@@ -42,13 +42,13 @@ Este checklist garantiza que cada Pull Request es revisado de forma sistemática
 | 12 | Se manejan todos los flujos: principal, alternativo y de error.       | ☐ |
 | 13 | Las condiciones de borde están cubiertas (nulos, vacíos, límites).    | ☐ |
 | 14 | No hay `TODO`, `FIXME` o código comentado sin justificación.          | ☐ |
-| 15 | Los mensajes de error mostrados al usuario son claros y están en español. | ☐ |
+| 15 | Los mensajes de error mostrados al usuario son claros. | ☐ |
 
 ### 3.4 Legibilidad y mantenibilidad
 
 | #  | Ítem                                                                 | Cumple |
 |----|-----------------------------------------------------------------------|--------|
-| 16 | Nombres de clases, métodos y variables son descriptivos y en español (dominio) / inglés (patrones técnicos). | ☐ |
+| 16 | Nombres de clases, métodos y variables son descriptivos y siguen la convención: español para dominio, inglés para patrones técnicos. | ☐ |
 | 17 | Los métodos son cortos (< 30 líneas) y con una sola responsabilidad.  | ☐ |
 | 18 | Se evita la duplicación de código (DRY). Si existe duplicación justificada, está documentada. | ☐ |
 | 19 | El código complejo tiene comentarios que explican el *por qué*.        | ☐ |

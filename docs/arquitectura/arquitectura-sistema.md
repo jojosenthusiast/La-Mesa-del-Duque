@@ -52,7 +52,7 @@ Contiene la lógica de negocio pura, independiente de cualquier framework, base 
 
 - **SOLID**: Cada clase tiene una sola responsabilidad; las interfaces permiten inversión de dependencias.
 - **Encapsulamiento**: Las entidades protegen sus invariantes; los setters públicos son mínimos.
-- **Ubiquitous Language**: Todos los nombres de clases, métodos y propiedades están en español, reflejando el lenguaje del negocio (restaurante).
+- **Ubiquitous Language**: Los nombres de clases, métodos y propiedades reflejan el lenguaje del negocio (restaurante).
 
 ## 4. Capa de Infraestructura (`LaMesaDelDuque.Infraestructura`)
 

@@ -21,7 +21,7 @@
 - [ ] Se respetan las convenciones de nomenclatura del proyecto.
 - [ ] Los principios SOLID y la arquitectura en capas se mantienen.
 - [ ] No se introdujeron dependencias innecesarias al proyecto.
-- [ ] El código nuevo está escrito en español para conceptos de dominio e inglés para patrones técnicos.
+- [ ] El código nuevo sigue la convención del proyecto: español para dominio, inglés para patrones técnicos.
 
 ### Pruebas
 - [ ] Las pruebas unitarias asociadas están escritas y pasan (`dotnet test` exitoso).

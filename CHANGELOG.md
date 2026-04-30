@@ -13,7 +13,7 @@ y este proyecto adhiere al [Versionado Semántico](https://semver.org/lang/es/).
 - Pipeline de integración continua (`ci.yml`) con compilación, pruebas, verificación de paquetes vulnerables y gobernanza de documentación.
 - Pipeline de seguridad (`security.yml`) con análisis CodeQL, detección de secretos con Gitleaks y verificación de paquetes vulnerables.
 - Pipeline de generación de releases (`release.yml`) con Release Please.
-- Plantilla de Pull Request en español con checklist de calidad, seguridad, pruebas, trazabilidad e impacto.
+- Plantilla de Pull Request con checklist de calidad, seguridad, pruebas, trazabilidad e impacto.
 - Documentación de calidad: plan de calidad, definición de hecho, matriz de trazabilidad, registro de riesgos, checklist de revisión de código y checklist de seguridad.
 - Documentación de arquitectura y ADR (Architecture Decision Records).
 - Documentación de requisitos: historias de usuario y criterios de aceptación.
