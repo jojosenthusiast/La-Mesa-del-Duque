@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/LaMesaDelDuque.Dominio/LaMesaDelDuque.Dominio.csproj" />
+    <Project Path="src/LaMesaDelDuque.Infraestructura/LaMesaDelDuque.Infraestructura.csproj" />
+    <Project Path="src/LaMesaDelDuque.Web/LaMesaDelDuque.Web.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/LaMesaDelDuque.Pruebas/LaMesaDelDuque.Pruebas.csproj" />
+  </Folder>
+</Solution>

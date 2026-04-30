@@ -1,0 +1,125 @@
+name: Integración Continua
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  compilar-y-probar:
+    name: Compilar y probar
+    runs-on: ubuntu-latest
+    steps:
+      - name: Obtener código fuente
+        uses: actions/checkout@v4
+
+      - name: Configurar .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restaurar dependencias
+        run: dotnet restore
+
+      - name: Compilar solución
+        run: dotnet build --configuration Release --no-restore
+
+      - name: Ejecutar pruebas
+        run: dotnet test --configuration Release --no-build --verbosity normal --collect:"XPlat Code Coverage" --results-directory TestResults
+
+      - name: Publicar resultados de cobertura
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: cobertura-pruebas
+          path: TestResults/
+
+  paquetes-vulnerables:
+    name: Verificar paquetes vulnerables
+    runs-on: ubuntu-latest
+    steps:
+      - name: Obtener código fuente
+        uses: actions/checkout@v4
+
+      - name: Configurar .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restaurar dependencias
+        run: dotnet restore
+
+      - name: Listar paquetes con vulnerabilidades conocidas
+        run: dotnet list package --vulnerable --include-transitive 2>&1 | tee salida-vulnerabilidades.txt
+
+      - name: Fallar si hay vulnerabilidades
+        run: |
+          if grep -q "has the following vulnerable packages" salida-vulnerabilidades.txt; then
+            echo "::error::Se detectaron paquetes con vulnerabilidades conocidas. Revisa la salida anterior."
+            exit 1
+          fi
+
+  gobernanza:
+    name: Validación de gobernanza
+    runs-on: ubuntu-latest
+    needs:
+      - compilar-y-probar
+      - paquetes-vulnerables
+    steps:
+      - name: Obtener código fuente
+        uses: actions/checkout@v4
+
+      - name: Validar documentación requerida
+        run: |
+          errores=0
+
+          echo "=== Verificando documentación de calidad ==="
+
+          verificar() {
+            if [ ! -f "$1" ]; then
+              echo "::error::Documento requerido no encontrado: $1"
+              errores=$((errores + 1))
+            else
+              echo "✓ $1 — presente"
+            fi
+          }
+
+          verificar "docs/calidad/plan-calidad.md"
+          verificar "docs/calidad/definicion-de-hecho.md"
+          verificar "docs/calidad/matriz-trazabilidad.md"
+          verificar "docs/calidad/registro-riesgos.md"
+          verificar "docs/calidad/checklist-revision-codigo.md"
+          verificar "docs/calidad/checklist-seguridad.md"
+          verificar "docs/calidad/matriz-impacto-cambios.md"
+          verificar "docs/calidad/suite-regresion.md"
+          verificar "docs/arquitectura/arquitectura-sistema.md"
+          verificar "docs/requisitos/criterios-aceptacion.md"
+          verificar "docs/requisitos/historias-usuario.md"
+          verificar "docs/seguridad/declaracion-aplicabilidad-iso27001.md"
+          verificar "docs/seguridad/alcance-sgsi-y-riesgos.md"
+          verificar "docs/pruebas/estrategia-pruebas.md"
+          verificar "docs/auditoria/plan-auditoria.md"
+          verificar "docs/auditoria/checklist-evidencia-auditoria.md"
+          verificar "docs/metricas/indicadores-calidad.md"
+
+          echo ""
+          echo "=== Verificando configuración de releases ==="
+
+          verificar "release-please-config.json"
+          verificar ".release-please-manifest.json"
+          verificar "CHANGELOG.md"
+
+          echo ""
+          echo "=== Verificando suites de prueba ==="
+
+          verificar "tests/regresion/README.md"
+          verificar "tests/impacto-cambios/matriz-impacto.md"
+
+          if [ "$errores" -gt 0 ]; then
+            echo ""
+            echo "::error::Se encontraron $errores documento(s) requerido(s) ausente(s)."
+            exit 1
+          fi
+
+          echo ""
+          echo "✓ Todos los documentos requeridos están presentes."

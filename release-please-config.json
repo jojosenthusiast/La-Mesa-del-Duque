@@ -1,0 +1,28 @@
+{
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
+  "packages": {
+    ".": {
+      "release-type": "simple",
+      "changelog-sections": [
+        { "type": "feat", "section": "Nuevas funcionalidades", "hidden": false },
+        { "type": "feature", "section": "Nuevas funcionalidades", "hidden": false },
+        { "type": "fix", "section": "Correcciones", "hidden": false },
+        { "type": "bug", "section": "Correcciones", "hidden": false },
+        { "type": "perf", "section": "Mejoras de rendimiento", "hidden": false },
+        { "type": "performance", "section": "Mejoras de rendimiento", "hidden": false },
+        { "type": "refactor", "section": "Refactorizaciones", "hidden": false },
+        { "type": "docs", "section": "Documentación", "hidden": false },
+        { "type": "test", "section": "Pruebas", "hidden": false },
+        { "type": "chore", "section": "Tareas de mantenimiento", "hidden": false },
+        { "type": "security", "section": "Seguridad", "hidden": false },
+        { "type": "deps", "section": "Dependencias", "hidden": false },
+        { "type": "build", "section": "Compilación y despliegue", "hidden": false },
+        { "type": "ci", "section": "Integración continua", "hidden": false },
+        { "type": "style", "section": "Estilo de código", "hidden": false },
+        { "type": "revert", "section": "Revertidos", "hidden": false }
+      ],
+      "versioning": "default",
+      "extra-files": []
+    }
+  }
+}

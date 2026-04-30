@@ -1,0 +1,87 @@
+# -----------------------------------------------------------
+# La Mesa del Duque — .gitignore
+# -----------------------------------------------------------
+# Secretos y configuración local (NUNCA incluir en el repositorio)
+# -----------------------------------------------------------
+appsettings.Development.json
+appsettings.*.local.json
+*.local.json
+.env
+.env.*
+*.pfx
+*.pem
+*.key
+*.crt
+secrets.json
+credentials.json
+
+# -----------------------------------------------------------
+# Registros (logs)
+# -----------------------------------------------------------
+*.log
+logs/
+Logs/
+NLog-*
+serilog-*
+
+# -----------------------------------------------------------
+# Artefactos de compilación (.NET)
+# -----------------------------------------------------------
+[Bb]in/
+[Oo]bj/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.userprefs
+.vs/
+*.DotSettings.user
+
+# -----------------------------------------------------------
+# Resultados de pruebas
+# -----------------------------------------------------------
+TestResults/
+**/TestResults/
+*.coverage
+*.coveragexml
+coveragereport/
+.coverage.*
+
+# -----------------------------------------------------------
+# Paquetes NuGet
+# -----------------------------------------------------------
+*.nupkg
+**/[Pp]ackages/*
+!**/[Pp]ackages/build/
+*.nuget.props
+*.nuget.targets
+nuget.exe
+
+# -----------------------------------------------------------
+# Archivos de sistema operativo
+# -----------------------------------------------------------
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+
+# -----------------------------------------------------------
+# Entornos virtuales Python (si se usan herramientas auxiliares)
+# -----------------------------------------------------------
+venv/
+.venv/
+__pycache__/
+
+# -----------------------------------------------------------
+# Archivos temporales y de edición
+# -----------------------------------------------------------
+*.swp
+*.swo
+*~
+*.orig
+*.tmp
+*.bak
