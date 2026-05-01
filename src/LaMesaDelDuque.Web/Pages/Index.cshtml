@@ -1,10 +1,34 @@
 ﻿@page
 @model IndexModel
 @{
-    ViewData["Title"] = "Home page";
+    ViewData["Title"] = "Inicio";
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
+<section class="lmd-hero rounded">
+    <img src="~/img/marca/logo-completo.png" alt="La Mesa del Duque" />
+    <h1>La Mesa del Duque</h1>
+    <p class="lmd-eslogan">El SaaS que gestiona tu restaurante como la realeza</p>
+</section>
+
+<div class="lmd-separador"><span>◆</span></div>
+
+<div class="row g-4">
+    <div class="col-md-4">
+        <div class="lmd-tarjeta h-100">
+            <h3>Pedidos en tiempo real</h3>
+            <p>Gestión ágil desde la mesa hasta la cocina con actualizaciones instantáneas.</p>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="lmd-tarjeta h-100">
+            <h3>Inventario inteligente</h3>
+            <p>Control automático de existencias con alertas de reabastecimiento y registro de merma diaria.</p>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="lmd-tarjeta h-100">
+            <h3>Reportes y métricas</h3>
+            <p>Información clave para decisiones estratégicas con indicadores de desempeño del negocio.</p>
+        </div>
+    </div>
 </div>
