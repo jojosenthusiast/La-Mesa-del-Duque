@@ -85,3 +85,13 @@ __pycache__/
 *.orig
 *.tmp
 *.bak
+
+# -----------------------------------------------------------
+# Herramientas locales de planificación y flujo de trabajo
+# -----------------------------------------------------------
+.atl/
+openspec/
+.claude/
+.sdd/
+AGENTS.md
+CLAUDE.md
