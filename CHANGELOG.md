@@ -5,6 +5,14 @@ Todas las modificaciones notables de este proyecto se documentarán en este arch
 El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/),
 y este proyecto adhiere al [Versionado Semántico](https://semver.org/lang/es/).
 
+## [0.2.0](https://github.com/jojosenthusiast/La-Mesa-del-Duque/compare/v0.1.1...v0.2.0) (2026-05-01)
+
+
+### Nuevas funcionalidades
+
+* **marca:** integrar fundación visual ([db3cf42](https://github.com/jojosenthusiast/La-Mesa-del-Duque/commit/db3cf42c54f5a5d534b4b5796a53d3b8c04c00a7))
+* **marca:** integrar fundación visual ([b4b0986](https://github.com/jojosenthusiast/La-Mesa-del-Duque/commit/b4b09861801f0c273ab349b1c15bd1612dcdd43d))
+
 ## [0.1.1](https://github.com/jojosenthusiast/La-Mesa-del-Duque/compare/v0.1.0...v0.1.1) (2026-05-01)
 
 
