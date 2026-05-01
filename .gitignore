@@ -85,3 +85,9 @@ __pycache__/
 *.orig
 *.tmp
 *.bak
+
+# -----------------------------------------------------------
+# Herramientas de agentes (no incluir en el repositorio)
+# -----------------------------------------------------------
+.atl/
+openspec/
