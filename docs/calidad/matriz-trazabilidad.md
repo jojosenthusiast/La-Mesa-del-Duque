@@ -130,7 +130,20 @@ Este documento establece la trazabilidad bidireccional entre los requisitos del 
 | `MesaTests.cs`                            | HU-016         |
 | `UsuarioTests.cs`                         | HU-021         |
 | `AuthTests.cs`                            | HU-025         |
+| `CategoriaProductoTests.cs`               | HU-011 (base)  |
+| `DetallePedidoTests.cs`                   | HU-001 (base)  |
 | TC-REG-001 a TC-REG-025 (Regresión)       | HU-001 a HU-025 |
+
+### HU-000: Arquitectura base del dominio
+
+| Elemento           | Artefacto                                      | Estado |
+|--------------------|------------------------------------------------|--------|
+| Modelo de dominio  | `docs/arquitectura/modelo-dominio.md`           | ✓      |
+| Pruebas unitarias  | `tests/LaMesaDelDuque.Pruebas/Entidades/`       | ✓      |
+| Código             | `src/LaMesaDelDuque.Dominio/Entidades/`         | ✓      |
+| Código             | `src/LaMesaDelDuque.Dominio/Enumeraciones/`     | ✓      |
+| Código             | `src/LaMesaDelDuque.Dominio/Excepciones/`       | ✓      |
+| ADR relacionado    | `docs/arquitectura/adr/0001-arquitectura-en-capas.md`| ✓  |
 
 ## 5. Trazabilidad ADR → HU
 
