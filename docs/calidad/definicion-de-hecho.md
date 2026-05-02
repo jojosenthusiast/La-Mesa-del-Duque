@@ -50,6 +50,7 @@ Toda historia de usuario debe satisfacer **todos** los criterios siguientes ante
 - [ ] Si la HU introduce una decisión arquitectónica, se ha creado o actualizado un ADR en `docs/arquitectura/adr/`.
 - [ ] Los comentarios en el código explican el *por qué*, no el *qué* (el código debe ser autoexplicativo).
 - [ ] La historia de usuario en `docs/requisitos/historias-usuario.md` refleja el estado actual.
+- [ ] Si el cambio constituye una versión relevante del producto, se ha creado o actualizado la documentación curada en `docs/releases/` con resumen ejecutivo, impacto (funcional y técnico), verificación, riesgos y próximos pasos.
 
 ### 2.7 Calidad
 

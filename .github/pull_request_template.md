@@ -48,6 +48,7 @@
 - [ ] La documentación técnica relevante fue actualizada (README, arquitectura, etc.).
 - [ ] Los comentarios en el código explican el *por qué*, no el *qué*.
 - [ ] Se actualizó `CHANGELOG.md` con los cambios introducidos (si la rama es `main`).
+- [ ] Si el cambio genera una versión relevante, se creó o actualizó la documentación curada en `docs/releases/`.
 
 ### Impacto del cambio
 - [ ] Se documentó qué módulos o capas se ven afectados por este cambio.
