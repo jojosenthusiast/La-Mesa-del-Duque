@@ -214,4 +214,20 @@ Este documento detalla los criterios de aceptación para cada historia de usuari
 
 ---
 
-**Versión**: 1.0 | **Fecha**: Abril 2026 | **Actualizar con cada HU nueva**
+### CA-000: Arquitectura base del dominio
+
+Validación inicial del modelo de dominio con entidades, enumeraciones y reglas de negocio. Cubierto en `docs/arquitectura/modelo-dominio.md`.
+
+**CA-000-01: Invariantes de entidad**
+- **Dado** que se instancia cualquier entidad del dominio
+- **Cuando** se proporcionan datos inválidos (nulos, vacíos, negativos)
+- **Entonces** se lanza `ReglaDominioException` con un mensaje descriptivo.
+
+**CA-000-02: Estados iniciales**
+- **Dado** que se crea una entidad sin especificar estado
+- **Cuando** se consulta su estado
+- **Entonces** la entidad tiene el estado por defecto definido (Mesa→Disponible, Pedido→Abierto, entidades→Activo).
+
+---
+
+**Versión**: 1.0 | **Fecha**: Abril 2026 | **Actualizado**: Mayo 2026 — dominio base | **Actualizar con cada HU nueva**
