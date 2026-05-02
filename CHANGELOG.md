@@ -7,11 +7,17 @@ y este proyecto adhiere al [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [0.3.1](https://github.com/jojosenthusiast/La-Mesa-del-Duque/compare/v0.3.0...v0.3.1) (2026-05-02)
 
+### Summary
 
-### Documentación
+- Establece un estándar profesional para documentar releases relevantes del producto, separando el changelog mecánico de Release Please de la documentación curada del proyecto.
 
-* **releases:** documentación propia para las versiones ([a0a4e38](https://github.com/jojosenthusiast/La-Mesa-del-Duque/commit/a0a4e38afb58a53e17893c48a230a0c45546463b))
-* **releases:** establecer documentación profesional de versiones ([3dad06e](https://github.com/jojosenthusiast/La-Mesa-del-Duque/commit/3dad06e394c297187a0aa64221b19853d917f5d0))
+### Details
+
+- Agrega documentación curada para `v0.2.0` y `v0.3.0` en `docs/releases/`, con resumen ejecutivo, impacto funcional, impacto técnico, verificación, riesgos y próximos pasos.
+- Actualiza la definición de hecho para exigir documentación curada cuando un cambio constituya una versión relevante del producto.
+- Actualiza la plantilla de Pull Request para recordar la documentación de release antes de fusionar incrementos significativos.
+- Define que Release Please se mantiene como automatización de versionado y changelog, mientras `docs/releases/` será la fuente de documentación profesional.
+- Documentación detallada: [`docs/releases/v0.3.1-documentacion-profesional-releases.md`](docs/releases/v0.3.1-documentacion-profesional-releases.md).
 
 ## [0.3.0](https://github.com/jojosenthusiast/La-Mesa-del-Duque/compare/v0.2.0...v0.3.0) (2026-05-02)
 
