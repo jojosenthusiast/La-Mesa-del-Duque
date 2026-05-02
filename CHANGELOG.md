@@ -5,6 +5,14 @@ Todas las modificaciones notables de este proyecto se documentarán en este arch
 El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/),
 y este proyecto adhiere al [Versionado Semántico](https://semver.org/lang/es/).
 
+## [0.3.0](https://github.com/jojosenthusiast/La-Mesa-del-Duque/compare/v0.2.0...v0.3.0) (2026-05-02)
+
+
+### Nuevas funcionalidades
+
+* **dominio:** implementar base del modelo de pedidos ([7680ad9](https://github.com/jojosenthusiast/La-Mesa-del-Duque/commit/7680ad98eaf362f4d06e7aac907b3c85afdf39e9))
+* **dominio:** implementar base del modelo de pedidos ([2510e69](https://github.com/jojosenthusiast/La-Mesa-del-Duque/commit/2510e6979e0585b961bb65ac565942abecd0464c))
+
 ## [0.2.0](https://github.com/jojosenthusiast/La-Mesa-del-Duque/compare/v0.1.1...v0.2.0) (2026-05-01)
 
 
