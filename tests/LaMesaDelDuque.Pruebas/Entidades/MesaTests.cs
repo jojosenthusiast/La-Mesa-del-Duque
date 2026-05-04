@@ -76,4 +76,64 @@ public class MesaTests
 
         Assert.Equal(EstadoMesa.Reservada, mesa.Estado);
     }
+
+    [Fact]
+    public void CrearMesa_DebeEstarActivaPorDefecto()
+    {
+        var mesa = new Mesa(11, 4);
+
+        Assert.True(mesa.Activa);
+    }
+
+    [Fact]
+    public void DesactivarMesa_DebeMarcarComoInactiva()
+    {
+        var mesa = new Mesa(12, 4);
+
+        mesa.Desactivar();
+
+        Assert.False(mesa.Activa);
+    }
+
+    [Fact]
+    public void ActivarMesa_DebeMarcarComoActiva()
+    {
+        var mesa = new Mesa(13, 4);
+        mesa.Desactivar();
+
+        mesa.Activar();
+
+        Assert.True(mesa.Activa);
+    }
+
+    [Fact]
+    public void ActualizarDatos_CuandoDatosSonValidos_DebeActualizarNumeroYCapacidad()
+    {
+        var mesa = new Mesa(14, 4);
+
+        mesa.ActualizarDatos(20, 8);
+
+        Assert.Equal(20, mesa.Numero);
+        Assert.Equal(8, mesa.Capacidad);
+    }
+
+    [Fact]
+    public void ActualizarDatos_CuandoNumeroEsInvalido_DebeLanzarExcepcion()
+    {
+        var mesa = new Mesa(15, 4);
+
+        var ex = Assert.Throws<ReglaDominioException>(() => mesa.ActualizarDatos(0, 4));
+
+        Assert.Contains("número", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void ActualizarDatos_CuandoCapacidadEsInvalida_DebeLanzarExcepcion()
+    {
+        var mesa = new Mesa(16, 4);
+
+        var ex = Assert.Throws<ReglaDominioException>(() => mesa.ActualizarDatos(16, -1));
+
+        Assert.Contains("capacidad", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
 }
