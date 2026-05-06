@@ -13,6 +13,11 @@ public class Pedido
     public IReadOnlyList<DetallePedido> Detalles => _detalles.AsReadOnly();
     public decimal Total => _detalles.Sum(d => d.Subtotal);
 
+    private Pedido()
+    {
+        Mesa = null!;
+    }
+
     public Pedido(Mesa mesa)
     {
         if (mesa is null)
@@ -43,5 +48,33 @@ public class Pedido
             throw new ReglaDominioException("No se puede cerrar un pedido sin detalles.");
 
         Estado = EstadoPedido.Cerrado;
+    }
+
+    public void Cancelar()
+    {
+        if (Estado == EstadoPedido.Cancelado)
+            throw new ReglaDominioException("El pedido ya está cancelado.");
+
+        if (Estado == EstadoPedido.Cerrado)
+            throw new ReglaDominioException("No se puede cancelar un pedido cerrado.");
+
+        Estado = EstadoPedido.Cancelado;
+    }
+
+    public void EliminarDetalle(Guid detalleId)
+    {
+        if (Estado == EstadoPedido.Cerrado)
+            throw new ReglaDominioException("No se pueden modificar los detalles de un pedido cerrado.");
+
+        if (Estado == EstadoPedido.Cancelado)
+            throw new ReglaDominioException("No se pueden modificar los detalles de un pedido cancelado.");
+
+        if (_detalles.Count == 1)
+            throw new ReglaDominioException("No se puede eliminar el único detalle del pedido. Use cancelar en su lugar.");
+
+        var detalle = _detalles.FirstOrDefault(d => d.Id == detalleId)
+            ?? throw new ReglaDominioException("El detalle especificado no pertenece a este pedido.");
+
+        _detalles.Remove(detalle);
     }
 }

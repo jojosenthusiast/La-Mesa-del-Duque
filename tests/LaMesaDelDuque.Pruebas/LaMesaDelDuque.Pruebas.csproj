@@ -10,6 +10,9 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.11" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="8.0.11" />
+    <PackageReference Include="Microsoft.Extensions.Configuration" Version="8.0.0" />
     <PackageReference Include="coverlet.collector" Version="10.0.0">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
@@ -27,6 +30,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\src\LaMesaDelDuque.Aplicacion\LaMesaDelDuque.Aplicacion.csproj" />
     <ProjectReference Include="..\..\src\LaMesaDelDuque.Dominio\LaMesaDelDuque.Dominio.csproj" />
     <ProjectReference Include="..\..\src\LaMesaDelDuque.Infraestructura\LaMesaDelDuque.Infraestructura.csproj" />
   </ItemGroup>
