@@ -157,6 +157,7 @@ public class RepositorioIntegrationTests : IDisposable
     }
 
     [Fact]
+    [Trait("Category", "Regression")]
     public async Task MesaRepositorio_ActualizarEstado_DebePersistir()
     {
         var mesa = new Mesa(1, 4);
@@ -174,6 +175,7 @@ public class RepositorioIntegrationTests : IDisposable
     // --- Pedido ---
 
     [Fact]
+    [Trait("Category", "Regression")]
     public async Task PedidoRepositorio_AgregarYObtenerConDetalles_DebeFuncionar()
     {
         var mesa = new Mesa(2, 4);
@@ -201,6 +203,7 @@ public class RepositorioIntegrationTests : IDisposable
     }
 
     [Fact]
+    [Trait("Category", "Regression")]
     public async Task PedidoRepositorio_ObtenerTodos_DebeRetornarLista()
     {
         var mesa = new Mesa(3, 4);

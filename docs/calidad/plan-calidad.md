@@ -58,6 +58,8 @@ Actividades preventivas que garantizan que los procesos se ejecutan correctament
 - Verificación de seguridad con checklist (`docs/calidad/checklist-seguridad.md`).
 - Definición de Hecho aplicada en cada historia de usuario.
 - Pipeline de CI con GitHub Actions: compilación, pruebas, análisis estático.
+- Validación automatizada de trazabilidad (`scripts/quality/validar-trazabilidad.ps1`) ejecutada en CI.
+- Validación automatizada de evidencia de calidad en PR (`scripts/quality/validar-pr-evidencia.ps1`) ejecutada en CI.
 - Trazabilidad de requisitos mantenida en la matriz de trazabilidad.
 
 ### 6.2 Control de Calidad (QC)
@@ -117,7 +119,16 @@ Planificación → Desarrollo → Revisión de código → Pruebas → Verificac
                                               Registrar defecto → Corregir
 ```
 
-## 10. Revisión y actualización
+## 10. Transición de calidad progresiva a calidad bloqueante
+
+Quality Governance Pipeline v1 inicia en modo progresivo para evitar bloquear el desarrollo por deuda documental heredada. El modo estricto se activa cuando se cumplan estas condiciones:
+
+1. La matriz de trazabilidad no tiene rutas rotas.
+2. La suite de regresión contiene pruebas marcadas con `Category=Regression` para los flujos críticos de Sprint 1.
+3. El paquete de evidencia se publica correctamente en CI durante al menos dos PR consecutivos.
+4. La cobertura reportada tiene línea base conocida y no disminuye respecto al PR anterior.
+
+## 11. Revisión y actualización
 
 Este plan de calidad se revisa y actualiza:
 

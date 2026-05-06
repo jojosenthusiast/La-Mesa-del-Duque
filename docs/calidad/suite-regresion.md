@@ -120,7 +120,7 @@ Nivel 3 — Regresión completa (30-45 min)
 La suite automatizada se ejecuta con xUnit:
 
 ```bash
-dotnet test --filter "Category=Regression"
+dotnet test "LaMesaDelDuque.slnx" --filter "Category=Regression"
 ```
 
 Los casos manuales se ejecutan siguiendo las instrucciones en `tests/regresion/README.md`.
@@ -134,7 +134,21 @@ Los casos manuales se ejecutan siguiendo las instrucciones en `tests/regresion/R
 | Antes de merge a `main`    | Nivel 1 + 2 + 3     |
 | Release candidata          | Nivel 1 + 2 + 3     |
 
-## 5. Resultados
+## 5. Taxonomía ejecutable
+
+Las pruebas de regresión automatizadas deben marcarse con:
+
+```csharp
+[Trait("Category", "Regression")]
+```
+
+La suite se ejecuta con:
+
+```powershell
+dotnet test "LaMesaDelDuque.slnx" --filter "Category=Regression"
+```
+
+## 6. Resultados
 
 Los resultados de cada ejecución se documentan en `tests/regresion/resultados/` con el formato `YYYY-MM-DD-ejecucion-N.md`, incluyendo:
 

@@ -45,6 +45,7 @@ public class PedidosServicioTests : IDisposable
     }
 
     [Fact]
+    [Trait("Category", "Regression")]
     public async Task CrearPedido_ConUnDetalle_DebeCrearYRetornarDtoConTotal()
     {
         // Arrange: crear mesa y producto
@@ -363,6 +364,7 @@ public class PedidosServicioTests : IDisposable
     }
 
     [Fact]
+    [Trait("Category", "Regression")]
     public async Task CancelarPedido_Abierto_DebeCancelarYPersistir()
     {
         // Arrange
@@ -588,6 +590,7 @@ public class PedidosServicioTests : IDisposable
     }
 
     [Fact]
+    [Trait("Category", "Regression")]
     public async Task ActualizarCantidadDetalle_PedidoAbierto_DebeActualizarYRecalcularTotal()
     {
         var mesa = new Mesa(60, 4);
@@ -624,6 +627,7 @@ public class PedidosServicioTests : IDisposable
     }
 
     [Fact]
+    [Trait("Category", "Regression")]
     public async Task ActualizarCantidadDetalle_PedidoCerrado_DebeLanzarExcepcion()
     {
         var mesa = new Mesa(61, 4);
@@ -650,6 +654,7 @@ public class PedidosServicioTests : IDisposable
     }
 
     [Fact]
+    [Trait("Category", "Regression")]
     public async Task ActualizarCantidadDetalle_PedidoCancelado_DebeLanzarExcepcion()
     {
         var mesa = new Mesa(62, 4);

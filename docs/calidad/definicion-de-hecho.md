@@ -91,4 +91,10 @@ Toda historia de usuario debe satisfacer **todos** los criterios siguientes ante
 
 ---
 
+## 6. Condiciones para revisión
+
+Un cambio está listo para revisión cuando adjunta evidencia de calidad generada por CI o explica explícitamente por qué no aplica. En modo estricto, las validaciones de trazabilidad, regresión y cobertura son bloqueantes.
+
+---
+
 **Versión**: 1.0 | **Fecha**: Abril 2026 | **Responsable**: Equipo de calidad
