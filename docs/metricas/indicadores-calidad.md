@@ -46,6 +46,13 @@ Cada indicador se describe con los siguientes atributos:
 | **Frecuencia**       | Cada PR y al cierre de sprint                             |
 | **Fuente**           | Coverlet (reporte XML/HTML) ejecutado en CI               |
 
+### IND-09: Cobertura automatizada
+
+Fuente: `TestResults/CoverageReport/Summary.json` generado por CI.
+Objetivo inicial: 80% de cobertura de líneas.
+Modo v1: advertencia no bloqueante.
+Modo estricto posterior: bloqueo de PR si la cobertura baja de 80%.
+
 ### IND-03: Cobertura de requisitos por pruebas
 
 | Atributo             | Valor                                                     |
@@ -130,6 +137,7 @@ Cada indicador se describe con los siguientes atributos:
 | IND-06 | Cobertura de regresión            | 100%     | Por medir    | ⬜     |
 | IND-07 | Tiempo de corrección de defectos  | ≤ 2 días | Por medir    | ⬜     |
 | IND-08 | Cumplimiento DoD                  | 100%     | Por medir    | ⬜     |
+| IND-09 | Cobertura automatizada            | ≥ 80%    | Por medir    | ⬜     |
 
 **Leyenda**: 🟢 Cumple objetivo | 🟡 En umbral de alerta | 🔴 No cumple | ⬜ Por medir
 

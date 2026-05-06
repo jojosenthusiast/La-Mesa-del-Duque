@@ -74,6 +74,13 @@
 - Issue:
 - ADR (si aplica):
 
+## Evidencia de calidad
+
+HU: 
+Riesgo: 
+Pruebas: 
+Trazabilidad: docs/calidad/matriz-trazabilidad.md
+
 ---
 
 > **Nota para el revisor**: Por favor, completa el checklist de revisión de código en `docs/calidad/checklist-revision-codigo.md` antes de aprobar este PR.

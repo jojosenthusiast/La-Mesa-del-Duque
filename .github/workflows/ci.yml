@@ -5,6 +5,9 @@ on:
     branches:
       - main
 
+env:
+  QUALITY_GATE_MODE: warning
+
 jobs:
   compilar-y-probar:
     name: Compilar y probar
@@ -27,12 +30,61 @@ jobs:
       - name: Ejecutar pruebas
         run: dotnet test --configuration Release --no-build --verbosity normal --collect:"XPlat Code Coverage" --results-directory TestResults
 
+      - name: Instalar ReportGenerator
+        run: dotnet tool install --global dotnet-reportgenerator-globaltool
+
+      - name: Generar resumen de cobertura
+        run: reportgenerator -reports:"TestResults/**/coverage.cobertura.xml" -targetdir:"TestResults/CoverageReport" -reporttypes:"MarkdownSummary;JsonSummary"
+
+      - name: Validar umbral de cobertura en modo progresivo
+        shell: pwsh
+        run: |
+          $summary = Get-Content "TestResults/CoverageReport/Summary.json" -Raw | ConvertFrom-Json
+          $coverage = [double]$summary.summary.linecoverage
+          Write-Host "Cobertura de lineas: $coverage%"
+          if ($coverage -lt 80) {
+            Write-Warning "La cobertura esta por debajo del objetivo documental de 80%. Modo progresivo: no bloquea este PR."
+          }
+
+      - name: Generar metricas de calidad
+        shell: pwsh
+        run: pwsh -NoProfile -File scripts/quality/generar-metricas-calidad.ps1
+
+      - name: Generar paquete de evidencia
+        shell: pwsh
+        run: pwsh -NoProfile -File scripts/quality/generar-paquete-evidencia.ps1
+
       - name: Publicar resultados de cobertura
         uses: actions/upload-artifact@v4
         if: always()
         with:
           name: cobertura-pruebas
           path: TestResults/
+
+      - name: Publicar evidencia de calidad
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: evidencia-calidad
+          path: artifacts/
+
+  regresion:
+    name: Suite de regresión
+    runs-on: ubuntu-latest
+    steps:
+      - name: Obtener código fuente
+        uses: actions/checkout@v4
+
+      - name: Configurar .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restaurar dependencias
+        run: dotnet restore
+
+      - name: Ejecutar pruebas de regresión
+        run: dotnet test "LaMesaDelDuque.slnx" --filter "Category=Regression" --verbosity normal
 
   paquetes-vulnerables:
     name: Verificar paquetes vulnerables
@@ -65,6 +117,7 @@ jobs:
     needs:
       - compilar-y-probar
       - paquetes-vulnerables
+      - regresion
     steps:
       - name: Obtener código fuente
         uses: actions/checkout@v4
@@ -123,3 +176,24 @@ jobs:
 
           echo ""
           echo "✓ Todos los documentos requeridos están presentes."
+
+      - name: Validar trazabilidad en modo progresivo
+        shell: pwsh
+        run: pwsh -NoProfile -File scripts/quality/validar-trazabilidad.ps1 -Modo "$env:QUALITY_GATE_MODE"
+
+      - name: Validar evidencia de PR en modo progresivo
+        shell: pwsh
+        run: |
+          $prBodyFile = Join-Path $env:RUNNER_TEMP 'pr-body.md'
+          try {
+            $event = Get-Content $env:GITHUB_EVENT_PATH -Raw | ConvertFrom-Json
+            if ($event.pull_request -and $event.pull_request.body) {
+              $event.pull_request.body | Out-File -FilePath $prBodyFile -Encoding utf8
+            } else {
+              '[Cuerpo de PR no disponible]' | Out-File -FilePath $prBodyFile -Encoding utf8
+            }
+          } catch {
+            Write-Warning "No se pudo extraer el cuerpo del PR del evento: $($_.Exception.Message)"
+            '[Cuerpo de PR no disponible]' | Out-File -FilePath $prBodyFile -Encoding utf8
+          }
+          pwsh -NoProfile -File scripts/quality/validar-pr-evidencia.ps1 -PrBodyPath $prBodyFile -Modo "$env:QUALITY_GATE_MODE"

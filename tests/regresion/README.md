@@ -19,7 +19,7 @@ tests/regresion/
 
 ```bash
 # Desde la raíz del repositorio
-dotnet test --filter "Category=Regression"
+dotnet test "LaMesaDelDuque.slnx" --filter "Category=Regression"
 ```
 
 ### Pruebas manuales
