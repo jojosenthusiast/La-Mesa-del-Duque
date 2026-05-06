@@ -5,6 +5,19 @@ Todas las modificaciones notables de este proyecto se documentarán en este arch
 El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/),
 y este proyecto adhiere al [Versionado Semántico](https://semver.org/lang/es/).
 
+## [0.4.0](https://github.com/jojosenthusiast/La-Mesa-del-Duque/compare/v0.3.1...v0.4.0) (2026-05-06)
+
+### Summary
+
+- Incorpora la base de persistencia y servicios de aplicación para el flujo de pedidos, dejando preparados los casos de uso principales de catálogo, mesas y pedidos.
+
+### Details
+
+- Agrega persistencia EF Core/Npgsql para `CategoriaProducto`, `Producto`, `Mesa`, `Pedido` y `DetallePedido`.
+- Agrega repositorios específicos, unidad de trabajo y servicios de aplicación para catálogo, mesas y pedidos.
+- Incorpora cancelación lógica, actualización de datos, desactivación con guardas y modificación de detalles de pedido.
+- Amplía la cobertura automatizada con pruebas unitarias e integración sobre dominio, repositorios, unidad de trabajo y servicios.
+
 ## [0.3.1](https://github.com/jojosenthusiast/La-Mesa-del-Duque/compare/v0.3.0...v0.3.1) (2026-05-02)
 
 ### Summary
