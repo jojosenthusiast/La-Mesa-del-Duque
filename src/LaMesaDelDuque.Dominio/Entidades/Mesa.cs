@@ -9,11 +9,6 @@ public class Mesa
     public int Numero { get; private set; }
     public int Capacidad { get; private set; }
     public EstadoMesa Estado { get; private set; }
-    public bool Activa { get; private set; }
-
-    private Mesa()
-    {
-    }
 
     public Mesa(int numero, int capacidad)
     {
@@ -27,33 +22,10 @@ public class Mesa
         Numero = numero;
         Capacidad = capacidad;
         Estado = EstadoMesa.Disponible;
-        Activa = true;
     }
 
     public void CambiarEstado(EstadoMesa nuevoEstado)
     {
         Estado = nuevoEstado;
-    }
-
-    public void Desactivar()
-    {
-        Activa = false;
-    }
-
-    public void Activar()
-    {
-        Activa = true;
-    }
-
-    public void ActualizarDatos(int numero, int capacidad)
-    {
-        if (numero <= 0)
-            throw new ReglaDominioException("El número de mesa debe ser mayor que cero.");
-
-        if (capacidad <= 0)
-            throw new ReglaDominioException("La capacidad de la mesa debe ser mayor que cero.");
-
-        Numero = numero;
-        Capacidad = capacidad;
     }
 }

@@ -83,37 +83,4 @@ public class DetallePedidoTests
 
         Assert.Equal(0m, detalle.Subtotal);
     }
-
-    [Fact]
-    public void ActualizarCantidad_CuandoCantidadEsValida_DebeActualizarYRecalcularSubtotal()
-    {
-        var detalle = new DetallePedido(_producto, 2, 3.50m);
-
-        detalle.ActualizarCantidad(5);
-
-        Assert.Equal(5, detalle.Cantidad);
-        Assert.Equal(17.50m, detalle.Subtotal);
-    }
-
-    [Fact]
-    public void ActualizarCantidad_CuandoCantidadEsCero_DebeLanzarExcepcion()
-    {
-        var detalle = new DetallePedido(_producto, 2, 3.50m);
-
-        var ex = Assert.Throws<ReglaDominioException>(() => detalle.ActualizarCantidad(0));
-
-        Assert.Contains("cantidad", ex.Message, StringComparison.OrdinalIgnoreCase);
-        Assert.Equal(2, detalle.Cantidad); // No debe cambiar
-    }
-
-    [Fact]
-    public void ActualizarCantidad_CuandoCantidadEsNegativa_DebeLanzarExcepcion()
-    {
-        var detalle = new DetallePedido(_producto, 2, 3.50m);
-
-        var ex = Assert.Throws<ReglaDominioException>(() => detalle.ActualizarCantidad(-1));
-
-        Assert.Contains("cantidad", ex.Message, StringComparison.OrdinalIgnoreCase);
-        Assert.Equal(2, detalle.Cantidad); // No debe cambiar
-    }
 }

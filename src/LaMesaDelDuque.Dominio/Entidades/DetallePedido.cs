@@ -4,16 +4,10 @@ namespace LaMesaDelDuque.Dominio.Entidades;
 
 public class DetallePedido
 {
-    public Guid Id { get; private set; }
     public Producto Producto { get; private set; }
     public int Cantidad { get; private set; }
     public decimal PrecioUnitario { get; private set; }
     public decimal Subtotal => Cantidad * PrecioUnitario;
-
-    private DetallePedido()
-    {
-        Producto = null!;
-    }
 
     public DetallePedido(Producto producto, int cantidad, decimal precioUnitario)
     {
@@ -29,13 +23,5 @@ public class DetallePedido
         Producto = producto;
         Cantidad = cantidad;
         PrecioUnitario = precioUnitario;
-    }
-
-    public void ActualizarCantidad(int nuevaCantidad)
-    {
-        if (nuevaCantidad <= 0)
-            throw new ReglaDominioException("La cantidad debe ser mayor que cero.");
-
-        Cantidad = nuevaCantidad;
     }
 }

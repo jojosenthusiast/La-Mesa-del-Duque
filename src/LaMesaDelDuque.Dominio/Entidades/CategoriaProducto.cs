@@ -8,11 +8,6 @@ public class CategoriaProducto
     public string Nombre { get; private set; }
     public bool Activo { get; private set; }
 
-    private CategoriaProducto()
-    {
-        Nombre = string.Empty;
-    }
-
     public CategoriaProducto(string nombre)
     {
         if (string.IsNullOrWhiteSpace(nombre))
@@ -31,13 +26,5 @@ public class CategoriaProducto
     public void Activar()
     {
         Activo = true;
-    }
-
-    public void ActualizarNombre(string nombre)
-    {
-        if (string.IsNullOrWhiteSpace(nombre))
-            throw new ReglaDominioException("El nombre de la categoría es obligatorio.");
-
-        Nombre = nombre.Trim();
     }
 }

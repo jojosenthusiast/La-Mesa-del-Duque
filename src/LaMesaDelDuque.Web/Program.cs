@@ -1,16 +1,7 @@
-using LaMesaDelDuque.Aplicacion;
-using LaMesaDelDuque.Infraestructura;
-
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddRazorPages();
-
-// Capa de aplicación (servicios)
-builder.Services.AgregarAplicacion();
-
-// Persistencia con fail-fast si no hay connection string
-builder.Services.AgregarPersistencia(builder.Configuration);
 
 var app = builder.Build();
 
