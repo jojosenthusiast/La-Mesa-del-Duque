@@ -98,5 +98,6 @@ __pycache__/
 openspec/
 .claude/
 .sdd/
+.worktrees/
 AGENTS.md
 CLAUDE.md

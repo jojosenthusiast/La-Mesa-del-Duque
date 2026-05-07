@@ -97,4 +97,26 @@ Un cambio está listo para revisión cuando adjunta evidencia de calidad generad
 
 ---
 
-**Versión**: 1.0 | **Fecha**: Abril 2026 | **Responsable**: Equipo de calidad
+## 7. Política de releases
+
+### Release Please
+
+Release Please se mantiene como automatización de versionado, tags y changelog mecánico. Sin embargo, sus notas generadas **no constituyen la documentación pública definitiva** de una versión.
+
+### Estándar de documentación pública
+
+Toda versión relevante del producto debe cumplir:
+
+1. **Documentación curada en `docs/releases/`** con resumen ejecutivo, impacto, verificación, riesgos y próximos pasos.
+2. **Edición del release publicado en GitHub** con notas profesionales que reemplacen la salida mecánica de Release Please.
+3. **No publicar** notas duplicadas, historial mecánico de commits, ni entradas de releases anteriores en el cuerpo del release.
+
+### Proceso
+
+1. Release Please crea el tag y el release con notas mecánicas.
+2. Antes de considerar la versión cerrada, el equipo edita el release en GitHub (`gh release edit`) con las notas curadas.
+3. Se verifica que `docs/releases/` contenga la página correspondiente.
+
+---
+
+**Versión**: 1.1 | **Fecha**: Mayo 2026 | **Responsable**: Equipo de calidad
