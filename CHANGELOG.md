@@ -5,6 +5,15 @@ Todas las modificaciones notables de este proyecto se documentarán en este arch
 El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/),
 y este proyecto adhiere al [Versionado Semántico](https://semver.org/lang/es/).
 
+## [0.6.0](https://github.com/jojosenthusiast/La-Mesa-del-Duque/compare/v0.5.1...v0.6.0) (2026-05-08)
+
+
+### Nuevas funcionalidades
+
+* **db:** agregar esquema canónico completo de 24 tablas — Slice 0 ([#16](https://github.com/jojosenthusiast/La-Mesa-del-Duque/issues/16)) ([83c7d7a](https://github.com/jojosenthusiast/La-Mesa-del-Duque/commit/83c7d7a1004d66e1c9d12a4abc0a035cbd2347be))
+* **pedidos:** alinear ciclo de vida del pedido con criterios de aceptación — Slice 1 ([d298a62](https://github.com/jojosenthusiast/La-Mesa-del-Duque/commit/d298a620de1a8bcec35cb91ad8010e55a49fbfb8))
+* **pedidos:** alinear ciclo de vida del pedido con criterios de aceptación — Slice 1 ([292f7ee](https://github.com/jojosenthusiast/La-Mesa-del-Duque/commit/292f7ee5a306a9dd6e4e1ea3651f46f117f9a11e))
+
 ## [0.5.1](https://github.com/jojosenthusiast/La-Mesa-del-Duque/compare/v0.5.0...v0.5.1) (2026-05-07)
 
 
