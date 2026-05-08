@@ -5,6 +5,13 @@ Todas las modificaciones notables de este proyecto se documentarán en este arch
 El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/),
 y este proyecto adhiere al [Versionado Semántico](https://semver.org/lang/es/).
 
+## [0.7.0](https://github.com/jojosenthusiast/La-Mesa-del-Duque/compare/v0.6.0...v0.7.0) (2026-05-08)
+
+
+### Nuevas funcionalidades
+
+* **pos:** completar flujo de pedidos del sprint 1 — Slice 2 ([9937f10](https://github.com/jojosenthusiast/La-Mesa-del-Duque/commit/9937f106dee3a6690ce16af9f2b5b4e4593ed580))
+
 ## [0.6.0](https://github.com/jojosenthusiast/La-Mesa-del-Duque/compare/v0.5.1...v0.6.0) (2026-05-08)
 
 
