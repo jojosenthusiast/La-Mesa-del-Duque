@@ -15,15 +15,29 @@ internal class PedidosServicio : IPedidosServicio
         _uot = uot;
     }
 
-    public async Task<PedidoDto> CrearPedidoAsync(Guid mesaId, List<DetalleCreacionDto> detalles, CancellationToken cancelacion = default)
+    public async Task<PedidoDto> CrearPedidoAsync(TipoServicio tipoServicio, Guid? mesaId, List<DetalleCreacionDto> detalles, CancellationToken cancelacion = default)
     {
         if (detalles is null || detalles.Count == 0)
             throw new ArgumentException("El pedido debe tener al menos un detalle.", nameof(detalles));
 
-        var mesa = await _uot.Mesas.ObtenerParaActualizarAsync(mesaId, cancelacion)
-            ?? throw new ArgumentException($"No se encontró la mesa con ID {mesaId}.", nameof(mesaId));
+        Mesa? mesa = null;
 
-        var pedido = new Pedido(mesa);
+        if (tipoServicio == TipoServicio.ParaLlevar && mesaId.HasValue)
+            throw new ReglaDominioException("Un pedido para llevar no puede tener mesa asignada.");
+
+        if (mesaId.HasValue)
+        {
+            mesa = await _uot.Mesas.ObtenerParaActualizarAsync(mesaId.Value, cancelacion)
+                ?? throw new ArgumentException($"No se encontró la mesa con ID {mesaId.Value}.", nameof(mesaId));
+
+            if (mesa.Estado != EstadoMesa.Disponible)
+                throw new ReglaDominioException("Solo se puede asignar una mesa disponible.");
+        }
+
+        var pedido = new Pedido(tipoServicio, mesa);
+
+        if (mesa is not null)
+            mesa.CambiarEstado(EstadoMesa.Ocupada);
 
         foreach (var d in detalles)
         {
@@ -114,6 +128,27 @@ internal class PedidosServicio : IPedidosServicio
         await _uot.GuardarCambiosAsync(cancelacion);
     }
 
+    public async Task EliminarPedidoPendienteAsync(Guid pedidoId, Guid usuarioId, string? ipAddress = null, CancellationToken cancelacion = default)
+    {
+        var pedido = await _uot.Pedidos.ObtenerConDetallesParaActualizarAsync(pedidoId, cancelacion)
+            ?? throw new ArgumentException($"No se encontró el pedido con ID {pedidoId}.", nameof(pedidoId));
+
+        if (pedido.Estado != EstadoPedido.Pendiente)
+            throw new ReglaDominioException("Solo se puede eliminar un pedido pendiente que no ha sido pagado.");
+
+        var usuario = await _uot.Usuarios.ObtenerPorIdAsync(usuarioId, cancelacion)
+            ?? throw new ArgumentException($"No se encontró el usuario con ID {usuarioId}.", nameof(usuarioId));
+
+        if (pedido.Mesa is not null)
+            pedido.Mesa.CambiarEstado(EstadoMesa.Disponible);
+
+        var auditoria = new Auditoria("pedido", pedido.Id, "DELETE", usuario, pedido.Estado.ToString(), null, ipAddress);
+
+        await _uot.Auditorias.AgregarAsync(auditoria, cancelacion);
+        _uot.Pedidos.Eliminar(pedido);
+        await _uot.GuardarCambiosAsync(cancelacion);
+    }
+
     public async Task<PedidoDto?> ObtenerPedidoAsync(Guid pedidoId, CancellationToken cancelacion = default)
     {
         var pedido = await _uot.Pedidos.ObtenerConDetallesAsync(pedidoId, cancelacion);
@@ -134,8 +169,9 @@ internal class PedidosServicio : IPedidosServicio
         return new PedidoDto
         {
             Id = pedido.Id,
-            MesaId = pedido.Mesa.Id,
-            MesaNumero = pedido.Mesa.Numero,
+            TipoServicio = pedido.TipoServicio.ToString(),
+            MesaId = pedido.Mesa?.Id,
+            MesaNumero = pedido.Mesa?.Numero,
             Estado = pedido.Estado.ToString(),
             Total = pedido.Total,
             Detalles = pedido.Detalles.Select(d => new DetallePedidoDto

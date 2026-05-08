@@ -1,6 +1,7 @@
 using LaMesaDelDuque.Aplicacion.Dtos;
 using LaMesaDelDuque.Aplicacion.Servicios;
 using LaMesaDelDuque.Dominio.Entidades;
+using LaMesaDelDuque.Dominio.Enumeraciones;
 using LaMesaDelDuque.Dominio.Excepciones;
 using LaMesaDelDuque.Dominio.Repositorios;
 using LaMesaDelDuque.Infraestructura.Persistencia;
@@ -33,7 +34,9 @@ public class CatalogoProductosServicioTests : IDisposable
             new CategoriaProductoRepositorio(_contexto),
             new ProductoRepositorio(_contexto),
             new MesaRepositorio(_contexto),
-            new PedidoRepositorio(_contexto));
+            new PedidoRepositorio(_contexto),
+            new UsuarioRepositorio(_contexto),
+            new AuditoriaRepositorio(_contexto));
 
         _servicio = new CatalogoProductosServicio(_uot);
     }
@@ -193,7 +196,7 @@ public class CatalogoProductosServicioTests : IDisposable
         await _uot.Mesas.AgregarAsync(mesa);
         // Re-obtener producto con tracking para EF
         var productoTracked = await _uot.Productos.ObtenerConTrackingAsync(producto.Id);
-        var pedido = new Pedido(mesa);
+        var pedido = new Pedido(TipoServicio.ComerAqui, mesa);
         pedido.AgregarDetalle(new DetallePedido(productoTracked!, 1, 3.00m));
         await _uot.Pedidos.AgregarAsync(pedido);
         await _uot.GuardarCambiosAsync();

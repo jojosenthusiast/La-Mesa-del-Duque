@@ -8,22 +8,23 @@ public class Pedido
     private readonly List<DetallePedido> _detalles = [];
 
     public Guid Id { get; private set; }
-    public Mesa Mesa { get; private set; }
+    public TipoServicio TipoServicio { get; private set; }
+    public Mesa? Mesa { get; private set; }
     public EstadoPedido Estado { get; private set; }
     public IReadOnlyList<DetallePedido> Detalles => _detalles.AsReadOnly();
     public decimal Total => _detalles.Sum(d => d.Subtotal);
 
     private Pedido()
     {
-        Mesa = null!;
     }
 
-    public Pedido(Mesa mesa)
+    public Pedido(TipoServicio tipoServicio, Mesa? mesa = null)
     {
-        if (mesa is null)
-            throw new ReglaDominioException("El pedido debe estar asociado a una mesa.");
+        if (tipoServicio == TipoServicio.ParaLlevar && mesa is not null)
+            throw new ReglaDominioException("Un pedido para llevar no puede tener mesa asignada.");
 
         Id = Guid.NewGuid();
+        TipoServicio = tipoServicio;
         Mesa = mesa;
         Estado = EstadoPedido.Pendiente;
     }

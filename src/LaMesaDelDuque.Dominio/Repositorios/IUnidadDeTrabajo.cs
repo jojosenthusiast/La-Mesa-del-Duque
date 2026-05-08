@@ -6,6 +6,8 @@ public interface IUnidadDeTrabajo
     IProductoRepositorio Productos { get; }
     IMesaRepositorio Mesas { get; }
     IPedidoRepositorio Pedidos { get; }
+    IUsuarioRepositorio Usuarios { get; }
+    IAuditoriaRepositorio Auditorias { get; }
 
     Task<int> GuardarCambiosAsync(CancellationToken cancelacion = default);
 }

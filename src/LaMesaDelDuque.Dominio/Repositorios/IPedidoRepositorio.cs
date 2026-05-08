@@ -9,5 +9,6 @@ public interface IPedidoRepositorio
     Task<Pedido?> ObtenerConDetallesParaActualizarAsync(Guid id, CancellationToken cancelacion = default);
     Task<List<Pedido>> ObtenerTodosAsync(CancellationToken cancelacion = default);
     Task AgregarAsync(Pedido pedido, CancellationToken cancelacion = default);
+    void Eliminar(Pedido pedido);
     Task<List<Pedido>> ObtenerPorMesaAsync(Guid mesaId, CancellationToken cancelacion = default);
 }

@@ -33,7 +33,9 @@ public class MesasServicioTests : IDisposable
             new CategoriaProductoRepositorio(_contexto),
             new ProductoRepositorio(_contexto),
             new MesaRepositorio(_contexto),
-            new PedidoRepositorio(_contexto));
+            new PedidoRepositorio(_contexto),
+            new UsuarioRepositorio(_contexto),
+            new AuditoriaRepositorio(_contexto));
 
         _servicio = new MesasServicio(_uot);
     }
@@ -167,7 +169,7 @@ public class MesasServicioTests : IDisposable
         await _uot.Productos.AgregarAsync(producto);
         await _uot.GuardarCambiosAsync();
 
-        var pedido = new Pedido(mesaTracked!);
+        var pedido = new Pedido(TipoServicio.ComerAqui, mesaTracked!);
         pedido.AgregarDetalle(new DetallePedido(producto, 1, 3.00m));
         await _uot.Pedidos.AgregarAsync(pedido);
         await _uot.GuardarCambiosAsync();
