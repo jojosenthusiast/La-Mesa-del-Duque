@@ -56,12 +56,21 @@ internal class PedidosServicio : IPedidosServicio
         return MapToDto(pedido);
     }
 
-    public async Task CerrarPedidoAsync(Guid pedidoId, CancellationToken cancelacion = default)
+    public async Task MarcarEnPreparacionAsync(Guid pedidoId, CancellationToken cancelacion = default)
     {
         var pedido = await _uot.Pedidos.ObtenerConDetallesParaActualizarAsync(pedidoId, cancelacion)
             ?? throw new ArgumentException($"No se encontró el pedido con ID {pedidoId}.", nameof(pedidoId));
 
-        pedido.Cerrar();
+        pedido.MarcarEnPreparacion();
+        await _uot.GuardarCambiosAsync(cancelacion);
+    }
+
+    public async Task PagarPedidoAsync(Guid pedidoId, CancellationToken cancelacion = default)
+    {
+        var pedido = await _uot.Pedidos.ObtenerConDetallesParaActualizarAsync(pedidoId, cancelacion)
+            ?? throw new ArgumentException($"No se encontró el pedido con ID {pedidoId}.", nameof(pedidoId));
+
+        pedido.MarcarComoPagado();
         await _uot.GuardarCambiosAsync(cancelacion);
     }
 
@@ -81,8 +90,11 @@ internal class PedidosServicio : IPedidosServicio
         var pedido = await _uot.Pedidos.ObtenerConDetallesParaActualizarAsync(pedidoId, cancelacion)
             ?? throw new ArgumentException($"No se encontró el pedido con ID {pedidoId}.", nameof(pedidoId));
 
-        if (pedido.Estado != EstadoPedido.Abierto)
-            throw new ReglaDominioException("Solo se pueden modificar los detalles de pedidos abiertos.");
+        if (pedido.Estado == EstadoPedido.Pagado)
+            throw new ReglaDominioException("No se pueden modificar los detalles de un pedido pagado.");
+
+        if (pedido.Estado == EstadoPedido.Cancelado)
+            throw new ReglaDominioException("No se pueden modificar los detalles de un pedido cancelado.");
 
         var detalle = pedido.Detalles.FirstOrDefault(d => d.Id == detalleId)
             ?? throw new ReglaDominioException("El detalle especificado no pertenece a este pedido.");
@@ -112,7 +124,7 @@ internal class PedidosServicio : IPedidosServicio
     {
         var pedidos = await _uot.Pedidos.ObtenerTodosAsync(cancelacion);
         return pedidos
-            .Where(p => p.Estado == EstadoPedido.Abierto)
+            .Where(p => p.Estado == EstadoPedido.Pendiente || p.Estado == EstadoPedido.EnPreparacion)
             .Select(MapToDto)
             .ToList();
     }

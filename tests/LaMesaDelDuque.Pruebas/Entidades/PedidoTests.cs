@@ -15,13 +15,22 @@ public class PedidoTests
         _producto = new Producto("Café Americano", 3.50m, _categoria);
     }
 
+    private Pedido CrearPedidoConDetalle()
+    {
+        var pedido = new Pedido(_mesa);
+        pedido.AgregarDetalle(new DetallePedido(_producto, 1, 3.50m));
+        return pedido;
+    }
+
+    // --- Creación ---
+
     [Fact]
     public void CrearPedido_CuandoMesaEsValida_DebeCrearInstancia()
     {
         var pedido = new Pedido(_mesa);
 
         Assert.Equal(_mesa, pedido.Mesa);
-        Assert.Equal(EstadoPedido.Abierto, pedido.Estado);
+        Assert.Equal(EstadoPedido.Pendiente, pedido.Estado);
         Assert.Empty(pedido.Detalles);
         Assert.Equal(0m, pedido.Total);
     }
@@ -35,11 +44,11 @@ public class PedidoTests
     }
 
     [Fact]
-    public void CrearPedido_DebeIniciarComoAbierto()
+    public void CrearPedido_DebeIniciarComoPendiente()
     {
         var pedido = new Pedido(_mesa);
 
-        Assert.Equal(EstadoPedido.Abierto, pedido.Estado);
+        Assert.Equal(EstadoPedido.Pendiente, pedido.Estado);
     }
 
     [Fact]
@@ -49,6 +58,8 @@ public class PedidoTests
 
         Assert.Empty(pedido.Detalles);
     }
+
+    // --- AgregarDetalle ---
 
     [Fact]
     public void AgregarDetalle_CuandoDetalleEsValido_DebeAgregarlo()
@@ -73,6 +84,44 @@ public class PedidoTests
     }
 
     [Fact]
+    public void AgregarDetalle_EnPreparacion_DebePermitirAgregar()
+    {
+        var pedido = CrearPedidoConDetalle();
+        pedido.MarcarEnPreparacion();
+
+        var otroDetalle = new DetallePedido(_producto, 1, 5.00m);
+        pedido.AgregarDetalle(otroDetalle);
+
+        Assert.Equal(2, pedido.Detalles.Count);
+    }
+
+    [Fact]
+    public void AgregarDetalle_CuandoPedidoEstaPagado_DebeLanzarExcepcion()
+    {
+        var pedido = CrearPedidoConDetalle();
+        pedido.MarcarComoPagado();
+
+        var detalle = new DetallePedido(_producto, 1, 5m);
+        var ex = Assert.Throws<ReglaDominioException>(() => pedido.AgregarDetalle(detalle));
+
+        Assert.Contains("pagado", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void AgregarDetalle_CuandoPedidoEstaCancelado_DebeLanzarExcepcion()
+    {
+        var pedido = new Pedido(_mesa);
+        pedido.Cancelar();
+
+        var detalle = new DetallePedido(_producto, 1, 5m);
+        var ex = Assert.Throws<ReglaDominioException>(() => pedido.AgregarDetalle(detalle));
+
+        Assert.Contains("cancelado", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    // --- Total ---
+
+    [Fact]
     public void Total_DebeSerSumaDeSubtotales()
     {
         var pedido = new Pedido(_mesa);
@@ -94,54 +143,109 @@ public class PedidoTests
         Assert.Equal(26.50m, pedido.Total);
     }
 
+    // --- MarcarEnPreparacion ---
+
     [Fact]
-    public void Cerrar_CuandoTieneDetalles_DebeCambiarEstado()
+    public void MarcarEnPreparacion_DesdePendiente_DebeCambiarEstado()
     {
-        var pedido = new Pedido(_mesa);
-        pedido.AgregarDetalle(new DetallePedido(_producto, 1, 10m));
+        var pedido = CrearPedidoConDetalle();
 
-        pedido.Cerrar();
+        pedido.MarcarEnPreparacion();
 
-        Assert.Equal(EstadoPedido.Cerrado, pedido.Estado);
+        Assert.Equal(EstadoPedido.EnPreparacion, pedido.Estado);
     }
 
     [Fact]
-    public void Cerrar_CuandoNoTieneDetalles_DebeLanzarExcepcion()
+    public void MarcarEnPreparacion_SinDetalles_DebeLanzarExcepcion()
     {
         var pedido = new Pedido(_mesa);
 
-        var ex = Assert.Throws<ReglaDominioException>(() => pedido.Cerrar());
+        var ex = Assert.Throws<ReglaDominioException>(() => pedido.MarcarEnPreparacion());
 
         Assert.Contains("detalle", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
-    public void Cerrar_CuandoYaEstaCerrado_DebeLanzarExcepcion()
+    public void MarcarEnPreparacion_DesdeEnPreparacion_DebeLanzarExcepcion()
     {
-        var pedido = new Pedido(_mesa);
-        pedido.AgregarDetalle(new DetallePedido(_producto, 1, 10m));
-        pedido.Cerrar();
+        var pedido = CrearPedidoConDetalle();
+        pedido.MarcarEnPreparacion();
 
-        var ex = Assert.Throws<ReglaDominioException>(() => pedido.Cerrar());
+        var ex = Assert.Throws<ReglaDominioException>(() => pedido.MarcarEnPreparacion());
 
-        Assert.Contains("cerrado", ex.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("pendiente", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
-    public void AgregarDetalle_CuandoPedidoEstaCerrado_DebeLanzarExcepcion()
+    public void MarcarEnPreparacion_DesdePagado_DebeLanzarExcepcion()
     {
-        var pedido = new Pedido(_mesa);
-        pedido.AgregarDetalle(new DetallePedido(_producto, 1, 10m));
-        pedido.Cerrar();
+        var pedido = CrearPedidoConDetalle();
+        pedido.MarcarComoPagado();
 
-        var detalle = new DetallePedido(_producto, 1, 5m);
-        var ex = Assert.Throws<ReglaDominioException>(() => pedido.AgregarDetalle(detalle));
+        var ex = Assert.Throws<ReglaDominioException>(() => pedido.MarcarEnPreparacion());
 
-        Assert.Contains("cerrado", ex.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("pendiente", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    // --- MarcarComoPagado ---
+
+    [Fact]
+    public void MarcarComoPagado_DesdePendiente_DebeCambiarEstado()
+    {
+        var pedido = CrearPedidoConDetalle();
+
+        pedido.MarcarComoPagado();
+
+        Assert.Equal(EstadoPedido.Pagado, pedido.Estado);
     }
 
     [Fact]
-    public void Cancelar_CuandoPedidoAbierto_DebeCambiarEstadoACancelado()
+    public void MarcarComoPagado_DesdeEnPreparacion_DebeCambiarEstado()
+    {
+        var pedido = CrearPedidoConDetalle();
+        pedido.MarcarEnPreparacion();
+
+        pedido.MarcarComoPagado();
+
+        Assert.Equal(EstadoPedido.Pagado, pedido.Estado);
+    }
+
+    [Fact]
+    public void MarcarComoPagado_SinDetalles_DebeLanzarExcepcion()
+    {
+        var pedido = new Pedido(_mesa);
+
+        var ex = Assert.Throws<ReglaDominioException>(() => pedido.MarcarComoPagado());
+
+        Assert.Contains("detalle", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void MarcarComoPagado_CuandoYaEstaPagado_DebeLanzarExcepcion()
+    {
+        var pedido = CrearPedidoConDetalle();
+        pedido.MarcarComoPagado();
+
+        var ex = Assert.Throws<ReglaDominioException>(() => pedido.MarcarComoPagado());
+
+        Assert.Contains("pagado", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void MarcarComoPagado_DesdeCancelado_DebeLanzarExcepcion()
+    {
+        var pedido = new Pedido(_mesa);
+        pedido.Cancelar();
+
+        var ex = Assert.Throws<ReglaDominioException>(() => pedido.MarcarComoPagado());
+
+        Assert.Contains("cancelado", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    // --- Cancelar ---
+
+    [Fact]
+    public void Cancelar_CuandoPedidoPendiente_DebeCambiarEstadoACancelado()
     {
         var pedido = new Pedido(_mesa);
 
@@ -151,15 +255,25 @@ public class PedidoTests
     }
 
     [Fact]
-    public void Cancelar_CuandoPedidoCerrado_DebeLanzarExcepcion()
+    public void Cancelar_CuandoPedidoEnPreparacion_DebeCambiarEstadoACancelado()
     {
-        var pedido = new Pedido(_mesa);
-        pedido.AgregarDetalle(new DetallePedido(_producto, 1, 10m));
-        pedido.Cerrar();
+        var pedido = CrearPedidoConDetalle();
+        pedido.MarcarEnPreparacion();
+
+        pedido.Cancelar();
+
+        Assert.Equal(EstadoPedido.Cancelado, pedido.Estado);
+    }
+
+    [Fact]
+    public void Cancelar_CuandoPedidoPagado_DebeLanzarExcepcion()
+    {
+        var pedido = CrearPedidoConDetalle();
+        pedido.MarcarComoPagado();
 
         var ex = Assert.Throws<ReglaDominioException>(() => pedido.Cancelar());
 
-        Assert.Contains("cerrado", ex.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("pagado", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -172,6 +286,8 @@ public class PedidoTests
 
         Assert.Contains("cancelado", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
+
+    // --- EliminarDetalle ---
 
     [Fact]
     public void EliminarDetalle_CuandoHayMultiplesDetalles_DebeEliminarYRecalcularTotal()
@@ -190,6 +306,21 @@ public class PedidoTests
     }
 
     [Fact]
+    public void EliminarDetalle_EnPreparacion_DebePermitirEliminar()
+    {
+        var pedido = new Pedido(_mesa);
+        var detalle1 = new DetallePedido(_producto, 2, 3.50m);
+        var detalle2 = new DetallePedido(_producto, 1, 5.00m);
+        pedido.AgregarDetalle(detalle1);
+        pedido.AgregarDetalle(detalle2);
+        pedido.MarcarEnPreparacion();
+
+        pedido.EliminarDetalle(detalle1.Id);
+
+        Assert.Single(pedido.Detalles);
+    }
+
+    [Fact]
     public void EliminarDetalle_CuandoEsUltimoDetalle_DebeLanzarExcepcion()
     {
         var pedido = new Pedido(_mesa);
@@ -203,18 +334,18 @@ public class PedidoTests
     }
 
     [Fact]
-    public void EliminarDetalle_CuandoPedidoEstaCerrado_DebeLanzarExcepcion()
+    public void EliminarDetalle_CuandoPedidoEstaPagado_DebeLanzarExcepcion()
     {
         var pedido = new Pedido(_mesa);
         var detalle1 = new DetallePedido(_producto, 2, 3.50m);
         var detalle2 = new DetallePedido(_producto, 1, 5.00m);
         pedido.AgregarDetalle(detalle1);
         pedido.AgregarDetalle(detalle2);
-        pedido.Cerrar();
+        pedido.MarcarComoPagado();
 
         var ex = Assert.Throws<ReglaDominioException>(() => pedido.EliminarDetalle(detalle1.Id));
 
-        Assert.Contains("cerrado", ex.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("pagado", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

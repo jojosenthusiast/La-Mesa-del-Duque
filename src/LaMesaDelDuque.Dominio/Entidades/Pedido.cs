@@ -25,29 +25,32 @@ public class Pedido
 
         Id = Guid.NewGuid();
         Mesa = mesa;
-        Estado = EstadoPedido.Abierto;
+        Estado = EstadoPedido.Pendiente;
     }
 
-    public void AgregarDetalle(DetallePedido detalle)
+    public void MarcarEnPreparacion()
     {
-        if (detalle is null)
-            throw new ReglaDominioException("El detalle no puede ser nulo.");
-
-        if (Estado == EstadoPedido.Cerrado)
-            throw new ReglaDominioException("No se pueden agregar detalles a un pedido cerrado.");
-
-        _detalles.Add(detalle);
-    }
-
-    public void Cerrar()
-    {
-        if (Estado == EstadoPedido.Cerrado)
-            throw new ReglaDominioException("El pedido ya está cerrado.");
+        if (Estado != EstadoPedido.Pendiente)
+            throw new ReglaDominioException("Solo se puede marcar en preparación un pedido pendiente.");
 
         if (_detalles.Count == 0)
-            throw new ReglaDominioException("No se puede cerrar un pedido sin detalles.");
+            throw new ReglaDominioException("No se puede marcar en preparación un pedido sin detalles.");
 
-        Estado = EstadoPedido.Cerrado;
+        Estado = EstadoPedido.EnPreparacion;
+    }
+
+    public void MarcarComoPagado()
+    {
+        if (Estado == EstadoPedido.Pagado)
+            throw new ReglaDominioException("El pedido ya está pagado.");
+
+        if (Estado == EstadoPedido.Cancelado)
+            throw new ReglaDominioException("No se puede pagar un pedido cancelado.");
+
+        if (_detalles.Count == 0)
+            throw new ReglaDominioException("No se puede pagar un pedido sin detalles.");
+
+        Estado = EstadoPedido.Pagado;
     }
 
     public void Cancelar()
@@ -55,16 +58,30 @@ public class Pedido
         if (Estado == EstadoPedido.Cancelado)
             throw new ReglaDominioException("El pedido ya está cancelado.");
 
-        if (Estado == EstadoPedido.Cerrado)
-            throw new ReglaDominioException("No se puede cancelar un pedido cerrado.");
+        if (Estado == EstadoPedido.Pagado)
+            throw new ReglaDominioException("No se puede cancelar un pedido pagado.");
 
         Estado = EstadoPedido.Cancelado;
     }
 
+    public void AgregarDetalle(DetallePedido detalle)
+    {
+        if (detalle is null)
+            throw new ReglaDominioException("El detalle no puede ser nulo.");
+
+        if (Estado == EstadoPedido.Pagado)
+            throw new ReglaDominioException("No se pueden agregar detalles a un pedido pagado.");
+
+        if (Estado == EstadoPedido.Cancelado)
+            throw new ReglaDominioException("No se pueden agregar detalles a un pedido cancelado.");
+
+        _detalles.Add(detalle);
+    }
+
     public void EliminarDetalle(Guid detalleId)
     {
-        if (Estado == EstadoPedido.Cerrado)
-            throw new ReglaDominioException("No se pueden modificar los detalles de un pedido cerrado.");
+        if (Estado == EstadoPedido.Pagado)
+            throw new ReglaDominioException("No se pueden modificar los detalles de un pedido pagado.");
 
         if (Estado == EstadoPedido.Cancelado)
             throw new ReglaDominioException("No se pueden modificar los detalles de un pedido cancelado.");

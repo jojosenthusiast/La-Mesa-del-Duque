@@ -55,7 +55,7 @@ internal class ProductoRepositorio : IProductoRepositorio
     public async Task<bool> ExisteEnPedidosActivosAsync(Guid productoId, CancellationToken cancelacion = default)
     {
         return await _contexto.Set<Pedido>()
-            .Where(p => p.Estado == EstadoPedido.Abierto)
+            .Where(p => p.Estado == EstadoPedido.Pendiente || p.Estado == EstadoPedido.EnPreparacion)
             .AnyAsync(p => p.Detalles.Any(d => d.Producto.Id == productoId), cancelacion);
     }
 }

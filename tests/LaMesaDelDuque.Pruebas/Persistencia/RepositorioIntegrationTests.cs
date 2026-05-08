@@ -195,7 +195,7 @@ public class RepositorioIntegrationTests : IDisposable
         var recuperado = await _uot.Pedidos.ObtenerConDetallesAsync(pedido.Id);
 
         Assert.NotNull(recuperado);
-        Assert.Equal(EstadoPedido.Abierto, recuperado!.Estado);
+        Assert.Equal(EstadoPedido.Pendiente, recuperado!.Estado);
         Assert.NotNull(recuperado.Mesa);
         Assert.Equal(2, recuperado.Mesa.Numero);
         Assert.Single(recuperado.Detalles);
