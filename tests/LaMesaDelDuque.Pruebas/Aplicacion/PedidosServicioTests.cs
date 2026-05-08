@@ -44,11 +44,12 @@ public class PedidosServicioTests : IDisposable
         _conexion.Dispose();
     }
 
+    // --- CrearPedido ---
+
     [Fact]
     [Trait("Category", "Regression")]
     public async Task CrearPedido_ConUnDetalle_DebeCrearYRetornarDtoConTotal()
     {
-        // Arrange: crear mesa y producto
         var mesa = new Mesa(1, 4);
         await _uot.Mesas.AgregarAsync(mesa);
 
@@ -60,19 +61,17 @@ public class PedidosServicioTests : IDisposable
 
         await _uot.GuardarCambiosAsync();
 
-        // Act
         var detalles = new List<DetalleCreacionDto>
         {
             new() { ProductoId = producto.Id, Cantidad = 2, PrecioUnitario = 3.50m }
         };
         var pedidoDto = await _servicio.CrearPedidoAsync(mesa.Id, detalles);
 
-        // Assert
         Assert.NotNull(pedidoDto);
         Assert.NotEqual(Guid.Empty, pedidoDto.Id);
         Assert.Equal(mesa.Id, pedidoDto.MesaId);
         Assert.Equal(mesa.Numero, pedidoDto.MesaNumero);
-        Assert.Equal("Abierto", pedidoDto.Estado);
+        Assert.Equal("Pendiente", pedidoDto.Estado);
         Assert.Equal(7.00m, pedidoDto.Total);
         Assert.Single(pedidoDto.Detalles);
         Assert.Equal(producto.Id, pedidoDto.Detalles[0].ProductoId);
@@ -85,7 +84,6 @@ public class PedidosServicioTests : IDisposable
     [Fact]
     public async Task CrearPedido_ConVariosDetalles_DebeSumarTotalCorrecto()
     {
-        // Arrange
         var mesa = new Mesa(2, 4);
         await _uot.Mesas.AgregarAsync(mesa);
 
@@ -105,10 +103,8 @@ public class PedidosServicioTests : IDisposable
             new() { ProductoId = p2.Id, Cantidad = 2, PrecioUnitario = 6.50m }
         };
 
-        // Act
         var pedidoDto = await _servicio.CrearPedidoAsync(mesa.Id, detalles);
 
-        // Assert: 8.00 + (6.50 * 2) = 21.00
         Assert.Equal(21.00m, pedidoDto.Total);
         Assert.Equal(2, pedidoDto.Detalles.Count);
     }
@@ -148,10 +144,11 @@ public class PedidosServicioTests : IDisposable
             }));
     }
 
+    // --- ObtenerPedido ---
+
     [Fact]
     public async Task ObtenerPedido_Existente_DebeIncluirDetallesProductoYMesa()
     {
-        // Arrange: crear pedido con detalle
         var mesa = new Mesa(5, 4);
         await _uot.Mesas.AgregarAsync(mesa);
 
@@ -168,10 +165,8 @@ public class PedidosServicioTests : IDisposable
             new() { ProductoId = producto.Id, Cantidad = 3, PrecioUnitario = 7.00m }
         });
 
-        // Act
         var obtenido = await _servicio.ObtenerPedidoAsync(dtoCreado.Id);
 
-        // Assert
         Assert.NotNull(obtenido);
         Assert.Equal(dtoCreado.Id, obtenido!.Id);
         Assert.Equal(mesa.Id, obtenido.MesaId);
@@ -190,14 +185,17 @@ public class PedidosServicioTests : IDisposable
         Assert.Null(resultado);
     }
 
+    // --- ListarPedidosActivos ---
+
     [Fact]
-    public async Task ListarPedidosActivos_DebeIncluirSoloAbiertos()
+    public async Task ListarPedidosActivos_DebeIncluirPendientesYEnPreparacion()
     {
-        // Arrange: crear 2 pedidos abiertos y 1 cerrado
         var mesa1 = new Mesa(10, 4);
         var mesa2 = new Mesa(11, 4);
+        var mesa3 = new Mesa(12, 4);
         await _uot.Mesas.AgregarAsync(mesa1);
         await _uot.Mesas.AgregarAsync(mesa2);
+        await _uot.Mesas.AgregarAsync(mesa3);
 
         var categoria = new CategoriaProducto("Bebidas");
         await _uot.Categorias.AgregarAsync(categoria);
@@ -212,19 +210,18 @@ public class PedidosServicioTests : IDisposable
             new() { ProductoId = producto.Id, Cantidad = 1, PrecioUnitario = 3.00m }
         };
 
-        var abierto1 = await _servicio.CrearPedidoAsync(mesa1.Id, detalles);
-        var abierto2 = await _servicio.CrearPedidoAsync(mesa2.Id, detalles);
+        var pendiente = await _servicio.CrearPedidoAsync(mesa1.Id, detalles);
+        var enPrep = await _servicio.CrearPedidoAsync(mesa2.Id, detalles);
+        var pagado = await _servicio.CrearPedidoAsync(mesa3.Id, detalles);
 
-        // Cerrar el segundo pedido
-        await _servicio.CerrarPedidoAsync(abierto2.Id);
+        await _servicio.MarcarEnPreparacionAsync(enPrep.Id);
+        await _servicio.PagarPedidoAsync(pagado.Id);
 
-        // Act
         var activos = await _servicio.ListarPedidosActivosAsync();
 
-        // Assert
-        Assert.Single(activos);
-        Assert.Equal(abierto1.Id, activos[0].Id);
-        Assert.Equal("Abierto", activos[0].Estado);
+        Assert.Equal(2, activos.Count);
+        Assert.Contains(activos, a => a.Id == pendiente.Id);
+        Assert.Contains(activos, a => a.Id == enPrep.Id);
     }
 
     [Fact]
@@ -236,10 +233,11 @@ public class PedidosServicioTests : IDisposable
         Assert.Empty(activos);
     }
 
+    // --- AgregarDetalle ---
+
     [Fact]
-    public async Task AgregarDetalle_PedidoAbierto_DebeAgregarYRecalcularTotal()
+    public async Task AgregarDetalle_PedidoPendiente_DebeAgregarYRecalcularTotal()
     {
-        // Arrange: crear pedido con 1 detalle
         var mesa = new Mesa(20, 4);
         await _uot.Mesas.AgregarAsync(mesa);
 
@@ -259,12 +257,10 @@ public class PedidosServicioTests : IDisposable
         });
         Assert.Equal(6.00m, pedido.Total);
 
-        // Act: agregar otro detalle
         var actualizado = await _servicio.AgregarDetalleAsync(pedido.Id, te.Id, 1, 2.50m);
 
-        // Assert
         Assert.Equal(2, actualizado.Detalles.Count);
-        Assert.Equal(8.50m, actualizado.Total); // 6.00 + 2.50
+        Assert.Equal(8.50m, actualizado.Total);
         Assert.Contains(actualizado.Detalles, d => d.ProductoNombre == "Té");
     }
 
@@ -276,69 +272,7 @@ public class PedidosServicioTests : IDisposable
     }
 
     [Fact]
-    public async Task CerrarPedido_ConDetalles_DebeCerrarCorrectamente()
-    {
-        // Arrange
-        var mesa = new Mesa(30, 4);
-        await _uot.Mesas.AgregarAsync(mesa);
-
-        var categoria = new CategoriaProducto("Bebidas");
-        await _uot.Categorias.AgregarAsync(categoria);
-
-        var producto = new Producto("Café", 3.00m, categoria);
-        await _uot.Productos.AgregarAsync(producto);
-
-        await _uot.GuardarCambiosAsync();
-
-        var pedido = await _servicio.CrearPedidoAsync(mesa.Id, new List<DetalleCreacionDto>
-        {
-            new() { ProductoId = producto.Id, Cantidad = 1, PrecioUnitario = 3.00m }
-        });
-
-        // Act
-        await _servicio.CerrarPedidoAsync(pedido.Id);
-
-        // Assert: el pedido ahora debe estar cerrado
-        var cerrado = await _servicio.ObtenerPedidoAsync(pedido.Id);
-        Assert.NotNull(cerrado);
-        Assert.Equal("Cerrado", cerrado!.Estado);
-    }
-
-    [Fact]
-    public async Task CerrarPedido_Inexistente_DebeLanzarExcepcion()
-    {
-        await Assert.ThrowsAsync<ArgumentException>(() =>
-            _servicio.CerrarPedidoAsync(Guid.NewGuid()));
-    }
-
-    [Fact]
-    public async Task CerrarPedido_YaCerrado_DebeLanzarExcepcion()
-    {
-        var mesa = new Mesa(31, 4);
-        await _uot.Mesas.AgregarAsync(mesa);
-
-        var categoria = new CategoriaProducto("Bebidas");
-        await _uot.Categorias.AgregarAsync(categoria);
-
-        var producto = new Producto("Café", 3.00m, categoria);
-        await _uot.Productos.AgregarAsync(producto);
-
-        await _uot.GuardarCambiosAsync();
-
-        var pedido = await _servicio.CrearPedidoAsync(mesa.Id, new List<DetalleCreacionDto>
-        {
-            new() { ProductoId = producto.Id, Cantidad = 1, PrecioUnitario = 3.00m }
-        });
-
-        await _servicio.CerrarPedidoAsync(pedido.Id);
-
-        // Segundo cierre debe lanzar excepción del dominio
-        await Assert.ThrowsAsync<ReglaDominioException>(() =>
-            _servicio.CerrarPedidoAsync(pedido.Id));
-    }
-
-    [Fact]
-    public async Task AgregarDetalle_PedidoCerrado_DebeLanzarExcepcion()
+    public async Task AgregarDetalle_PedidoPagado_DebeLanzarExcepcion()
     {
         var mesa = new Mesa(32, 4);
         await _uot.Mesas.AgregarAsync(mesa);
@@ -356,18 +290,141 @@ public class PedidosServicioTests : IDisposable
             new() { ProductoId = cafe.Id, Cantidad = 1, PrecioUnitario = 3.00m }
         });
 
-        await _servicio.CerrarPedidoAsync(pedido.Id);
+        await _servicio.PagarPedidoAsync(pedido.Id);
 
-        // Agregar detalle a pedido cerrado debe lanzar excepción del dominio
         await Assert.ThrowsAsync<ReglaDominioException>(() =>
             _servicio.AgregarDetalleAsync(pedido.Id, cafe.Id, 1, 3.00m));
     }
 
+    // --- MarcarEnPreparacion ---
+
+    [Fact]
+    public async Task MarcarEnPreparacion_PedidoPendiente_DebeCambiarEstado()
+    {
+        var mesa = new Mesa(25, 4);
+        await _uot.Mesas.AgregarAsync(mesa);
+
+        var categoria = new CategoriaProducto("Bebidas");
+        await _uot.Categorias.AgregarAsync(categoria);
+
+        var producto = new Producto("Café", 3.00m, categoria);
+        await _uot.Productos.AgregarAsync(producto);
+
+        await _uot.GuardarCambiosAsync();
+
+        var pedido = await _servicio.CrearPedidoAsync(mesa.Id, new List<DetalleCreacionDto>
+        {
+            new() { ProductoId = producto.Id, Cantidad = 1, PrecioUnitario = 3.00m }
+        });
+
+        await _servicio.MarcarEnPreparacionAsync(pedido.Id);
+
+        var recuperado = await _servicio.ObtenerPedidoAsync(pedido.Id);
+        Assert.NotNull(recuperado);
+        Assert.Equal("EnPreparacion", recuperado!.Estado);
+    }
+
+    [Fact]
+    public async Task MarcarEnPreparacion_Inexistente_DebeLanzarExcepcion()
+    {
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            _servicio.MarcarEnPreparacionAsync(Guid.NewGuid()));
+    }
+
+    // --- PagarPedido ---
+
     [Fact]
     [Trait("Category", "Regression")]
-    public async Task CancelarPedido_Abierto_DebeCancelarYPersistir()
+    public async Task PagarPedido_DesdePendiente_DebePagarCorrectamente()
     {
-        // Arrange
+        var mesa = new Mesa(30, 4);
+        await _uot.Mesas.AgregarAsync(mesa);
+
+        var categoria = new CategoriaProducto("Bebidas");
+        await _uot.Categorias.AgregarAsync(categoria);
+
+        var producto = new Producto("Café", 3.00m, categoria);
+        await _uot.Productos.AgregarAsync(producto);
+
+        await _uot.GuardarCambiosAsync();
+
+        var pedido = await _servicio.CrearPedidoAsync(mesa.Id, new List<DetalleCreacionDto>
+        {
+            new() { ProductoId = producto.Id, Cantidad = 1, PrecioUnitario = 3.00m }
+        });
+
+        await _servicio.PagarPedidoAsync(pedido.Id);
+
+        var pagado = await _servicio.ObtenerPedidoAsync(pedido.Id);
+        Assert.NotNull(pagado);
+        Assert.Equal("Pagado", pagado!.Estado);
+    }
+
+    [Fact]
+    public async Task PagarPedido_DesdeEnPreparacion_DebePagarCorrectamente()
+    {
+        var mesa = new Mesa(31, 4);
+        await _uot.Mesas.AgregarAsync(mesa);
+
+        var categoria = new CategoriaProducto("Bebidas");
+        await _uot.Categorias.AgregarAsync(categoria);
+
+        var producto = new Producto("Café", 3.00m, categoria);
+        await _uot.Productos.AgregarAsync(producto);
+
+        await _uot.GuardarCambiosAsync();
+
+        var pedido = await _servicio.CrearPedidoAsync(mesa.Id, new List<DetalleCreacionDto>
+        {
+            new() { ProductoId = producto.Id, Cantidad = 1, PrecioUnitario = 3.00m }
+        });
+
+        await _servicio.MarcarEnPreparacionAsync(pedido.Id);
+        await _servicio.PagarPedidoAsync(pedido.Id);
+
+        var pagado = await _servicio.ObtenerPedidoAsync(pedido.Id);
+        Assert.NotNull(pagado);
+        Assert.Equal("Pagado", pagado!.Estado);
+    }
+
+    [Fact]
+    public async Task PagarPedido_Inexistente_DebeLanzarExcepcion()
+    {
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            _servicio.PagarPedidoAsync(Guid.NewGuid()));
+    }
+
+    [Fact]
+    public async Task PagarPedido_YaPagado_DebeLanzarExcepcion()
+    {
+        var mesa = new Mesa(33, 4);
+        await _uot.Mesas.AgregarAsync(mesa);
+
+        var categoria = new CategoriaProducto("Bebidas");
+        await _uot.Categorias.AgregarAsync(categoria);
+
+        var producto = new Producto("Café", 3.00m, categoria);
+        await _uot.Productos.AgregarAsync(producto);
+
+        await _uot.GuardarCambiosAsync();
+
+        var pedido = await _servicio.CrearPedidoAsync(mesa.Id, new List<DetalleCreacionDto>
+        {
+            new() { ProductoId = producto.Id, Cantidad = 1, PrecioUnitario = 3.00m }
+        });
+
+        await _servicio.PagarPedidoAsync(pedido.Id);
+
+        await Assert.ThrowsAsync<ReglaDominioException>(() =>
+            _servicio.PagarPedidoAsync(pedido.Id));
+    }
+
+    // --- CancelarPedido ---
+
+    [Fact]
+    [Trait("Category", "Regression")]
+    public async Task CancelarPedido_Pendiente_DebeCancelarYPersistir()
+    {
         var mesa = new Mesa(40, 4);
         await _uot.Mesas.AgregarAsync(mesa);
 
@@ -384,10 +441,8 @@ public class PedidosServicioTests : IDisposable
             new() { ProductoId = producto.Id, Cantidad = 1, PrecioUnitario = 3.00m }
         });
 
-        // Act
         await _servicio.CancelarPedidoAsync(pedido.Id);
 
-        // Assert: el pedido ahora debe estar cancelado
         var cancelado = await _servicio.ObtenerPedidoAsync(pedido.Id);
         Assert.NotNull(cancelado);
         Assert.Equal("Cancelado", cancelado!.Estado);
@@ -401,7 +456,7 @@ public class PedidosServicioTests : IDisposable
     }
 
     [Fact]
-    public async Task CancelarPedido_Cerrado_DebeLanzarExcepcion()
+    public async Task CancelarPedido_Pagado_DebeLanzarExcepcion()
     {
         var mesa = new Mesa(41, 4);
         await _uot.Mesas.AgregarAsync(mesa);
@@ -419,9 +474,8 @@ public class PedidosServicioTests : IDisposable
             new() { ProductoId = producto.Id, Cantidad = 1, PrecioUnitario = 3.00m }
         });
 
-        await _servicio.CerrarPedidoAsync(pedido.Id);
+        await _servicio.PagarPedidoAsync(pedido.Id);
 
-        // Cancelar pedido cerrado debe lanzar excepción del dominio
         await Assert.ThrowsAsync<ReglaDominioException>(() =>
             _servicio.CancelarPedidoAsync(pedido.Id));
     }
@@ -429,7 +483,6 @@ public class PedidosServicioTests : IDisposable
     [Fact]
     public async Task CancelarPedido_Cancelado_NoApareceEnActivos()
     {
-        // Arrange: crear 2 pedidos, cancelar uno
         var mesa1 = new Mesa(42, 4);
         var mesa2 = new Mesa(43, 4);
         await _uot.Mesas.AgregarAsync(mesa1);
@@ -454,22 +507,20 @@ public class PedidosServicioTests : IDisposable
             new() { ProductoId = producto.Id, Cantidad = 1, PrecioUnitario = 3.00m }
         });
 
-        // Cancelar el primer pedido
         await _servicio.CancelarPedidoAsync(pedido1.Id);
 
-        // Act
         var activos = await _servicio.ListarPedidosActivosAsync();
 
-        // Assert: solo debe aparecer el pedido abierto (no cancelado)
         Assert.Single(activos);
         Assert.Equal(pedido2.Id, activos[0].Id);
-        Assert.Equal("Abierto", activos[0].Estado);
+        Assert.Equal("Pendiente", activos[0].Estado);
     }
+
+    // --- EliminarDetalle ---
 
     [Fact]
     public async Task EliminarDetalle_ConMultiplesDetalles_DebeEliminarYRecalcularTotal()
     {
-        // Arrange: crear pedido con 2 detalles
         var mesa = new Mesa(50, 4);
         await _uot.Mesas.AgregarAsync(mesa);
 
@@ -491,11 +542,9 @@ public class PedidosServicioTests : IDisposable
         Assert.Equal(8.50m, pedido.Total);
         Assert.Equal(2, pedido.Detalles.Count);
 
-        // Act: eliminar el primer detalle
         var detalleAEliminar = pedido.Detalles.First(d => d.ProductoNombre == "Café");
         var actualizado = await _servicio.EliminarDetalleAsync(pedido.Id, detalleAEliminar.Id);
 
-        // Assert
         Assert.Single(actualizado.Detalles);
         Assert.Equal(2.50m, actualizado.Total);
         Assert.Equal("Té", actualizado.Detalles[0].ProductoNombre);
@@ -511,7 +560,6 @@ public class PedidosServicioTests : IDisposable
     [Fact]
     public async Task EliminarDetalle_DetalleInexistente_DebeLanzarExcepcion()
     {
-        // Arrange: crear pedido con un detalle
         var mesa = new Mesa(51, 4);
         await _uot.Mesas.AgregarAsync(mesa);
 
@@ -530,7 +578,6 @@ public class PedidosServicioTests : IDisposable
             new() { ProductoId = cafe.Id, Cantidad = 1, PrecioUnitario = 3.00m }
         });
 
-        // Intentar eliminar un detalle que no pertenece al pedido (ID inventado)
         await Assert.ThrowsAsync<ReglaDominioException>(() =>
             _servicio.EliminarDetalleAsync(pedido.Id, Guid.NewGuid()));
     }
@@ -561,7 +608,7 @@ public class PedidosServicioTests : IDisposable
     }
 
     [Fact]
-    public async Task EliminarDetalle_PedidoCerrado_DebeLanzarExcepcion()
+    public async Task EliminarDetalle_PedidoPagado_DebeLanzarExcepcion()
     {
         var mesa = new Mesa(53, 4);
         await _uot.Mesas.AgregarAsync(mesa);
@@ -582,16 +629,18 @@ public class PedidosServicioTests : IDisposable
             new() { ProductoId = te.Id, Cantidad = 1, PrecioUnitario = 2.50m }
         });
 
-        await _servicio.CerrarPedidoAsync(pedido.Id);
+        await _servicio.PagarPedidoAsync(pedido.Id);
 
         var detalle = pedido.Detalles[0];
         await Assert.ThrowsAsync<ReglaDominioException>(() =>
             _servicio.EliminarDetalleAsync(pedido.Id, detalle.Id));
     }
 
+    // --- ActualizarCantidadDetalle ---
+
     [Fact]
     [Trait("Category", "Regression")]
-    public async Task ActualizarCantidadDetalle_PedidoAbierto_DebeActualizarYRecalcularTotal()
+    public async Task ActualizarCantidadDetalle_PedidoPendiente_DebeActualizarYRecalcularTotal()
     {
         var mesa = new Mesa(60, 4);
         await _uot.Mesas.AgregarAsync(mesa);
@@ -612,11 +661,38 @@ public class PedidosServicioTests : IDisposable
 
         var detalle = pedido.Detalles[0];
 
-        // Act: cambiar cantidad de 2 a 5
         var actualizado = await _servicio.ActualizarCantidadDetalleAsync(pedido.Id, detalle.Id, 5);
 
         Assert.Equal(5, actualizado.Detalles[0].Cantidad);
         Assert.Equal(15.00m, actualizado.Total);
+    }
+
+    [Fact]
+    public async Task ActualizarCantidadDetalle_PedidoEnPreparacion_DebePermitir()
+    {
+        var mesa = new Mesa(63, 4);
+        await _uot.Mesas.AgregarAsync(mesa);
+
+        var categoria = new CategoriaProducto("Bebidas");
+        await _uot.Categorias.AgregarAsync(categoria);
+
+        var cafe = new Producto("Café", 3.00m, categoria);
+        await _uot.Productos.AgregarAsync(cafe);
+
+        await _uot.GuardarCambiosAsync();
+
+        var pedido = await _servicio.CrearPedidoAsync(mesa.Id, new List<DetalleCreacionDto>
+        {
+            new() { ProductoId = cafe.Id, Cantidad = 2, PrecioUnitario = 3.00m }
+        });
+
+        await _servicio.MarcarEnPreparacionAsync(pedido.Id);
+
+        var detalle = pedido.Detalles[0];
+        var actualizado = await _servicio.ActualizarCantidadDetalleAsync(pedido.Id, detalle.Id, 4);
+
+        Assert.Equal(4, actualizado.Detalles[0].Cantidad);
+        Assert.Equal(12.00m, actualizado.Total);
     }
 
     [Fact]
@@ -628,7 +704,7 @@ public class PedidosServicioTests : IDisposable
 
     [Fact]
     [Trait("Category", "Regression")]
-    public async Task ActualizarCantidadDetalle_PedidoCerrado_DebeLanzarExcepcion()
+    public async Task ActualizarCantidadDetalle_PedidoPagado_DebeLanzarExcepcion()
     {
         var mesa = new Mesa(61, 4);
         await _uot.Mesas.AgregarAsync(mesa);
@@ -646,7 +722,7 @@ public class PedidosServicioTests : IDisposable
             new() { ProductoId = cafe.Id, Cantidad = 2, PrecioUnitario = 3.00m }
         });
 
-        await _servicio.CerrarPedidoAsync(pedido.Id);
+        await _servicio.PagarPedidoAsync(pedido.Id);
 
         var detalle = pedido.Detalles[0];
         await Assert.ThrowsAsync<ReglaDominioException>(() =>

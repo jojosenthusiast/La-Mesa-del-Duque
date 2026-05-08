@@ -69,8 +69,8 @@ internal class MesasServicio : IMesasServicio
             ?? throw new ArgumentException($"No se encontró la mesa con ID {mesaId}.", nameof(mesaId));
 
         var pedidos = await _uot.Pedidos.ObtenerPorMesaAsync(mesaId, cancelacion);
-        if (pedidos.Any(p => p.Estado == EstadoPedido.Abierto))
-            throw new ReglaDominioException("No se puede desactivar la mesa porque tiene pedidos activos o abiertos.");
+        if (pedidos.Any(p => p.Estado == EstadoPedido.Pendiente || p.Estado == EstadoPedido.EnPreparacion))
+            throw new ReglaDominioException("No se puede desactivar la mesa porque tiene pedidos activos.");
 
         mesa.Desactivar();
         await _uot.GuardarCambiosAsync(cancelacion);

@@ -115,7 +115,7 @@ public class PersistenciaIntegrationTests : IDisposable
             .First(p => p.Id == pedido.Id);
 
         Assert.NotNull(recuperado);
-        Assert.Equal(EstadoPedido.Abierto, recuperado.Estado);
+        Assert.Equal(EstadoPedido.Pendiente, recuperado.Estado);
         Assert.NotNull(recuperado.Mesa);
         Assert.Equal(3, recuperado.Mesa.Numero);
         Assert.Single(recuperado.Detalles);
