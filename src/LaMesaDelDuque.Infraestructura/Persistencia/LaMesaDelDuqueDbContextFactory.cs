@@ -1,6 +1,5 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
-using Microsoft.Extensions.Configuration;
 
 namespace LaMesaDelDuque.Infraestructura.Persistencia;
 
@@ -13,29 +12,11 @@ internal class LaMesaDelDuqueDbContextFactory : IDesignTimeDbContextFactory<LaMe
 {
     public LaMesaDelDuqueDbContext CreateDbContext(string[] args)
     {
-        // Resolver la ruta base al proyecto Web desde el directorio de trabajo de la CLI
-        var basePath = Path.GetFullPath(
-            Path.Combine(Directory.GetCurrentDirectory(), "..", "LaMesaDelDuque.Web"));
+        var builder = new DbContextOptionsBuilder<LaMesaDelDuqueDbContext>();
+        var connectionString = Environment.GetEnvironmentVariable("LMD_CONNECTION_STRING")
+            ?? "Host=localhost;Database=la_mesa_del_duque;Username=postgres;Password=postgres";
 
-        var configuracion = new ConfigurationBuilder()
-            .AddJsonFile(Path.Combine(basePath, "appsettings.json"), optional: true)
-            .AddJsonFile(Path.Combine(basePath, "appsettings.Development.json"), optional: true)
-            .AddEnvironmentVariables()
-            .Build();
-
-        var cadenaConexion = configuracion.GetConnectionString("DefaultConnection");
-
-        if (string.IsNullOrWhiteSpace(cadenaConexion))
-        {
-            throw new InvalidOperationException(
-                "No se encontró ConnectionStrings:DefaultConnection para la fábrica de tiempo de diseño. " +
-                "Agréguela en src/LaMesaDelDuque.Web/appsettings.json o establezca la variable de entorno " +
-                "ConnectionStrings__DefaultConnection.");
-        }
-
-        var opciones = new DbContextOptionsBuilder<LaMesaDelDuqueDbContext>();
-        opciones.UseNpgsql(cadenaConexion);
-
-        return new LaMesaDelDuqueDbContext(opciones.Options);
+        builder.UseNpgsql(connectionString);
+        return new LaMesaDelDuqueDbContext(builder.Options);
     }
 }

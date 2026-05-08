@@ -11,7 +11,7 @@ internal class ProductoConfiguracion : IEntityTypeConfiguration<Producto>
         constructor.HasKey(p => p.Id);
 
         constructor.Property(p => p.Nombre)
-            .HasMaxLength(300)
+            .HasMaxLength(150)
             .IsRequired();
 
         constructor.Property(p => p.Precio)
@@ -22,7 +22,24 @@ internal class ProductoConfiguracion : IEntityTypeConfiguration<Producto>
             .IsRequired();
 
         constructor.Property(p => p.Descripcion)
-            .HasMaxLength(1000);
+            .HasColumnType("text");
+
+        constructor.Property(p => p.ImagenUrl)
+            .HasMaxLength(500);
+
+        constructor.Property(p => p.TiempoPreparacionMin)
+            .IsRequired()
+            .HasDefaultValue(5);
+
+        constructor.Property(p => p.CreatedAt)
+            .HasColumnType("timestamp with time zone")
+            .HasDefaultValueSql("NOW()")
+            .IsRequired();
+
+        constructor.Property(p => p.UpdatedAt)
+            .HasColumnType("timestamp with time zone")
+            .HasDefaultValueSql("NOW()")
+            .IsRequired();
 
         // FK sombra hacia CategoriaProducto
         constructor.Property<Guid>("CategoriaId")

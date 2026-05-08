@@ -16,17 +16,15 @@ public static class InyeccionInfraestructura
     public static IServiceCollection AgregarPersistencia(
         this IServiceCollection servicios, IConfiguration configuracion)
     {
-        var cadenaConexion = configuracion.GetConnectionString("DefaultConnection");
+        var connectionString = configuracion.GetConnectionString("DefaultConnection");
 
-        if (string.IsNullOrWhiteSpace(cadenaConexion))
+        if (string.IsNullOrWhiteSpace(connectionString))
         {
-            throw new InvalidOperationException(
-                "No se encontró ConnectionStrings:DefaultConnection en la configuración. " +
-                "Agréguela en appsettings.json o en variables de entorno.");
+            throw new InvalidOperationException("La cadena de conexión 'DefaultConnection' es obligatoria.");
         }
 
         servicios.AddDbContext<LaMesaDelDuqueDbContext>(opciones =>
-            opciones.UseNpgsql(cadenaConexion));
+            opciones.UseNpgsql(connectionString));
 
         // Repositorios
         servicios.AddScoped<CategoriaProductoRepositorio>();

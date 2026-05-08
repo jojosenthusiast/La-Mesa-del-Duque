@@ -10,6 +10,25 @@ public class LaMesaDelDuqueDbContext : DbContext
     {
     }
 
+    public DbSet<Rol> Roles => Set<Rol>();
+    public DbSet<Permiso> Permisos => Set<Permiso>();
+    public DbSet<RolPermiso> RolesPermisos => Set<RolPermiso>();
+    public DbSet<Usuario> Usuarios => Set<Usuario>();
+    public DbSet<PedidoEstadoLog> PedidosEstadosLog => Set<PedidoEstadoLog>();
+    public DbSet<ProductoPrecioHistorial> ProductosPreciosHistorial => Set<ProductoPrecioHistorial>();
+
+    // Nuevas entidades Sprint 1
+    public DbSet<RestauranteConfig> RestauranteConfigs => Set<RestauranteConfig>();
+    public DbSet<Combo> Combos => Set<Combo>();
+    public DbSet<ComboProducto> CombosProductos => Set<ComboProducto>();
+    public DbSet<Promocion> Promociones => Set<Promocion>();
+    public DbSet<PromocionProducto> PromocionesProductos => Set<PromocionProducto>();
+    public DbSet<OrdenCompra> OrdenesCompra => Set<OrdenCompra>();
+    public DbSet<OrdenCompraDetalle> OrdenesCompraDetalle => Set<OrdenCompraDetalle>();
+    public DbSet<CierreDia> CierresDia => Set<CierreDia>();
+    public DbSet<MermaDiaria> MermasDiarias => Set<MermaDiaria>();
+    public DbSet<Auditoria> Auditorias => Set<Auditoria>();
+
     protected override void OnModelCreating(ModelBuilder constructorDeModelos)
     {
         constructorDeModelos.ApplyConfigurationsFromAssembly(typeof(LaMesaDelDuqueDbContext).Assembly);

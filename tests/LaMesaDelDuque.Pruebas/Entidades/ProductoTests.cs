@@ -123,19 +123,50 @@ public class ProductoTests
     }
 
     [Fact]
-    public void ActualizarDatos_CuandoPrecioEsCeroONegativo_DebeLanzarExcepcion()
+    public void ActualizarDatos_CuandoPrecioEsNegativo_DebeLanzarExcepcion()
     {
         var producto = new Producto("Café", 3.50m, _categoria);
 
-        var exCero = Assert.Throws<ReglaDominioException>(
-            () => producto.ActualizarDatos("Café", 0m, _categoria));
-
-        Assert.Contains("precio", exCero.Message, StringComparison.OrdinalIgnoreCase);
-
-        var exNegativo = Assert.Throws<ReglaDominioException>(
+        var ex = Assert.Throws<ReglaDominioException>(
             () => producto.ActualizarDatos("Café", -1m, _categoria));
 
-        Assert.Contains("precio", exNegativo.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("precio", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    // INVARIANTE CANÓNICA (CHECK >= 0): precio cero debe ser consistente entre crear y actualizar
+    [Fact]
+    public void ActualizarDatos_CuandoPrecioEsCero_DebeAceptarlo()
+    {
+        var producto = new Producto("Café", 3.50m, _categoria);
+
+        producto.ActualizarDatos("Café del día", 0m, _categoria);
+
+        Assert.Equal(0m, producto.Precio);
+    }
+
+    // ActualizarImagen debe aplicar el mismo límite que el constructor (500 chars)
+    [Fact]
+    public void ActualizarImagen_CuandoUrlExcedeLongitudCanonica_DebeLanzarExcepcion()
+    {
+        var producto = new Producto("Café", 3.50m, _categoria);
+        var urlMuyLarga = "https://cdn.lmd/" + new string('x', 490);
+
+        var ex = Assert.Throws<ReglaDominioException>(
+            () => producto.ActualizarImagen(urlMuyLarga));
+
+        Assert.Contains("500", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    // ActualizarImagen con URL válida dentro del límite debe funcionar
+    [Fact]
+    public void ActualizarImagen_CuandoUrlEsValida_DebeActualizar()
+    {
+        var producto = new Producto("Café", 3.50m, _categoria);
+        var url = "https://cdn.lmd/menu/cafe.jpg";
+
+        producto.ActualizarImagen(url);
+
+        Assert.Equal(url, producto.ImagenUrl);
     }
 
     [Fact]
@@ -179,5 +210,24 @@ public class ProductoTests
         producto.ActualizarDescripcion(null);
 
         Assert.Null(producto.Descripcion);
+    }
+
+    [Fact]
+    public void CrearProducto_CuandoIncluyeImagenYTiempoPreparacion_DebePersistirValores()
+    {
+        var producto = new Producto("Hamburguesa clásica", 6.99m, _categoria, "https://cdn.lmd/menu/hamburguesa.jpg", 12);
+
+        Assert.Equal("https://cdn.lmd/menu/hamburguesa.jpg", producto.ImagenUrl);
+        Assert.Equal(12, producto.TiempoPreparacionMin);
+    }
+
+    [Fact]
+    public void CrearProducto_CuandoNombreExcedeLongitudCanonica_DebeLanzarExcepcion()
+    {
+        var nombreMuyLargo = new string('P', 151);
+
+        var ex = Assert.Throws<ReglaDominioException>(() => new Producto(nombreMuyLargo, 7.50m, _categoria));
+
+        Assert.Contains("150", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 }
