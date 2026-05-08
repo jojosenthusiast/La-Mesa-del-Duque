@@ -209,4 +209,27 @@ public class PersistenciaIntegrationTests : IDisposable
         Assert.NotNull(recuperada);
         Assert.False(recuperada!.Activo);
     }
+
+    [Fact]
+    public void ProveedorEIngrediente_AgregarYRecuperar_DebePersistirConRelacion()
+    {
+        var proveedor = new Proveedor("Insumos del Norte", "0614-250890-102-3");
+        _contexto.Set<Proveedor>().Add(proveedor);
+        _contexto.SaveChanges();
+
+        var ingrediente = new Ingrediente("Pan hamburguesa", "unidad", 40m, 10m, 0.35m, proveedor);
+        _contexto.Set<Ingrediente>().Add(ingrediente);
+        _contexto.SaveChanges();
+
+        _contexto.ChangeTracker.Clear();
+
+        var recuperado = _contexto.Set<Ingrediente>()
+            .Include(i => i.ProveedorDefault)
+            .First(i => i.Id == ingrediente.Id);
+
+        Assert.Equal("Pan hamburguesa", recuperado.Nombre);
+        Assert.Equal("unidad", recuperado.UnidadMedida);
+        Assert.NotNull(recuperado.ProveedorDefault);
+        Assert.Equal("0614-250890-102-3", recuperado.ProveedorDefault!.Nit);
+    }
 }

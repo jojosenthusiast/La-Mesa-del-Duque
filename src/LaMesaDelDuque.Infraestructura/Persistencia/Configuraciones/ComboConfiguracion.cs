@@ -4,32 +4,38 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace LaMesaDelDuque.Infraestructura.Persistencia.Configuraciones;
 
-internal class CategoriaProductoConfiguracion : IEntityTypeConfiguration<CategoriaProducto>
+internal class ComboConfiguracion : IEntityTypeConfiguration<Combo>
 {
-    public void Configure(EntityTypeBuilder<CategoriaProducto> constructor)
+    public void Configure(EntityTypeBuilder<Combo> constructor)
     {
         constructor.HasKey(c => c.Id);
 
         constructor.Property(c => c.Nombre)
-            .HasMaxLength(100)
+            .HasMaxLength(150)
             .IsRequired();
 
         constructor.Property(c => c.Descripcion)
-            .HasMaxLength(250);
+            .HasColumnType("text");
 
-        constructor.Property(c => c.OrdenDisplay)
-            .HasDefaultValue(0)
+        constructor.Property(c => c.PrecioCombo)
+            .HasPrecision(10, 2)
             .IsRequired();
 
         constructor.Property(c => c.Activo)
+            .IsRequired()
+            .HasDefaultValue(true);
+
+        constructor.Property(c => c.FechaInicio)
             .IsRequired();
+
+        constructor.Property(c => c.FechaFin);
 
         constructor.Property(c => c.CreatedAt)
             .HasColumnType("timestamp with time zone")
             .HasDefaultValueSql("NOW()")
             .IsRequired();
 
-        constructor.HasIndex(c => c.Nombre)
-            .IsUnique();
+        constructor.ToTable(t =>
+            t.HasCheckConstraint("CK_Combo_PrecioCombo", "\"PrecioCombo\" > 0"));
     }
 }

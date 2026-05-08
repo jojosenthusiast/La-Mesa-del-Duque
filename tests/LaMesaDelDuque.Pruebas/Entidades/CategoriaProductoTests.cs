@@ -74,4 +74,23 @@ public class CategoriaProductoTests
 
         Assert.NotEqual(Guid.Empty, categoria.Id);
     }
+
+    [Fact]
+    public void CrearCategoria_CuandoIncluyeDescripcionYOrdenDisplay_DebePersistirValores()
+    {
+        var categoria = new CategoriaProducto("Especiales", "Categoría premium", 3);
+
+        Assert.Equal("Categoría premium", categoria.Descripcion);
+        Assert.Equal(3, categoria.OrdenDisplay);
+    }
+
+    [Fact]
+    public void CrearCategoria_CuandoNombreExcedeLongitudCanonica_DebeLanzarExcepcion()
+    {
+        var nombreMuyLargo = new string('A', 101);
+
+        var ex = Assert.Throws<ReglaDominioException>(() => new CategoriaProducto(nombreMuyLargo));
+
+        Assert.Contains("100", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
 }
