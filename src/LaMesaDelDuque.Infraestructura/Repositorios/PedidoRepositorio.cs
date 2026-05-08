@@ -57,6 +57,11 @@ internal class PedidoRepositorio : IPedidoRepositorio
         await _contexto.Set<Pedido>().AddAsync(pedido, cancelacion);
     }
 
+    public void Eliminar(Pedido pedido)
+    {
+        _contexto.Set<Pedido>().Remove(pedido);
+    }
+
     public async Task<List<Pedido>> ObtenerPorMesaAsync(Guid mesaId, CancellationToken cancelacion = default)
     {
         return await _contexto.Set<Pedido>()
@@ -64,7 +69,7 @@ internal class PedidoRepositorio : IPedidoRepositorio
             .Include(p => p.Mesa)
             .Include(p => p.Detalles)
                 .ThenInclude(d => d.Producto)
-            .Where(p => p.Mesa.Id == mesaId && p.Estado != EstadoPedido.Cancelado)
+            .Where(p => p.Mesa != null && p.Mesa.Id == mesaId && p.Estado != EstadoPedido.Cancelado)
             .ToListAsync(cancelacion);
     }
 }

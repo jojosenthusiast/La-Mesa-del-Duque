@@ -30,7 +30,9 @@ public class RepositorioIntegrationTests : IDisposable
             new CategoriaProductoRepositorio(_contexto),
             new ProductoRepositorio(_contexto),
             new MesaRepositorio(_contexto),
-            new PedidoRepositorio(_contexto));
+            new PedidoRepositorio(_contexto),
+            new UsuarioRepositorio(_contexto),
+            new AuditoriaRepositorio(_contexto));
     }
 
     public void Dispose()
@@ -187,7 +189,7 @@ public class RepositorioIntegrationTests : IDisposable
         await _uot.Productos.AgregarAsync(producto);
         await _uot.GuardarCambiosAsync();
 
-        var pedido = new Pedido(mesa);
+        var pedido = new Pedido(TipoServicio.ComerAqui, mesa);
         pedido.AgregarDetalle(new DetallePedido(producto, 2, 3.50m));
         await _uot.Pedidos.AgregarAsync(pedido);
         await _uot.GuardarCambiosAsync();
@@ -210,8 +212,8 @@ public class RepositorioIntegrationTests : IDisposable
         await _uot.Mesas.AgregarAsync(mesa);
         await _uot.GuardarCambiosAsync();
 
-        await _uot.Pedidos.AgregarAsync(new Pedido(mesa));
-        await _uot.Pedidos.AgregarAsync(new Pedido(mesa));
+        await _uot.Pedidos.AgregarAsync(new Pedido(TipoServicio.ComerAqui, mesa));
+        await _uot.Pedidos.AgregarAsync(new Pedido(TipoServicio.ComerAqui, mesa));
         await _uot.GuardarCambiosAsync();
 
         var pedidos = await _uot.Pedidos.ObtenerTodosAsync();

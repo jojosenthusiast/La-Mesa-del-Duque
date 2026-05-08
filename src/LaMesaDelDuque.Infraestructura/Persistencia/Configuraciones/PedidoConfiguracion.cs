@@ -10,6 +10,11 @@ internal class PedidoConfiguracion : IEntityTypeConfiguration<Pedido>
     {
         constructor.HasKey(p => p.Id);
 
+        constructor.Property(p => p.TipoServicio)
+            .HasConversion<string>()
+            .HasMaxLength(20)
+            .IsRequired();
+
         constructor.Property(p => p.Estado)
             .HasConversion<string>()
             .HasMaxLength(30)
@@ -19,12 +24,13 @@ internal class PedidoConfiguracion : IEntityTypeConfiguration<Pedido>
         constructor.Ignore(p => p.Total);
 
         // FK sombra hacia Mesa
-        constructor.Property<Guid>("MesaId")
-            .IsRequired();
+        constructor.Property<Guid?>("MesaId")
+            .IsRequired(false);
 
         constructor.HasOne(p => p.Mesa)
             .WithMany()
-            .HasForeignKey("MesaId");
+            .HasForeignKey("MesaId")
+            .OnDelete(DeleteBehavior.Restrict);
 
         // Detalles mapeados desde la propiedad pública Detalles
         // EF Core descubre automáticamente el backing field _detalles

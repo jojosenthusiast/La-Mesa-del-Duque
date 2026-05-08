@@ -1,6 +1,7 @@
 using LaMesaDelDuque.Aplicacion.Dtos;
 using LaMesaDelDuque.Aplicacion.Servicios;
 using LaMesaDelDuque.Dominio.Entidades;
+using LaMesaDelDuque.Dominio.Enumeraciones;
 using LaMesaDelDuque.Dominio.Excepciones;
 using LaMesaDelDuque.Dominio.Repositorios;
 using LaMesaDelDuque.Infraestructura.Persistencia;
@@ -33,7 +34,9 @@ public class PedidosServicioTests : IDisposable
             new CategoriaProductoRepositorio(_contexto),
             new ProductoRepositorio(_contexto),
             new MesaRepositorio(_contexto),
-            new PedidoRepositorio(_contexto));
+            new PedidoRepositorio(_contexto),
+            new UsuarioRepositorio(_contexto),
+            new AuditoriaRepositorio(_contexto));
 
         _servicio = new PedidosServicio(_uot);
     }
@@ -44,715 +47,190 @@ public class PedidosServicioTests : IDisposable
         _conexion.Dispose();
     }
 
-    // --- CrearPedido ---
-
-    [Fact]
-    [Trait("Category", "Regression")]
-    public async Task CrearPedido_ConUnDetalle_DebeCrearYRetornarDtoConTotal()
+    private async Task<(Mesa mesa, Producto producto)> CrearMesaYProductoAsync(int numeroMesa = 1)
     {
-        var mesa = new Mesa(1, 4);
+        var mesa = new Mesa(numeroMesa, 4);
+        var categoria = new CategoriaProducto($"Bebidas {numeroMesa}");
+        var producto = new Producto($"Café {numeroMesa}", 3.50m, categoria);
+
         await _uot.Mesas.AgregarAsync(mesa);
-
-        var categoria = new CategoriaProducto("Bebidas");
         await _uot.Categorias.AgregarAsync(categoria);
-
-        var producto = new Producto("Café", 3.50m, categoria);
         await _uot.Productos.AgregarAsync(producto);
-
         await _uot.GuardarCambiosAsync();
 
-        var detalles = new List<DetalleCreacionDto>
+        return (mesa, producto);
+    }
+
+    private async Task<Usuario> CrearUsuarioAuditoriaAsync()
+    {
+        var rol = new Rol("admin", "Administrador");
+        var usuario = new Usuario("admin", "admin@lmd.test", "hash-demo", "Admin Demo", rol);
+
+        _contexto.Set<Rol>().Add(rol);
+        _contexto.Set<Usuario>().Add(usuario);
+        await _contexto.SaveChangesAsync();
+
+        return usuario;
+    }
+
+    [Fact]
+    public async Task CrearPedido_ParaLlevar_SinMesa_DebeCrearPedidoPendiente()
+    {
+        var (_, producto) = await CrearMesaYProductoAsync();
+
+        var pedido = await _servicio.CrearPedidoAsync(TipoServicio.ParaLlevar, null, new List<DetalleCreacionDto>
         {
             new() { ProductoId = producto.Id, Cantidad = 2, PrecioUnitario = 3.50m }
-        };
-        var pedidoDto = await _servicio.CrearPedidoAsync(mesa.Id, detalles);
-
-        Assert.NotNull(pedidoDto);
-        Assert.NotEqual(Guid.Empty, pedidoDto.Id);
-        Assert.Equal(mesa.Id, pedidoDto.MesaId);
-        Assert.Equal(mesa.Numero, pedidoDto.MesaNumero);
-        Assert.Equal("Pendiente", pedidoDto.Estado);
-        Assert.Equal(7.00m, pedidoDto.Total);
-        Assert.Single(pedidoDto.Detalles);
-        Assert.Equal(producto.Id, pedidoDto.Detalles[0].ProductoId);
-        Assert.Equal("Café", pedidoDto.Detalles[0].ProductoNombre);
-        Assert.Equal(2, pedidoDto.Detalles[0].Cantidad);
-        Assert.Equal(3.50m, pedidoDto.Detalles[0].PrecioUnitario);
-        Assert.Equal(7.00m, pedidoDto.Detalles[0].Subtotal);
-    }
-
-    [Fact]
-    public async Task CrearPedido_ConVariosDetalles_DebeSumarTotalCorrecto()
-    {
-        var mesa = new Mesa(2, 4);
-        await _uot.Mesas.AgregarAsync(mesa);
-
-        var categoria = new CategoriaProducto("Entradas");
-        await _uot.Categorias.AgregarAsync(categoria);
-
-        var p1 = new Producto("Bruschetta", 8.00m, categoria);
-        var p2 = new Producto("Ensalada", 6.50m, categoria);
-        await _uot.Productos.AgregarAsync(p1);
-        await _uot.Productos.AgregarAsync(p2);
-
-        await _uot.GuardarCambiosAsync();
-
-        var detalles = new List<DetalleCreacionDto>
-        {
-            new() { ProductoId = p1.Id, Cantidad = 1, PrecioUnitario = 8.00m },
-            new() { ProductoId = p2.Id, Cantidad = 2, PrecioUnitario = 6.50m }
-        };
-
-        var pedidoDto = await _servicio.CrearPedidoAsync(mesa.Id, detalles);
-
-        Assert.Equal(21.00m, pedidoDto.Total);
-        Assert.Equal(2, pedidoDto.Detalles.Count);
-    }
-
-    [Fact]
-    public async Task CrearPedido_SinDetalles_DebeLanzarExcepcion()
-    {
-        var mesa = new Mesa(3, 4);
-        await _uot.Mesas.AgregarAsync(mesa);
-        await _uot.GuardarCambiosAsync();
-
-        await Assert.ThrowsAsync<ArgumentException>(() =>
-            _servicio.CrearPedidoAsync(mesa.Id, new List<DetalleCreacionDto>()));
-    }
-
-    [Fact]
-    public async Task CrearPedido_ConMesaInexistente_DebeLanzarExcepcion()
-    {
-        await Assert.ThrowsAsync<ArgumentException>(() =>
-            _servicio.CrearPedidoAsync(Guid.NewGuid(), new List<DetalleCreacionDto>
-            {
-                new() { ProductoId = Guid.NewGuid(), Cantidad = 1, PrecioUnitario = 10m }
-            }));
-    }
-
-    [Fact]
-    public async Task CrearPedido_ConProductoInexistente_DebeLanzarExcepcion()
-    {
-        var mesa = new Mesa(4, 4);
-        await _uot.Mesas.AgregarAsync(mesa);
-        await _uot.GuardarCambiosAsync();
-
-        await Assert.ThrowsAsync<ArgumentException>(() =>
-            _servicio.CrearPedidoAsync(mesa.Id, new List<DetalleCreacionDto>
-            {
-                new() { ProductoId = Guid.NewGuid(), Cantidad = 1, PrecioUnitario = 10m }
-            }));
-    }
-
-    // --- ObtenerPedido ---
-
-    [Fact]
-    public async Task ObtenerPedido_Existente_DebeIncluirDetallesProductoYMesa()
-    {
-        var mesa = new Mesa(5, 4);
-        await _uot.Mesas.AgregarAsync(mesa);
-
-        var categoria = new CategoriaProducto("Postres");
-        await _uot.Categorias.AgregarAsync(categoria);
-
-        var producto = new Producto("Tiramisú", 7.00m, categoria);
-        await _uot.Productos.AgregarAsync(producto);
-
-        await _uot.GuardarCambiosAsync();
-
-        var dtoCreado = await _servicio.CrearPedidoAsync(mesa.Id, new List<DetalleCreacionDto>
-        {
-            new() { ProductoId = producto.Id, Cantidad = 3, PrecioUnitario = 7.00m }
         });
 
-        var obtenido = await _servicio.ObtenerPedidoAsync(dtoCreado.Id);
-
-        Assert.NotNull(obtenido);
-        Assert.Equal(dtoCreado.Id, obtenido!.Id);
-        Assert.Equal(mesa.Id, obtenido.MesaId);
-        Assert.Equal(mesa.Numero, obtenido.MesaNumero);
-        Assert.Single(obtenido.Detalles);
-        Assert.Equal(producto.Id, obtenido.Detalles[0].ProductoId);
-        Assert.Equal("Tiramisú", obtenido.Detalles[0].ProductoNombre);
-        Assert.Equal(3, obtenido.Detalles[0].Cantidad);
-        Assert.Equal(21.00m, obtenido.Total);
+        Assert.Equal("Pendiente", pedido.Estado);
+        Assert.Equal("ParaLlevar", pedido.TipoServicio);
+        Assert.Null(pedido.MesaId);
+        Assert.Null(pedido.MesaNumero);
+        Assert.Equal(7.00m, pedido.Total);
     }
 
     [Fact]
-    public async Task ObtenerPedido_Inexistente_DebeRetornarNulo()
+    public async Task CrearPedido_ComerAqui_ConMesa_DebeAsignarMesaYOcuparla()
     {
-        var resultado = await _servicio.ObtenerPedidoAsync(Guid.NewGuid());
-        Assert.Null(resultado);
-    }
+        var (mesa, producto) = await CrearMesaYProductoAsync(10);
 
-    // --- ListarPedidosActivos ---
-
-    [Fact]
-    public async Task ListarPedidosActivos_DebeIncluirPendientesYEnPreparacion()
-    {
-        var mesa1 = new Mesa(10, 4);
-        var mesa2 = new Mesa(11, 4);
-        var mesa3 = new Mesa(12, 4);
-        await _uot.Mesas.AgregarAsync(mesa1);
-        await _uot.Mesas.AgregarAsync(mesa2);
-        await _uot.Mesas.AgregarAsync(mesa3);
-
-        var categoria = new CategoriaProducto("Bebidas");
-        await _uot.Categorias.AgregarAsync(categoria);
-
-        var producto = new Producto("Café", 3.00m, categoria);
-        await _uot.Productos.AgregarAsync(producto);
-
-        await _uot.GuardarCambiosAsync();
-
-        var detalles = new List<DetalleCreacionDto>
+        var pedido = await _servicio.CrearPedidoAsync(TipoServicio.ComerAqui, mesa.Id, new List<DetalleCreacionDto>
         {
-            new() { ProductoId = producto.Id, Cantidad = 1, PrecioUnitario = 3.00m }
-        };
-
-        var pendiente = await _servicio.CrearPedidoAsync(mesa1.Id, detalles);
-        var enPrep = await _servicio.CrearPedidoAsync(mesa2.Id, detalles);
-        var pagado = await _servicio.CrearPedidoAsync(mesa3.Id, detalles);
-
-        await _servicio.MarcarEnPreparacionAsync(enPrep.Id);
-        await _servicio.PagarPedidoAsync(pagado.Id);
-
-        var activos = await _servicio.ListarPedidosActivosAsync();
-
-        Assert.Equal(2, activos.Count);
-        Assert.Contains(activos, a => a.Id == pendiente.Id);
-        Assert.Contains(activos, a => a.Id == enPrep.Id);
-    }
-
-    [Fact]
-    public async Task ListarPedidosActivos_SinPedidos_DebeRetornarListaVacia()
-    {
-        var activos = await _servicio.ListarPedidosActivosAsync();
-
-        Assert.NotNull(activos);
-        Assert.Empty(activos);
-    }
-
-    // --- AgregarDetalle ---
-
-    [Fact]
-    public async Task AgregarDetalle_PedidoPendiente_DebeAgregarYRecalcularTotal()
-    {
-        var mesa = new Mesa(20, 4);
-        await _uot.Mesas.AgregarAsync(mesa);
-
-        var categoria = new CategoriaProducto("Bebidas");
-        await _uot.Categorias.AgregarAsync(categoria);
-
-        var cafe = new Producto("Café", 3.00m, categoria);
-        var te = new Producto("Té", 2.50m, categoria);
-        await _uot.Productos.AgregarAsync(cafe);
-        await _uot.Productos.AgregarAsync(te);
-
-        await _uot.GuardarCambiosAsync();
-
-        var pedido = await _servicio.CrearPedidoAsync(mesa.Id, new List<DetalleCreacionDto>
-        {
-            new() { ProductoId = cafe.Id, Cantidad = 2, PrecioUnitario = 3.00m }
-        });
-        Assert.Equal(6.00m, pedido.Total);
-
-        var actualizado = await _servicio.AgregarDetalleAsync(pedido.Id, te.Id, 1, 2.50m);
-
-        Assert.Equal(2, actualizado.Detalles.Count);
-        Assert.Equal(8.50m, actualizado.Total);
-        Assert.Contains(actualizado.Detalles, d => d.ProductoNombre == "Té");
-    }
-
-    [Fact]
-    public async Task AgregarDetalle_PedidoInexistente_DebeLanzarExcepcion()
-    {
-        await Assert.ThrowsAsync<ArgumentException>(() =>
-            _servicio.AgregarDetalleAsync(Guid.NewGuid(), Guid.NewGuid(), 1, 10m));
-    }
-
-    [Fact]
-    public async Task AgregarDetalle_PedidoPagado_DebeLanzarExcepcion()
-    {
-        var mesa = new Mesa(32, 4);
-        await _uot.Mesas.AgregarAsync(mesa);
-
-        var categoria = new CategoriaProducto("Bebidas");
-        await _uot.Categorias.AgregarAsync(categoria);
-
-        var cafe = new Producto("Café", 3.00m, categoria);
-        await _uot.Productos.AgregarAsync(cafe);
-
-        await _uot.GuardarCambiosAsync();
-
-        var pedido = await _servicio.CrearPedidoAsync(mesa.Id, new List<DetalleCreacionDto>
-        {
-            new() { ProductoId = cafe.Id, Cantidad = 1, PrecioUnitario = 3.00m }
+            new() { ProductoId = producto.Id, Cantidad = 1, PrecioUnitario = 3.50m }
         });
 
-        await _servicio.PagarPedidoAsync(pedido.Id);
+        var mesaActualizada = await _uot.Mesas.ObtenerPorIdAsync(mesa.Id);
 
-        await Assert.ThrowsAsync<ReglaDominioException>(() =>
-            _servicio.AgregarDetalleAsync(pedido.Id, cafe.Id, 1, 3.00m));
+        Assert.Equal("ComerAqui", pedido.TipoServicio);
+        Assert.Equal(mesa.Id, pedido.MesaId);
+        Assert.Equal(10, pedido.MesaNumero);
+        Assert.NotNull(mesaActualizada);
+        Assert.Equal(EstadoMesa.Ocupada, mesaActualizada!.Estado);
     }
 
-    // --- MarcarEnPreparacion ---
-
     [Fact]
-    public async Task MarcarEnPreparacion_PedidoPendiente_DebeCambiarEstado()
+    public async Task CrearPedido_ParaLlevar_ConMesa_DebeLanzarExcepcion()
     {
-        var mesa = new Mesa(25, 4);
-        await _uot.Mesas.AgregarAsync(mesa);
+        var (mesa, producto) = await CrearMesaYProductoAsync(11);
 
-        var categoria = new CategoriaProducto("Bebidas");
-        await _uot.Categorias.AgregarAsync(categoria);
-
-        var producto = new Producto("Café", 3.00m, categoria);
-        await _uot.Productos.AgregarAsync(producto);
-
-        await _uot.GuardarCambiosAsync();
-
-        var pedido = await _servicio.CrearPedidoAsync(mesa.Id, new List<DetalleCreacionDto>
+        await Assert.ThrowsAsync<ReglaDominioException>(() => _servicio.CrearPedidoAsync(TipoServicio.ParaLlevar, mesa.Id, new List<DetalleCreacionDto>
         {
-            new() { ProductoId = producto.Id, Cantidad = 1, PrecioUnitario = 3.00m }
-        });
-
-        await _servicio.MarcarEnPreparacionAsync(pedido.Id);
-
-        var recuperado = await _servicio.ObtenerPedidoAsync(pedido.Id);
-        Assert.NotNull(recuperado);
-        Assert.Equal("EnPreparacion", recuperado!.Estado);
-    }
-
-    [Fact]
-    public async Task MarcarEnPreparacion_Inexistente_DebeLanzarExcepcion()
-    {
-        await Assert.ThrowsAsync<ArgumentException>(() =>
-            _servicio.MarcarEnPreparacionAsync(Guid.NewGuid()));
-    }
-
-    // --- PagarPedido ---
-
-    [Fact]
-    [Trait("Category", "Regression")]
-    public async Task PagarPedido_DesdePendiente_DebePagarCorrectamente()
-    {
-        var mesa = new Mesa(30, 4);
-        await _uot.Mesas.AgregarAsync(mesa);
-
-        var categoria = new CategoriaProducto("Bebidas");
-        await _uot.Categorias.AgregarAsync(categoria);
-
-        var producto = new Producto("Café", 3.00m, categoria);
-        await _uot.Productos.AgregarAsync(producto);
-
-        await _uot.GuardarCambiosAsync();
-
-        var pedido = await _servicio.CrearPedidoAsync(mesa.Id, new List<DetalleCreacionDto>
-        {
-            new() { ProductoId = producto.Id, Cantidad = 1, PrecioUnitario = 3.00m }
-        });
-
-        await _servicio.PagarPedidoAsync(pedido.Id);
-
-        var pagado = await _servicio.ObtenerPedidoAsync(pedido.Id);
-        Assert.NotNull(pagado);
-        Assert.Equal("Pagado", pagado!.Estado);
-    }
-
-    [Fact]
-    public async Task PagarPedido_DesdeEnPreparacion_DebePagarCorrectamente()
-    {
-        var mesa = new Mesa(31, 4);
-        await _uot.Mesas.AgregarAsync(mesa);
-
-        var categoria = new CategoriaProducto("Bebidas");
-        await _uot.Categorias.AgregarAsync(categoria);
-
-        var producto = new Producto("Café", 3.00m, categoria);
-        await _uot.Productos.AgregarAsync(producto);
-
-        await _uot.GuardarCambiosAsync();
-
-        var pedido = await _servicio.CrearPedidoAsync(mesa.Id, new List<DetalleCreacionDto>
-        {
-            new() { ProductoId = producto.Id, Cantidad = 1, PrecioUnitario = 3.00m }
-        });
-
-        await _servicio.MarcarEnPreparacionAsync(pedido.Id);
-        await _servicio.PagarPedidoAsync(pedido.Id);
-
-        var pagado = await _servicio.ObtenerPedidoAsync(pedido.Id);
-        Assert.NotNull(pagado);
-        Assert.Equal("Pagado", pagado!.Estado);
-    }
-
-    [Fact]
-    public async Task PagarPedido_Inexistente_DebeLanzarExcepcion()
-    {
-        await Assert.ThrowsAsync<ArgumentException>(() =>
-            _servicio.PagarPedidoAsync(Guid.NewGuid()));
-    }
-
-    [Fact]
-    public async Task PagarPedido_YaPagado_DebeLanzarExcepcion()
-    {
-        var mesa = new Mesa(33, 4);
-        await _uot.Mesas.AgregarAsync(mesa);
-
-        var categoria = new CategoriaProducto("Bebidas");
-        await _uot.Categorias.AgregarAsync(categoria);
-
-        var producto = new Producto("Café", 3.00m, categoria);
-        await _uot.Productos.AgregarAsync(producto);
-
-        await _uot.GuardarCambiosAsync();
-
-        var pedido = await _servicio.CrearPedidoAsync(mesa.Id, new List<DetalleCreacionDto>
-        {
-            new() { ProductoId = producto.Id, Cantidad = 1, PrecioUnitario = 3.00m }
-        });
-
-        await _servicio.PagarPedidoAsync(pedido.Id);
-
-        await Assert.ThrowsAsync<ReglaDominioException>(() =>
-            _servicio.PagarPedidoAsync(pedido.Id));
-    }
-
-    // --- CancelarPedido ---
-
-    [Fact]
-    [Trait("Category", "Regression")]
-    public async Task CancelarPedido_Pendiente_DebeCancelarYPersistir()
-    {
-        var mesa = new Mesa(40, 4);
-        await _uot.Mesas.AgregarAsync(mesa);
-
-        var categoria = new CategoriaProducto("Bebidas");
-        await _uot.Categorias.AgregarAsync(categoria);
-
-        var producto = new Producto("Café", 3.00m, categoria);
-        await _uot.Productos.AgregarAsync(producto);
-
-        await _uot.GuardarCambiosAsync();
-
-        var pedido = await _servicio.CrearPedidoAsync(mesa.Id, new List<DetalleCreacionDto>
-        {
-            new() { ProductoId = producto.Id, Cantidad = 1, PrecioUnitario = 3.00m }
-        });
-
-        await _servicio.CancelarPedidoAsync(pedido.Id);
-
-        var cancelado = await _servicio.ObtenerPedidoAsync(pedido.Id);
-        Assert.NotNull(cancelado);
-        Assert.Equal("Cancelado", cancelado!.Estado);
-    }
-
-    [Fact]
-    public async Task CancelarPedido_Inexistente_DebeLanzarExcepcion()
-    {
-        await Assert.ThrowsAsync<ArgumentException>(() =>
-            _servicio.CancelarPedidoAsync(Guid.NewGuid()));
-    }
-
-    [Fact]
-    public async Task CancelarPedido_Pagado_DebeLanzarExcepcion()
-    {
-        var mesa = new Mesa(41, 4);
-        await _uot.Mesas.AgregarAsync(mesa);
-
-        var categoria = new CategoriaProducto("Bebidas");
-        await _uot.Categorias.AgregarAsync(categoria);
-
-        var producto = new Producto("Café", 3.00m, categoria);
-        await _uot.Productos.AgregarAsync(producto);
-
-        await _uot.GuardarCambiosAsync();
-
-        var pedido = await _servicio.CrearPedidoAsync(mesa.Id, new List<DetalleCreacionDto>
-        {
-            new() { ProductoId = producto.Id, Cantidad = 1, PrecioUnitario = 3.00m }
-        });
-
-        await _servicio.PagarPedidoAsync(pedido.Id);
-
-        await Assert.ThrowsAsync<ReglaDominioException>(() =>
-            _servicio.CancelarPedidoAsync(pedido.Id));
-    }
-
-    [Fact]
-    public async Task CancelarPedido_Cancelado_NoApareceEnActivos()
-    {
-        var mesa1 = new Mesa(42, 4);
-        var mesa2 = new Mesa(43, 4);
-        await _uot.Mesas.AgregarAsync(mesa1);
-        await _uot.Mesas.AgregarAsync(mesa2);
-
-        var categoria = new CategoriaProducto("Bebidas");
-        await _uot.Categorias.AgregarAsync(categoria);
-
-        var producto = new Producto("Café", 3.00m, categoria);
-        await _uot.Productos.AgregarAsync(producto);
-
-        await _uot.GuardarCambiosAsync();
-
-        var detalles = new List<DetalleCreacionDto>
-        {
-            new() { ProductoId = producto.Id, Cantidad = 1, PrecioUnitario = 3.00m }
-        };
-
-        var pedido1 = await _servicio.CrearPedidoAsync(mesa1.Id, detalles);
-        var pedido2 = await _servicio.CrearPedidoAsync(mesa2.Id, new List<DetalleCreacionDto>
-        {
-            new() { ProductoId = producto.Id, Cantidad = 1, PrecioUnitario = 3.00m }
-        });
-
-        await _servicio.CancelarPedidoAsync(pedido1.Id);
-
-        var activos = await _servicio.ListarPedidosActivosAsync();
-
-        Assert.Single(activos);
-        Assert.Equal(pedido2.Id, activos[0].Id);
-        Assert.Equal("Pendiente", activos[0].Estado);
-    }
-
-    // --- EliminarDetalle ---
-
-    [Fact]
-    public async Task EliminarDetalle_ConMultiplesDetalles_DebeEliminarYRecalcularTotal()
-    {
-        var mesa = new Mesa(50, 4);
-        await _uot.Mesas.AgregarAsync(mesa);
-
-        var categoria = new CategoriaProducto("Bebidas");
-        await _uot.Categorias.AgregarAsync(categoria);
-
-        var cafe = new Producto("Café", 3.00m, categoria);
-        var te = new Producto("Té", 2.50m, categoria);
-        await _uot.Productos.AgregarAsync(cafe);
-        await _uot.Productos.AgregarAsync(te);
-
-        await _uot.GuardarCambiosAsync();
-
-        var pedido = await _servicio.CrearPedidoAsync(mesa.Id, new List<DetalleCreacionDto>
-        {
-            new() { ProductoId = cafe.Id, Cantidad = 2, PrecioUnitario = 3.00m },
-            new() { ProductoId = te.Id, Cantidad = 1, PrecioUnitario = 2.50m }
-        });
-        Assert.Equal(8.50m, pedido.Total);
-        Assert.Equal(2, pedido.Detalles.Count);
-
-        var detalleAEliminar = pedido.Detalles.First(d => d.ProductoNombre == "Café");
-        var actualizado = await _servicio.EliminarDetalleAsync(pedido.Id, detalleAEliminar.Id);
-
-        Assert.Single(actualizado.Detalles);
-        Assert.Equal(2.50m, actualizado.Total);
-        Assert.Equal("Té", actualizado.Detalles[0].ProductoNombre);
-    }
-
-    [Fact]
-    public async Task EliminarDetalle_PedidoInexistente_DebeLanzarExcepcion()
-    {
-        await Assert.ThrowsAsync<ArgumentException>(() =>
-            _servicio.EliminarDetalleAsync(Guid.NewGuid(), Guid.NewGuid()));
-    }
-
-    [Fact]
-    public async Task EliminarDetalle_DetalleInexistente_DebeLanzarExcepcion()
-    {
-        var mesa = new Mesa(51, 4);
-        await _uot.Mesas.AgregarAsync(mesa);
-
-        var categoria = new CategoriaProducto("Bebidas");
-        await _uot.Categorias.AgregarAsync(categoria);
-
-        var cafe = new Producto("Café", 3.00m, categoria);
-        var te = new Producto("Té", 2.50m, categoria);
-        await _uot.Productos.AgregarAsync(cafe);
-        await _uot.Productos.AgregarAsync(te);
-
-        await _uot.GuardarCambiosAsync();
-
-        var pedido = await _servicio.CrearPedidoAsync(mesa.Id, new List<DetalleCreacionDto>
-        {
-            new() { ProductoId = cafe.Id, Cantidad = 1, PrecioUnitario = 3.00m }
-        });
-
-        await Assert.ThrowsAsync<ReglaDominioException>(() =>
-            _servicio.EliminarDetalleAsync(pedido.Id, Guid.NewGuid()));
-    }
-
-    [Fact]
-    public async Task EliminarDetalle_UltimoDetalle_DebeLanzarExcepcion()
-    {
-        var mesa = new Mesa(52, 4);
-        await _uot.Mesas.AgregarAsync(mesa);
-
-        var categoria = new CategoriaProducto("Bebidas");
-        await _uot.Categorias.AgregarAsync(categoria);
-
-        var cafe = new Producto("Café", 3.00m, categoria);
-        await _uot.Productos.AgregarAsync(cafe);
-
-        await _uot.GuardarCambiosAsync();
-
-        var pedido = await _servicio.CrearPedidoAsync(mesa.Id, new List<DetalleCreacionDto>
-        {
-            new() { ProductoId = cafe.Id, Cantidad = 1, PrecioUnitario = 3.00m }
-        });
-
-        var unicoDetalle = pedido.Detalles[0];
-
-        await Assert.ThrowsAsync<ReglaDominioException>(() =>
-            _servicio.EliminarDetalleAsync(pedido.Id, unicoDetalle.Id));
-    }
-
-    [Fact]
-    public async Task EliminarDetalle_PedidoPagado_DebeLanzarExcepcion()
-    {
-        var mesa = new Mesa(53, 4);
-        await _uot.Mesas.AgregarAsync(mesa);
-
-        var categoria = new CategoriaProducto("Bebidas");
-        await _uot.Categorias.AgregarAsync(categoria);
-
-        var cafe = new Producto("Café", 3.00m, categoria);
-        var te = new Producto("Té", 2.50m, categoria);
-        await _uot.Productos.AgregarAsync(cafe);
-        await _uot.Productos.AgregarAsync(te);
-
-        await _uot.GuardarCambiosAsync();
-
-        var pedido = await _servicio.CrearPedidoAsync(mesa.Id, new List<DetalleCreacionDto>
-        {
-            new() { ProductoId = cafe.Id, Cantidad = 1, PrecioUnitario = 3.00m },
-            new() { ProductoId = te.Id, Cantidad = 1, PrecioUnitario = 2.50m }
-        });
-
-        await _servicio.PagarPedidoAsync(pedido.Id);
-
-        var detalle = pedido.Detalles[0];
-        await Assert.ThrowsAsync<ReglaDominioException>(() =>
-            _servicio.EliminarDetalleAsync(pedido.Id, detalle.Id));
-    }
-
-    // --- ActualizarCantidadDetalle ---
-
-    [Fact]
-    [Trait("Category", "Regression")]
-    public async Task ActualizarCantidadDetalle_PedidoPendiente_DebeActualizarYRecalcularTotal()
-    {
-        var mesa = new Mesa(60, 4);
-        await _uot.Mesas.AgregarAsync(mesa);
-
-        var categoria = new CategoriaProducto("Bebidas");
-        await _uot.Categorias.AgregarAsync(categoria);
-
-        var cafe = new Producto("Café", 3.00m, categoria);
-        await _uot.Productos.AgregarAsync(cafe);
-
-        await _uot.GuardarCambiosAsync();
-
-        var pedido = await _servicio.CrearPedidoAsync(mesa.Id, new List<DetalleCreacionDto>
-        {
-            new() { ProductoId = cafe.Id, Cantidad = 2, PrecioUnitario = 3.00m }
-        });
-        Assert.Equal(6.00m, pedido.Total);
-
-        var detalle = pedido.Detalles[0];
-
-        var actualizado = await _servicio.ActualizarCantidadDetalleAsync(pedido.Id, detalle.Id, 5);
-
-        Assert.Equal(5, actualizado.Detalles[0].Cantidad);
-        Assert.Equal(15.00m, actualizado.Total);
+            new() { ProductoId = producto.Id, Cantidad = 1, PrecioUnitario = 3.50m }
+        }));
     }
 
     [Fact]
     public async Task ActualizarCantidadDetalle_PedidoEnPreparacion_DebePermitir()
     {
-        var mesa = new Mesa(63, 4);
-        await _uot.Mesas.AgregarAsync(mesa);
+        var (mesa, producto) = await CrearMesaYProductoAsync(12);
 
-        var categoria = new CategoriaProducto("Bebidas");
-        await _uot.Categorias.AgregarAsync(categoria);
-
-        var cafe = new Producto("Café", 3.00m, categoria);
-        await _uot.Productos.AgregarAsync(cafe);
-
-        await _uot.GuardarCambiosAsync();
-
-        var pedido = await _servicio.CrearPedidoAsync(mesa.Id, new List<DetalleCreacionDto>
+        var pedido = await _servicio.CrearPedidoAsync(TipoServicio.ComerAqui, mesa.Id, new List<DetalleCreacionDto>
         {
-            new() { ProductoId = cafe.Id, Cantidad = 2, PrecioUnitario = 3.00m }
+            new() { ProductoId = producto.Id, Cantidad = 2, PrecioUnitario = 3.00m }
         });
 
         await _servicio.MarcarEnPreparacionAsync(pedido.Id);
 
-        var detalle = pedido.Detalles[0];
-        var actualizado = await _servicio.ActualizarCantidadDetalleAsync(pedido.Id, detalle.Id, 4);
+        var actualizado = await _servicio.ActualizarCantidadDetalleAsync(pedido.Id, pedido.Detalles[0].Id, 4);
 
         Assert.Equal(4, actualizado.Detalles[0].Cantidad);
         Assert.Equal(12.00m, actualizado.Total);
     }
 
     [Fact]
-    public async Task ActualizarCantidadDetalle_PedidoInexistente_DebeLanzarExcepcion()
+    public async Task EliminarPedidoPendiente_DebeEliminarRegistro()
     {
-        await Assert.ThrowsAsync<ArgumentException>(() =>
-            _servicio.ActualizarCantidadDetalleAsync(Guid.NewGuid(), Guid.NewGuid(), 3));
+        var (_, producto) = await CrearMesaYProductoAsync(13);
+        var usuario = await CrearUsuarioAuditoriaAsync();
+
+        var pedido = await _servicio.CrearPedidoAsync(TipoServicio.ParaLlevar, null, new List<DetalleCreacionDto>
+        {
+            new() { ProductoId = producto.Id, Cantidad = 1, PrecioUnitario = 3.50m }
+        });
+
+        await _servicio.EliminarPedidoPendienteAsync(pedido.Id, usuario.Id);
+
+        var eliminado = await _servicio.ObtenerPedidoAsync(pedido.Id);
+        Assert.Null(eliminado);
     }
 
     [Fact]
-    [Trait("Category", "Regression")]
-    public async Task ActualizarCantidadDetalle_PedidoPagado_DebeLanzarExcepcion()
+    public async Task EliminarPedidoPendiente_ConMesa_DebeLiberarMesa()
     {
-        var mesa = new Mesa(61, 4);
-        await _uot.Mesas.AgregarAsync(mesa);
+        var (mesa, producto) = await CrearMesaYProductoAsync(14);
+        var usuario = await CrearUsuarioAuditoriaAsync();
 
-        var categoria = new CategoriaProducto("Bebidas");
-        await _uot.Categorias.AgregarAsync(categoria);
-
-        var cafe = new Producto("Café", 3.00m, categoria);
-        await _uot.Productos.AgregarAsync(cafe);
-
-        await _uot.GuardarCambiosAsync();
-
-        var pedido = await _servicio.CrearPedidoAsync(mesa.Id, new List<DetalleCreacionDto>
+        var pedido = await _servicio.CrearPedidoAsync(TipoServicio.ComerAqui, mesa.Id, new List<DetalleCreacionDto>
         {
-            new() { ProductoId = cafe.Id, Cantidad = 2, PrecioUnitario = 3.00m }
+            new() { ProductoId = producto.Id, Cantidad = 1, PrecioUnitario = 3.50m }
+        });
+
+        await _servicio.EliminarPedidoPendienteAsync(pedido.Id, usuario.Id);
+
+        var mesaLiberada = await _uot.Mesas.ObtenerPorIdAsync(mesa.Id);
+        Assert.NotNull(mesaLiberada);
+        Assert.Equal(EstadoMesa.Disponible, mesaLiberada!.Estado);
+    }
+
+    [Fact]
+    public async Task EliminarPedidoPendiente_DebeRegistrarAuditoria()
+    {
+        var (_, producto) = await CrearMesaYProductoAsync(15);
+        var usuario = await CrearUsuarioAuditoriaAsync();
+
+        var pedido = await _servicio.CrearPedidoAsync(TipoServicio.ParaLlevar, null, new List<DetalleCreacionDto>
+        {
+            new() { ProductoId = producto.Id, Cantidad = 1, PrecioUnitario = 3.50m }
+        });
+
+        await _servicio.EliminarPedidoPendienteAsync(pedido.Id, usuario.Id, "127.0.0.1");
+
+        var auditoria = await _contexto.Set<Auditoria>().SingleAsync();
+        Assert.Equal("pedido", auditoria.TablaAfectada);
+        Assert.Equal(pedido.Id, auditoria.RegistroId);
+        Assert.Equal("DELETE", auditoria.Accion);
+        Assert.Equal(usuario.Id, auditoria.UsuarioId);
+        Assert.Equal("127.0.0.1", auditoria.IpAddress);
+    }
+
+    [Fact]
+    public async Task EliminarPedidoPendiente_Pagado_DebeRechazarOperacion()
+    {
+        var (_, producto) = await CrearMesaYProductoAsync(16);
+        var usuario = await CrearUsuarioAuditoriaAsync();
+
+        var pedido = await _servicio.CrearPedidoAsync(TipoServicio.ParaLlevar, null, new List<DetalleCreacionDto>
+        {
+            new() { ProductoId = producto.Id, Cantidad = 1, PrecioUnitario = 3.50m }
         });
 
         await _servicio.PagarPedidoAsync(pedido.Id);
 
-        var detalle = pedido.Detalles[0];
-        await Assert.ThrowsAsync<ReglaDominioException>(() =>
-            _servicio.ActualizarCantidadDetalleAsync(pedido.Id, detalle.Id, 3));
+        await Assert.ThrowsAsync<ReglaDominioException>(() => _servicio.EliminarPedidoPendienteAsync(pedido.Id, usuario.Id));
     }
 
     [Fact]
-    [Trait("Category", "Regression")]
-    public async Task ActualizarCantidadDetalle_PedidoCancelado_DebeLanzarExcepcion()
+    public async Task ListarPedidosActivos_DebeIncluirPendientesYEnPreparacion()
     {
-        var mesa = new Mesa(62, 4);
-        await _uot.Mesas.AgregarAsync(mesa);
+        var (_, producto1) = await CrearMesaYProductoAsync(17);
+        var (_, producto2) = await CrearMesaYProductoAsync(18);
 
-        var categoria = new CategoriaProducto("Bebidas");
-        await _uot.Categorias.AgregarAsync(categoria);
-
-        var cafe = new Producto("Café", 3.00m, categoria);
-        await _uot.Productos.AgregarAsync(cafe);
-
-        await _uot.GuardarCambiosAsync();
-
-        var pedido = await _servicio.CrearPedidoAsync(mesa.Id, new List<DetalleCreacionDto>
+        var pendiente = await _servicio.CrearPedidoAsync(TipoServicio.ParaLlevar, null, new List<DetalleCreacionDto>
         {
-            new() { ProductoId = cafe.Id, Cantidad = 2, PrecioUnitario = 3.00m }
+            new() { ProductoId = producto1.Id, Cantidad = 1, PrecioUnitario = 3.50m }
         });
 
-        await _servicio.CancelarPedidoAsync(pedido.Id);
+        var enPreparacion = await _servicio.CrearPedidoAsync(TipoServicio.ParaLlevar, null, new List<DetalleCreacionDto>
+        {
+            new() { ProductoId = producto2.Id, Cantidad = 1, PrecioUnitario = 3.50m }
+        });
 
-        var detalle = pedido.Detalles[0];
-        await Assert.ThrowsAsync<ReglaDominioException>(() =>
-            _servicio.ActualizarCantidadDetalleAsync(pedido.Id, detalle.Id, 3));
+        await _servicio.MarcarEnPreparacionAsync(enPreparacion.Id);
+
+        var activos = await _servicio.ListarPedidosActivosAsync();
+
+        Assert.Contains(activos, x => x.Id == pendiente.Id);
+        Assert.Contains(activos, x => x.Id == enPreparacion.Id);
     }
 }

@@ -101,7 +101,7 @@ public class PersistenciaIntegrationTests : IDisposable
         _contexto.Set<Producto>().Add(producto);
         _contexto.SaveChanges();
 
-        var pedido = new Pedido(mesa);
+        var pedido = new Pedido(TipoServicio.ComerAqui, mesa);
         pedido.AgregarDetalle(new DetallePedido(producto, 2, 3.50m));
         _contexto.Set<Pedido>().Add(pedido);
         _contexto.SaveChanges();
@@ -137,7 +137,7 @@ public class PersistenciaIntegrationTests : IDisposable
         _contexto.Set<Producto>().Add(producto);
         _contexto.SaveChanges();
 
-        var pedido = new Pedido(mesa);
+        var pedido = new Pedido(TipoServicio.ComerAqui, mesa);
         pedido.AgregarDetalle(new DetallePedido(producto, 2, 7.00m));
         Assert.Equal(14.00m, pedido.Total);
 
@@ -167,7 +167,7 @@ public class PersistenciaIntegrationTests : IDisposable
         _contexto.Set<Producto>().Add(producto);
         _contexto.SaveChanges();
 
-        var pedido = new Pedido(mesa);
+        var pedido = new Pedido(TipoServicio.ComerAqui, mesa);
         var detalle = new DetallePedido(producto, 1, 25.00m);
         pedido.AgregarDetalle(detalle);
         _contexto.Set<Pedido>().Add(pedido);
