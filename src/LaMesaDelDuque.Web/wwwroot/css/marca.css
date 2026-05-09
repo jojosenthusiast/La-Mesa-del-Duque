@@ -752,3 +752,466 @@ h1, h2, h3, h4, h5, h6 {
         position: static;
     }
 }
+
+/* ═══════════════════════════════════════════════════════
+   POS — Pantalla 1: Mesa + Tipo Servicio
+   ═══════════════════════════════════════════════════════ */
+
+.lmd-pos-pantalla {
+    padding: 1.5rem;
+    min-height: 60vh;
+}
+
+.lmd-pos-titulo {
+    font-family: 'Cinzel', serif;
+    font-size: 1.75rem;
+    margin-bottom: 1.25rem;
+    color: var(--lmd-azul-duque);
+}
+
+.lmd-pos-subtitulo {
+    font-size: 0.9375rem;
+    color: var(--lmd-gris-piedra);
+    margin-bottom: 1rem;
+    font-weight: 600;
+}
+
+/* Tipo de servicio — botones grandes */
+.lmd-pos-tipo-servicio {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.lmd-pos-tipo-btn {
+    font-size: 1.125rem;
+    font-weight: 700;
+    padding: 1.25rem 1rem;
+    border-radius: 0.75rem;
+    border: 3px solid rgba(15,27,45,0.12);
+    background: #fff;
+    cursor: pointer;
+    transition: all 0.15s;
+    touch-action: manipulation;
+}
+
+.lmd-pos-tipo-btn--activo {
+    border-color: var(--lmd-acento);
+    background: color-mix(in oklch, var(--lmd-acento) 12%, white);
+    color: var(--lmd-azul-duque);
+    box-shadow: 0 0 0 1px var(--lmd-acento);
+}
+
+.lmd-pos-tipo-btn:active {
+    transform: scale(0.97);
+}
+
+/* Mesa cards — grid táctil */
+.lmd-pos-mesas-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+}
+
+.lmd-mesa-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
+    padding: 1.25rem 0.75rem;
+    border: 2px solid rgba(15,27,45,0.1);
+    border-radius: 1rem;
+    background: #fff;
+    cursor: pointer;
+    min-height: 100px;
+    min-width: 88px;
+    touch-action: manipulation;
+    transition: all 0.12s;
+}
+
+.lmd-mesa-card:hover {
+    border-color: var(--lmd-acento);
+    background: color-mix(in oklch, var(--lmd-acento) 6%, white);
+}
+
+.lmd-mesa-card--selected {
+    border-color: var(--lmd-acento);
+    background: color-mix(in oklch, var(--lmd-acento) 18%, white);
+    box-shadow: 0 4px 12px rgba(201,162,78,0.25);
+}
+
+.lmd-mesa-card__numero {
+    font-size: 2rem;
+    font-weight: 800;
+    color: var(--lmd-azul-duque);
+    line-height: 1;
+}
+
+.lmd-mesa-card__capacidad {
+    font-size: 0.8125rem;
+    color: var(--lmd-gris-piedra);
+    font-weight: 600;
+}
+
+/* Continuar */
+.lmd-pos-continuar {
+    text-align: center;
+    padding: 1rem 0;
+}
+
+.lmd-pos-btn-primario {
+    font-size: 1.125rem;
+    font-weight: 700;
+    padding: 1rem 2.5rem;
+    border: none;
+    border-radius: 0.75rem;
+    background: var(--lmd-acento);
+    color: var(--lmd-azul-duque);
+    cursor: pointer;
+    touch-action: manipulation;
+    transition: background 0.12s;
+}
+
+.lmd-pos-btn-primario:disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+
+.lmd-pos-btn-primario:active:not(:disabled) {
+    background: color-mix(in oklch, var(--lmd-acento) 80%, black);
+}
+
+/* ═══════════════════════════════════════════════════════
+   POS — Pantalla 2: Productos + Resumen
+   ═══════════════════════════════════════════════════════ */
+
+.lmd-pos-productos-pantalla {
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    gap: 1rem;
+    align-items: start;
+    padding: 0;
+}
+
+.lmd-pos-topbar {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem 0 0.5rem;
+}
+
+.lmd-pos-btn-atras {
+    font-size: 0.875rem;
+    font-weight: 600;
+    padding: 0.5rem 1rem;
+    border: 1px solid rgba(15,27,45,0.12);
+    border-radius: 0.5rem;
+    background: #fff;
+    cursor: pointer;
+    color: var(--lmd-gris-piedra);
+    white-space: nowrap;
+}
+
+/* Category tabs */
+.lmd-pos-cat-tabs {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    padding: 0.5rem 0 1rem;
+}
+
+.lmd-pos-cat-tab {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    padding: 0.5rem 1rem;
+    border: 1px solid rgba(15,27,45,0.12);
+    border-radius: 2rem;
+    background: #fff;
+    cursor: pointer;
+    white-space: nowrap;
+    touch-action: manipulation;
+}
+
+.lmd-pos-cat-tab--activo {
+    background: var(--lmd-azul-duque);
+    color: #fff;
+    border-color: var(--lmd-azul-duque);
+}
+
+/* Product cards grid */
+.lmd-pos-productos-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 0.75rem;
+}
+
+.lmd-pos-producto-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    padding: 1rem;
+    border: 2px solid rgba(15,27,45,0.08);
+    border-radius: 0.75rem;
+    background: #fff;
+    cursor: pointer;
+    min-height: 80px;
+    text-align: left;
+    touch-action: manipulation;
+    transition: all 0.12s;
+}
+
+.lmd-pos-producto-card:hover {
+    border-color: var(--lmd-acento);
+    box-shadow: 0 2px 8px rgba(201,162,78,0.2);
+}
+
+.lmd-pos-producto-card:active {
+    transform: scale(0.97);
+}
+
+.lmd-pos-producto-card__nombre {
+    font-size: 0.9375rem;
+    font-weight: 700;
+    color: var(--lmd-azul-duque);
+    line-height: 1.3;
+}
+
+.lmd-pos-producto-card__precio {
+    font-size: 1.125rem;
+    font-weight: 800;
+    color: var(--lmd-acento);
+    font-variant-numeric: tabular-nums;
+}
+
+.lmd-pos-producto-card__tiempo {
+    font-size: 0.75rem;
+    color: var(--lmd-gris-piedra);
+    font-weight: 500;
+}
+
+/* Order summary sidebar */
+.lmd-pos-resumen {
+    position: sticky;
+    top: 1rem;
+    background: #fff;
+    border: 1px solid rgba(15,27,45,0.1);
+    border-radius: 1rem;
+    padding: 1.25rem;
+}
+
+.lmd-pos-resumen__titulo {
+    font-family: 'Cinzel', serif;
+    font-size: 1rem;
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid rgba(15,27,45,0.08);
+}
+
+.lmd-pos-resumen__lineas {
+    max-height: 350px;
+    overflow-y: auto;
+    margin-bottom: 1rem;
+}
+
+.lmd-pos-linea {
+    padding: 0.5rem 0;
+    border-bottom: 1px solid rgba(15,27,45,0.04);
+}
+
+.lmd-pos-linea__info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    margin-bottom: 0.35rem;
+}
+
+.lmd-pos-linea__info strong {
+    font-size: 0.8125rem;
+    font-weight: 700;
+}
+
+.lmd-pos-linea__info small {
+    font-size: 0.75rem;
+    color: var(--lmd-gris-piedra);
+}
+
+.lmd-pos-linea__acciones {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.lmd-pos-linea__qty {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: 1px solid rgba(15,27,45,0.15);
+    background: #fff;
+    font-size: 0.875rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    touch-action: manipulation;
+}
+
+.lmd-pos-linea__qty:disabled {
+    opacity: 0.3;
+    cursor: default;
+}
+
+.lmd-pos-linea__cantidad {
+    font-weight: 700;
+    font-size: 0.875rem;
+    min-width: 1.5rem;
+    text-align: center;
+}
+
+.lmd-pos-linea__subtotal {
+    font-weight: 700;
+    font-size: 0.875rem;
+    margin-left: auto;
+    font-variant-numeric: tabular-nums;
+}
+
+.lmd-pos-linea__eliminar {
+    background: none;
+    border: none;
+    color: var(--lmd-terracota);
+    font-size: 0.875rem;
+    cursor: pointer;
+    padding: 0.25rem;
+    touch-action: manipulation;
+}
+
+.lmd-pos-total-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 0;
+    border-top: 2px solid rgba(15,27,45,0.1);
+    font-size: 1.125rem;
+    font-weight: 700;
+}
+
+.lmd-pos-total-bar strong {
+    font-size: 1.5rem;
+    color: var(--lmd-azul-duque);
+    font-variant-numeric: tabular-nums;
+}
+
+.lmd-pos-btn-pagar {
+    width: 100%;
+    margin-bottom: 0.5rem;
+}
+
+.lmd-pos-btn-cancelar {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid rgba(163,79,56,0.3);
+    border-radius: 0.75rem;
+    background: transparent;
+    color: var(--lmd-terracota);
+    font-weight: 600;
+    cursor: pointer;
+}
+
+/* ═══════════════════════════════════════════════════════
+   POS — Pantalla 3: Pago
+   ═══════════════════════════════════════════════════════ */
+
+.lmd-pos-pago-total {
+    font-size: 3rem;
+    font-weight: 800;
+    text-align: center;
+    color: var(--lmd-azul-duque);
+    font-variant-numeric: tabular-nums;
+    padding: 1.5rem 0;
+    font-family: 'Cinzel', serif;
+}
+
+.lmd-pos-pago-efectivo {
+    max-width: 400px;
+    margin: 0 auto 2rem;
+}
+
+.lmd-pos-pago-label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    font-size: 0.9375rem;
+}
+
+.lmd-pos-pago-input-group {
+    display: flex;
+    align-items: center;
+    border: 2px solid rgba(15,27,45,0.12);
+    border-radius: 0.75rem;
+    overflow: hidden;
+    background: #fff;
+}
+
+.lmd-pos-pago-input-prefijo {
+    padding: 0.75rem 1rem;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--lmd-gris-piedra);
+    background: rgba(15,27,45,0.03);
+}
+
+.lmd-pos-pago-input {
+    flex: 1;
+    border: none;
+    padding: 0.75rem;
+    font-size: 1.5rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    outline: none;
+}
+
+.lmd-pos-pago-cambio {
+    margin-top: 0.75rem;
+    text-align: center;
+    font-size: 0.9375rem;
+}
+
+.lmd-pos-pago-cambio--ok .lmd-pos-pago-cambio-valor {
+    color: var(--lmd-verde-salvia);
+    font-size: 1.5rem;
+    font-weight: 800;
+}
+
+.lmd-pos-pago-acciones {
+    display: grid;
+    gap: 0.75rem;
+    max-width: 400px;
+    margin: 0 auto 2rem;
+}
+
+.lmd-pos-btn-secundario {
+    font-size: 1rem;
+    font-weight: 600;
+    padding: 0.875rem;
+    border: 1px solid rgba(15,27,45,0.12);
+    border-radius: 0.75rem;
+    background: #fff;
+    cursor: pointer;
+    color: var(--lmd-azul-duque);
+}
+
+@media (max-width: 768px) {
+    .lmd-pos-productos-pantalla {
+        grid-template-columns: 1fr;
+    }
+    .lmd-pos-resumen {
+        position: static;
+        margin-top: 1rem;
+    }
+    .lmd-pos-productos-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}

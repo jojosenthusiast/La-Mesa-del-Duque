@@ -232,6 +232,83 @@ public class IndexModel : PageModel
             return RedirectToPage(new { PedidoActualId = pedidoId });
         });
 
+    // ── JSON handlers para SPA (AJAX, sin recarga) ───────────
+    public async Task<IActionResult> OnPostCrearJsonAsync()
+    {
+        if (Vm.CrearPedido.Lineas.Count == 0 || Vm.CrearPedido.Lineas[0].ProductoId == Guid.Empty)
+            return BadRequest("Debe seleccionar un producto.");
+
+        Enum.TryParse<TipoServicio>(Vm.CrearPedido.TipoServicio, true, out var tipoServicio);
+        var mesaId = tipoServicio == TipoServicio.ComerAqui ? Vm.CrearPedido.MesaId : null;
+
+        var prods = (await _catalogoProductosServicio.ListarProductosAsync()).Where(p => p.Activo).ToDictionary(p => p.Id);
+        var detalles = new List<DetalleCreacionDto>();
+
+        foreach (var l in Vm.CrearPedido.Lineas)
+        {
+            if (!prods.TryGetValue(l.ProductoId, out var prod)) return BadRequest("Producto inválido.");
+            detalles.Add(new DetalleCreacionDto { ProductoId = l.ProductoId, Cantidad = l.Cantidad, PrecioUnitario = prod.Precio });
+        }
+
+        try
+        {
+            var pedido = await _pedidosServicio.CrearPedidoAsync(tipoServicio, mesaId, detalles);
+            return new JsonResult(new { pedidoId = pedido.Id });
+        }
+        catch (Exception ex) { return BadRequest(ex.Message); }
+    }
+
+    public async Task<IActionResult> OnPostAgregarLineaJsonAsync(Guid pedidoId, Guid productoId, int cantidad)
+    {
+        try
+        {
+            var prods = await _catalogoProductosServicio.ListarProductosAsync();
+            var prod = prods.FirstOrDefault(p => p.Id == productoId && p.Activo)
+                ?? throw new ArgumentException("Producto no encontrado.");
+            await _pedidosServicio.AgregarDetalleAsync(pedidoId, productoId, cantidad, prod.Precio);
+            return new JsonResult(new { ok = true });
+        }
+        catch (Exception ex) { return BadRequest(ex.Message); }
+    }
+
+    public async Task<IActionResult> OnPostEliminarLineaJsonAsync(Guid pedidoId, Guid detalleId)
+    {
+        try
+        {
+            await _pedidosServicio.EliminarDetalleAsync(pedidoId, detalleId);
+            return new JsonResult(new { ok = true });
+        }
+        catch (Exception ex) { return BadRequest(ex.Message); }
+    }
+
+    public async Task<IActionResult> OnPostActualizarCantidadJsonAsync(Guid pedidoId, Guid detalleId, int cantidad)
+    {
+        try
+        {
+            await _pedidosServicio.ActualizarCantidadDetalleAsync(pedidoId, detalleId, cantidad);
+            return new JsonResult(new { ok = true });
+        }
+        catch (Exception ex) { return BadRequest(ex.Message); }
+    }
+
+    public async Task<IActionResult> OnPostPagarEfectivoJsonAsync(Guid pedidoId, decimal efectivoRecibido)
+    {
+        try
+        {
+            var pedidos = await _pedidosServicio.ListarPedidosActivosAsync();
+            var pedido = pedidos.FirstOrDefault(p => p.Id == pedidoId)
+                ?? throw new ArgumentException("Pedido no encontrado.");
+
+            if (efectivoRecibido < pedido.Total)
+                return BadRequest($"Faltan ${pedido.Total - efectivoRecibido:F2}");
+
+            await _pedidosServicio.PagarPedidoAsync(pedidoId);
+            var cambio = efectivoRecibido - pedido.Total;
+            return new JsonResult(new { ok = true, mensaje = cambio > 0 ? $"Pedido pagado. Cambio: ${cambio:F2}" : "Pedido pagado correctamente." });
+        }
+        catch (Exception ex) { return BadRequest(ex.Message); }
+    }
+
     // ── Helpers ───────────────────────────────────────────────
     private async Task<IActionResult> EjecutarAccionPedidoAsync(Func<Task<IActionResult>> accion)
     {
