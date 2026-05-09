@@ -19,21 +19,21 @@ ON CONFLICT ("Id") DO NOTHING;
 
 -- 2. PERMISOS
 -- ============================================================================
-INSERT INTO "Permisos" ("Id", "Nombre")
+INSERT INTO "Permisos" ("Id", "Nombre", "Modulo", "Descripcion")
 VALUES
-    ('b0000000-0000-0000-0000-000000000001', 'productos.leer'),
-    ('b0000000-0000-0000-0000-000000000002', 'productos.crear'),
-    ('b0000000-0000-0000-0000-000000000003', 'productos.editar'),
-    ('b0000000-0000-0000-0000-000000000004', 'productos.desactivar'),
-    ('b0000000-0000-0000-0000-000000000005', 'pedidos.crear'),
-    ('b0000000-0000-0000-0000-000000000006', 'pedidos.ver_todos'),
-    ('b0000000-0000-0000-0000-000000000007', 'pedidos.modificar'),
-    ('b0000000-0000-0000-0000-000000000008', 'pedidos.cancelar'),
-    ('b0000000-0000-0000-0000-000000000009', 'pedidos.pagar'),
-    ('b0000000-0000-0000-0000-000000000010', 'mesas.leer'),
-    ('b0000000-0000-0000-0000-000000000011', 'mesas.gestionar'),
-    ('b0000000-0000-0000-0000-000000000012', 'usuarios.gestionar'),
-    ('b0000000-0000-0000-0000-000000000013', 'reportes.ver')
+    ('b0000000-0000-0000-0000-000000000001', 'productos.leer',      'Productos', 'Ver lista de productos y categorías'),
+    ('b0000000-0000-0000-0000-000000000002', 'productos.crear',     'Productos', 'Crear nuevos productos'),
+    ('b0000000-0000-0000-0000-000000000003', 'productos.editar',    'Productos', 'Modificar productos existentes'),
+    ('b0000000-0000-0000-0000-000000000004', 'productos.desactivar','Productos', 'Desactivar productos'),
+    ('b0000000-0000-0000-0000-000000000005', 'pedidos.crear',       'Pedidos',   'Crear nuevos pedidos'),
+    ('b0000000-0000-0000-0000-000000000006', 'pedidos.ver_todos',   'Pedidos',   'Ver todos los pedidos activos'),
+    ('b0000000-0000-0000-0000-000000000007', 'pedidos.modificar',   'Pedidos',   'Modificar pedidos existentes'),
+    ('b0000000-0000-0000-0000-000000000008', 'pedidos.cancelar',    'Pedidos',   'Cancelar pedidos'),
+    ('b0000000-0000-0000-0000-000000000009', 'pedidos.pagar',       'Pedidos',   'Pagar y cerrar pedidos'),
+    ('b0000000-0000-0000-0000-000000000010', 'mesas.leer',          'Mesas',     'Ver estado de mesas'),
+    ('b0000000-0000-0000-0000-000000000011', 'mesas.gestionar',     'Mesas',     'Gestionar mesas (crear/editar/estado)'),
+    ('b0000000-0000-0000-0000-000000000012', 'usuarios.gestionar',  'Usuarios',  'Administrar usuarios y roles'),
+    ('b0000000-0000-0000-0000-000000000013', 'reportes.ver',        'Reportes',  'Ver reportes y estadísticas')
 ON CONFLICT ("Id") DO NOTHING;
 
 -- 3. ROLES-PERMISOS
