@@ -1,0 +1,136 @@
+using LaMesaDelDuque.Aplicacion.Servicios;
+using LaMesaDelDuque.Dominio.Excepciones;
+using LaMesaDelDuque.Web.Models.Operaciones;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.RazorPages;
+
+namespace LaMesaDelDuque.Web.Pages.Operaciones.Mesas;
+
+public class IndexModel : PageModel
+{
+    private static readonly string[] EstadosOrdenados = ["Disponible", "Ocupada", "Reservada", "Mantenimiento", "Inactiva"];
+    private readonly IMesasServicio _mesasServicio;
+
+    public IndexModel(IMesasServicio mesasServicio)
+    {
+        _mesasServicio = mesasServicio;
+    }
+
+    [BindProperty]
+    public MesasPageVm Vm { get; set; } = new();
+
+    [TempData]
+    public string? ToastSuccess { get; set; }
+
+    [TempData]
+    public string? ToastError { get; set; }
+
+    public async Task OnGetAsync()
+    {
+        SetUiContext();
+        await CargarDatosAsync();
+    }
+
+    public async Task<IActionResult> OnPostGuardarAsync()
+    {
+        SetUiContext();
+        if (!ModelState.IsValid)
+        {
+            await CargarDatosAsync();
+            return Page();
+        }
+
+        try
+        {
+            if (Vm.Form.Id.HasValue)
+            {
+                await _mesasServicio.ActualizarMesaAsync(Vm.Form.Id.Value, Vm.Form.Numero, Vm.Form.Capacidad);
+                ToastSuccess = "Mesa actualizada correctamente.";
+            }
+            else
+            {
+                await _mesasServicio.CrearMesaAsync(Vm.Form.Numero, Vm.Form.Capacidad);
+                ToastSuccess = "Mesa creada correctamente.";
+            }
+
+            return RedirectToPage();
+        }
+        catch (ReglaDominioException ex)
+        {
+            ModelState.AddModelError(string.Empty, ex.Message);
+            ToastError = ex.Message;
+        }
+        catch (ArgumentException ex)
+        {
+            ModelState.AddModelError(string.Empty, ex.Message);
+            ToastError = ex.Message;
+        }
+
+        await CargarDatosAsync();
+        return Page();
+    }
+
+    public async Task<IActionResult> OnPostCambiarEstadoAsync(Guid id, string nuevoEstado)
+    {
+        SetUiContext();
+        try
+        {
+            await _mesasServicio.CambiarEstadoMesaAsync(id, nuevoEstado);
+            ToastSuccess = $"Mesa actualizada a estado {nuevoEstado}.";
+        }
+        catch (ReglaDominioException ex)
+        {
+            ToastError = ex.Message;
+        }
+        catch (ArgumentException ex)
+        {
+            ToastError = ex.Message;
+        }
+
+        return RedirectToPage();
+    }
+
+    public async Task<IActionResult> OnPostDesactivarAsync(Guid id)
+    {
+        SetUiContext();
+        try
+        {
+            await _mesasServicio.DesactivarMesaAsync(id);
+            ToastSuccess = "Mesa desactivada correctamente.";
+        }
+        catch (ReglaDominioException ex)
+        {
+            ToastError = ex.Message;
+        }
+        catch (ArgumentException ex)
+        {
+            ToastError = ex.Message;
+        }
+
+        return RedirectToPage();
+    }
+
+    private async Task CargarDatosAsync()
+    {
+        Vm.Mesas = await _mesasServicio.ListarMesasAsync();
+
+        var resumen = EstadosOrdenados.ToDictionary(e => e, _ => 0, StringComparer.OrdinalIgnoreCase);
+        foreach (var mesa in Vm.Mesas)
+        {
+            if (!resumen.TryAdd(mesa.Estado, 1))
+            {
+                resumen[mesa.Estado]++;
+            }
+        }
+
+        Vm.ResumenPorEstado = resumen;
+    }
+
+    private void SetUiContext()
+    {
+        if (ViewData is not null)
+        {
+            ViewData["ActiveTab"] = "Mesas";
+        }
+    }
+}
