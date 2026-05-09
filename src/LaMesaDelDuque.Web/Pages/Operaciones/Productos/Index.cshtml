@@ -1,0 +1,150 @@
+@page
+@model LaMesaDelDuque.Web.Pages.Operaciones.Productos.IndexModel
+@{
+    ViewData["Title"] = "Productos";
+}
+
+<section class="lmd-page-header rounded-top">
+    <div>
+        <h1>Productos</h1>
+        <p class="lmd-page-subtitle">Consola de mantenimiento del catálogo operativo.</p>
+    </div>
+    <button class="btn lmd-action-primary" type="button" data-bs-toggle="collapse" data-bs-target="#producto-form">
+        Nuevo producto
+    </button>
+</section>
+
+<section class="bg-white border-top-0 p-4 rounded-bottom">
+    <div class="lmd-toast-zone mb-3">
+        @if (!string.IsNullOrWhiteSpace(Model.ToastSuccess))
+        {
+            <div class="alert alert-success py-2 mb-2">@Model.ToastSuccess</div>
+        }
+        @if (!string.IsNullOrWhiteSpace(Model.ToastError))
+        {
+            <div class="alert alert-danger py-2 mb-2">@Model.ToastError</div>
+        }
+    </div>
+
+    <form method="get" class="row g-2 align-items-end mb-3">
+        <div class="col-md-4">
+            <label class="form-label">Buscar</label>
+            <input class="form-control form-control-sm" asp-for="Buscar" placeholder="Nombre del producto" />
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Categoría</label>
+            <select class="form-select form-select-sm" asp-for="CategoriaId">
+                <option value="">Todas</option>
+                @foreach (var categoria in Model.Vm.Categorias)
+                {
+                    <option value="@categoria.Id">@categoria.Nombre</option>
+                }
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label class="form-label">Estado</label>
+            <select class="form-select form-select-sm" asp-for="Estado">
+                <option value="todos">Todos</option>
+                <option value="activos">Activos</option>
+                <option value="inactivos">Inactivos</option>
+            </select>
+        </div>
+        <div class="col-md-2 d-grid">
+            <button class="btn btn-sm lmd-action-neutral" type="submit">Filtrar</button>
+        </div>
+    </form>
+
+    <div class="collapse mb-3 @(Model.ModelState.ErrorCount > 0 ? "show" : string.Empty)" id="producto-form">
+        <form method="post" asp-page-handler="Guardar" class="border rounded p-3">
+            <input type="hidden" asp-for="Vm.Form.Id" />
+            <div asp-validation-summary="ModelOnly" class="text-danger mb-2"></div>
+            <div class="row g-2">
+                <div class="col-md-4">
+                    <label class="form-label" asp-for="Vm.Form.Nombre"></label>
+                    <input class="form-control form-control-sm" asp-for="Vm.Form.Nombre" />
+                    <span class="text-danger" asp-validation-for="Vm.Form.Nombre"></span>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label" asp-for="Vm.Form.Precio"></label>
+                    <input class="form-control form-control-sm" asp-for="Vm.Form.Precio" />
+                    <span class="text-danger" asp-validation-for="Vm.Form.Precio"></span>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label" asp-for="Vm.Form.CategoriaId"></label>
+                    <select class="form-select form-select-sm" asp-for="Vm.Form.CategoriaId">
+                        <option value="">Seleccionar categoría</option>
+                        @foreach (var categoria in Model.Vm.Categorias)
+                        {
+                            <option value="@categoria.Id">@categoria.Nombre</option>
+                        }
+                    </select>
+                    <span class="text-danger" asp-validation-for="Vm.Form.CategoriaId"></span>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label" asp-for="Vm.Form.TiempoPreparacionMin">Prep. (min)</label>
+                    <input class="form-control form-control-sm" asp-for="Vm.Form.TiempoPreparacionMin" />
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label" asp-for="Vm.Form.Descripcion"></label>
+                    <input class="form-control form-control-sm" asp-for="Vm.Form.Descripcion" />
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label" asp-for="Vm.Form.ImagenUrl"></label>
+                    <input class="form-control form-control-sm" asp-for="Vm.Form.ImagenUrl" />
+                </div>
+            </div>
+            <div class="mt-3 d-flex gap-2">
+                <button class="btn btn-sm lmd-action-success" type="submit">Guardar producto</button>
+            </div>
+        </form>
+    </div>
+
+    @if (Model.Vm.Productos.Count == 0)
+    {
+        <div class="lmd-empty-state">No se encontraron productos para los filtros actuales.</div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="lmd-ops-table">
+                <thead>
+                    <tr>
+                        <th>Nombre</th>
+                        <th>Categoría</th>
+                        <th>Precio</th>
+                        <th>Estado</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var producto in Model.Vm.Productos)
+                    {
+                        <tr>
+                            <td>@producto.Nombre</td>
+                            <td>@producto.CategoriaNombre</td>
+                            <td class="lmd-money">@producto.Precio.ToString("C")</td>
+                            <td>
+                                <span class="lmd-status-badge @(producto.Activo ? "lmd-status-badge--active" : "lmd-status-badge--neutral")">
+                                    @(producto.Activo ? "Activo" : "Inactivo")
+                                </span>
+                            </td>
+                            <td>
+                                @if (producto.Activo)
+                                {
+                                    <form method="post" asp-page-handler="Desactivar" class="d-inline">
+                                        <input type="hidden" name="id" value="@producto.Id" />
+                                        <button type="submit" class="btn btn-sm lmd-action-danger">Desactivar</button>
+                                    </form>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</section>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
