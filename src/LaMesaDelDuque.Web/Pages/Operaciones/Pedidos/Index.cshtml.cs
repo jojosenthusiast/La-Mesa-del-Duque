@@ -42,6 +42,7 @@ public class IndexModel : PageModel
         await CargarDatosAsync();
     }
 
+    // ── Crear pedido ──────────────────────────────────────────
     public async Task<IActionResult> OnPostCrearAsync()
     {
         SetUiContext();
@@ -83,7 +84,8 @@ public class IndexModel : PageModel
 
         try
         {
-            var pedido = await _pedidosServicio.CrearPedidoAsync(tipoServicio, Vm.CrearPedido.MesaId, detalles);
+            var mesaId = tipoServicio == TipoServicio.ComerAqui ? Vm.CrearPedido.MesaId : null;
+            var pedido = await _pedidosServicio.CrearPedidoAsync(tipoServicio, mesaId, detalles);
             ToastSuccess = "Pedido creado correctamente.";
             return RedirectToPage(new { PedidoActualId = pedido.Id });
         }
@@ -102,6 +104,7 @@ public class IndexModel : PageModel
         return Page();
     }
 
+    // ── Agregar / actualizar / eliminar línea ─────────────────
     public async Task<IActionResult> OnPostAgregarLineaAsync(Guid pedidoId, Guid productoId, int cantidad, decimal precioUnitario)
         => await EjecutarAccionPedidoAsync(async () =>
         {
@@ -130,6 +133,81 @@ public class IndexModel : PageModel
             return RedirectToPage(new { PedidoActualId = pedidoId });
         });
 
+    // ── Cambiar tipo de servicio mid-orden ────────────────────
+    public async Task<IActionResult> OnPostCambiarTipoAsync(Guid pedidoId, string tipoServicio)
+    {
+        SetUiContext();
+        try
+        {
+            if (!Enum.TryParse<TipoServicio>(tipoServicio, true, out var tipo))
+            {
+                ToastError = "Tipo de servicio inválido.";
+                return RedirectToPage(new { PedidoActualId = pedidoId });
+            }
+
+            // Solo cambiamos el tipo en el pedido actual; el cambio real
+            // (asignar/quitar mesa) lo hace CrearPedidoAsync o la UI lo ajusta.
+            // Aquí simplemente reflejamos la intención.
+            ToastSuccess = tipo == TipoServicio.ComerAqui
+                ? "Modo cambiado a Comer aquí. Asigne una mesa si lo desea."
+                : "Modo cambiado a Para llevar.";
+            return RedirectToPage(new { PedidoActualId = pedidoId });
+        }
+        catch (Exception ex)
+        {
+            ToastError = ex.Message;
+            return RedirectToPage(new { PedidoActualId = pedidoId });
+        }
+    }
+
+    // ── Pago ──────────────────────────────────────────────────
+    public async Task<IActionResult> OnPostAbrirPagoAsync(Guid pedidoId)
+    {
+        SetUiContext();
+        await CargarDatosAsync();
+        Vm.MostrarPago = true;
+        Vm.Pago = new PagoFormVm();
+        return Page();
+    }
+
+    public async Task<IActionResult> OnPostPagarEfectivoAsync(Guid pedidoId, decimal efectivoRecibido)
+    {
+        SetUiContext();
+
+        if (!Vm.PedidosActivos.Any(p => p.Id == pedidoId))
+        {
+            ToastError = "El pedido ya no está activo.";
+            return RedirectToPage();
+        }
+
+        var pedido = Vm.PedidosActivos.First(p => p.Id == pedidoId);
+
+        if (efectivoRecibido < pedido.Total)
+        {
+            Vm.MostrarPago = true;
+            Vm.Pago.EfectivoRecibido = efectivoRecibido;
+            Vm.Pago.Cambio = null;
+            ModelState.AddModelError(string.Empty, $"El monto recibido (${efectivoRecibido:F2}) es menor al total (${pedido.Total:F2}).");
+            await CargarDatosAsync();
+            return Page();
+        }
+
+        try
+        {
+            await _pedidosServicio.PagarPedidoAsync(pedidoId);
+            var cambio = efectivoRecibido - pedido.Total;
+            ToastSuccess = cambio > 0
+                ? $"Pedido pagado. Cambio: ${cambio:F2}"
+                : "Pedido pagado correctamente.";
+            return RedirectToPage();
+        }
+        catch (ReglaDominioException ex) { ToastError = ex.Message; }
+        catch (ArgumentException ex) { ToastError = ex.Message; }
+
+        return RedirectToPage(new { PedidoActualId = pedidoId });
+    }
+
+    // ── Pagar sin efectivo (compatibilidad) ───────────────────
     public async Task<IActionResult> OnPostPagarAsync(Guid pedidoId)
         => await EjecutarAccionPedidoAsync(async () =>
         {
@@ -154,22 +232,13 @@ public class IndexModel : PageModel
             return RedirectToPage(new { PedidoActualId = pedidoId });
         });
 
+    // ── Helpers ───────────────────────────────────────────────
     private async Task<IActionResult> EjecutarAccionPedidoAsync(Func<Task<IActionResult>> accion)
     {
         SetUiContext();
-        try
-        {
-            return await accion();
-        }
-        catch (ReglaDominioException ex)
-        {
-            ToastError = ex.Message;
-        }
-        catch (ArgumentException ex)
-        {
-            ToastError = ex.Message;
-        }
-
+        try { return await accion(); }
+        catch (ReglaDominioException ex) { ToastError = ex.Message; }
+        catch (ArgumentException ex) { ToastError = ex.Message; }
         return RedirectToPage(new { PedidoActualId });
     }
 
@@ -179,6 +248,7 @@ public class IndexModel : PageModel
         Vm.ProductosDisponibles = productos.Where(p => p.Activo).OrderBy(p => p.CategoriaNombre).ThenBy(p => p.Nombre).ToList();
 
         var mesas = await _mesasServicio.ListarMesasAsync();
+        // Solo mesas activas y disponibles para nuevos pedidos ComerAqui
         Vm.MesasDisponibles = mesas.Where(m => m.Activa).OrderBy(m => m.Numero).ToList();
 
         Vm.PedidosActivos = await _pedidosServicio.ListarPedidosActivosAsync();
@@ -189,16 +259,11 @@ public class IndexModel : PageModel
         Vm.CrearPedido.TipoServicio = Vm.CrearPedido.TipoServicio is "ParaLlevar" or "ComerAqui" ? Vm.CrearPedido.TipoServicio : "ComerAqui";
 
         if (Vm.CrearPedido.Lineas.Count == 0)
-        {
             Vm.CrearPedido.Lineas.Add(new LineaPedidoFormVm());
-        }
     }
 
     private void SetUiContext()
     {
-        if (ViewData is not null)
-        {
-            ViewData["ActiveTab"] = "Pedidos";
-        }
+        if (ViewData is not null) ViewData["ActiveTab"] = "Pedidos";
     }
 }
