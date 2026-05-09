@@ -8,6 +8,7 @@ public interface IUnidadDeTrabajo
     IMesaRepositorio Mesas { get; }
     IPedidoRepositorio Pedidos { get; }
     IRecetaProductoRepositorio RecetasProductos { get; }
+    IRolRepositorio Roles { get; }
     IUsuarioRepositorio Usuarios { get; }
     IAuditoriaRepositorio Auditorias { get; }
 

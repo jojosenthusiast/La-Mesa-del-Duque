@@ -14,6 +14,7 @@ internal class UnidadDeTrabajo : IUnidadDeTrabajo
         IngredienteRepositorio ingredienteRepositorio,
         MesaRepositorio mesaRepositorio,
         PedidoRepositorio pedidoRepositorio,
+        RolRepositorio rolRepositorio,
         UsuarioRepositorio usuarioRepositorio,
         AuditoriaRepositorio auditoriaRepositorio,
         RecetaProductoRepositorio recetaProductoRepositorio)
@@ -24,6 +25,7 @@ internal class UnidadDeTrabajo : IUnidadDeTrabajo
         Ingredientes = ingredienteRepositorio;
         Mesas = mesaRepositorio;
         Pedidos = pedidoRepositorio;
+        Roles = rolRepositorio;
         Usuarios = usuarioRepositorio;
         Auditorias = auditoriaRepositorio;
         RecetasProductos = recetaProductoRepositorio;
@@ -35,6 +37,7 @@ internal class UnidadDeTrabajo : IUnidadDeTrabajo
     public IMesaRepositorio Mesas { get; }
     public IPedidoRepositorio Pedidos { get; }
     public IRecetaProductoRepositorio RecetasProductos { get; }
+    public IRolRepositorio Roles { get; }
     public IUsuarioRepositorio Usuarios { get; }
     public IAuditoriaRepositorio Auditorias { get; }
 

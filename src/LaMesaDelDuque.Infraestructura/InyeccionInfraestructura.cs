@@ -32,6 +32,7 @@ public static class InyeccionInfraestructura
         servicios.AddScoped<IngredienteRepositorio>();
         servicios.AddScoped<MesaRepositorio>();
         servicios.AddScoped<PedidoRepositorio>();
+        servicios.AddScoped<RolRepositorio>();
         servicios.AddScoped<UsuarioRepositorio>();
         servicios.AddScoped<AuditoriaRepositorio>();
         servicios.AddScoped<RecetaProductoRepositorio>();

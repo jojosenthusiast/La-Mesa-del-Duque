@@ -35,6 +35,7 @@ public class MesasServicioTests : IDisposable
             new IngredienteRepositorio(_contexto),
             new MesaRepositorio(_contexto),
             new PedidoRepositorio(_contexto),
+            new RolRepositorio(_contexto),
             new UsuarioRepositorio(_contexto),
             new AuditoriaRepositorio(_contexto),
             new RecetaProductoRepositorio(_contexto));
