@@ -145,18 +145,18 @@ ON CONFLICT ("Id") DO NOTHING;
 -- ============================================================================
 INSERT INTO "Proveedor" ("Id", "Nombre", "Nit", "Contacto", "Telefono", "Email", "Activo")
 VALUES
-    ('g0000000-0000-0000-0000-000000000001', 'Distribuidora La Económica', '0614-010101-001-1', 'Juan Distribuidor', '2222-3333', 'ventas@laeconomica.com', true)
+    ('0a000000-0000-0000-0000-000000000001', 'Distribuidora La Económica', '0614-010101-001-1', 'Juan Distribuidor', '2222-3333', 'ventas@laeconomica.com', true)
 ON CONFLICT ("Id") DO NOTHING;
 
 -- 9. INGREDIENTES (algunos para pruebas de recetas)
 -- ============================================================================
 INSERT INTO "Ingrediente" ("Id", "Nombre", "UnidadMedida", "StockActual", "StockMinimo", "CostoUnitario", "ProveedorDefaultId", "Activo")
 VALUES
-    ('h0000000-0000-0000-0000-000000000001', 'Tomate', 'kg', 25.0, 5.0, 2.50, 'g0000000-0000-0000-0000-000000000001', true),
-    ('h0000000-0000-0000-0000-000000000002', 'Queso Mozzarella', 'kg', 10.0, 2.0, 8.00, 'g0000000-0000-0000-0000-000000000001', true),
-    ('h0000000-0000-0000-0000-000000000003', 'Harina', 'kg', 50.0, 10.0, 1.20, 'g0000000-0000-0000-0000-000000000001', true),
-    ('h0000000-0000-0000-0000-000000000004', 'Aceite de Oliva', 'L', 15.0, 3.0, 6.00, 'g0000000-0000-0000-0000-000000000001', true),
-    ('h0000000-0000-0000-0000-000000000005', 'Pechuga de Pollo', 'kg', 20.0, 5.0, 7.50, 'g0000000-0000-0000-0000-000000000001', true)
+    ('0b000000-0000-0000-0000-000000000001', 'Tomate', 'kg', 25.0, 5.0, 2.50, '0a000000-0000-0000-0000-000000000001', true),
+    ('0b000000-0000-0000-0000-000000000002', 'Queso Mozzarella', 'kg', 10.0, 2.0, 8.00, '0a000000-0000-0000-0000-000000000001', true),
+    ('0b000000-0000-0000-0000-000000000003', 'Harina', 'kg', 50.0, 10.0, 1.20, '0a000000-0000-0000-0000-000000000001', true),
+    ('0b000000-0000-0000-0000-000000000004', 'Aceite de Oliva', 'L', 15.0, 3.0, 6.00, '0a000000-0000-0000-0000-000000000001', true),
+    ('0b000000-0000-0000-0000-000000000005', 'Pechuga de Pollo', 'kg', 20.0, 5.0, 7.50, '0a000000-0000-0000-0000-000000000001', true)
 ON CONFLICT ("Id") DO NOTHING;
 
 -- 10. CONFIGURACIÓN DEL RESTAURANTE
