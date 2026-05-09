@@ -6,6 +6,19 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1
 y este proyecto adhiere al [Versionado Semántico](https://semver.org/lang/es/).
 ## [0.11.0](https://github.com/jojosenthusiast/La-Mesa-del-Duque/compare/v0.10.1...v0.11.0) (2026-05-09)
 
+### Summary
+
+- Agrega notificaciones en tiempo real con SignalR para el flujo de pedidos, permitiendo que los clientes reciban eventos cuando se crean, cambian de estado o cancelan pedidos.
+
+### Details
+
+- Crea interfaz `INotificadorPedidos` en la capa de aplicación con métodos `NotificarPedidoCreadoAsync`, `NotificarEstadoCambiadoAsync` y `NotificarPedidoCanceladoAsync`.
+- Implementa `PedidosHub` como hub de SignalR en `/hubs/pedidos` para comunicación server→client.
+- Implementa `SignalRNotificadorPedidos` con patrón fire-and-forget (try/catch que no propaga errores de SignalR al caller).
+- Integra notificaciones en `PedidosServicio`: emite al crear pedido, al transicionar Pendiente→EnPreparacion y EnPreparacion→Pagado, y al cancelar.
+- Agrega test doubles: `NotificadorPedidosSpy` para verificar emisión de notificaciones y `NotificadorPedidosNulo` para mantener compatibilidad con tests existentes.
+- Expande suite de pruebas de 192 a 195 tests con 3 nuevos tests de contrato de notificaciones.
+- SignalR está incluido en el shared framework de ASP.NET Core 8 — no requiere paquete NuGet adicional.
 
 ### Nuevas funcionalidades
 
