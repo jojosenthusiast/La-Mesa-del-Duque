@@ -128,7 +128,7 @@ CREATE INDEX IF NOT EXISTS ix_pedido_estado_activo
 
 -- Productos por categoría (catálogo)
 CREATE INDEX IF NOT EXISTS ix_producto_categoria_activo
-    ON "Producto" ("CategoriaProductoId")
+    ON "Producto" ("CategoriaId")
     WHERE "Activo" = true;
 
 -- Mesas por número (lookup rápido)
@@ -136,7 +136,7 @@ CREATE INDEX IF NOT EXISTS ix_mesa_numero ON "Mesa" ("Numero");
 
 -- Auditoría por fecha (consultas de trazabilidad)
 CREATE INDEX IF NOT EXISTS ix_auditoria_fecha
-    ON "Auditorias" ("FechaHora" DESC);
+    ON "Auditorias" ("Fecha" DESC);
 
 -- Usuarios por username (login)
 CREATE INDEX IF NOT EXISTS ix_usuarios_username ON "Usuarios" ("Username");
