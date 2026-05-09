@@ -2,8 +2,19 @@
 -- La Mesa del Duque — RLS y optimizaciones para Supabase
 -- ============================================================================
 -- Ejecutar desde el SQL Editor de Supabase DESPUÉS de aplicar migraciones.
--- Este script usa los nombres EXACTOS de tabla generados por EF Core.
+-- Este script es IDEMPOTENTE: se puede ejecutar múltiples veces.
 -- ============================================================================
+
+-- 0. LIMPIAR POLÍTICAS EXISTENTES (para re-ejecución segura)
+-- ============================================================================
+DO $$
+DECLARE
+    pol RECORD;
+BEGIN
+    FOR pol IN SELECT policyname, tablename FROM pg_policies WHERE schemaname = 'public' LOOP
+        EXECUTE format('DROP POLICY IF EXISTS %I ON %I', pol.policyname, pol.tablename);
+    END LOOP;
+END $$;
 
 -- 1. HABILITAR RLS EN TODAS LAS TABLAS
 -- ============================================================================
