@@ -4,6 +4,13 @@ Todas las modificaciones notables de este proyecto se documentarán en este arch
 
 El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/),
 y este proyecto adhiere al [Versionado Semántico](https://semver.org/lang/es/).
+## [0.9.0](https://github.com/jojosenthusiast/La-Mesa-del-Duque/compare/v0.8.0...v0.9.0) (2026-05-09)
+
+
+### Nuevas funcionalidades
+
+* **mesas:** alinear reglas de mesa con criterios de aceptación del sprint 1 — Slice 4 ([3fd4c69](https://github.com/jojosenthusiast/La-Mesa-del-Duque/commit/3fd4c69f8a66caf86223399757d9be50edd198f0))
+
 ## [0.8.0](https://github.com/jojosenthusiast/La-Mesa-del-Duque/compare/v0.7.0...v0.8.0) (2026-05-09)
 
 ### Summary
