@@ -122,6 +122,24 @@ public class MesasServicioTests : IDisposable
     }
 
     [Fact]
+    public async Task CambiarEstadoMesa_AReservadaOMantenimiento_DebePersistir()
+    {
+        var mesa = await _servicio.CrearMesaAsync(11, 4);
+
+        await _servicio.CambiarEstadoMesaAsync(mesa.Id, "Reservada");
+        var reservada = await _servicio.ObtenerMesaPorNumeroAsync(11);
+
+        Assert.NotNull(reservada);
+        Assert.Equal("Reservada", reservada!.Estado);
+
+        await _servicio.CambiarEstadoMesaAsync(mesa.Id, "EnMantenimiento");
+        var mantenimiento = await _servicio.ObtenerMesaPorNumeroAsync(11);
+
+        Assert.NotNull(mantenimiento);
+        Assert.Equal("EnMantenimiento", mantenimiento!.Estado);
+    }
+
+    [Fact]
     public async Task CambiarEstadoMesa_CuandoNoExiste_DebeLanzarExcepcion()
     {
         await Assert.ThrowsAsync<ArgumentException>(() =>
@@ -178,6 +196,27 @@ public class MesasServicioTests : IDisposable
 
         await Assert.ThrowsAsync<ReglaDominioException>(() =>
             _servicio.DesactivarMesaAsync(mesa.Id));
+    }
+
+    [Fact]
+    public async Task CambiarEstadoMesa_ADisponible_ConPedidosActivos_DebeLanzarExcepcion()
+    {
+        var mesa = await _servicio.CrearMesaAsync(41, 4);
+
+        var mesaTracked = await _uot.Mesas.ObtenerParaActualizarAsync(mesa.Id);
+        var categoria = new CategoriaProducto("Bebidas activas");
+        await _uot.Categorias.AgregarAsync(categoria);
+        var producto = new Producto("Café activo", 3.00m, categoria);
+        await _uot.Productos.AgregarAsync(producto);
+        await _uot.GuardarCambiosAsync();
+
+        var pedido = new Pedido(TipoServicio.ComerAqui, mesaTracked!);
+        pedido.AgregarDetalle(new DetallePedido(producto, 1, 3.00m));
+        await _uot.Pedidos.AgregarAsync(pedido);
+        await _uot.GuardarCambiosAsync();
+
+        await Assert.ThrowsAsync<ReglaDominioException>(() =>
+            _servicio.CambiarEstadoMesaAsync(mesa.Id, "Disponible"));
     }
 
     [Fact]

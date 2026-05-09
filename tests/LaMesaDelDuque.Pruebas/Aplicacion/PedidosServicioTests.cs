@@ -235,4 +235,38 @@ public class PedidosServicioTests : IDisposable
         Assert.Contains(activos, x => x.Id == pendiente.Id);
         Assert.Contains(activos, x => x.Id == enPreparacion.Id);
     }
+
+    [Fact]
+    public async Task PagarPedido_UnicoPedidoEnMesa_DebeLiberarMesa()
+    {
+        var (mesa, producto) = await CrearMesaYProductoAsync(30);
+
+        var pedido = await _servicio.CrearPedidoAsync(TipoServicio.ComerAqui, mesa.Id, new List<DetalleCreacionDto>
+        {
+            new() { ProductoId = producto.Id, Cantidad = 1, PrecioUnitario = 3.50m }
+        });
+
+        await _servicio.PagarPedidoAsync(pedido.Id);
+
+        var mesaActualizada = await _uot.Mesas.ObtenerPorIdAsync(mesa.Id);
+        Assert.NotNull(mesaActualizada);
+        Assert.Equal(EstadoMesa.Disponible, mesaActualizada!.Estado);
+    }
+
+    [Fact]
+    public async Task CancelarPedido_UnicoPedidoEnMesa_DebeLiberarMesa()
+    {
+        var (mesa, producto) = await CrearMesaYProductoAsync(31);
+
+        var pedido = await _servicio.CrearPedidoAsync(TipoServicio.ComerAqui, mesa.Id, new List<DetalleCreacionDto>
+        {
+            new() { ProductoId = producto.Id, Cantidad = 1, PrecioUnitario = 3.50m }
+        });
+
+        await _servicio.CancelarPedidoAsync(pedido.Id);
+
+        var mesaActualizada = await _uot.Mesas.ObtenerPorIdAsync(mesa.Id);
+        Assert.NotNull(mesaActualizada);
+        Assert.Equal(EstadoMesa.Disponible, mesaActualizada!.Estado);
+    }
 }

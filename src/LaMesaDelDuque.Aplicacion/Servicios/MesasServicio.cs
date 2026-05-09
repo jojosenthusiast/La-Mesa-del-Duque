@@ -48,6 +48,13 @@ internal class MesasServicio : IMesasServicio
         var mesa = await _uot.Mesas.ObtenerParaActualizarAsync(mesaId, cancelacion)
             ?? throw new ArgumentException($"No se encontró la mesa con ID {mesaId}.", nameof(mesaId));
 
+        if (estado == EstadoMesa.Disponible)
+        {
+            var pedidos = await _uot.Pedidos.ObtenerPorMesaAsync(mesaId, cancelacion);
+            if (pedidos.Any(p => p.Estado == EstadoPedido.Pendiente || p.Estado == EstadoPedido.EnPreparacion))
+                throw new ReglaDominioException("No se puede marcar la mesa como disponible porque tiene pedidos activos.");
+        }
+
         mesa.CambiarEstado(estado);
         await _uot.GuardarCambiosAsync(cancelacion);
     }
