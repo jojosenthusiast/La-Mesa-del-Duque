@@ -57,4 +57,40 @@ public class Usuario
         CreatedAt = DateTime.UtcNow;
         UpdatedAt = DateTime.UtcNow;
     }
+
+    public void Desactivar()
+    {
+        Activo = false;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void Activar()
+    {
+        Activo = true;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void CambiarRol(Rol nuevoRol)
+    {
+        if (nuevoRol is null)
+            throw new ReglaDominioException("El rol del usuario es obligatorio.");
+
+        Rol = nuevoRol;
+        RolId = nuevoRol.Id;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void ActualizarUltimoAcceso()
+    {
+        UltimoAcceso = DateTime.UtcNow;
+    }
+
+    public void CambiarPasswordHash(string nuevoPasswordHash)
+    {
+        if (string.IsNullOrWhiteSpace(nuevoPasswordHash))
+            throw new ReglaDominioException("El password hash es obligatorio.");
+
+        PasswordHash = nuevoPasswordHash.Trim();
+        UpdatedAt = DateTime.UtcNow;
+    }
 }
