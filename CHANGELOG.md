@@ -4,6 +4,28 @@ Todas las modificaciones notables de este proyecto se documentarán en este arch
 
 El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/),
 y este proyecto adhiere al [Versionado Semántico](https://semver.org/lang/es/).
+## [0.10.0](https://github.com/jojosenthusiast/La-Mesa-del-Duque/compare/v0.9.0...v0.10.0) (2026-05-09)
+
+### Summary
+
+- Agrega gestión de usuarios, autenticación por cookies con BCrypt y autorización por roles, cubriendo el backend de HU-021 y HU-025 del Sprint 1.
+
+### Details
+
+- Agrega entidad `Usuario` con métodos de dominio: activar/desactivar, cambio de rol, actualización de último acceso y cambio de contraseña.
+- Implementa `IUsuariosServicio` y `UsuariosServicio` con CRUD completo, validación de credenciales con BCrypt y reglas de negocio.
+- Agrega `IRolRepositorio` y `RolRepositorio` para búsqueda de roles por ID y nombre.
+- Configura autenticación por cookies en `Program.cs` con timeout deslizante de 8 horas y claims de rol.
+- Agrega páginas Razor `Login.cshtml` y `Logout.cshtml` con validación de credenciales y cierre de sesión.
+- Configura middleware de autorización por rol para proteger endpoints.
+- Implementa soft delete de usuarios (`activo=false`) en lugar de eliminación física.
+- Agrega 137 tests unitarios para `UsuariosServicio`, elevando la suite completa a 192 tests.
+
+### Nuevas funcionalidades
+
+* **auth:** agregar gestión de usuarios, login con bcrypt y autorización por roles — Slice 5 ([c1cd1d6](https://github.com/jojosenthusiast/La-Mesa-del-Duque/commit/c1cd1d63dbc4c3400191ff80cc51f9c07f4ad974))
+* **auth:** agregar gestión de usuarios, login con bcrypt y autorización por roles — Slice 5 ([0e50f12](https://github.com/jojosenthusiast/La-Mesa-del-Duque/commit/0e50f12754a601d1754b271b63e6a06cbd9beb49))
+
 ## [0.9.0](https://github.com/jojosenthusiast/La-Mesa-del-Duque/compare/v0.8.0...v0.9.0) (2026-05-09)
 
 
