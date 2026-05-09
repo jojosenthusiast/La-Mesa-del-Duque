@@ -390,3 +390,286 @@ h1, h2, h3, h4, h5, h6 {
         font-size: var(--lmd-texto-base);
     }
 }
+
+/* ═══════════════════════════════════════════════════════
+   Sprint 1 — Shell operativo
+   ═══════════════════════════════════════════════════════ */
+
+.lmd-shell-container { max-width: 1400px; }
+
+/* --- Navegación operativa --- */
+
+.lmd-ops-nav {
+    background: color-mix(in oklch, var(--lmd-azul-duque) 94%, black);
+    box-shadow: 0 2px 8px rgba(15, 27, 45, 0.14);
+    min-height: var(--lmd-nav-alto);
+}
+
+.lmd-ops-nav .lmd-ops-brand {
+    display: flex;
+    align-items: center;
+    gap: var(--lmd-espacio-sm);
+    color: var(--lmd-acento);
+    font-family: var(--lmd-fuente-titulo);
+    font-weight: var(--lmd-peso-titulo);
+    font-size: var(--lmd-texto-lg);
+    text-decoration: none;
+    transition: color var(--lmd-transicion);
+}
+
+.lmd-ops-nav .lmd-ops-brand:hover { color: var(--lmd-dorado-claro); }
+
+.lmd-ops-nav .lmd-ops-brand img {
+    height: 40px;
+    width: auto;
+}
+
+.lmd-ops-nav .navbar-toggler { border-color: var(--lmd-acento); }
+
+.lmd-ops-nav .navbar-toggler-icon {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='%23C9A24E' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e");
+}
+
+/* --- Pestañas de módulo --- */
+
+.lmd-module-tabs {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.lmd-module-tabs .nav-link {
+    border-radius: var(--lmd-radio-sm);
+    padding: 0.625rem 1rem;
+    font-size: 0.875rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: var(--lmd-texto-invertido) !important;
+    font-family: var(--lmd-fuente-cuerpo);
+    text-transform: uppercase;
+    transition: background-color var(--lmd-transicion), color var(--lmd-transicion);
+}
+
+.lmd-module-tabs .nav-link:hover {
+    color: var(--lmd-acento) !important;
+}
+
+.lmd-module-tabs .nav-link.active {
+    background: var(--lmd-acento);
+    color: var(--lmd-azul-duque) !important;
+}
+
+/* --- Usuario en nav --- */
+
+.lmd-user-info {
+    font-size: var(--lmd-texto-sm);
+    color: var(--lmd-texto-invertido);
+}
+
+.lmd-user-name {
+    font-weight: var(--lmd-peso-enfasis);
+    color: var(--lmd-acento);
+}
+
+/* --- Shell main --- */
+
+.lmd-shell-main {
+    padding-block: 1.5rem 2rem;
+    flex: 1;
+}
+
+.lmd-main-surface {
+    min-height: 60vh;
+}
+
+/* ═══════════════════════════════════════════════════════
+   Sprint 1 — Encabezado de página
+   ═══════════════════════════════════════════════════════ */
+
+.lmd-page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: start;
+    gap: 1rem;
+    padding: 1.5rem;
+    background: #fff;
+    border-bottom: 2px solid rgba(15, 27, 45, 0.08);
+}
+
+.lmd-page-header h1 {
+    font-family: var(--lmd-fuente-titulo);
+    font-size: 1.5rem;
+    margin: 0;
+    color: var(--lmd-azul-duque);
+}
+
+.lmd-page-subtitle {
+    color: var(--lmd-gris-piedra);
+    font-size: 0.9375rem;
+    font-weight: 500;
+    font-family: var(--lmd-fuente-cuerpo);
+    margin: 0.25rem 0 0;
+}
+
+/* ═══════════════════════════════════════════════════════
+   Sprint 1 — Semántica de acciones
+   ═══════════════════════════════════════════════════════ */
+
+.lmd-action-primary {
+    background: var(--lmd-acento);
+    color: var(--lmd-azul-duque);
+    border: none;
+}
+
+.lmd-action-primary:hover {
+    background: var(--lmd-dorado-hover);
+    color: #fff;
+}
+
+.lmd-action-success {
+    background: var(--lmd-verde-salvia);
+    color: var(--lmd-texto-invertido);
+    border: none;
+}
+
+.lmd-action-success:hover {
+    background: #3d5847;
+    color: var(--lmd-texto-invertido);
+}
+
+.lmd-action-danger {
+    background: var(--lmd-terracota);
+    color: var(--lmd-texto-invertido);
+    border: none;
+}
+
+.lmd-action-danger:hover {
+    background: #b0492c;
+    color: var(--lmd-texto-invertido);
+}
+
+.lmd-action-neutral {
+    background: transparent;
+    border: 1px solid rgba(15, 27, 45, 0.18);
+    color: var(--lmd-texto-primario);
+}
+
+.lmd-action-neutral:hover {
+    background: rgba(15, 27, 45, 0.04);
+    color: var(--lmd-texto-primario);
+}
+
+/* ═══════════════════════════════════════════════════════
+   Sprint 1 — Badges de estado
+   ═══════════════════════════════════════════════════════ */
+
+.lmd-status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.28rem 0.7rem;
+    border-radius: 0.35rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    font-family: var(--lmd-fuente-cuerpo);
+}
+
+.lmd-status-badge--active {
+    background: #1f5f3d;
+    color: #f8f6ef;
+}
+
+.lmd-status-badge--busy {
+    background: #8e6f1a;
+    color: #f8f6ef;
+}
+
+.lmd-status-badge--reserved {
+    background: #2a568a;
+    color: #f8f6ef;
+}
+
+.lmd-status-badge--danger {
+    background: #a34f38;
+    color: #f8f6ef;
+}
+
+.lmd-status-badge--neutral {
+    background: #6b6f76;
+    color: #f8f6ef;
+}
+
+/* ═══════════════════════════════════════════════════════
+   Sprint 1 — Tabla operativa
+   ═══════════════════════════════════════════════════════ */
+
+.lmd-ops-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #fff;
+    font-family: var(--lmd-fuente-cuerpo);
+}
+
+.lmd-ops-table th {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--lmd-gris-piedra);
+    font-weight: var(--lmd-peso-enfasis);
+}
+
+.lmd-ops-table td,
+.lmd-ops-table th {
+    padding: 0.9rem 0.75rem;
+    border-bottom: 1px solid rgba(15, 27, 45, 0.08);
+}
+
+.lmd-money {
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+}
+
+/* ═══════════════════════════════════════════════════════
+   Sprint 1 — Zona de notificaciones
+   ═══════════════════════════════════════════════════════ */
+
+.lmd-toast-zone {
+    position: sticky;
+    top: calc(var(--lmd-nav-alto) + 0.5rem);
+    z-index: 20;
+}
+
+/* ═══════════════════════════════════════════════════════
+   Sprint 1 — Accesibilidad y utilidades
+   ═══════════════════════════════════════════════════════ */
+
+.lmd-sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+}
+
+.lmd-focus-ring:focus-visible {
+    outline: 3px solid rgba(201, 162, 78, 0.35);
+    outline-offset: 2px;
+}
+
+.lmd-visually-muted {
+    color: var(--lmd-gris-piedra);
+}
+
+.lmd-empty-state {
+    padding: 2rem;
+    text-align: center;
+    color: var(--lmd-gris-piedra);
+    font-family: var(--lmd-fuente-cuerpo);
+    font-size: var(--lmd-texto-sm);
+}
+
+.lmd-danger-zone {
+    border-top: 1px solid rgba(163, 79, 56, 0.2);
+    padding-top: 1rem;
+}
