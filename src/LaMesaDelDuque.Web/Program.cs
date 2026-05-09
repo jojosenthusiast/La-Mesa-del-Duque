@@ -1,5 +1,8 @@
 using LaMesaDelDuque.Aplicacion;
+using LaMesaDelDuque.Aplicacion.Notificaciones;
 using LaMesaDelDuque.Infraestructura;
+using LaMesaDelDuque.Web.Hubs;
+using LaMesaDelDuque.Web.Servicios;
 using Microsoft.AspNetCore.Authentication.Cookies;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -19,9 +22,11 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
     });
 
 builder.Services.AddAuthorization();
+builder.Services.AddSignalR();
 
 // Capa de aplicación (servicios)
 builder.Services.AgregarAplicacion();
+builder.Services.AddScoped<INotificadorPedidos, SignalRNotificadorPedidos>();
 
 // Persistencia con fail-fast si no hay connection string
 builder.Services.AgregarPersistencia(builder.Configuration);
@@ -45,5 +50,6 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapRazorPages();
+app.MapHub<PedidosHub>("/hubs/pedidos");
 
 app.Run();
