@@ -5,15 +5,14 @@ namespace LaMesaDelDuque.Pruebas.Web;
 public class IndexPageTests
 {
     [Fact]
-    public void OnGet_sets_pedidos_as_minimum_module()
+    public void OnGet_returns_empty_modules_when_not_authenticated()
     {
         var page = new IndexModel();
 
         page.OnGet();
 
         Assert.NotNull(page.ModuleLinks);
-        Assert.True(page.ModuleLinks.Count >= 1); // al menos Pedidos
-        Assert.Contains(page.ModuleLinks, m => m.Label == "Pedidos");
+        Assert.Empty(page.ModuleLinks); // sin autenticación, sin módulos
     }
 
     [Fact]

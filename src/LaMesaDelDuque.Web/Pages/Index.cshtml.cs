@@ -14,15 +14,18 @@ public class IndexModel : PageModel
     {
         var modulos = new List<ModuleLinkVm>();
 
-        if (User.IsInRole("Administrador") || User.IsInRole("Encargado"))
+        var autenticado = User?.Identity?.IsAuthenticated == true;
+
+        if (autenticado && (User.IsInRole("Administrador") || User.IsInRole("Encargado")))
             modulos.Add(new("Productos", "/Operaciones/Productos/Index", "Catálogo operativo y mantenimiento seguro."));
 
-        if (User.IsInRole("Administrador") || User.IsInRole("Encargado") || User.IsInRole("Mesero"))
+        if (autenticado && (User.IsInRole("Administrador") || User.IsInRole("Encargado") || User.IsInRole("Mesero")))
             modulos.Add(new("Mesas", "/Operaciones/Mesas/Index", "Estado del salón y acciones rápidas."));
 
-        modulos.Add(new("Pedidos", "/Operaciones/Pedidos/Index", "Captura rápida de órdenes y totales visibles."));
+        if (autenticado)
+            modulos.Add(new("Pedidos", "/Operaciones/Pedidos/Index", "Captura rápida de órdenes y totales visibles."));
 
-        if (User.IsInRole("Administrador"))
+        if (autenticado && User.IsInRole("Administrador"))
             modulos.Add(new("Usuarios", "/Admin/Usuarios/Index", "Gestión de acceso y roles."));
 
         ModuleLinks = modulos;

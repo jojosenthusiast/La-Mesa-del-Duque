@@ -1,0 +1,51 @@
+# ============================================================================
+# La Mesa del Duque — Docker Compose
+# ============================================================================
+# Modo 1 (desarrollo local con SQLite):
+#   docker compose up
+#
+# Modo 2 (producción con PostgreSQL):
+#   LMD_CONNECTION_STRING="postgresql://..." docker compose up
+#
+# Modo 3 (con PostgreSQL local + app):
+#   docker compose --profile produccion up
+# ============================================================================
+
+services:
+  app:
+    build: .
+    container_name: lmd-app
+    ports:
+      - "8080:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT:-Production}
+      - LMD_CONNECTION_STRING=${LMD_CONNECTION_STRING:-}
+    volumes:
+      - lmd-data:/app/data
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+        required: false
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: lmd-db
+    profiles: ["produccion"]
+    environment:
+      POSTGRES_DB: la_mesa_del_duque
+      POSTGRES_USER: lmd_app
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-cambiar_esta_clave}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lmd_app -d la_mesa_del_duque"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  lmd-data:
+  pgdata:
