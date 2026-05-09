@@ -85,6 +85,7 @@ internal class PedidosServicio : IPedidosServicio
             ?? throw new ArgumentException($"No se encontró el pedido con ID {pedidoId}.", nameof(pedidoId));
 
         pedido.MarcarComoPagado();
+        await LiberarMesaSiCorrespondeAsync(pedido, cancelacion);
         await _uot.GuardarCambiosAsync(cancelacion);
     }
 
@@ -125,6 +126,7 @@ internal class PedidosServicio : IPedidosServicio
             ?? throw new ArgumentException($"No se encontró el pedido con ID {pedidoId}.", nameof(pedidoId));
 
         pedido.Cancelar();
+        await LiberarMesaSiCorrespondeAsync(pedido, cancelacion);
         await _uot.GuardarCambiosAsync(cancelacion);
     }
 
@@ -162,6 +164,22 @@ internal class PedidosServicio : IPedidosServicio
             .Where(p => p.Estado == EstadoPedido.Pendiente || p.Estado == EstadoPedido.EnPreparacion)
             .Select(MapToDto)
             .ToList();
+    }
+
+    private async Task LiberarMesaSiCorrespondeAsync(Pedido pedido, CancellationToken cancelacion)
+    {
+        if (pedido.Mesa is null) return;
+
+        var pedidosMesa = await _uot.Pedidos.ObtenerPorMesaAsync(pedido.Mesa.Id, cancelacion);
+        var tieneActivos = pedidosMesa.Any(p =>
+            p.Id != pedido.Id &&
+            (p.Estado == EstadoPedido.Pendiente || p.Estado == EstadoPedido.EnPreparacion));
+
+        if (!tieneActivos)
+        {
+            var mesa = await _uot.Mesas.ObtenerParaActualizarAsync(pedido.Mesa.Id, cancelacion);
+            mesa?.CambiarEstado(EstadoMesa.Disponible);
+        }
     }
 
     private static PedidoDto MapToDto(Pedido pedido)
