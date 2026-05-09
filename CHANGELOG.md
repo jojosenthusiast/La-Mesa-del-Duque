@@ -4,6 +4,13 @@ Todas las modificaciones notables de este proyecto se documentarán en este arch
 
 El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/),
 y este proyecto adhiere al [Versionado Semántico](https://semver.org/lang/es/).
+## [0.13.0](https://github.com/jojosenthusiast/La-Mesa-del-Duque/compare/v0.12.0...v0.13.0) (2026-05-09)
+
+
+### Nuevas funcionalidades
+
+* **ui:** completar frontend operativo Sprint 1 — Slices 7b+7c+7d ([58a7d9d](https://github.com/jojosenthusiast/La-Mesa-del-Duque/commit/58a7d9d68dd8aab48627f1af04bd9512fe16990a))
+
 ## [0.12.0](https://github.com/jojosenthusiast/La-Mesa-del-Duque/compare/v0.11.0...v0.12.0) (2026-05-09)
 
 
