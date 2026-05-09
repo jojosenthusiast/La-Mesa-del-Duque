@@ -698,3 +698,57 @@ h1, h2, h3, h4, h5, h6 {
 .lmd-mesa-card--reservada { border-top-color: #2a568a; }
 .lmd-mesa-card--mantenimiento { border-top-color: #a34f38; }
 .lmd-mesa-card--inactiva { border-top-color: #6b6f76; }
+
+/* ═══════════════════════════════════════════════════════
+   Sprint 1 — Pedidos POS split workspace
+   ═══════════════════════════════════════════════════════ */
+
+.lmd-pos-shell {
+    display: grid;
+    grid-template-columns: minmax(320px, 1fr) minmax(360px, 1fr);
+    gap: 1rem;
+    align-items: start;
+}
+
+.lmd-pos-catalog,
+.lmd-pos-order-panel {
+    border: 1px solid rgba(15, 27, 45, 0.1);
+    border-radius: 0.5rem;
+    padding: 1rem;
+    background: #fff;
+}
+
+.lmd-pos-order-panel {
+    position: sticky;
+    top: calc(var(--lmd-nav-alto) + 1.5rem);
+}
+
+.lmd-pos-line-item {
+    background: #fff;
+    transition: border-color var(--lmd-transicion);
+}
+
+.lmd-pos-line-item:focus-within,
+.lmd-pos-line-item:hover {
+    border-color: rgba(201, 162, 78, 0.5) !important;
+}
+
+.lmd-pos-total {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 0.9rem;
+    border-radius: 0.5rem;
+    border: 1px solid rgba(15, 27, 45, 0.18);
+    background: rgba(247, 244, 236, 0.8);
+}
+
+@media (max-width: 991px) {
+    .lmd-pos-shell {
+        grid-template-columns: 1fr;
+    }
+
+    .lmd-pos-order-panel {
+        position: static;
+    }
+}

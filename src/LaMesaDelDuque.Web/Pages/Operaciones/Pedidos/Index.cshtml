@@ -1,0 +1,207 @@
+@page
+@model LaMesaDelDuque.Web.Pages.Operaciones.Pedidos.IndexModel
+@{
+    ViewData["Title"] = "Pedidos";
+    var pedidosPorMesa = Model.Vm.PedidosActivos.OrderBy(p => p.MesaNumero ?? int.MaxValue).ToList();
+    var productosPorCategoria = Model.Vm.ProductosDisponibles.GroupBy(p => p.CategoriaNombre).OrderBy(g => g.Key);
+}
+
+<section class="lmd-page-header rounded-top">
+    <div>
+        <h1>Pedidos</h1>
+        <p class="lmd-page-subtitle">Terminal de servicio con flujo rápido y seguro en horario pico.</p>
+    </div>
+</section>
+
+<section class="bg-white border-top-0 p-4 rounded-bottom">
+    <div class="lmd-toast-zone mb-3" id="lmd-toast-zone">
+        @if (!string.IsNullOrWhiteSpace(Model.ToastSuccess))
+        {
+            <div class="alert alert-success alert-dismissible fade show py-2 mb-2" data-lmd-toast="true" role="status">
+                @Model.ToastSuccess
+                <button type="button" class="btn-close" aria-label="Cerrar"></button>
+            </div>
+        }
+        @if (!string.IsNullOrWhiteSpace(Model.ToastError))
+        {
+            <div class="alert alert-danger alert-dismissible fade show py-2 mb-2" data-lmd-toast="true" role="alert">
+                @Model.ToastError
+                <button type="button" class="btn-close" aria-label="Cerrar"></button>
+            </div>
+        }
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-lg-6">
+            <form method="post" asp-page-handler="Crear" class="border rounded p-3">
+                <div asp-validation-summary="ModelOnly" class="text-danger mb-2"></div>
+                <div class="row g-2 align-items-end">
+                    <div class="col-md-4">
+                        <label class="form-label" asp-for="Vm.CrearPedido.TipoServicio">Tipo de servicio</label>
+                        <select asp-for="Vm.CrearPedido.TipoServicio" class="form-select form-select-sm">
+                            <option value="ComerAqui">Comer aquí</option>
+                            <option value="ParaLlevar">Para llevar</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label" asp-for="Vm.CrearPedido.MesaId">Mesa</label>
+                        <select asp-for="Vm.CrearPedido.MesaId" class="form-select form-select-sm">
+                            <option value="">Sin mesa</option>
+                            @foreach (var mesa in Model.Vm.MesasDisponibles)
+                            {
+                                <option value="@mesa.Id">Mesa @mesa.Numero</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-4 d-grid">
+                        <button type="submit" class="btn btn-sm lmd-action-success">Crear pedido</button>
+                    </div>
+                </div>
+
+                @if (Model.Vm.ProductosDisponibles.Count > 0)
+                {
+                    var defaultProducto = Model.Vm.ProductosDisponibles.First();
+                    <input type="hidden" name="Vm.CrearPedido.Lineas[0].ProductoId" value="@defaultProducto.Id" />
+                    <input type="hidden" name="Vm.CrearPedido.Lineas[0].Cantidad" value="1" />
+                    <input type="hidden" name="Vm.CrearPedido.Lineas[0].PrecioUnitario" value="@defaultProducto.Precio" />
+                }
+            </form>
+        </div>
+        <div class="col-lg-6">
+            <div class="border rounded p-3">
+                <h2 class="h6 mb-2">Pedidos activos</h2>
+                @if (pedidosPorMesa.Count == 0)
+                {
+                    <div class="lmd-empty-state p-3">No hay pedidos activos en este momento.</div>
+                }
+                else
+                {
+                    <div class="d-flex flex-wrap gap-2">
+                        @foreach (var pedido in pedidosPorMesa)
+                        {
+                            <a asp-page="./Index" asp-route-PedidoActualId="@pedido.Id" class="btn btn-sm @(Model.Vm.PedidoActual?.Id == pedido.Id ? "lmd-action-primary" : "lmd-action-neutral")">
+                                @(pedido.MesaNumero.HasValue ? $"Mesa {pedido.MesaNumero}" : pedido.TipoServicio) · @pedido.Estado
+                            </a>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <div class="lmd-pos-shell">
+        <div class="lmd-pos-catalog">
+            <h2 class="h5 mb-3">Selección de productos</h2>
+            @if (Model.Vm.ProductosDisponibles.Count == 0)
+            {
+                <div class="lmd-empty-state">No hay productos activos disponibles para agregar.</div>
+            }
+            else
+            {
+                @foreach (var categoria in productosPorCategoria)
+                {
+                    <section class="mb-3">
+                        <h3 class="h6 mb-2">@categoria.Key</h3>
+                        <div class="d-grid gap-2">
+                            @foreach (var producto in categoria)
+                            {
+                                <form method="post" asp-page-handler="AgregarLinea" class="lmd-pos-line-item border rounded p-2">
+                                    <input type="hidden" name="pedidoId" value="@Model.Vm.PedidoActual?.Id" />
+                                    <input type="hidden" name="productoId" value="@producto.Id" />
+                                    <input type="hidden" name="precioUnitario" value="@producto.Precio" />
+                                    <div class="d-flex justify-content-between align-items-center gap-2">
+                                        <div>
+                                            <strong>@producto.Nombre</strong>
+                                            <div class="small lmd-visually-muted lmd-money">@producto.Precio.ToString("C")</div>
+                                        </div>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <label class="lmd-sr-only" for="cantidad-@producto.Id">Cantidad</label>
+                                            <input id="cantidad-@producto.Id" type="number" name="cantidad" min="1" value="1" class="form-control form-control-sm" style="width: 84px;" />
+                                            <button type="submit" class="btn btn-sm lmd-action-primary" @(Model.Vm.PedidoActual is null ? "disabled" : null)>Agregar</button>
+                                        </div>
+                                    </div>
+                                </form>
+                            }
+                        </div>
+                    </section>
+                }
+            }
+        </div>
+
+        <aside class="lmd-pos-order-panel">
+            <h2 class="h5">Pedido actual</h2>
+            @if (Model.Vm.PedidoActual is null)
+            {
+                <div class="lmd-empty-state">Seleccioná o creá un pedido para empezar a cargar productos.</div>
+            }
+            else
+            {
+                <div class="mb-2">
+                    <span class="lmd-status-badge lmd-status-badge--busy">@Model.Vm.PedidoActual.Estado</span>
+                    <span class="ms-2 small lmd-visually-muted">Mesa: @(Model.Vm.PedidoActual.MesaNumero?.ToString() ?? "Sin mesa")</span>
+                </div>
+
+                @if (Model.Vm.PedidoActual.Detalles.Count == 0)
+                {
+                    <div class="lmd-empty-state">Este pedido aún no tiene líneas.</div>
+                }
+                else
+                {
+                    <div class="d-grid gap-2 mb-3">
+                        @foreach (var detalle in Model.Vm.PedidoActual.Detalles)
+                        {
+                            <article class="lmd-pos-line-item border rounded p-2">
+                                <div class="d-flex justify-content-between gap-2 align-items-start">
+                                    <div>
+                                        <strong>@detalle.ProductoNombre</strong>
+                                        <div class="small lmd-visually-muted lmd-money">@detalle.PrecioUnitario.ToString("C") c/u · Subtotal @detalle.Subtotal.ToString("C")</div>
+                                    </div>
+                                    <form method="post" asp-page-handler="EliminarLinea" class="lmd-confirm-destructive" data-confirm-message="¿Eliminar esta línea del pedido?">
+                                        <input type="hidden" name="pedidoId" value="@Model.Vm.PedidoActual.Id" />
+                                        <input type="hidden" name="detalleId" value="@detalle.Id" />
+                                        <button type="submit" class="btn btn-sm lmd-action-danger">Quitar</button>
+                                    </form>
+                                </div>
+                                <form method="post" asp-page-handler="ActualizarCantidad" class="mt-2 d-flex align-items-center gap-2 lmd-auto-submit-on-change">
+                                    <input type="hidden" name="pedidoId" value="@Model.Vm.PedidoActual.Id" />
+                                    <input type="hidden" name="detalleId" value="@detalle.Id" />
+                                    <label class="small" for="detalle-@detalle.Id">Cantidad</label>
+                                    <input id="detalle-@detalle.Id" type="number" min="1" name="cantidad" value="@detalle.Cantidad" class="form-control form-control-sm" style="width:88px;" />
+                                </form>
+                            </article>
+                        }
+                    </div>
+                }
+
+                <div class="lmd-pos-total mb-3">
+                    <span>Total</span>
+                    <strong class="lmd-money fs-5">@Model.Vm.PedidoActual.Total.ToString("C")</strong>
+                </div>
+
+                <div class="d-flex flex-wrap gap-2 mb-3">
+                    <form method="post" asp-page-handler="MarcarEnPreparacion" class="d-inline">
+                        <input type="hidden" name="pedidoId" value="@Model.Vm.PedidoActual.Id" />
+                        <button type="submit" class="btn btn-sm lmd-action-primary">Marcar en preparación</button>
+                    </form>
+                    <form method="post" asp-page-handler="Pagar" class="d-inline">
+                        <input type="hidden" name="pedidoId" value="@Model.Vm.PedidoActual.Id" />
+                        <button type="submit" class="btn btn-sm lmd-action-success">Pagar</button>
+                    </form>
+                </div>
+
+                <div class="lmd-danger-zone">
+                    <form method="post" asp-page-handler="Cancelar" class="lmd-confirm-destructive" data-confirm-message="¿Cancelar este pedido? Esta acción no se puede deshacer.">
+                        <input type="hidden" name="pedidoId" value="@Model.Vm.PedidoActual.Id" />
+                        <button type="submit" class="btn btn-sm lmd-action-danger">Cancelar pedido</button>
+                    </form>
+                </div>
+            }
+        </aside>
+    </div>
+</section>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.7/signalr.min.js"></script>
+    <script>window.lmdPedidosHubUrl = "/hubs/pedidos";</script>
+}

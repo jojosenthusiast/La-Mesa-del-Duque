@@ -36,11 +36,11 @@
     <div class="lmd-toast-zone mb-3">
         @if (!string.IsNullOrWhiteSpace(Model.ToastSuccess))
         {
-            <div class="alert alert-success py-2 mb-2">@Model.ToastSuccess</div>
+            <div class="alert alert-success alert-dismissible fade show py-2 mb-2" data-lmd-toast="true" role="status">@Model.ToastSuccess<button type="button" class="btn-close" aria-label="Cerrar"></button></div>
         }
         @if (!string.IsNullOrWhiteSpace(Model.ToastError))
         {
-            <div class="alert alert-danger py-2 mb-2">@Model.ToastError</div>
+            <div class="alert alert-danger alert-dismissible fade show py-2 mb-2" data-lmd-toast="true" role="alert">@Model.ToastError<button type="button" class="btn-close" aria-label="Cerrar"></button></div>
         }
     </div>
 
@@ -115,7 +115,7 @@
 
                         @if (mesa.Activa)
                         {
-                            <form method="post" asp-page-handler="Desactivar" class="d-inline">
+                            <form method="post" asp-page-handler="Desactivar" class="d-inline lmd-confirm-destructive" data-confirm-message="¿Desactivar esta mesa?">
                                 <input type="hidden" name="id" value="@mesa.Id" />
                                 <button type="submit" class="btn btn-sm lmd-action-danger">Desactivar</button>
                             </form>
