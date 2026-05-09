@@ -8,26 +8,27 @@ namespace LaMesaDelDuque.Pruebas.Infraestructura;
 
 public class InyeccionInfraestructuraTests
 {
-    private const string MensajeConnectionStringObligatoria = "La cadena de conexión 'DefaultConnection' es obligatoria.";
-
     [Fact]
-    public void AgregarPersistencia_SinConnectionString_DebeLanzarExcepcion()
+    public void AgregarPersistencia_SinConnectionString_DebeUsarSqlite()
     {
         var servicios = new ServiceCollection();
+        servicios.AddLogging();
         var configuracion = new ConfigurationBuilder()
             .AddInMemoryCollection()
             .Build();
 
-        var ex = Assert.Throws<InvalidOperationException>(() =>
-            servicios.AgregarPersistencia(configuracion));
+        servicios.AgregarPersistencia(configuracion);
+        var proveedor = servicios.BuildServiceProvider();
 
-        Assert.Equal(MensajeConnectionStringObligatoria, ex.Message);
+        var contexto = proveedor.GetService<LaMesaDelDuqueDbContext>();
+        Assert.NotNull(contexto);
     }
 
     [Fact]
-    public void AgregarPersistencia_ConConnectionStringVacio_DebeLanzarExcepcion()
+    public void AgregarPersistencia_ConConnectionStringVacio_DebeUsarSqlite()
     {
         var servicios = new ServiceCollection();
+        servicios.AddLogging();
         var configuracion = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
@@ -35,16 +36,18 @@ public class InyeccionInfraestructuraTests
             })
             .Build();
 
-        var ex = Assert.Throws<InvalidOperationException>(() =>
-            servicios.AgregarPersistencia(configuracion));
+        servicios.AgregarPersistencia(configuracion);
+        var proveedor = servicios.BuildServiceProvider();
 
-        Assert.Equal(MensajeConnectionStringObligatoria, ex.Message);
+        var contexto = proveedor.GetService<LaMesaDelDuqueDbContext>();
+        Assert.NotNull(contexto);
     }
 
     [Fact]
-    public void AgregarPersistencia_ConConnectionStringSoloEspacios_DebeLanzarExcepcion()
+    public void AgregarPersistencia_ConConnectionStringSoloEspacios_DebeUsarSqlite()
     {
         var servicios = new ServiceCollection();
+        servicios.AddLogging();
         var configuracion = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
@@ -52,10 +55,11 @@ public class InyeccionInfraestructuraTests
             })
             .Build();
 
-        var ex = Assert.Throws<InvalidOperationException>(() =>
-            servicios.AgregarPersistencia(configuracion));
+        servicios.AgregarPersistencia(configuracion);
+        var proveedor = servicios.BuildServiceProvider();
 
-        Assert.Equal(MensajeConnectionStringObligatoria, ex.Message);
+        var contexto = proveedor.GetService<LaMesaDelDuqueDbContext>();
+        Assert.NotNull(contexto);
     }
 
     [Fact]
@@ -92,6 +96,7 @@ public class InyeccionInfraestructuraTests
             .Build();
 
         var services = new ServiceCollection();
+        services.AddLogging();
 
         services.AgregarPersistencia(configuration);
         var provider = services.BuildServiceProvider();
