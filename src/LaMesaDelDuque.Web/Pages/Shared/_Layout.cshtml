@@ -18,10 +18,12 @@
     <nav class="navbar navbar-expand-lg lmd-ops-nav">
         <div class="container lmd-shell-container">
             <a class="navbar-brand lmd-ops-brand" asp-page="/Index">
-                <img src="~/img/marca/logo-simbolo.png" alt="La Mesa del Duque" />
+                <img src="~/img/marca/canvas.png" alt="La Mesa del Duque" style="height:40px;" />
                 <span>La Mesa del Duque</span>
             </a>
 
+            @if (User.Identity?.IsAuthenticated == true)
+            {
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#ops-nav-collapse"
                     aria-controls="ops-nav-collapse" aria-expanded="false" aria-label="Menú de navegación">
                 <span class="navbar-toggler-icon"></span>
@@ -51,19 +53,13 @@
                 </ul>
 
                 <div class="lmd-user-info d-flex align-items-center gap-2 ms-auto">
-                    @if (User.Identity?.IsAuthenticated == true)
-                    {
-                        <span class="lmd-user-name">@User.Identity.Name</span>
-                        <form method="post" asp-page="/Auth/Logout" class="d-inline">
-                            <button type="submit" class="btn btn-sm lmd-action-neutral">Salir</button>
-                        </form>
-                    }
-                    else
-                    {
-                        <a class="btn btn-sm lmd-action-primary" asp-page="/Auth/Login">Ingresar</a>
-                    }
+                    <span class="lmd-user-name">@User.Identity.Name</span>
+                    <form method="post" asp-page="/Auth/Logout" class="d-inline">
+                        <button type="submit" class="btn btn-sm lmd-action-neutral">Salir</button>
+                    </form>
                 </div>
             </div>
+            }
         </div>
     </nav>
 
