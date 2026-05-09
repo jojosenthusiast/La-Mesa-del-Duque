@@ -4,6 +4,20 @@ Todas las modificaciones notables de este proyecto se documentarán en este arch
 
 El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/),
 y este proyecto adhiere al [Versionado Semántico](https://semver.org/lang/es/).
+## [0.8.0](https://github.com/jojosenthusiast/La-Mesa-del-Duque/compare/v0.7.0...v0.8.0) (2026-05-09)
+
+### Summary
+
+- Completa el backend de **Productos + Recetas** para Sprint 1, endureciendo las reglas del catálogo y agregando la base persistente para modelar instrucciones e ingredientes por producto.
+
+### Details
+
+- Endurece la validación de productos para exigir precio **mayor que cero** y evita productos gratuitos por accidente.
+- Amplía el contrato de catálogo para devolver y actualizar `ImagenUrl` y `TiempoPreparacionMin` junto con el resto de campos relevantes del producto.
+- Agrega `RecetaProducto` y `RecetaIngrediente` como agregado independiente para representar preparación e ingredientes requeridos sin inflar el agregado `Producto`.
+- Incorpora repositorios, servicio de aplicación, configuraciones EF Core y migración `AgregarRecetasProductosSprint1` para persistir recetas en la base.
+- Deja preparada la estructura para conectar recetas con el descuento automático de inventario en slices posteriores del flujo POS.
+
 
 ## [0.8.0](https://github.com/jojosenthusiast/La-Mesa-del-Duque/compare/v0.7.0...v0.8.0) (2026-05-09)
 
