@@ -4,6 +4,15 @@ Todas las modificaciones notables de este proyecto se documentarán en este arch
 
 El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/),
 y este proyecto adhiere al [Versionado Semántico](https://semver.org/lang/es/).
+## [0.11.0](https://github.com/jojosenthusiast/La-Mesa-del-Duque/compare/v0.10.1...v0.11.0) (2026-05-09)
+
+
+### Nuevas funcionalidades
+
+* **notifications:** agregar notificaciones en tiempo real con SignalR — Slice 6 ([ba4b920](https://github.com/jojosenthusiast/La-Mesa-del-Duque/commit/ba4b9205871da278211bb9855915954df34931d7))
+* **pedidos:** emitir y validar notificaciones de flujo ([1d1430c](https://github.com/jojosenthusiast/La-Mesa-del-Duque/commit/1d1430cac93497f648083f60c491921379683d60))
+* **web:** add SignalR hub and pedido notifier ([8a2bdad](https://github.com/jojosenthusiast/La-Mesa-del-Duque/commit/8a2bdad1f21d6cd7801f1f3feacb65aba626ff8f))
+
 ## [0.10.1](https://github.com/jojosenthusiast/La-Mesa-del-Duque/compare/v0.10.0...v0.10.1) (2026-05-09)
 
 
