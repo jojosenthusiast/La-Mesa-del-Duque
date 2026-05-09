@@ -1,9 +1,11 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 
 namespace LaMesaDelDuque.Web.Pages;
 
 public sealed record ModuleLinkVm(string Label, string Page, string Description);
 
+ [Authorize]
 public class IndexModel : PageModel
 {
     public List<ModuleLinkVm> ModuleLinks { get; private set; } = [];

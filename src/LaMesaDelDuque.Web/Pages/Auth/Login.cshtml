@@ -16,14 +16,16 @@
                 }
 
                 <form method="post">
+                    <div asp-validation-summary="ModelOnly" class="text-danger mb-2"></div>
                     <div class="mb-3">
-                        <label for="Username" class="form-label">Usuario</label>
-                        <input type="text" class="form-control" id="Username" name="Username"
-                               value="@Model.Username" required autofocus />
+                        <label asp-for="Username" class="form-label">Usuario</label>
+                        <input asp-for="Username" type="text" class="form-control" required autofocus />
+                        <span asp-validation-for="Username" class="text-danger"></span>
                     </div>
                     <div class="mb-3">
-                        <label for="Password" class="form-label">Contraseña</label>
-                        <input type="password" class="form-control" id="Password" name="Password" required />
+                        <label asp-for="Password" class="form-label">Contraseña</label>
+                        <input asp-for="Password" type="password" class="form-control" required />
+                        <span asp-validation-for="Password" class="text-danger"></span>
                     </div>
                     <button type="submit" class="btn btn-primary w-100">Ingresar</button>
                 </form>
@@ -31,3 +33,7 @@
         </div>
     </div>
 </div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

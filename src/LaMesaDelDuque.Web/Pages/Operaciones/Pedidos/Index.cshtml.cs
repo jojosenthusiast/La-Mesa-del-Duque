@@ -59,9 +59,27 @@ public class IndexModel : PageModel
             return Page();
         }
 
-        var detalles = Vm.CrearPedido.Lineas
-            .Select(l => new DetalleCreacionDto { ProductoId = l.ProductoId, Cantidad = l.Cantidad, PrecioUnitario = l.PrecioUnitario })
-            .ToList();
+        var productosActivos = (await _catalogoProductosServicio.ListarProductosAsync())
+            .Where(p => p.Activo)
+            .ToDictionary(p => p.Id, p => p);
+
+        var detalles = new List<DetalleCreacionDto>();
+        foreach (var linea in Vm.CrearPedido.Lineas)
+        {
+            if (!productosActivos.TryGetValue(linea.ProductoId, out var producto))
+            {
+                ModelState.AddModelError(string.Empty, "Debe seleccionar un producto válido para crear el pedido.");
+                await CargarDatosAsync();
+                return Page();
+            }
+
+            detalles.Add(new DetalleCreacionDto
+            {
+                ProductoId = linea.ProductoId,
+                Cantidad = linea.Cantidad,
+                PrecioUnitario = producto.Precio
+            });
+        }
 
         try
         {
@@ -87,7 +105,11 @@ public class IndexModel : PageModel
     public async Task<IActionResult> OnPostAgregarLineaAsync(Guid pedidoId, Guid productoId, int cantidad, decimal precioUnitario)
         => await EjecutarAccionPedidoAsync(async () =>
         {
-            await _pedidosServicio.AgregarDetalleAsync(pedidoId, productoId, cantidad, precioUnitario);
+            var producto = (await _catalogoProductosServicio.ListarProductosAsync())
+                .FirstOrDefault(p => p.Id == productoId && p.Activo)
+                ?? throw new ArgumentException("Debe seleccionar un producto activo válido.", nameof(productoId));
+
+            await _pedidosServicio.AgregarDetalleAsync(pedidoId, productoId, cantidad, producto.Precio);
             ToastSuccess = "Línea agregada.";
             return RedirectToPage(new { PedidoActualId = pedidoId });
         });

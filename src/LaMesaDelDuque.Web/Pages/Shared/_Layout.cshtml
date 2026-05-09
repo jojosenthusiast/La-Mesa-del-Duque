@@ -54,7 +54,9 @@
                     @if (User.Identity?.IsAuthenticated == true)
                     {
                         <span class="lmd-user-name">@User.Identity.Name</span>
-                        <a class="btn btn-sm lmd-action-neutral" asp-page="/Auth/Logout">Salir</a>
+                        <form method="post" asp-page="/Auth/Logout" class="d-inline">
+                            <button type="submit" class="btn btn-sm lmd-action-neutral">Salir</button>
+                        </form>
                     }
                     else
                     {

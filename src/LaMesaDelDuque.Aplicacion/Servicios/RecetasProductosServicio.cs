@@ -15,8 +15,16 @@ internal class RecetasProductosServicio : IRecetasProductosServicio
 
     public async Task<RecetaProductoDto> CrearRecetaAsync(Guid productoId, string instrucciones, List<RecetaIngredienteCreacionDto> ingredientes, CancellationToken cancelacion = default)
     {
+        ArgumentNullException.ThrowIfNull(ingredientes);
+
         var producto = await _uot.Productos.ObtenerConTrackingAsync(productoId, cancelacion)
             ?? throw new ArgumentException($"No se encontró el producto con ID {productoId}.", nameof(productoId));
+
+        var recetaExistente = await _uot.RecetasProductos.ObtenerPorProductoIdAsync(productoId, cancelacion);
+        if (recetaExistente is not null)
+        {
+            throw new InvalidOperationException($"El producto '{producto.Nombre}' ya tiene una receta asociada.");
+        }
 
         var ingredientesReceta = new List<RecetaIngrediente>();
         foreach (var ingredienteDto in ingredientes)
