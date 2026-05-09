@@ -4,6 +4,20 @@ Todas las modificaciones notables de este proyecto se documentarán en este arch
 
 El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/),
 y este proyecto adhiere al [Versionado Semántico](https://semver.org/lang/es/).
+## [0.12.0](https://github.com/jojosenthusiast/La-Mesa-del-Duque/compare/v0.11.0...v0.12.0) (2026-05-09)
+
+
+### Nuevas funcionalidades
+
+* **ui:** convert home page into operational hub with auth guards ([4002306](https://github.com/jojosenthusiast/La-Mesa-del-Duque/commit/40023069f799b8f32a70fb958fdc7d1ef3432e79))
+* **ui:** establecer shell operativo, landing y auth guards — Slice 7a ([2e0a53d](https://github.com/jojosenthusiast/La-Mesa-del-Duque/commit/2e0a53d86b7a4a0fc0a21ada7b51040c6f30d147))
+* **ui:** establish Sprint 1 operational shell ([5d6b8a4](https://github.com/jojosenthusiast/La-Mesa-del-Duque/commit/5d6b8a49f00095705e12270512d05312e242f193))
+
+
+### Pruebas
+
+* **ui:** add shell smoke and index page tests ([2f3fcae](https://github.com/jojosenthusiast/La-Mesa-del-Duque/commit/2f3fcaefdd31d356e1d43001756ac4bb31dffa1f))
+
 ## [0.11.0](https://github.com/jojosenthusiast/La-Mesa-del-Duque/compare/v0.10.1...v0.11.0) (2026-05-09)
 
 ### Summary
