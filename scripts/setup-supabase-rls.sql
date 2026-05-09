@@ -35,8 +35,8 @@ BEGIN
     LOOP
         EXECUTE format(
             'CREATE POLICY %I ON %I FOR ALL TO authenticated
-             USING (current_setting(''request.jwt.claims'', true)::jsonb->>''role'' = ''Administrador'')
-             WITH CHECK (current_setting(''request.jwt.claims'', true)::jsonb->>''role'' = ''Administrador'')',
+             USING ((SELECT current_setting(''request.jwt.claims'', true)::jsonb->>''role'') = ''Administrador'')
+             WITH CHECK ((SELECT current_setting(''request.jwt.claims'', true)::jsonb->>''role'') = ''Administrador'')',
             'admin_all_' || tbl, tbl);
     END LOOP;
 END $$;
@@ -47,12 +47,12 @@ END $$;
 -- Producto: todos los autenticados pueden ver activos
 CREATE POLICY operador_select_producto ON "Producto" FOR SELECT TO authenticated
     USING ("Activo" = true
-        OR current_setting('request.jwt.claims', true)::jsonb->>'role' = 'Administrador');
+        OR (SELECT current_setting('request.jwt.claims', true)::jsonb->>'role') = 'Administrador');
 
 -- CategoriaProducto: todos los autenticados pueden ver activas
 CREATE POLICY operador_select_categoria ON "CategoriaProducto" FOR SELECT TO authenticated
     USING ("Activo" = true
-        OR current_setting('request.jwt.claims', true)::jsonb->>'role' = 'Administrador');
+        OR (SELECT current_setting('request.jwt.claims', true)::jsonb->>'role') = 'Administrador');
 
 -- Mesa: todos los autenticados pueden ver
 CREATE POLICY operador_select_mesa ON "Mesa" FOR SELECT TO authenticated
@@ -80,7 +80,7 @@ CREATE POLICY pedido_insert ON "Pedido" FOR INSERT TO authenticated
 -- Solo modificar pedidos en estados activos (a menos que seas admin)
 CREATE POLICY pedido_update ON "Pedido" FOR UPDATE TO authenticated
     USING ("Estado" IN ('Pendiente', 'EnPreparacion')
-        OR current_setting('request.jwt.claims', true)::jsonb->>'role' = 'Administrador');
+        OR (SELECT current_setting('request.jwt.claims', true)::jsonb->>'role') = 'Administrador');
 
 -- DetallePedido: hereda visibilidad del pedido (RLS se aplica al insert también)
 CREATE POLICY detalle_select ON "DetallePedido" FOR SELECT TO authenticated
@@ -96,7 +96,7 @@ CREATE POLICY auditoria_insert ON "Auditorias" FOR INSERT TO authenticated
     WITH CHECK (true);
 
 CREATE POLICY auditoria_select ON "Auditorias" FOR SELECT TO authenticated
-    USING (current_setting('request.jwt.claims', true)::jsonb->>'role' = 'Administrador');
+    USING ((SELECT current_setting('request.jwt.claims', true)::jsonb->>'role') = 'Administrador');
 
 -- PedidosEstadosLog: append-only, visible para todos
 CREATE POLICY estadolog_insert ON "PedidosEstadosLog" FOR INSERT TO authenticated
@@ -110,12 +110,12 @@ CREATE POLICY estadolog_select ON "PedidosEstadosLog" FOR SELECT TO authenticate
 
 -- Solo admin ve la lista de usuarios y roles
 CREATE POLICY usuarios_admin ON "Usuarios" FOR ALL TO authenticated
-    USING (current_setting('request.jwt.claims', true)::jsonb->>'role' = 'Administrador')
-    WITH CHECK (current_setting('request.jwt.claims', true)::jsonb->>'role' = 'Administrador');
+    USING ((SELECT current_setting('request.jwt.claims', true)::jsonb->>'role') = 'Administrador')
+    WITH CHECK ((SELECT current_setting('request.jwt.claims', true)::jsonb->>'role') = 'Administrador');
 
 CREATE POLICY roles_admin ON "Roles" FOR ALL TO authenticated
-    USING (current_setting('request.jwt.claims', true)::jsonb->>'role' = 'Administrador')
-    WITH CHECK (current_setting('request.jwt.claims', true)::jsonb->>'role' = 'Administrador');
+    USING ((SELECT current_setting('request.jwt.claims', true)::jsonb->>'role') = 'Administrador')
+    WITH CHECK ((SELECT current_setting('request.jwt.claims', true)::jsonb->>'role') = 'Administrador');
 
 -- ============================================================================
 -- 7. ÍNDICES DE RENDIMIENTO
