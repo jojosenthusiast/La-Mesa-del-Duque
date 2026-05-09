@@ -17,6 +17,7 @@ public class PedidosServicioTests : IDisposable
     private readonly LaMesaDelDuqueDbContext _contexto;
     private readonly IPedidosServicio _servicio;
     private readonly IUnidadDeTrabajo _uot;
+    private readonly NotificadorPedidosSpy _notificadorSpy;
 
     public PedidosServicioTests()
     {
@@ -41,7 +42,8 @@ public class PedidosServicioTests : IDisposable
             new AuditoriaRepositorio(_contexto),
             new RecetaProductoRepositorio(_contexto));
 
-        _servicio = new PedidosServicio(_uot);
+        _notificadorSpy = new NotificadorPedidosSpy();
+        _servicio = new PedidosServicio(_uot, _notificadorSpy);
     }
 
     public void Dispose()
@@ -269,5 +271,57 @@ public class PedidosServicioTests : IDisposable
         var mesaActualizada = await _uot.Mesas.ObtenerPorIdAsync(mesa.Id);
         Assert.NotNull(mesaActualizada);
         Assert.Equal(EstadoMesa.Disponible, mesaActualizada!.Estado);
+    }
+
+    [Fact]
+    public async Task CrearPedido_DebeEmitirNotificacionDeCreacion()
+    {
+        var (_, producto) = await CrearMesaYProductoAsync(40);
+
+        var pedido = await _servicio.CrearPedidoAsync(TipoServicio.ParaLlevar, null, new List<DetalleCreacionDto>
+        {
+            new() { ProductoId = producto.Id, Cantidad = 1, PrecioUnitario = 3.50m }
+        });
+
+        var notificacion = Assert.Single(_notificadorSpy.PedidosCreados);
+        Assert.Equal(pedido.Id, notificacion.PedidoId);
+        Assert.Equal(EstadoPedido.Pendiente, notificacion.Estado);
+    }
+
+    [Fact]
+    public async Task MarcarEnPreparacion_DebeEmitirNotificacionDeCambioEstado()
+    {
+        var (_, producto) = await CrearMesaYProductoAsync(41);
+
+        var pedido = await _servicio.CrearPedidoAsync(TipoServicio.ParaLlevar, null, new List<DetalleCreacionDto>
+        {
+            new() { ProductoId = producto.Id, Cantidad = 1, PrecioUnitario = 3.50m }
+        });
+
+        _notificadorSpy.EstadosCambiados.Clear();
+
+        await _servicio.MarcarEnPreparacionAsync(pedido.Id);
+
+        var notificacion = Assert.Single(_notificadorSpy.EstadosCambiados);
+        Assert.Equal(pedido.Id, notificacion.PedidoId);
+        Assert.Equal(EstadoPedido.EnPreparacion, notificacion.Estado);
+    }
+
+    [Fact]
+    public async Task CancelarPedido_DebeEmitirNotificacionDeCancelacion()
+    {
+        var (_, producto) = await CrearMesaYProductoAsync(42);
+
+        var pedido = await _servicio.CrearPedidoAsync(TipoServicio.ParaLlevar, null, new List<DetalleCreacionDto>
+        {
+            new() { ProductoId = producto.Id, Cantidad = 1, PrecioUnitario = 3.50m }
+        });
+
+        _notificadorSpy.PedidosCancelados.Clear();
+
+        await _servicio.CancelarPedidoAsync(pedido.Id);
+
+        var notificacion = Assert.Single(_notificadorSpy.PedidosCancelados);
+        Assert.Equal(pedido.Id, notificacion);
     }
 }

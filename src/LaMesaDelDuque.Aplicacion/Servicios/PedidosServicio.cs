@@ -1,4 +1,5 @@
 using LaMesaDelDuque.Aplicacion.Dtos;
+using LaMesaDelDuque.Aplicacion.Notificaciones;
 using LaMesaDelDuque.Dominio.Entidades;
 using LaMesaDelDuque.Dominio.Enumeraciones;
 using LaMesaDelDuque.Dominio.Excepciones;
@@ -9,10 +10,12 @@ namespace LaMesaDelDuque.Aplicacion.Servicios;
 internal class PedidosServicio : IPedidosServicio
 {
     private readonly IUnidadDeTrabajo _uot;
+    private readonly INotificadorPedidos _notificadorPedidos;
 
-    public PedidosServicio(IUnidadDeTrabajo uot)
+    public PedidosServicio(IUnidadDeTrabajo uot, INotificadorPedidos notificadorPedidos)
     {
         _uot = uot;
+        _notificadorPedidos = notificadorPedidos;
     }
 
     public async Task<PedidoDto> CrearPedidoAsync(TipoServicio tipoServicio, Guid? mesaId, List<DetalleCreacionDto> detalles, CancellationToken cancelacion = default)
@@ -50,6 +53,7 @@ internal class PedidosServicio : IPedidosServicio
 
         await _uot.Pedidos.AgregarAsync(pedido, cancelacion);
         await _uot.GuardarCambiosAsync(cancelacion);
+        await _notificadorPedidos.NotificarPedidoCreadoAsync(pedido.Id, pedido.Estado, cancelacion);
 
         return MapToDto(pedido);
     }
@@ -77,6 +81,7 @@ internal class PedidosServicio : IPedidosServicio
 
         pedido.MarcarEnPreparacion();
         await _uot.GuardarCambiosAsync(cancelacion);
+        await _notificadorPedidos.NotificarEstadoCambiadoAsync(pedido.Id, pedido.Estado, cancelacion);
     }
 
     public async Task PagarPedidoAsync(Guid pedidoId, CancellationToken cancelacion = default)
@@ -87,6 +92,7 @@ internal class PedidosServicio : IPedidosServicio
         pedido.MarcarComoPagado();
         await LiberarMesaSiCorrespondeAsync(pedido, cancelacion);
         await _uot.GuardarCambiosAsync(cancelacion);
+        await _notificadorPedidos.NotificarEstadoCambiadoAsync(pedido.Id, pedido.Estado, cancelacion);
     }
 
     public async Task<PedidoDto> EliminarDetalleAsync(Guid pedidoId, Guid detalleId, CancellationToken cancelacion = default)
@@ -128,6 +134,7 @@ internal class PedidosServicio : IPedidosServicio
         pedido.Cancelar();
         await LiberarMesaSiCorrespondeAsync(pedido, cancelacion);
         await _uot.GuardarCambiosAsync(cancelacion);
+        await _notificadorPedidos.NotificarPedidoCanceladoAsync(pedido.Id, cancelacion);
     }
 
     public async Task EliminarPedidoPendienteAsync(Guid pedidoId, Guid usuarioId, string? ipAddress = null, CancellationToken cancelacion = default)
