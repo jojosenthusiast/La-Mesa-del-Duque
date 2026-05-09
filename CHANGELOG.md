@@ -4,6 +4,13 @@ Todas las modificaciones notables de este proyecto se documentarán en este arch
 
 El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/),
 y este proyecto adhiere al [Versionado Semántico](https://semver.org/lang/es/).
+## [0.10.1](https://github.com/jojosenthusiast/La-Mesa-del-Duque/compare/v0.10.0...v0.10.1) (2026-05-09)
+
+
+### Documentación
+
+* **release:** ampliar notas de las versiones 0.9.0 y 0.10.0 ([59082a0](https://github.com/jojosenthusiast/La-Mesa-del-Duque/commit/59082a011cff4e5d32e9f7e58612161ff8e2cbcc))
+
 ## [0.10.0](https://github.com/jojosenthusiast/La-Mesa-del-Duque/compare/v0.9.0...v0.10.0) (2026-05-09)
 
 ### Summary
