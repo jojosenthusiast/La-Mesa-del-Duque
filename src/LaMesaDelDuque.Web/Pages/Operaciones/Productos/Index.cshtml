@@ -18,11 +18,11 @@
     <div class="lmd-toast-zone mb-3">
         @if (!string.IsNullOrWhiteSpace(Model.ToastSuccess))
         {
-            <div class="alert alert-success py-2 mb-2">@Model.ToastSuccess</div>
+            <div class="alert alert-success alert-dismissible fade show py-2 mb-2" data-lmd-toast="true" role="status">@Model.ToastSuccess<button type="button" class="btn-close" aria-label="Cerrar"></button></div>
         }
         @if (!string.IsNullOrWhiteSpace(Model.ToastError))
         {
-            <div class="alert alert-danger py-2 mb-2">@Model.ToastError</div>
+            <div class="alert alert-danger alert-dismissible fade show py-2 mb-2" data-lmd-toast="true" role="alert">@Model.ToastError<button type="button" class="btn-close" aria-label="Cerrar"></button></div>
         }
     </div>
 
@@ -128,10 +128,14 @@
                                     @(producto.Activo ? "Activo" : "Inactivo")
                                 </span>
                             </td>
-                            <td>
+                            <td class="d-flex gap-1">
+                                <button type="button" class="btn btn-sm lmd-action-neutral"
+                                        onclick="document.getElementById('Vm_Form_Id').value='@producto.Id';document.getElementById('Vm_Form_Nombre').value='@producto.Nombre';document.getElementById('Vm_Form_Precio').value='@producto.Precio';document.getElementById('Vm_Form_CategoriaId').value='@producto.CategoriaId';document.getElementById('Vm_Form_Descripcion').value='@(producto.Descripcion ?? "")';document.getElementById('Vm_Form_ImagenUrl').value='@(producto.ImagenUrl ?? "")';document.getElementById('Vm_Form_TiempoPreparacionMin').value='@(producto.TiempoPreparacionMin)';document.getElementById('producto-form').classList.add('show');">
+                                    Editar
+                                </button>
                                 @if (producto.Activo)
                                 {
-                                    <form method="post" asp-page-handler="Desactivar" class="d-inline">
+                                    <form method="post" asp-page-handler="Desactivar" class="d-inline lmd-confirm-destructive" data-confirm-message="¿Desactivar este producto?">
                                         <input type="hidden" name="id" value="@producto.Id" />
                                         <button type="submit" class="btn btn-sm lmd-action-danger">Desactivar</button>
                                     </form>
