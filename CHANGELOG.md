@@ -5,6 +5,13 @@ Todas las modificaciones notables de este proyecto se documentarán en este arch
 El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/),
 y este proyecto adhiere al [Versionado Semántico](https://semver.org/lang/es/).
 
+## [0.8.0](https://github.com/jojosenthusiast/La-Mesa-del-Duque/compare/v0.7.0...v0.8.0) (2026-05-09)
+
+
+### Nuevas funcionalidades
+
+* **productos-recetas:** completar backend de catálogo y recetas del sprint 1 — Slice 3 ([14ba704](https://github.com/jojosenthusiast/La-Mesa-del-Duque/commit/14ba7048098675f46b90e90440a19ad22b73bab4))
+
 ## [0.7.0](https://github.com/jojosenthusiast/La-Mesa-del-Duque/compare/v0.6.0...v0.7.0) (2026-05-08)
 
 ### Summary
