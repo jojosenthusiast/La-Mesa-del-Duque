@@ -6,6 +6,19 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1
 y este proyecto adhiere al [Versionado Semántico](https://semver.org/lang/es/).
 ## [0.13.0](https://github.com/jojosenthusiast/La-Mesa-del-Duque/compare/v0.12.0...v0.13.0) (2026-05-09)
 
+### Summary
+
+- Completa el frontend operativo del Sprint 1 con las consolas de Productos, Usuarios, Mesas y la terminal POS de Pedidos sobre los contratos backend estables.
+
+### Details
+
+- Agrega consola de mantenimiento de Productos con tabla densa, filtros (búsqueda, categoría, estado), CRUD completo con formulario colapsable y botón Editar en cada fila.
+- Agrega administración de Usuarios protegida con `[Authorize(Roles = "Administrador")]`, creación y desactivación de usuarios con feedback.
+- Agrega superficie de control de Mesas con grid de estado del salón, badges de resumen por estado, transiciones rápidas de estado desde cada tarjeta.
+- Agrega terminal POS de Pedidos con split workspace: selección de productos a la izquierda y panel de orden a la derecha, total siempre visible, acciones semánticas (Marcar en Preparación, Pagar, Cancelar).
+- Agrega cliente SignalR JS que se conecta a `/hubs/pedidos` y muestra toasts en tiempo real al recibir notificaciones de pedidos.
+- Agrega pulido cross-módulo: empty states, toasts, confirmación destructiva, enlace Usuarios en nav para admins, accessibility helpers.
+- Expande suite de pruebas de 201 a 207 con tests de PageModel para cada módulo.
 
 ### Nuevas funcionalidades
 
@@ -13,6 +26,19 @@ y este proyecto adhiere al [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [0.12.0](https://github.com/jojosenthusiast/La-Mesa-del-Duque/compare/v0.11.0...v0.12.0) (2026-05-09)
 
+### Summary
+
+- Establece el shell operativo compartido del Sprint 1: navegación por módulos, landing operativo, CSS operacional completo y guardas de autenticación.
+
+### Details
+
+- Reemplaza el layout scaffold por una navbar operativa con tabs de módulos (Productos, Mesas, Pedidos) y estado activo visual.
+- Convierte la home page de hero promocional a hub operativo con tarjetas de acceso rápido a los tres flujos del Sprint 1.
+- Agrega ~280 líneas de CSS operacional a `marca.css`: shell, page headers, status badges (5 variantes semánticas), acciones (primary/success/danger/neutral), tabla operativa con tabular numerals, toast zone, mesa grid y accessibility helpers.
+- Configura `AuthorizeFolder("/Operaciones")` en Program.cs para proteger todas las páginas operativas.
+- Agrega página AccesoDenegado para redirección segura.
+- Agrega tests de smoke para el shell y la landing page operativa.
+- Suite de pruebas: 201 tests, 0 fallas.
 
 ### Nuevas funcionalidades
 
