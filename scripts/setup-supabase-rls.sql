@@ -34,10 +34,10 @@ BEGIN
           AND tablename NOT IN ('__EFMigrationsHistory')
     LOOP
         EXECUTE format(
-            'CREATE POLICY admin_all_%I ON %I FOR ALL TO authenticated
+            'CREATE POLICY %I ON %I FOR ALL TO authenticated
              USING (current_setting(''request.jwt.claims'', true)::jsonb->>''role'' = ''Administrador'')
              WITH CHECK (current_setting(''request.jwt.claims'', true)::jsonb->>''role'' = ''Administrador'')',
-            tbl, tbl);
+            'admin_all_' || tbl, tbl);
     END LOOP;
 END $$;
 
