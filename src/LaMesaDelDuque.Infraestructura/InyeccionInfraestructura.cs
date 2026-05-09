@@ -1,3 +1,4 @@
+using System;
 using LaMesaDelDuque.Dominio.Repositorios;
 using LaMesaDelDuque.Infraestructura.Persistencia;
 using LaMesaDelDuque.Infraestructura.Repositorios;
@@ -16,12 +17,10 @@ public static class InyeccionInfraestructura
     public static IServiceCollection AgregarPersistencia(
         this IServiceCollection servicios, IConfiguration configuracion)
     {
-        var connectionString = configuracion.GetConnectionString("DefaultConnection");
+        var connectionString = Environment.GetEnvironmentVariable("LMD_CONNECTION_STRING")
+            ?? configuracion.GetConnectionString("DefaultConnection");
 
-        if (string.IsNullOrWhiteSpace(connectionString))
-        {
-            throw new InvalidOperationException("La cadena de conexión 'DefaultConnection' es obligatoria.");
-        }
+        connectionString = ConexionHelper.Normalizar(connectionString);
 
         servicios.AddDbContext<LaMesaDelDuqueDbContext>(opciones =>
             opciones.UseNpgsql(connectionString));

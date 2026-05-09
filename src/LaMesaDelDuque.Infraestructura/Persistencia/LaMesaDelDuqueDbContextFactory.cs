@@ -13,12 +13,8 @@ internal class LaMesaDelDuqueDbContextFactory : IDesignTimeDbContextFactory<LaMe
     public LaMesaDelDuqueDbContext CreateDbContext(string[] args)
     {
         var builder = new DbContextOptionsBuilder<LaMesaDelDuqueDbContext>();
-        var connectionString = Environment.GetEnvironmentVariable("LMD_CONNECTION_STRING");
-
-        if (string.IsNullOrWhiteSpace(connectionString))
-        {
-            throw new InvalidOperationException("La variable de entorno LMD_CONNECTION_STRING es obligatoria para ejecutar EF Core en tiempo de diseño.");
-        }
+        var connectionString = ConexionHelper.Normalizar(
+            Environment.GetEnvironmentVariable("LMD_CONNECTION_STRING"));
 
         builder.UseNpgsql(connectionString);
         return new LaMesaDelDuqueDbContext(builder.Options);
