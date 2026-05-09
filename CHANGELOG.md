@@ -28,6 +28,16 @@ y este proyecto adhiere al [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [0.9.0](https://github.com/jojosenthusiast/La-Mesa-del-Duque/compare/v0.8.0...v0.9.0) (2026-05-09)
 
+### Summary
+
+- Alinea las reglas de estado de mesa con HU-016 del Sprint 1, agregando guardas de transición y liberación automática al completar pedidos.
+
+### Details
+
+- Agrega guarda que impide volver una mesa a `Disponible` si tiene pedidos activos (`Pendiente` o `EnPreparacion`).
+- Libera automáticamente la mesa a `Disponible` al pagar o cancelar el último pedido activo asociado.
+- `PagarPedidoAsync` y `CancelarPedidoAsync` invocan `LiberarMesaSiCorrespondeAsync` después de la transición de estado del pedido.
+- `CambiarEstadoMesaAsync` rechaza la transición a `Disponible` si existen pedidos activos en la mesa.
 
 ### Nuevas funcionalidades
 
