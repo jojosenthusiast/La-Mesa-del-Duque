@@ -1,14 +1,12 @@
 -- ============================================================================
--- La Mesa del Duque — Script de setup de base de datos para Supabase
+-- La Mesa del Duque — RLS y optimizaciones para Supabase
 -- ============================================================================
--- Este script se ejecuta DESPUÉS de aplicar las migraciones de EF Core.
--- Agrega: RLS (Row-Level Security), índices de rendimiento, políticas
--- de acceso por rol y triggers de auditoría que EF no genera automáticamente.
--- ============================================================================
-
--- 1. HABILITAR RLS EN TODAS LAS TABLAS OPERACIONALES
+-- Ejecutar desde el SQL Editor de Supabase DESPUÉS de aplicar migraciones.
+-- Este script usa los nombres EXACTOS de tabla generados por EF Core.
 -- ============================================================================
 
+-- 1. HABILITAR RLS EN TODAS LAS TABLAS
+-- ============================================================================
 DO $$
 DECLARE
     tbl TEXT;
@@ -23,16 +21,8 @@ BEGIN
     END LOOP;
 END $$;
 
+-- 2. POLÍTICA DE ADMIN — acceso completo a todas las tablas
 -- ============================================================================
--- 2. POLÍTICAS RLS POR ROL
--- ============================================================================
-
--- 2.1. Rol administrador: acceso completo a todas las tablas
-CREATE POLICY admin_acceso_completo ON "AspNetRoles" FOR ALL TO authenticated
-    USING (current_setting('request.jwt.claims', true)::jsonb->>'role' = 'Administrador')
-    WITH CHECK (current_setting('request.jwt.claims', true)::jsonb->>'role' = 'Administrador');
-
--- Política genérica de admin para todas las tablas operativas
 DO $$
 DECLARE
     tbl TEXT;
@@ -41,7 +31,7 @@ BEGIN
         SELECT tablename FROM pg_tables
         WHERE schemaname = 'public'
           AND tablename NOT LIKE '\\_%'
-          AND tablename NOT IN ('__EFMigrationsHistory', 'AspNetRoles')
+          AND tablename NOT IN ('__EFMigrationsHistory')
     LOOP
         EXECUTE format(
             'CREATE POLICY admin_all_%I ON %I FOR ALL TO authenticated
@@ -51,101 +41,123 @@ BEGIN
     END LOOP;
 END $$;
 
--- 2.2. Roles operativos: leer productos, categorías y mesas activas
-CREATE POLICY operador_select_activos ON "Productos" FOR SELECT TO authenticated
-    USING ("Activo" = true OR current_setting('request.jwt.claims', true)::jsonb->>'role' = 'Administrador');
+-- 3. POLÍTICA DE OPERADOR — lectura de catálogo y mesas
+-- ============================================================================
 
-CREATE POLICY operador_select_categorias ON "CategoriasProducto" FOR SELECT TO authenticated
-    USING ("Activo" = true OR current_setting('request.jwt.claims', true)::jsonb->>'role' = 'Administrador');
+-- Producto: todos los autenticados pueden ver activos
+CREATE POLICY operador_select_producto ON "Producto" FOR SELECT TO authenticated
+    USING ("Activo" = true
+        OR current_setting('request.jwt.claims', true)::jsonb->>'role' = 'Administrador');
 
-CREATE POLICY operador_select_mesas ON "Mesas" FOR SELECT TO authenticated
-    USING (true); -- Todos los roles autenticados pueden ver mesas
+-- CategoriaProducto: todos los autenticados pueden ver activas
+CREATE POLICY operador_select_categoria ON "CategoriaProducto" FOR SELECT TO authenticated
+    USING ("Activo" = true
+        OR current_setting('request.jwt.claims', true)::jsonb->>'role' = 'Administrador');
 
--- 2.3. Pedidos: crear propios, ver todos, modificar solo pendientes propios
-CREATE POLICY pedidos_select_all ON "Pedidos" FOR SELECT TO authenticated
-    USING (true); -- Visibilidad compartida del salón
+-- Mesa: todos los autenticados pueden ver
+CREATE POLICY operador_select_mesa ON "Mesa" FOR SELECT TO authenticated
+    USING (true);
 
-CREATE POLICY pedidos_insert ON "Pedidos" FOR INSERT TO authenticated
+-- Proveedor: todos los autenticados pueden ver
+CREATE POLICY operador_select_proveedor ON "Proveedor" FOR SELECT TO authenticated
+    USING (true);
+
+-- Ingrediente: todos los autenticados pueden ver
+CREATE POLICY operador_select_ingrediente ON "Ingrediente" FOR SELECT TO authenticated
+    USING (true);
+
+-- 4. POLÍTICA DE PEDIDOS — crear y ver todos, modificar solo activos
+-- ============================================================================
+
+-- Todos los autenticados pueden ver pedidos (visibilidad compartida del salón)
+CREATE POLICY pedido_select ON "Pedido" FOR SELECT TO authenticated
+    USING (true);
+
+-- Todos los autenticados pueden crear pedidos
+CREATE POLICY pedido_insert ON "Pedido" FOR INSERT TO authenticated
     WITH CHECK (true);
 
-CREATE POLICY pedidos_update ON "Pedidos" FOR UPDATE TO authenticated
-    USING ("Estado" IN ('Pendiente', 'EnPreparacion') OR
-           current_setting('request.jwt.claims', true)::jsonb->>'role' = 'Administrador');
+-- Solo modificar pedidos en estados activos (a menos que seas admin)
+CREATE POLICY pedido_update ON "Pedido" FOR UPDATE TO authenticated
+    USING ("Estado" IN ('Pendiente', 'EnPreparacion')
+        OR current_setting('request.jwt.claims', true)::jsonb->>'role' = 'Administrador');
 
--- 2.4. Auditoría: solo insert, nunca modificar ni eliminar
-CREATE POLICY auditoria_insert ON "Auditoria" FOR INSERT TO authenticated
+-- DetallePedido: hereda visibilidad del pedido (RLS se aplica al insert también)
+CREATE POLICY detalle_select ON "DetallePedido" FOR SELECT TO authenticated
+    USING (true);
+
+CREATE POLICY detalle_insert ON "DetallePedido" FOR INSERT TO authenticated
     WITH CHECK (true);
 
-CREATE POLICY auditoria_select_admin ON "Auditoria" FOR SELECT TO authenticated
+-- 5. POLÍTICA DE AUDITORÍA — append-only, solo admin lee
+-- ============================================================================
+
+CREATE POLICY auditoria_insert ON "Auditorias" FOR INSERT TO authenticated
+    WITH CHECK (true);
+
+CREATE POLICY auditoria_select ON "Auditorias" FOR SELECT TO authenticated
     USING (current_setting('request.jwt.claims', true)::jsonb->>'role' = 'Administrador');
 
--- ============================================================================
--- 3. ÍNDICES DE RENDIMIENTO PARA OPERACIONES FRECUENTES
+-- PedidosEstadosLog: append-only, visible para todos
+CREATE POLICY estadolog_insert ON "PedidosEstadosLog" FOR INSERT TO authenticated
+    WITH CHECK (true);
+
+CREATE POLICY estadolog_select ON "PedidosEstadosLog" FOR SELECT TO authenticated
+    USING (true);
+
+-- 6. POLÍTICA DE USUARIOS — solo admin gestiona
 -- ============================================================================
 
--- 3.1. Pedidos: búsqueda por estado y tipo de servicio (POS activo)
-CREATE INDEX CONCURRENTLY IF NOT EXISTS ix_pedidos_estado_activo
-    ON "Pedidos" ("Estado")
+-- Solo admin ve la lista de usuarios y roles
+CREATE POLICY usuarios_admin ON "Usuarios" FOR ALL TO authenticated
+    USING (current_setting('request.jwt.claims', true)::jsonb->>'role' = 'Administrador')
+    WITH CHECK (current_setting('request.jwt.claims', true)::jsonb->>'role' = 'Administrador');
+
+CREATE POLICY roles_admin ON "Roles" FOR ALL TO authenticated
+    USING (current_setting('request.jwt.claims', true)::jsonb->>'role' = 'Administrador')
+    WITH CHECK (current_setting('request.jwt.claims', true)::jsonb->>'role' = 'Administrador');
+
+-- ============================================================================
+-- 7. ÍNDICES DE RENDIMIENTO
+-- ============================================================================
+
+-- Pedidos activos (consulta más frecuente del POS)
+CREATE INDEX IF NOT EXISTS ix_pedido_estado_activo
+    ON "Pedido" ("Estado")
     WHERE "Estado" IN ('Pendiente', 'EnPreparacion');
 
-CREATE INDEX CONCURRENTLY IF NOT EXISTS ix_pedidos_tipo_servicio
-    ON "Pedidos" ("TipoServicio");
-
--- 3.2. Productos: búsqueda por categoría y estado
-CREATE INDEX CONCURRENTLY IF NOT EXISTS ix_productos_categoria_activo
-    ON "Productos" ("CategoriaProductoId")
+-- Productos por categoría (catálogo)
+CREATE INDEX IF NOT EXISTS ix_producto_categoria_activo
+    ON "Producto" ("CategoriaProductoId")
     WHERE "Activo" = true;
 
--- 3.3. Mesas: búsqueda por número
-CREATE INDEX CONCURRENTLY IF NOT EXISTS ix_mesas_numero
-    ON "Mesas" ("Numero");
+-- Mesas por número (lookup rápido)
+CREATE INDEX IF NOT EXISTS ix_mesa_numero ON "Mesa" ("Numero");
 
--- 3.4. Auditoría: búsqueda por fecha y tabla
-CREATE INDEX CONCURRENTLY IF NOT EXISTS ix_auditoria_fecha_tabla
-    ON "Auditoria" ("FechaHora" DESC, "TablaAfectada");
+-- Auditoría por fecha (consultas de trazabilidad)
+CREATE INDEX IF NOT EXISTS ix_auditoria_fecha
+    ON "Auditorias" ("FechaHora" DESC);
 
--- 3.5. Usuarios: búsqueda por username (login)
-CREATE INDEX CONCURRENTLY IF NOT EXISTS ix_usuarios_username
-    ON "Usuarios" ("Username");
+-- Usuarios por username (login)
+CREATE INDEX IF NOT EXISTS ix_usuarios_username ON "Usuarios" ("Username");
 
 -- ============================================================================
--- 4. CONFIGURACIÓN DE RENDIMIENTO DE PostgreSQL
+-- 8. CONFIGURACIÓN DE AUTOVACUUM PARA TABLAS DE ALTA ESCRITURA
 -- ============================================================================
 
--- Aumentar work_mem para consultas de agregación (totales de pedidos)
-ALTER SYSTEM SET work_mem = '16MB';
-
--- Aumentar effective_cache_size para aprovechar RAM del servidor
-ALTER SYSTEM SET effective_cache_size = '1GB';
-
--- Configurar autovacuum más agresivo para tablas de alta escritura
-ALTER TABLE "Pedidos" SET (autovacuum_vacuum_scale_factor = 0.01);
-ALTER TABLE "Auditoria" SET (autovacuum_vacuum_scale_factor = 0.05);
-ALTER TABLE "PedidoEstadoLog" SET (autovacuum_vacuum_scale_factor = 0.01);
+ALTER TABLE "Pedido" SET (autovacuum_vacuum_scale_factor = 0.01);
+ALTER TABLE "Auditorias" SET (autovacuum_vacuum_scale_factor = 0.05);
+ALTER TABLE "PedidosEstadosLog" SET (autovacuum_vacuum_scale_factor = 0.01);
 
 -- ============================================================================
--- 5. FUNCIÓN DE LIMPIEZA DE SESIONES EXPIRADAS (opcional, para mantenimiento)
+-- 9. VERIFICACIÓN
 -- ============================================================================
 
-CREATE OR REPLACE FUNCTION limpiar_auditoria_antigua(dias_retencion INT DEFAULT 90)
-RETURNS void AS $$
-BEGIN
-    DELETE FROM "Auditoria"
-    WHERE "FechaHora" < NOW() - (dias_retencion || ' days')::INTERVAL;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
--- ============================================================================
--- 6. VERIFICACIÓN FINAL
--- ============================================================================
-
--- Contar tablas con RLS habilitado
-SELECT COUNT(*) AS tablas_con_rls
+SELECT count(*) AS tablas_con_rls
 FROM pg_tables
 WHERE schemaname = 'public' AND rowsecurity = true;
 
--- Listar políticas creadas
-SELECT schemaname, tablename, policyname, cmd
+SELECT tablename, policyname, cmd
 FROM pg_policies
 WHERE schemaname = 'public'
 ORDER BY tablename, cmd;
