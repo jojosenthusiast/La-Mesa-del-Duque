@@ -4,6 +4,14 @@ Todas las modificaciones notables de este proyecto se documentarán en este arch
 
 El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/),
 y este proyecto adhiere al [Versionado Semántico](https://semver.org/lang/es/).
+## [0.10.0](https://github.com/jojosenthusiast/La-Mesa-del-Duque/compare/v0.9.0...v0.10.0) (2026-05-09)
+
+
+### Nuevas funcionalidades
+
+* **auth:** agregar gestión de usuarios, login con bcrypt y autorización por roles — Slice 5 ([c1cd1d6](https://github.com/jojosenthusiast/La-Mesa-del-Duque/commit/c1cd1d63dbc4c3400191ff80cc51f9c07f4ad974))
+* **auth:** agregar gestión de usuarios, login con bcrypt y autorización por roles — Slice 5 ([0e50f12](https://github.com/jojosenthusiast/La-Mesa-del-Duque/commit/0e50f12754a601d1754b271b63e6a06cbd9beb49))
+
 ## [0.9.0](https://github.com/jojosenthusiast/La-Mesa-del-Duque/compare/v0.8.0...v0.9.0) (2026-05-09)
 
 
