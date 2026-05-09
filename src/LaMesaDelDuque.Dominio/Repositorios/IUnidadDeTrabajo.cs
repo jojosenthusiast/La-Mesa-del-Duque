@@ -4,8 +4,10 @@ public interface IUnidadDeTrabajo
 {
     ICategoriaProductoRepositorio Categorias { get; }
     IProductoRepositorio Productos { get; }
+    IIngredienteRepositorio Ingredientes { get; }
     IMesaRepositorio Mesas { get; }
     IPedidoRepositorio Pedidos { get; }
+    IRecetaProductoRepositorio RecetasProductos { get; }
     IUsuarioRepositorio Usuarios { get; }
     IAuditoriaRepositorio Auditorias { get; }
 

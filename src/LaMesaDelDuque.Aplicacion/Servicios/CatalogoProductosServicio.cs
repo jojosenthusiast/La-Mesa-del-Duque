@@ -54,13 +54,13 @@ internal class CatalogoProductosServicio : ICatalogoProductosServicio
         return productos.Select(MapToDto).ToList();
     }
 
-    public async Task<ProductoDto> CrearProductoAsync(string nombre, decimal precio, Guid categoriaId, CancellationToken cancelacion = default)
+    public async Task<ProductoDto> CrearProductoAsync(string nombre, decimal precio, Guid categoriaId, string? descripcion = null, string? imagenUrl = null, int tiempoPreparacionMin = 5, CancellationToken cancelacion = default)
     {
         if (string.IsNullOrWhiteSpace(nombre))
             throw new ArgumentException("El nombre del producto es obligatorio.", nameof(nombre));
 
-        if (precio < 0)
-            throw new ArgumentException("El precio no puede ser negativo.", nameof(precio));
+        if (precio <= 0)
+            throw new ArgumentException("El precio del producto debe ser mayor que cero.", nameof(precio));
 
         // Usamos tracking para evitar conflicto de identidad con la categoría
         // ya trackeada en el contexto tras crear el producto que la referencia.
@@ -68,14 +68,15 @@ internal class CatalogoProductosServicio : ICatalogoProductosServicio
         if (categoria is null)
             throw new ArgumentException($"No se encontró la categoría con ID {categoriaId}.", nameof(categoriaId));
 
-        var producto = new Producto(nombre.Trim(), precio, categoria);
+        var producto = new Producto(nombre.Trim(), precio, categoria, imagenUrl, tiempoPreparacionMin);
+        producto.ActualizarDescripcion(descripcion);
         await _uot.Productos.AgregarAsync(producto, cancelacion);
         await _uot.GuardarCambiosAsync(cancelacion);
 
         return MapToDto(producto);
     }
 
-    public async Task<ProductoDto> ActualizarProductoAsync(Guid productoId, string nombre, decimal precio, Guid categoriaId, string? descripcion, CancellationToken cancelacion = default)
+    public async Task<ProductoDto> ActualizarProductoAsync(Guid productoId, string nombre, decimal precio, Guid categoriaId, string? descripcion, string? imagenUrl = null, int? tiempoPreparacionMin = null, CancellationToken cancelacion = default)
     {
         var producto = await _uot.Productos.ObtenerConTrackingAsync(productoId, cancelacion)
             ?? throw new ArgumentException($"No se encontró el producto con ID {productoId}.", nameof(productoId));
@@ -85,6 +86,9 @@ internal class CatalogoProductosServicio : ICatalogoProductosServicio
 
         producto.ActualizarDatos(nombre, precio, categoria);
         producto.ActualizarDescripcion(descripcion);
+        producto.ActualizarImagen(imagenUrl);
+        if (tiempoPreparacionMin.HasValue)
+            producto.ActualizarTiempoPreparacion(tiempoPreparacionMin.Value);
         await _uot.GuardarCambiosAsync(cancelacion);
 
         return MapToDto(producto);
@@ -97,7 +101,7 @@ internal class CatalogoProductosServicio : ICatalogoProductosServicio
 
         var tienePedidosActivos = await _uot.Productos.ExisteEnPedidosActivosAsync(productoId, cancelacion);
         if (tienePedidosActivos)
-            throw new ReglaDominioException("No se puede desactivar el producto porque aparece en pedidos activos o abiertos.");
+            throw new ReglaDominioException("No se puede desactivar el producto porque tiene pedidos activos.");
 
         producto.Desactivar();
         await _uot.GuardarCambiosAsync(cancelacion);
@@ -141,7 +145,9 @@ internal class CatalogoProductosServicio : ICatalogoProductosServicio
             CategoriaId = producto.Categoria.Id,
             CategoriaNombre = producto.Categoria.Nombre,
             Activo = producto.Activo,
-            Descripcion = producto.Descripcion
+            Descripcion = producto.Descripcion,
+            ImagenUrl = producto.ImagenUrl,
+            TiempoPreparacionMin = producto.TiempoPreparacionMin
         };
     }
 }

@@ -15,7 +15,7 @@ internal class ProductoIngredienteConfiguracion : IEntityTypeConfiguration<Produ
             .IsRequired();
 
         constructor.HasOne(pi => pi.Producto)
-            .WithMany()
+            .WithMany(p => p.Ingredientes)
             .HasForeignKey(pi => pi.ProductoId)
             .OnDelete(DeleteBehavior.Cascade);
 

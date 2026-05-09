@@ -16,6 +16,8 @@ public class LaMesaDelDuqueDbContext : DbContext
     public DbSet<Usuario> Usuarios => Set<Usuario>();
     public DbSet<PedidoEstadoLog> PedidosEstadosLog => Set<PedidoEstadoLog>();
     public DbSet<ProductoPrecioHistorial> ProductosPreciosHistorial => Set<ProductoPrecioHistorial>();
+    public DbSet<RecetaProducto> RecetasProductos => Set<RecetaProducto>();
+    public DbSet<RecetaIngrediente> RecetasIngredientes => Set<RecetaIngrediente>();
 
     // Nuevas entidades Sprint 1
     public DbSet<RestauranteConfig> RestauranteConfigs => Set<RestauranteConfig>();

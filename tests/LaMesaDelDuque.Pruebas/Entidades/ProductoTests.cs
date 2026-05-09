@@ -20,11 +20,12 @@ public class ProductoTests
     }
 
     [Fact]
-    public void CrearProducto_CuandoPrecioEsCero_DebeAceptarlo()
+    public void CrearProducto_CuandoPrecioEsCero_DebeLanzarExcepcion()
     {
-        var producto = new Producto("Agua del grifo", 0m, _categoria);
+        var ex = Assert.Throws<ReglaDominioException>(
+            () => new Producto("Agua del grifo", 0m, _categoria));
 
-        Assert.Equal(0m, producto.Precio);
+        Assert.Contains("precio", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -135,13 +136,14 @@ public class ProductoTests
 
     // INVARIANTE CANÓNICA (CHECK >= 0): precio cero debe ser consistente entre crear y actualizar
     [Fact]
-    public void ActualizarDatos_CuandoPrecioEsCero_DebeAceptarlo()
+    public void ActualizarDatos_CuandoPrecioEsCero_DebeLanzarExcepcion()
     {
         var producto = new Producto("Café", 3.50m, _categoria);
 
-        producto.ActualizarDatos("Café del día", 0m, _categoria);
+        var ex = Assert.Throws<ReglaDominioException>(() =>
+            producto.ActualizarDatos("Café del día", 0m, _categoria));
 
-        Assert.Equal(0m, producto.Precio);
+        Assert.Contains("precio", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     // ActualizarImagen debe aplicar el mismo límite que el constructor (500 chars)
