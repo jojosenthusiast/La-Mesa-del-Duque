@@ -5,6 +5,25 @@ Todas las modificaciones notables de este proyecto se documentarán en este arch
 El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/),
 y este proyecto adhiere al [Versionado Semántico](https://semver.org/lang/es/).
 
+## [0.7.0](https://github.com/jojosenthusiast/La-Mesa-del-Duque/compare/v0.6.0...v0.7.0) (2026-05-08)
+
+### Summary
+
+- Completa el flujo POS del pedido para Sprint 1 en backend, incorporando `tipo_servicio`, asignación opcional de mesa, eliminación segura de pedidos pendientes y trazabilidad de auditoría.
+
+### Details
+
+- Agrega `TipoServicio` al contrato de `Pedido` para distinguir `ParaLlevar` y `ComerAqui`.
+- Permite crear pedidos sin mesa y restringe la asignación de mesa a los casos válidos del flujo POS.
+- Implementa `EliminarPedidoPendienteAsync` para eliminar pedidos no pagados, liberar la mesa asociada y registrar una auditoría `DELETE`.
+- Ajusta persistencia EF Core para soportar `MesaId` nullable y la nueva forma del agregado `Pedido`.
+- Amplía las pruebas automatizadas para cubrir creación, modificación, pago, eliminación y reglas de mesa del Slice 2.
+
+
+### Nuevas funcionalidades
+
+* **pos:** completar flujo de pedidos del sprint 1 — Slice 2 ([9937f10](https://github.com/jojosenthusiast/La-Mesa-del-Duque/commit/9937f106dee3a6690ce16af9f2b5b4e4593ed580))
+
 ## [0.6.0](https://github.com/jojosenthusiast/La-Mesa-del-Duque/compare/v0.5.1...v0.6.0) (2026-05-08)
 
 
