@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="La Mesa del Duque — El SaaS que gestiona tu restaurante como la realeza" />
+    <meta name="description" content="La Mesa del Duque — Operaciones" />
     <title>@ViewData["Title"] — La Mesa del Duque</title>
     <link rel="icon" type="image/png" href="~/img/marca/logo-simbolo.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -15,43 +15,54 @@
     <link rel="stylesheet" href="~/LaMesaDelDuque.Web.styles.css" asp-append-version="true" />
 </head>
 <body>
-    <header>
-        <nav class="navbar navbar-expand-sm lmd-navbar">
-            <div class="container">
-                <a class="navbar-brand" asp-area="" asp-page="/Index">
-                    <img src="~/img/marca/logo-simbolo.png" alt="La Mesa del Duque" />
-                    La Mesa del Duque
-                </a>
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse"
-                        aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Menú de navegación">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
-                <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
-                    <ul class="navbar-nav flex-grow-1">
-                        <li class="nav-item">
-                            <a class="nav-link" asp-area="" asp-page="/Index">Inicio</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" asp-area="" asp-page="/Privacy">Privacidad</a>
-                        </li>
-                    </ul>
+    <nav class="navbar navbar-expand-lg lmd-ops-nav">
+        <div class="container lmd-shell-container">
+            <a class="navbar-brand lmd-ops-brand" asp-page="/Index">
+                <img src="~/img/marca/logo-simbolo.png" alt="La Mesa del Duque" />
+                <span>La Mesa del Duque</span>
+            </a>
+
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#ops-nav-collapse"
+                    aria-controls="ops-nav-collapse" aria-expanded="false" aria-label="Menú de navegación">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <div class="navbar-collapse collapse" id="ops-nav-collapse">
+                <ul class="navbar-nav lmd-module-tabs mx-auto">
+                    <li class="nav-item">
+                        <a class="nav-link @(ViewData["ActiveTab"]?.ToString() == "Productos" ? "active" : "")"
+                           asp-page="/Operaciones/Productos/Index">Productos</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link @(ViewData["ActiveTab"]?.ToString() == "Mesas" ? "active" : "")"
+                           asp-page="/Operaciones/Mesas/Index">Mesas</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link @(ViewData["ActiveTab"]?.ToString() == "Pedidos" ? "active" : "")"
+                           asp-page="/Operaciones/Pedidos/Index">Pedidos</a>
+                    </li>
+                </ul>
+
+                <div class="lmd-user-info d-flex align-items-center gap-2 ms-auto">
+                    @if (User.Identity?.IsAuthenticated == true)
+                    {
+                        <span class="lmd-user-name">@User.Identity.Name</span>
+                        <a class="btn btn-sm lmd-action-neutral" asp-page="/Auth/Logout">Salir</a>
+                    }
+                    else
+                    {
+                        <a class="btn btn-sm lmd-action-primary" asp-page="/Auth/Login">Ingresar</a>
+                    }
                 </div>
             </div>
-        </nav>
-    </header>
+        </div>
+    </nav>
 
-    <div class="container lmd-contenido">
-        <main role="main" class="pb-3">
+    <div class="container lmd-shell-container lmd-shell-main">
+        <main role="main" class="lmd-main-surface">
             @RenderBody()
         </main>
     </div>
-
-    <footer class="lmd-footer">
-        <div class="container d-flex justify-content-between align-items-center flex-wrap gap-2">
-            <span class="lmd-footer-marca">&copy; 2026 La Mesa del Duque</span>
-            <a asp-area="" asp-page="/Privacy">Privacidad</a>
-        </div>
-    </footer>
 
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
