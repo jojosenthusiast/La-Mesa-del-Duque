@@ -33,10 +33,12 @@ public class CatalogoProductosServicioTests : IDisposable
         _uot = new UnidadDeTrabajo(_contexto,
             new CategoriaProductoRepositorio(_contexto),
             new ProductoRepositorio(_contexto),
+            new IngredienteRepositorio(_contexto),
             new MesaRepositorio(_contexto),
             new PedidoRepositorio(_contexto),
             new UsuarioRepositorio(_contexto),
-            new AuditoriaRepositorio(_contexto));
+            new AuditoriaRepositorio(_contexto),
+            new RecetaProductoRepositorio(_contexto));
 
         _servicio = new CatalogoProductosServicio(_uot);
     }
@@ -112,6 +114,35 @@ public class CatalogoProductosServicioTests : IDisposable
     }
 
     [Fact]
+    public async Task CrearProducto_ConDatosCompletos_DebePersistirDescripcionImagenYTiempoPreparacion()
+    {
+        var categoria = await _servicio.CrearCategoriaAsync("Platos fuertes");
+
+        var dto = await _servicio.CrearProductoAsync(
+            "Hamburguesa clásica",
+            6.99m,
+            categoria.Id,
+            "Pan brioche, carne y vegetales frescos.",
+            "https://cdn.lmd/menu/hamburguesa.jpg",
+            12);
+
+        Assert.Equal("Pan brioche, carne y vegetales frescos.", dto.Descripcion);
+        Assert.Equal("https://cdn.lmd/menu/hamburguesa.jpg", dto.ImagenUrl);
+        Assert.Equal(12, dto.TiempoPreparacionMin);
+    }
+
+    [Fact]
+    public async Task CrearProducto_PrecioCero_DebeUsarMensajeEsperado()
+    {
+        var categoria = await _servicio.CrearCategoriaAsync("Bebidas");
+
+        var ex = await Assert.ThrowsAsync<ArgumentException>(() =>
+            _servicio.CrearProductoAsync("Agua filtrada", 0m, categoria.Id));
+
+        Assert.Contains("mayor que cero", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public async Task CrearProducto_ConCategoriaInexistente_DebeLanzarExcepcion()
     {
         await Assert.ThrowsAsync<ArgumentException>(() =>
@@ -166,6 +197,25 @@ public class CatalogoProductosServicioTests : IDisposable
     }
 
     [Fact]
+    public async Task ActualizarProducto_ConImagenYTiempoPreparacion_DebeActualizarCamposCompletos()
+    {
+        var bebidas = await _servicio.CrearCategoriaAsync("Bebidas especiales");
+        var producto = await _servicio.CrearProductoAsync("Latte", 4.25m, bebidas.Id);
+
+        var actualizado = await _servicio.ActualizarProductoAsync(
+            producto.Id,
+            "Latte vainilla",
+            4.75m,
+            bebidas.Id,
+            "Bebida caliente con vainilla.",
+            "https://cdn.lmd/menu/latte-vainilla.jpg",
+            8);
+
+        Assert.Equal("https://cdn.lmd/menu/latte-vainilla.jpg", actualizado.ImagenUrl);
+        Assert.Equal(8, actualizado.TiempoPreparacionMin);
+    }
+
+    [Fact]
     public async Task ActualizarProducto_Inexistente_DebeLanzarExcepcion()
     {
         await Assert.ThrowsAsync<ArgumentException>(() =>
@@ -203,6 +253,26 @@ public class CatalogoProductosServicioTests : IDisposable
 
         await Assert.ThrowsAsync<ReglaDominioException>(() =>
             _servicio.DesactivarProductoAsync(producto.Id));
+    }
+
+    [Fact]
+    public async Task DesactivarProducto_ConPedidosActivos_DebeUsarMensajeEsperado()
+    {
+        var categoria = await _servicio.CrearCategoriaAsync("Bebidas premium");
+        var producto = await _servicio.CrearProductoAsync("Café reserva", 4.50m, categoria.Id);
+
+        var mesa = new Mesa(101, 4);
+        await _uot.Mesas.AgregarAsync(mesa);
+        var productoTracked = await _uot.Productos.ObtenerConTrackingAsync(producto.Id);
+        var pedido = new Pedido(TipoServicio.ComerAqui, mesa);
+        pedido.AgregarDetalle(new DetallePedido(productoTracked!, 1, 4.50m));
+        await _uot.Pedidos.AgregarAsync(pedido);
+        await _uot.GuardarCambiosAsync();
+
+        var ex = await Assert.ThrowsAsync<ReglaDominioException>(() =>
+            _servicio.DesactivarProductoAsync(producto.Id));
+
+        Assert.Contains("pedidos activos", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

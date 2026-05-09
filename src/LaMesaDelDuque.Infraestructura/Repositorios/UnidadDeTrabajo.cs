@@ -11,24 +11,30 @@ internal class UnidadDeTrabajo : IUnidadDeTrabajo
         LaMesaDelDuqueDbContext contexto,
         CategoriaProductoRepositorio categoriaRepositorio,
         ProductoRepositorio productoRepositorio,
+        IngredienteRepositorio ingredienteRepositorio,
         MesaRepositorio mesaRepositorio,
         PedidoRepositorio pedidoRepositorio,
         UsuarioRepositorio usuarioRepositorio,
-        AuditoriaRepositorio auditoriaRepositorio)
+        AuditoriaRepositorio auditoriaRepositorio,
+        RecetaProductoRepositorio recetaProductoRepositorio)
     {
         _contexto = contexto;
         Categorias = categoriaRepositorio;
         Productos = productoRepositorio;
+        Ingredientes = ingredienteRepositorio;
         Mesas = mesaRepositorio;
         Pedidos = pedidoRepositorio;
         Usuarios = usuarioRepositorio;
         Auditorias = auditoriaRepositorio;
+        RecetasProductos = recetaProductoRepositorio;
     }
 
     public ICategoriaProductoRepositorio Categorias { get; }
     public IProductoRepositorio Productos { get; }
+    public IIngredienteRepositorio Ingredientes { get; }
     public IMesaRepositorio Mesas { get; }
     public IPedidoRepositorio Pedidos { get; }
+    public IRecetaProductoRepositorio RecetasProductos { get; }
     public IUsuarioRepositorio Usuarios { get; }
     public IAuditoriaRepositorio Auditorias { get; }
 

@@ -10,7 +10,7 @@ public interface ICatalogoProductosServicio
     Task DesactivarCategoriaAsync(Guid categoriaId, CancellationToken cancelacion = default);
     Task<List<ProductoDto>> ListarProductosAsync(CancellationToken cancelacion = default);
     Task<List<ProductoDto>> ListarProductosPorCategoriaAsync(Guid categoriaId, CancellationToken cancelacion = default);
-    Task<ProductoDto> CrearProductoAsync(string nombre, decimal precio, Guid categoriaId, CancellationToken cancelacion = default);
-    Task<ProductoDto> ActualizarProductoAsync(Guid productoId, string nombre, decimal precio, Guid categoriaId, string? descripcion, CancellationToken cancelacion = default);
+    Task<ProductoDto> CrearProductoAsync(string nombre, decimal precio, Guid categoriaId, string? descripcion = null, string? imagenUrl = null, int tiempoPreparacionMin = 5, CancellationToken cancelacion = default);
+    Task<ProductoDto> ActualizarProductoAsync(Guid productoId, string nombre, decimal precio, Guid categoriaId, string? descripcion, string? imagenUrl = null, int? tiempoPreparacionMin = null, CancellationToken cancelacion = default);
     Task DesactivarProductoAsync(Guid productoId, CancellationToken cancelacion = default);
 }

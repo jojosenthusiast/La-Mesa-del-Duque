@@ -32,10 +32,12 @@ public class MesasServicioTests : IDisposable
         _uot = new UnidadDeTrabajo(_contexto,
             new CategoriaProductoRepositorio(_contexto),
             new ProductoRepositorio(_contexto),
+            new IngredienteRepositorio(_contexto),
             new MesaRepositorio(_contexto),
             new PedidoRepositorio(_contexto),
             new UsuarioRepositorio(_contexto),
-            new AuditoriaRepositorio(_contexto));
+            new AuditoriaRepositorio(_contexto),
+            new RecetaProductoRepositorio(_contexto));
 
         _servicio = new MesasServicio(_uot);
     }

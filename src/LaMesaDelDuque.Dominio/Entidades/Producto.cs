@@ -6,6 +6,7 @@ public class Producto
 {
     private const int LongitudMaximaNombre = 150;
     private const int LongitudMaximaImagenUrl = 500;
+    private readonly List<ProductoIngrediente> _ingredientes = [];
 
     public Guid Id { get; private set; }
     public string Nombre { get; private set; }
@@ -17,6 +18,7 @@ public class Producto
     public int TiempoPreparacionMin { get; private set; }
     public DateTime CreatedAt { get; private set; }
     public DateTime UpdatedAt { get; private set; }
+    public IReadOnlyList<ProductoIngrediente> Ingredientes => _ingredientes.AsReadOnly();
 
     private Producto()
     {
@@ -32,8 +34,8 @@ public class Producto
         if (nombre.Trim().Length > LongitudMaximaNombre)
             throw new ReglaDominioException($"El nombre del producto no puede exceder {LongitudMaximaNombre} caracteres.");
 
-        if (precio < 0)
-            throw new ReglaDominioException("El precio no puede ser negativo.");
+        if (precio <= 0)
+            throw new ReglaDominioException("El precio del producto debe ser mayor que cero.");
 
         if (categoria is null)
             throw new ReglaDominioException("El producto debe pertenecer a una categoría.");
@@ -63,8 +65,8 @@ public class Producto
         if (nombre.Trim().Length > LongitudMaximaNombre)
             throw new ReglaDominioException($"El nombre del producto no puede exceder {LongitudMaximaNombre} caracteres.");
 
-        if (precio < 0)
-            throw new ReglaDominioException("El precio no puede ser negativo.");
+        if (precio <= 0)
+            throw new ReglaDominioException("El precio del producto debe ser mayor que cero.");
 
         if (categoria is null)
             throw new ReglaDominioException("El producto debe pertenecer a una categoría.");
