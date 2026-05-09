@@ -187,6 +187,11 @@ public class IndexModel : PageModel
             : Vm.PedidosActivos.OrderByDescending(p => p.Total).FirstOrDefault();
 
         Vm.CrearPedido.TipoServicio = Vm.CrearPedido.TipoServicio is "ParaLlevar" or "ComerAqui" ? Vm.CrearPedido.TipoServicio : "ComerAqui";
+
+        if (Vm.CrearPedido.Lineas.Count == 0)
+        {
+            Vm.CrearPedido.Lineas.Add(new LineaPedidoFormVm());
+        }
     }
 
     private void SetUiContext()

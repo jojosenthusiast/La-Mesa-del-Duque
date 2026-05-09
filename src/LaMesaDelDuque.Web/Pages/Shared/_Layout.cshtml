@@ -31,19 +31,31 @@
 
             <div class="navbar-collapse collapse" id="ops-nav-collapse">
                 <ul class="navbar-nav lmd-module-tabs mx-auto">
+                    @{
+                        var esAdmin = User.IsInRole("Administrador");
+                        var esEncargado = User.IsInRole("Encargado");
+                        var esMesero = User.IsInRole("Mesero");
+                        var esCocinero = User.IsInRole("Cocinero");
+                    }
+                    @if (esAdmin || esEncargado)
+                    {
                     <li class="nav-item">
                         <a class="nav-link @(ViewData["ActiveTab"]?.ToString() == "Productos" ? "active" : "")"
                            asp-page="/Operaciones/Productos/Index">Productos</a>
                     </li>
+                    }
+                    @if (esAdmin || esEncargado || esMesero)
+                    {
                     <li class="nav-item">
                         <a class="nav-link @(ViewData["ActiveTab"]?.ToString() == "Mesas" ? "active" : "")"
                            asp-page="/Operaciones/Mesas/Index">Mesas</a>
                     </li>
+                    }
                     <li class="nav-item">
                         <a class="nav-link @(ViewData["ActiveTab"]?.ToString() == "Pedidos" ? "active" : "")"
                            asp-page="/Operaciones/Pedidos/Index">Pedidos</a>
                     </li>
-                    @if (User.IsInRole("Administrador"))
+                    @if (esAdmin)
                     {
                         <li class="nav-item">
                             <a class="nav-link @(ViewData["ActiveTab"]?.ToString() == "Usuarios" ? "active" : "")"

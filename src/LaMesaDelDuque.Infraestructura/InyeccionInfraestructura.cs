@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using LaMesaDelDuque.Dominio.Repositorios;
 using LaMesaDelDuque.Infraestructura.Persistencia;
 using LaMesaDelDuque.Infraestructura.Repositorios;
@@ -10,20 +11,39 @@ namespace LaMesaDelDuque.Infraestructura;
 
 public static class InyeccionInfraestructura
 {
-    /// <summary>
-    /// Registra los servicios de infraestructura (persistencia, repositorios, unidad de trabajo).
-    /// Lanza InvalidOperationException si no hay connection string configurada.
-    /// </summary>
     public static IServiceCollection AgregarPersistencia(
-        this IServiceCollection servicios, IConfiguration configuracion)
+        this IServiceCollection servicios, IConfiguration configuracion, bool esDesarrollo = false)
     {
-        var connectionString = Environment.GetEnvironmentVariable("LMD_CONNECTION_STRING")
-            ?? configuracion.GetConnectionString("DefaultConnection");
+        // Solo usar appsettings.json. Ignorar variable de entorno porque
+        // persiste en sesiones de PowerShell y causa conexiones rotas a Supabase.
+        var connectionString = configuracion.GetConnectionString("DefaultConnection");
 
-        connectionString = ConexionHelper.Normalizar(connectionString);
+        Console.WriteLine($"[DBG] esDesarrollo={esDesarrollo} cs='{connectionString}' isEmpty={string.IsNullOrWhiteSpace(connectionString)}");
 
         servicios.AddDbContext<LaMesaDelDuqueDbContext>(opciones =>
-            opciones.UseNpgsql(connectionString));
+        {
+            if (esDesarrollo && string.IsNullOrWhiteSpace(connectionString))
+            {
+                Console.WriteLine("[DBG] USING SQLITE (desarrollo)");
+                var dbPath = Path.Combine(
+                    AppContext.BaseDirectory, "..", "..", "..", "lmd-dev.db");
+                opciones.UseSqlite($"Data Source={dbPath}");
+                return;
+            }
+
+            if (!string.IsNullOrWhiteSpace(connectionString))
+            {
+                Console.WriteLine("[DBG] USING Npgsql");
+                connectionString = ConexionHelper.Normalizar(connectionString);
+                opciones.UseNpgsql(connectionString);
+                return;
+            }
+
+            Console.WriteLine("[DBG] USING SQLITE (fallback)");
+            var dbPath2 = Path.Combine(
+                AppContext.BaseDirectory, "..", "..", "..", "lmd-dev.db");
+            opciones.UseSqlite($"Data Source={dbPath2}");
+        });
 
         // Repositorios
         servicios.AddScoped<CategoriaProductoRepositorio>();
