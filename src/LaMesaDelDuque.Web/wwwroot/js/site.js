@@ -36,6 +36,33 @@
         });
     });
 
+    document.addEventListener("click", function (event) {
+        var editButton = event.target.closest("[data-lmd-edit-product]");
+        if (!editButton) {
+            return;
+        }
+
+        var setValue = function (id, value) {
+            var input = document.getElementById(id);
+            if (input) {
+                input.value = value || "";
+            }
+        };
+
+        setValue("Vm_Form_Id", editButton.getAttribute("data-producto-id"));
+        setValue("Vm_Form_Nombre", editButton.getAttribute("data-producto-nombre"));
+        setValue("Vm_Form_Precio", editButton.getAttribute("data-producto-precio"));
+        setValue("Vm_Form_CategoriaId", editButton.getAttribute("data-producto-categoria-id"));
+        setValue("Vm_Form_Descripcion", editButton.getAttribute("data-producto-descripcion"));
+        setValue("Vm_Form_ImagenUrl", editButton.getAttribute("data-producto-imagen-url"));
+        setValue("Vm_Form_TiempoPreparacionMin", editButton.getAttribute("data-producto-tiempo-preparacion"));
+
+        var formContainer = document.getElementById("producto-form");
+        if (formContainer) {
+            formContainer.classList.add("show");
+        }
+    });
+
     if (window.signalR && window.lmdPedidosHubUrl) {
         var connection = new window.signalR.HubConnectionBuilder()
             .withUrl(window.lmdPedidosHubUrl)

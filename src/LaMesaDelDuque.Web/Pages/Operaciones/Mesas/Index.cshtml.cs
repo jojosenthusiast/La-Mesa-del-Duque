@@ -1,11 +1,13 @@
 using LaMesaDelDuque.Aplicacion.Servicios;
 using LaMesaDelDuque.Dominio.Excepciones;
 using LaMesaDelDuque.Web.Models.Operaciones;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 
 namespace LaMesaDelDuque.Web.Pages.Operaciones.Mesas;
 
+[Authorize(Roles = "Administrador,Encargado,Mesero")]
 public class IndexModel : PageModel
 {
     private static readonly string[] EstadosOrdenados = ["Disponible", "Ocupada", "Reservada", "Mantenimiento", "Inactiva"];

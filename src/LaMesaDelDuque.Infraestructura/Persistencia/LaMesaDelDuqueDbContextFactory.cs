@@ -13,8 +13,8 @@ internal class LaMesaDelDuqueDbContextFactory : IDesignTimeDbContextFactory<LaMe
     public LaMesaDelDuqueDbContext CreateDbContext(string[] args)
     {
         var builder = new DbContextOptionsBuilder<LaMesaDelDuqueDbContext>();
-        var connectionString = Environment.GetEnvironmentVariable("LMD_CONNECTION_STRING")
-            ?? "Host=localhost;Database=la_mesa_del_duque;Username=postgres;Password=postgres";
+        var connectionString = ConexionHelper.Normalizar(
+            Environment.GetEnvironmentVariable("LMD_CONNECTION_STRING"));
 
         builder.UseNpgsql(connectionString);
         return new LaMesaDelDuqueDbContext(builder.Options);

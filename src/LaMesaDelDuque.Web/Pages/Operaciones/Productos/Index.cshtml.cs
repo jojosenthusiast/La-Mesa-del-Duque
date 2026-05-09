@@ -1,11 +1,13 @@
 using LaMesaDelDuque.Aplicacion.Servicios;
 using LaMesaDelDuque.Dominio.Excepciones;
 using LaMesaDelDuque.Web.Models.Operaciones;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 
 namespace LaMesaDelDuque.Web.Pages.Operaciones.Productos;
 
+[Authorize(Roles = "Administrador,Encargado")]
 public class IndexModel : PageModel
 {
     private readonly ICatalogoProductosServicio _catalogoProductosServicio;

@@ -129,8 +129,14 @@
                                 </span>
                             </td>
                             <td class="d-flex gap-1">
-                                <button type="button" class="btn btn-sm lmd-action-neutral"
-                                        onclick="document.getElementById('Vm_Form_Id').value='@producto.Id';document.getElementById('Vm_Form_Nombre').value='@producto.Nombre';document.getElementById('Vm_Form_Precio').value='@producto.Precio';document.getElementById('Vm_Form_CategoriaId').value='@producto.CategoriaId';document.getElementById('Vm_Form_Descripcion').value='@(producto.Descripcion ?? "")';document.getElementById('Vm_Form_ImagenUrl').value='@(producto.ImagenUrl ?? "")';document.getElementById('Vm_Form_TiempoPreparacionMin').value='@(producto.TiempoPreparacionMin)';document.getElementById('producto-form').classList.add('show');">
+                                <button type="button" class="btn btn-sm lmd-action-neutral" data-lmd-edit-product
+                                        data-producto-id="@producto.Id"
+                                        data-producto-nombre="@producto.Nombre"
+                                        data-producto-precio="@producto.Precio"
+                                        data-producto-categoria-id="@producto.CategoriaId"
+                                        data-producto-descripcion="@(producto.Descripcion ?? string.Empty)"
+                                        data-producto-imagen-url="@(producto.ImagenUrl ?? string.Empty)"
+                                        data-producto-tiempo-preparacion="@producto.TiempoPreparacionMin">
                                     Editar
                                 </button>
                                 @if (producto.Activo)

@@ -27,11 +27,13 @@ public class IndexModel : PageModel
 
     public async Task OnGetAsync()
     {
+        SetUiContext();
         await CargarDatosAsync();
     }
 
     public async Task<IActionResult> OnPostCrearAsync()
     {
+        SetUiContext();
         if (!ModelState.IsValid)
         {
             await CargarDatosAsync();
@@ -65,6 +67,7 @@ public class IndexModel : PageModel
 
     public async Task<IActionResult> OnPostDesactivarAsync(Guid id)
     {
+        SetUiContext();
         try
         {
             await _usuariosServicio.DesactivarUsuarioAsync(id);
@@ -81,5 +84,13 @@ public class IndexModel : PageModel
     private async Task CargarDatosAsync()
     {
         Vm.Usuarios = await _usuariosServicio.ListarUsuariosAsync();
+    }
+
+    private void SetUiContext()
+    {
+        if (ViewData is not null)
+        {
+            ViewData["ActiveTab"] = "Usuarios";
+        }
     }
 }

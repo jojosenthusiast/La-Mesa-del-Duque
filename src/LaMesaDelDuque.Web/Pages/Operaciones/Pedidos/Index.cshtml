@@ -56,15 +56,21 @@
                     <div class="col-md-4 d-grid">
                         <button type="submit" class="btn btn-sm lmd-action-success">Crear pedido</button>
                     </div>
+                    <div class="col-md-6">
+                        <label class="form-label" asp-for="Vm.CrearPedido.Lineas[0].ProductoId">Producto inicial</label>
+                        <select asp-for="Vm.CrearPedido.Lineas[0].ProductoId" class="form-select form-select-sm">
+                            <option value="">Seleccionar producto</option>
+                            @foreach (var producto in Model.Vm.ProductosDisponibles)
+                            {
+                                <option value="@producto.Id">@producto.Nombre (@producto.Precio.ToString("C"))</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label" asp-for="Vm.CrearPedido.Lineas[0].Cantidad">Cantidad</label>
+                        <input asp-for="Vm.CrearPedido.Lineas[0].Cantidad" class="form-control form-control-sm" min="1" />
+                    </div>
                 </div>
-
-                @if (Model.Vm.ProductosDisponibles.Count > 0)
-                {
-                    var defaultProducto = Model.Vm.ProductosDisponibles.First();
-                    <input type="hidden" name="Vm.CrearPedido.Lineas[0].ProductoId" value="@defaultProducto.Id" />
-                    <input type="hidden" name="Vm.CrearPedido.Lineas[0].Cantidad" value="1" />
-                    <input type="hidden" name="Vm.CrearPedido.Lineas[0].PrecioUnitario" value="@defaultProducto.Precio" />
-                }
             </form>
         </div>
         <div class="col-lg-6">
@@ -108,7 +114,6 @@
                                 <form method="post" asp-page-handler="AgregarLinea" class="lmd-pos-line-item border rounded p-2">
                                     <input type="hidden" name="pedidoId" value="@Model.Vm.PedidoActual?.Id" />
                                     <input type="hidden" name="productoId" value="@producto.Id" />
-                                    <input type="hidden" name="precioUnitario" value="@producto.Precio" />
                                     <div class="d-flex justify-content-between align-items-center gap-2">
                                         <div>
                                             <strong>@producto.Nombre</strong>

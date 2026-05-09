@@ -14,6 +14,9 @@ internal class RecetaProductoConfiguracion : IEntityTypeConfiguration<RecetaProd
             .HasColumnType("text")
             .IsRequired();
 
+        constructor.HasIndex(x => x.ProductoId)
+            .IsUnique();
+
         constructor.HasOne(x => x.Producto)
             .WithMany()
             .HasForeignKey(x => x.ProductoId)

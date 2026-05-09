@@ -26,7 +26,7 @@ internal class UsuariosServicio : IUsuariosServicio
         var rol = await _uot.Roles.ObtenerPorIdAsync(rolId, cancelacion)
             ?? throw new ArgumentException($"No se encontró el rol con ID {rolId}.", nameof(rolId));
 
-        var passwordHash = BCrypt.Net.BCrypt.HashPassword(password);
+        var passwordHash = BCrypt.Net.BCrypt.HashPassword(password, workFactor: 12);
         var usuario = new Usuario(username, email, passwordHash, nombreCompleto, rol);
 
         await _uot.Usuarios.AgregarAsync(usuario, cancelacion);

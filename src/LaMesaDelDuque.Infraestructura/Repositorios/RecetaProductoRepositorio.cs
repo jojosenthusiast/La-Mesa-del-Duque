@@ -17,6 +17,7 @@ internal class RecetaProductoRepositorio : IRecetaProductoRepositorio
     public async Task<RecetaProducto?> ObtenerPorProductoIdAsync(Guid productoId, CancellationToken cancelacion = default)
     {
         return await _contexto.Set<RecetaProducto>()
+            .AsNoTracking()
             .Include(x => x.Producto)
             .Include(x => x.Ingredientes)
                 .ThenInclude(x => x.Ingrediente)

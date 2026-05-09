@@ -4,6 +4,8 @@
 # Secretos y configuración local (NUNCA incluir en el repositorio)
 # -----------------------------------------------------------
 appsettings.Development.json
+appsettings.*.json
+!appsettings.json
 appsettings.*.local.json
 *.local.json
 .env
