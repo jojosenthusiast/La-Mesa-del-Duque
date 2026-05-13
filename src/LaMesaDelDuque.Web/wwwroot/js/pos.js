@@ -699,4 +699,10 @@
         renderPantallaMesa();
         initSignalR();
     });
+
+    window.addEventListener('beforeunload', () => {
+        if (connection && state.pedidoActual) {
+            connection.invoke('SalirDePedido', state.pedidoActual.id).catch(() => {});
+        }
+    });
 })();
