@@ -2,6 +2,7 @@ using LaMesaDelDuque.Aplicacion.Dtos;
 using LaMesaDelDuque.Aplicacion.Servicios;
 using LaMesaDelDuque.Web.Hubs;
 using LaMesaDelDuque.Web.Pages.Operaciones.Pedidos;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 
 namespace LaMesaDelDuque.Pruebas.Web;
@@ -142,6 +143,7 @@ internal sealed class FakeHubClients : IHubClients
     public IClientProxy Client(string connectionId) => new FakeClientProxy(_onSend);
     public IClientProxy Clients(IReadOnlyList<string> connectionIds) => new FakeClientProxy(_onSend);
     public IClientProxy Group(string groupName) => new FakeClientProxy(_onSend);
+    public IClientProxy GroupExcept(string groupName, IReadOnlyList<string> excludedConnectionIds) => new FakeClientProxy(_onSend);
     public IClientProxy Groups(IReadOnlyList<string> groupNames) => new FakeClientProxy(_onSend);
     public IClientProxy User(string userId) => new FakeClientProxy(_onSend);
     public IClientProxy Users(IReadOnlyList<string> userIds) => new FakeClientProxy(_onSend);
