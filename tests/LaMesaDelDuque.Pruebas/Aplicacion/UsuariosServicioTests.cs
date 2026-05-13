@@ -36,7 +36,8 @@ public class UsuariosServicioTests : IDisposable
             new RolRepositorio(_contexto),
             new UsuarioRepositorio(_contexto),
             new AuditoriaRepositorio(_contexto),
-            new RecetaProductoRepositorio(_contexto));
+            new RecetaProductoRepositorio(_contexto),
+            new OrdenCocinaRepositorio(_contexto));
 
         _servicio = new UsuariosServicio(_uot);
     }
