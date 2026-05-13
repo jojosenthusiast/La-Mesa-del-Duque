@@ -317,6 +317,27 @@ public class IndexModel : PageModel
         catch (Exception ex) { return BadRequest(ex.Message); }
     }
 
+    public async Task<IActionResult> OnPostPagarConPropinaJsonAsync(Guid pedidoId, decimal efectivoRecibido, decimal propina)
+    {
+        try
+        {
+            var pedidos = await _pedidosServicio.ListarPedidosActivosAsync();
+            var pedido = pedidos.FirstOrDefault(p => p.Id == pedidoId)
+                ?? throw new ArgumentException("Pedido no encontrado.");
+
+            var totalConPropina = pedido.Total + propina;
+            if (efectivoRecibido < totalConPropina)
+                return BadRequest($"Faltan ${totalConPropina - efectivoRecibido:F2}");
+
+            await _pedidosServicio.PagarPedidoAsync(pedidoId);
+            var cambio = efectivoRecibido - totalConPropina;
+            return new JsonResult(new { ok = true, mensaje = cambio > 0
+                ? $"Pedido pagado (propina ${propina:F2}). Cambio: ${cambio:F2}"
+                : $"Pedido pagado (propina ${propina:F2})." });
+        }
+        catch (Exception ex) { return BadRequest(ex.Message); }
+    }
+
     public async Task<IActionResult> OnPostEnviarACocinaJsonAsync(Guid pedidoId)
     {
         try

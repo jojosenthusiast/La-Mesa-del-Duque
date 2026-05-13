@@ -63,6 +63,17 @@
             return res.json();
         },
 
+        async pagarConPropina(pedidoId, efectivo, propina) {
+            const form = new FormData();
+            form.append('__RequestVerificationToken', csrfToken());
+            form.append('pedidoId', pedidoId);
+            form.append('efectivoRecibido', efectivo);
+            form.append('propina', propina);
+
+            const res = await fetch('?handler=PagarConPropinaJson', { method: 'POST', body: form, headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+            return res.json();
+        },
+
         async enviarACocina(pedidoId) {
             const form = new FormData();
             form.append('__RequestVerificationToken', csrfToken());
@@ -130,6 +141,9 @@
         pedidoActual: null,
         lineas: [],
         enviadoACocina: false,
+        propinaPct: 0,
+        dividirEntre: 0,
+        personasPagadas: 0,
     };
 
     function persistState() {
@@ -281,6 +295,12 @@
         if (!container) return;
 
         const total = state.lineas.reduce((s, l) => s + l.subtotal, 0);
+        const propina = total * (state.propinaPct / 100);
+        const totalConPropina = total + propina;
+
+        const splitHtml = state.dividirEntre > 1
+            ? `<div class="lmd-pos-split-info">Persona ${state.personasPagadas + 1} de ${state.dividirEntre} — <strong>${formatMoney(totalConPropina / state.dividirEntre)}</strong></div>`
+            : '';
 
         container.innerHTML = `
             <div class="lmd-pos-pantalla" id="pantalla-pago">
@@ -288,12 +308,31 @@
                 <h2 class="lmd-pos-titulo">Pago</h2>
                 <div class="lmd-pos-pago-total">${formatMoney(total)}</div>
 
+                <div class="lmd-pos-split-btns" id="split-btns">
+                    <span class="lmd-pos-pago-label">Dividir cuenta</span>
+                    <button class="lmd-pos-split-btn ${state.dividirEntre === 2 ? 'lmd-pos-split-btn--activo' : ''}" onclick="pos.dividirCuenta(2)">÷2</button>
+                    <button class="lmd-pos-split-btn ${state.dividirEntre === 3 ? 'lmd-pos-split-btn--activo' : ''}" onclick="pos.dividirCuenta(3)">÷3</button>
+                    <button class="lmd-pos-split-btn ${state.dividirEntre === 4 ? 'lmd-pos-split-btn--activo' : ''}" onclick="pos.dividirCuenta(4)">÷4</button>
+                    <button class="lmd-pos-split-btn ${state.dividirEntre === 5 ? 'lmd-pos-split-btn--activo' : ''}" onclick="pos.dividirCuenta(5)">÷5</button>
+                    ${state.dividirEntre > 1 ? `<button class="lmd-pos-split-btn lmd-pos-split-btn--reset" onclick="pos.dividirCuenta(0)">×</button>` : ''}
+                </div>
+
+                <div class="lmd-pos-tip-btns" id="tip-btns">
+                    <span class="lmd-pos-pago-label">Propina</span>
+                    <button class="lmd-pos-tip-btn ${state.propinaPct === 10 ? 'lmd-pos-tip-btn--activo' : ''}" onclick="pos.seleccionarPropina(10)">10%</button>
+                    <button class="lmd-pos-tip-btn ${state.propinaPct === 15 ? 'lmd-pos-tip-btn--activo' : ''}" onclick="pos.seleccionarPropina(15)">15%</button>
+                    <button class="lmd-pos-tip-btn ${state.propinaPct === 20 ? 'lmd-pos-tip-btn--activo' : ''}" onclick="pos.seleccionarPropina(20)">20%</button>
+                    <button class="lmd-pos-tip-btn lmd-pos-tip-btn--custom ${state.propinaPct === 0 ? 'lmd-pos-tip-btn--activo' : ''}" id="tip-sin-propina" onclick="pos.seleccionarPropina(0)">Sin propina</button>
+                </div>
+
+                ${splitHtml}
+
                 <div class="lmd-pos-pago-efectivo">
                     <label class="lmd-pos-pago-label">Efectivo recibido</label>
                     <div class="lmd-pos-pago-input-group">
                         <span class="lmd-pos-pago-input-prefijo">$</span>
                         <input type="number" id="efectivo-input" class="lmd-pos-pago-input" step="0.01" min="0"
-                               placeholder="${total.toFixed(2)}" oninput="pos.calcularCambio()" autofocus />
+                               placeholder="${totalConPropina.toFixed(2)}" oninput="pos.calcularCambio()" autofocus />
                     </div>
                     <div class="lmd-pos-pago-cambio" id="cambio-display"></div>
                 </div>
@@ -429,15 +468,26 @@
             if (!input || !display || !btn) return;
 
             const total = state.lineas.reduce((s, l) => s + l.subtotal, 0);
+            const propina = total * (state.propinaPct / 100);
+            const totalConPropina = total + propina;
+            const montoAdeudado = state.dividirEntre > 1
+                ? totalConPropina / state.dividirEntre
+                : totalConPropina;
             const efectivo = parseFloat(input.value) || 0;
 
-            if (efectivo >= total) {
-                const cambio = efectivo - total;
-                display.innerHTML = `<span class="lmd-pos-pago-cambio-valor">Cambio: ${formatMoney(cambio)}</span>`;
+            if (efectivo >= montoAdeudado) {
+                const cambio = efectivo - montoAdeudado;
+                let html = `<span class="lmd-pos-pago-cambio-valor">Cambio: ${formatMoney(cambio)}</span>`;
+                if (propina > 0) html += `<div class="lmd-pos-pago-propina">Propina (${state.propinaPct}%): ${formatMoney(propina)}</div>`;
+                if (state.dividirEntre > 1) html += `<div class="lmd-pos-pago-split-info">Persona ${state.personasPagadas + 1} de ${state.dividirEntre}</div>`;
+                html += `<div class="lmd-pos-pago-total-final">Total: ${formatMoney(totalConPropina)}</div>`;
+                display.innerHTML = html;
                 display.className = 'lmd-pos-pago-cambio lmd-pos-pago-cambio--ok';
                 btn.disabled = false;
             } else {
-                display.innerHTML = efectivo > 0 ? `<span>Faltan ${formatMoney(total - efectivo)}</span>` : '';
+                display.innerHTML = efectivo > 0
+                    ? `<span>Faltan ${formatMoney(montoAdeudado - efectivo)}</span>${propina > 0 ? `<div class="lmd-pos-pago-propina">Propina: ${formatMoney(propina)}</div>` : ''}`
+                    : (propina > 0 ? `<div class="lmd-pos-pago-propina">Propina: ${formatMoney(propina)}</div>` : '');
                 display.className = 'lmd-pos-pago-cambio';
                 btn.disabled = true;
             }
@@ -447,17 +497,57 @@
             const input = document.getElementById('efectivo-input');
             const efectivo = parseFloat(input?.value || 0);
             if (!state.pedidoActual || efectivo <= 0) return;
+
+            const total = state.lineas.reduce((s, l) => s + l.subtotal, 0);
+            const propina = total * (state.propinaPct / 100);
+            const totalConPropina = total + propina;
+
+            if (state.dividirEntre > 1) {
+                const montoPorPersona = totalConPropina / state.dividirEntre;
+                if (efectivo < montoPorPersona) {
+                    toast.show(`Faltan ${formatMoney(montoPorPersona - efectivo)} para esta persona`, 'error');
+                    return;
+                }
+                state.personasPagadas++;
+                if (state.personasPagadas < state.dividirEntre) {
+                    toast.show(`Persona ${state.personasPagadas} pagó ${formatMoney(efectivo)}. Quedan ${state.dividirEntre - state.personasPagadas}.`, 'info');
+                    input.value = '';
+                    pos.calcularCambio();
+                    renderPantallaPago();
+                    persistState();
+                    return;
+                }
+            }
+
             try {
-                const result = await api.pagarEfectivo(state.pedidoActual.id, efectivo);
+                const result = state.propinaPct > 0
+                    ? await api.pagarConPropina(state.pedidoActual.id, efectivo, propina)
+                    : await api.pagarEfectivo(state.pedidoActual.id, efectivo);
                 state.pedidoActual = null;
                 state.lineas = [];
                 state.mesaId = null;
                 state.enviadoACocina = false;
+                state.propinaPct = 0;
+                state.dividirEntre = 0;
+                state.personasPagadas = 0;
                 clearState();
                 toast.show(result.mensaje || 'Pedido pagado.', 'success');
                 state.pantalla = 'mesa';
                 renderPantallaMesa();
             } catch (e) { toast.show('Error: ' + e.message, 'error'); }
+        },
+
+        seleccionarPropina(pct) {
+            state.propinaPct = pct;
+            renderPantallaPago();
+            persistState();
+        },
+
+        dividirCuenta(n) {
+            state.dividirEntre = n;
+            state.personasPagadas = 0;
+            renderPantallaPago();
+            persistState();
         },
 
         async pagarConTarjeta() {
@@ -490,6 +580,9 @@
                 state.lineas = [];
                 state.mesaId = null;
                 state.enviadoACocina = false;
+                state.propinaPct = 0;
+                state.dividirEntre = 0;
+                state.personasPagadas = 0;
                 clearState();
                 state.pantalla = 'mesa';
                 renderPantallaMesa();

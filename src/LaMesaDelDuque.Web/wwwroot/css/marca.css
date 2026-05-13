@@ -1603,3 +1603,70 @@ h1, h2, h3, h4, h5, h6 {
         justify-content: flex-start;
     }
 }
+
+/* ═══════════════════════════════════════════════════════
+   Sprint 2 — POS UX: Tip + Split
+   ═══════════════════════════════════════════════════════ */
+
+.lmd-pos-tip-btns,
+.lmd-pos-split-btns {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    max-width: 400px;
+    margin: 0 auto 1rem;
+}
+
+.lmd-pos-tip-btn,
+.lmd-pos-split-btn {
+    font-size: 0.9375rem;
+    font-weight: 700;
+    padding: 0.625rem 1rem;
+    border: 2px solid rgba(15,27,45,0.12);
+    border-radius: 0.5rem;
+    background: #fff;
+    cursor: pointer;
+    touch-action: manipulation;
+    transition: all 0.12s;
+}
+
+.lmd-pos-tip-btn--activo,
+.lmd-pos-split-btn--activo {
+    border-color: var(--lmd-acento);
+    background: color-mix(in oklch, var(--lmd-acento) 12%, white);
+    color: var(--lmd-azul-duque);
+}
+
+.lmd-pos-tip-btn--custom {
+    font-size: 0.8125rem;
+    font-weight: 600;
+}
+
+.lmd-pos-split-btn--reset {
+    background: var(--lmd-terracota);
+    color: #fff;
+    border-color: var(--lmd-terracota);
+}
+
+.lmd-pos-split-info {
+    text-align: center;
+    font-weight: 700;
+    font-size: 1.125rem;
+    color: var(--lmd-azul-duque);
+    margin-bottom: 1rem;
+}
+
+.lmd-pos-pago-propina,
+.lmd-pos-pago-split-info {
+    font-size: 0.875rem;
+    color: var(--lmd-gris-piedra);
+    margin-top: 0.25rem;
+}
+
+.lmd-pos-pago-total-final {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: var(--lmd-azul-duque);
+    margin-top: 0.5rem;
+}
