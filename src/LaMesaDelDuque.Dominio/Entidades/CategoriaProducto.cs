@@ -1,3 +1,4 @@
+using LaMesaDelDuque.Dominio.Enumeraciones;
 using LaMesaDelDuque.Dominio.Excepciones;
 
 namespace LaMesaDelDuque.Dominio.Entidades;
@@ -12,6 +13,7 @@ public class CategoriaProducto
     public string? Descripcion { get; private set; }
     public int OrdenDisplay { get; private set; }
     public bool Activo { get; private set; }
+    public EstacionCocina EstacionCocina { get; private set; }
     public DateTime CreatedAt { get; private set; }
 
     private CategoriaProducto()
@@ -19,7 +21,7 @@ public class CategoriaProducto
         Nombre = string.Empty;
     }
 
-    public CategoriaProducto(string nombre, string? descripcion = null, int ordenDisplay = 0)
+    public CategoriaProducto(string nombre, string? descripcion = null, int ordenDisplay = 0, EstacionCocina estacionCocina = EstacionCocina.Expo)
     {
         if (string.IsNullOrWhiteSpace(nombre))
             throw new ReglaDominioException("El nombre de la categoría es obligatorio.");
@@ -37,6 +39,7 @@ public class CategoriaProducto
         Nombre = nombre.Trim();
         Descripcion = string.IsNullOrWhiteSpace(descripcion) ? null : descripcion.Trim();
         OrdenDisplay = ordenDisplay;
+        EstacionCocina = estacionCocina;
         Activo = true;
         CreatedAt = DateTime.UtcNow;
     }
@@ -72,5 +75,10 @@ public class CategoriaProducto
 
         Descripcion = string.IsNullOrWhiteSpace(descripcion) ? null : descripcion.Trim();
         OrdenDisplay = ordenDisplay;
+    }
+
+    public void ActualizarEstacionCocina(EstacionCocina estacionCocina)
+    {
+        EstacionCocina = estacionCocina;
     }
 }
