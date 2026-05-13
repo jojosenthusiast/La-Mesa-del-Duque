@@ -1,6 +1,8 @@
 using LaMesaDelDuque.Aplicacion.Dtos;
 using LaMesaDelDuque.Aplicacion.Servicios;
+using LaMesaDelDuque.Web.Hubs;
 using LaMesaDelDuque.Web.Pages.Operaciones.Pedidos;
+using Microsoft.AspNetCore.SignalR;
 
 namespace LaMesaDelDuque.Pruebas.Web;
 
@@ -12,8 +14,9 @@ public class PedidosPageTests
         var catalogo = new FakeCatalogoPedidosProductosServicio();
         var mesas = new FakePedidosMesasServicio();
         var pedidos = new FakePedidosServicio();
+        var hub = new FakeHubContext<PedidosHub>();
 
-        var page = new IndexModel(pedidos, catalogo, mesas);
+        var page = new IndexModel(pedidos, catalogo, mesas, hub);
 
         await page.OnGetAsync();
 
@@ -22,6 +25,36 @@ public class PedidosPageTests
         Assert.NotEmpty(page.Vm.MesasDisponibles);
         Assert.NotEmpty(page.Vm.PedidosActivos);
     }
+}
+
+internal sealed class FakeHubContext<THub> : IHubContext<THub> where THub : Hub
+{
+    public IHubClients Clients => new FakeHubClients();
+    public IGroupManager Groups => new FakeGroupManager();
+}
+
+internal sealed class FakeHubClients : IHubClients
+{
+    public IClientProxy All => new FakeClientProxy();
+    public IClientProxy AllExcept(IReadOnlyList<string> excludedConnectionIds) => new FakeClientProxy();
+    public IClientProxy Client(string connectionId) => new FakeClientProxy();
+    public IClientProxy Clients(IReadOnlyList<string> connectionIds) => new FakeClientProxy();
+    public IClientProxy Group(string groupName) => new FakeClientProxy();
+    public IClientProxy GroupExcept(string groupName, IReadOnlyList<string> excludedConnectionIds) => new FakeClientProxy();
+    public IClientProxy Groups(IReadOnlyList<string> groupNames) => new FakeClientProxy();
+    public IClientProxy User(string userId) => new FakeClientProxy();
+    public IClientProxy Users(IReadOnlyList<string> userIds) => new FakeClientProxy();
+}
+
+internal sealed class FakeClientProxy : IClientProxy
+{
+    public Task SendCoreAsync(string method, object?[]? args, CancellationToken cancellationToken = default) => Task.CompletedTask;
+}
+
+internal sealed class FakeGroupManager : IGroupManager
+{
+    public Task AddToGroupAsync(string connectionId, string groupName, CancellationToken cancellationToken = default) => Task.CompletedTask;
+    public Task RemoveFromGroupAsync(string connectionId, string groupName, CancellationToken cancellationToken = default) => Task.CompletedTask;
 }
 
 internal sealed class FakePedidosServicio : IPedidosServicio
@@ -46,6 +79,7 @@ internal sealed class FakePedidosServicio : IPedidosServicio
     public Task EliminarPedidoPendienteAsync(Guid pedidoId, Guid usuarioId, string? ipAddress = null, CancellationToken cancelacion = default) => Task.CompletedTask;
     public Task<PedidoDto?> ObtenerPedidoAsync(Guid pedidoId, CancellationToken cancelacion = default) => Task.FromResult<PedidoDto?>(_pedido);
     public Task<List<PedidoDto>> ListarPedidosActivosAsync(CancellationToken cancelacion = default) => Task.FromResult(new List<PedidoDto> { _pedido });
+    public Task MarcarEnCobroAsync(Guid pedidoId, CancellationToken cancelacion = default) => Task.CompletedTask;
     public Task<List<CuentaDto>> CrearCuentasAsync(Guid pedidoId, int cantidad, CancellationToken cancelacion = default) => Task.FromResult(new List<CuentaDto>());
     public Task<CuentaDto> PagarCuentaAsync(Guid cuentaId, LaMesaDelDuque.Dominio.Enumeraciones.MetodoPago metodoPago, decimal propinaMonto = 0, CancellationToken cancelacion = default) => Task.FromResult(new CuentaDto());
     public Task<List<CuentaDto>> ObtenerCuentasAsync(Guid pedidoId, CancellationToken cancelacion = default) => Task.FromResult(new List<CuentaDto>());

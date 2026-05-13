@@ -173,6 +173,16 @@ internal class PedidosServicio : IPedidosServicio
             .ToList();
     }
 
+    public async Task MarcarEnCobroAsync(Guid pedidoId, CancellationToken cancelacion = default)
+    {
+        var pedido = await _uot.Pedidos.ObtenerConDetallesParaActualizarAsync(pedidoId, cancelacion)
+            ?? throw new ArgumentException($"No se encontró el pedido con ID {pedidoId}.", nameof(pedidoId));
+
+        pedido.MarcarEnCobro();
+        await _uot.GuardarCambiosAsync(cancelacion);
+        await _notificadorPedidos.NotificarEstadoCambiadoAsync(pedido.Id, pedido.Estado, cancelacion);
+    }
+
     public async Task<List<CuentaDto>> CrearCuentasAsync(Guid pedidoId, int cantidad, CancellationToken cancelacion = default)
     {
         var pedido = await _uot.Pedidos.ObtenerConCuentasParaActualizarAsync(pedidoId, cancelacion)

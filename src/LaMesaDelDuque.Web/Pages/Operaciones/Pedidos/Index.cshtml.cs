@@ -2,9 +2,11 @@ using LaMesaDelDuque.Aplicacion.Dtos;
 using LaMesaDelDuque.Aplicacion.Servicios;
 using LaMesaDelDuque.Dominio.Enumeraciones;
 using LaMesaDelDuque.Dominio.Excepciones;
+using LaMesaDelDuque.Web.Hubs;
 using LaMesaDelDuque.Web.Models.Operaciones;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.AspNetCore.SignalR;
 
 namespace LaMesaDelDuque.Web.Pages.Operaciones.Pedidos;
 
@@ -13,15 +15,18 @@ public class IndexModel : PageModel
     private readonly IPedidosServicio _pedidosServicio;
     private readonly ICatalogoProductosServicio _catalogoProductosServicio;
     private readonly IMesasServicio _mesasServicio;
+    private readonly IHubContext<PedidosHub> _hubContext;
 
     public IndexModel(
         IPedidosServicio pedidosServicio,
         ICatalogoProductosServicio catalogoProductosServicio,
-        IMesasServicio mesasServicio)
+        IMesasServicio mesasServicio,
+        IHubContext<PedidosHub> hubContext)
     {
         _pedidosServicio = pedidosServicio;
         _catalogoProductosServicio = catalogoProductosServicio;
         _mesasServicio = mesasServicio;
+        _hubContext = hubContext;
     }
 
     [BindProperty(SupportsGet = true)]
@@ -305,6 +310,54 @@ public class IndexModel : PageModel
             await _pedidosServicio.PagarPedidoAsync(pedidoId);
             var cambio = efectivoRecibido - pedido.Total;
             return new JsonResult(new { ok = true, mensaje = cambio > 0 ? $"Pedido pagado. Cambio: ${cambio:F2}" : "Pedido pagado correctamente." });
+        }
+        catch (Exception ex) { return BadRequest(ex.Message); }
+    }
+
+    // ── Cuentas y pago dividido (JSON) ────────────────────────
+
+    public async Task<IActionResult> OnPostMarcarEnCobroJsonAsync(Guid pedidoId)
+    {
+        try
+        {
+            await _pedidosServicio.MarcarEnCobroAsync(pedidoId);
+            await _hubContext.Clients.Group($"pedido-{pedidoId}").SendAsync("EstadoCambiado", pedidoId, "EnCobro");
+            return new JsonResult(new { ok = true });
+        }
+        catch (Exception ex) { return BadRequest(ex.Message); }
+    }
+
+    public async Task<IActionResult> OnPostCrearCuentasJsonAsync(Guid pedidoId, int cantidad)
+    {
+        try
+        {
+            var cuentas = await _pedidosServicio.CrearCuentasAsync(pedidoId, cantidad);
+            await _hubContext.Clients.Group($"pedido-{pedidoId}").SendAsync("CuentasCreadas", pedidoId, cuentas);
+            return new JsonResult(cuentas);
+        }
+        catch (Exception ex) { return BadRequest(ex.Message); }
+    }
+
+    public async Task<IActionResult> OnPostObtenerCuentasJsonAsync(Guid pedidoId)
+    {
+        try
+        {
+            var cuentas = await _pedidosServicio.ObtenerCuentasAsync(pedidoId);
+            return new JsonResult(cuentas);
+        }
+        catch (Exception ex) { return BadRequest(ex.Message); }
+    }
+
+    public async Task<IActionResult> OnPostPagarCuentaJsonAsync(Guid cuentaId, string metodoPago, decimal propinaMonto)
+    {
+        try
+        {
+            if (!Enum.TryParse<MetodoPago>(metodoPago, true, out var metodo))
+                return BadRequest("Método de pago inválido.");
+
+            var cuenta = await _pedidosServicio.PagarCuentaAsync(cuentaId, metodo, propinaMonto);
+            await _hubContext.Clients.Group($"pedido-{cuenta.PedidoId}").SendAsync("CuentaPagada", cuenta.Id, cuenta.PedidoId);
+            return new JsonResult(cuenta);
         }
         catch (Exception ex) { return BadRequest(ex.Message); }
     }

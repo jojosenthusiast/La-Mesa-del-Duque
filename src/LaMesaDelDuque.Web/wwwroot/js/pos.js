@@ -1,6 +1,7 @@
 /* ============================================================================
    La Mesa del Duque — POS Pedidos (SPA via fetch)
    Tarjetas táctiles, 3 pantallas, sin recargas de página.
+   Cuentas reales + SignalR concurrente.
    ============================================================================ */
 
 (function () {
@@ -69,6 +70,49 @@
             form.append('pedidoId', pedidoId);
 
             await fetch(`?handler=${handler}`, { method: 'POST', body: form, headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+        },
+
+        async marcarEnCobro(pedidoId) {
+            const form = new FormData();
+            form.append('__RequestVerificationToken', csrfToken());
+            form.append('pedidoId', pedidoId);
+
+            const res = await fetch('?handler=MarcarEnCobroJson', { method: 'POST', body: form, headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+            if (!res.ok) throw new Error((await res.text()) || 'Error al marcar en cobro');
+            return res.json();
+        },
+
+        async crearCuentas(pedidoId, cantidad) {
+            const form = new FormData();
+            form.append('__RequestVerificationToken', csrfToken());
+            form.append('pedidoId', pedidoId);
+            form.append('cantidad', cantidad);
+
+            const res = await fetch('?handler=CrearCuentasJson', { method: 'POST', body: form, headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+            if (!res.ok) throw new Error((await res.text()) || 'Error al crear cuentas');
+            return res.json();
+        },
+
+        async obtenerCuentas(pedidoId) {
+            const form = new FormData();
+            form.append('__RequestVerificationToken', csrfToken());
+            form.append('pedidoId', pedidoId);
+
+            const res = await fetch('?handler=ObtenerCuentasJson', { method: 'POST', body: form, headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+            if (!res.ok) throw new Error((await res.text()) || 'Error al obtener cuentas');
+            return res.json();
+        },
+
+        async pagarCuenta(cuentaId, metodoPago, propinaMonto) {
+            const form = new FormData();
+            form.append('__RequestVerificationToken', csrfToken());
+            form.append('cuentaId', cuentaId);
+            form.append('metodoPago', metodoPago);
+            form.append('propinaMonto', propinaMonto);
+
+            const res = await fetch('?handler=PagarCuentaJson', { method: 'POST', body: form, headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+            if (!res.ok) throw new Error((await res.text()) || 'Error al pagar cuenta');
+            return res.json();
         }
     };
 
@@ -77,13 +121,86 @@
         return el ? el.value : '';
     }
 
+    // ── SignalR ─────────────────────────────────────────────
+    let connection = null;
+
+    function initSignalR() {
+        if (typeof signalR === 'undefined') {
+            console.warn('SignalR no disponible');
+            return;
+        }
+        connection = new signalR.HubConnectionBuilder()
+            .withUrl('/hubs/pedidos')
+            .withAutomaticReconnect()
+            .build();
+
+        connection.on('CuentaPagada', (cuentaId, pedidoId) => {
+            if (state.pedidoActual && state.pedidoActual.id === pedidoId) {
+                const cuenta = state.cuentas.find(c => c.id === cuentaId);
+                if (cuenta) {
+                    cuenta.estado = 'Pagada';
+                    renderPantallaPago();
+                }
+            }
+        });
+
+        connection.on('CuentasCreadas', (pedidoId, cuentas) => {
+            if (state.pedidoActual && state.pedidoActual.id === pedidoId) {
+                state.cuentas = cuentas.map(c => ({
+                    ...c,
+                    metodoPagoSeleccionado: null,
+                    propinaMonto: 0,
+                    propinaPorcentaje: null
+                }));
+                renderPantallaPago();
+            }
+        });
+
+        connection.on('EstadoCambiado', (pedidoId, nuevoEstado) => {
+            if (state.pedidoActual && state.pedidoActual.id === pedidoId) {
+                state.pedidoActual.estado = nuevoEstado;
+            }
+        });
+
+        startConnection();
+    }
+
+    async function startConnection() {
+        if (!connection) return;
+        try {
+            await connection.start();
+            console.log('SignalR conectado.');
+            if (state.pedidoActual) {
+                await connection.invoke('UnirseAPedido', state.pedidoActual.id);
+            }
+        } catch (e) {
+            console.error('SignalR error:', e);
+            setTimeout(startConnection, 5000);
+        }
+    }
+
+    async function leavePedidoGroup() {
+        if (!connection || !state.pedidoActual) return;
+        try {
+            await connection.invoke('SalirDePedido', state.pedidoActual.id);
+        } catch (e) { /* ignore */ }
+    }
+
+    async function joinPedidoGroup(pedidoId) {
+        if (!connection) return;
+        try {
+            await connection.invoke('UnirseAPedido', pedidoId);
+        } catch (e) { /* ignore */ }
+    }
+
     // ── Estado POS ──────────────────────────────────────────
     const state = {
-        pantalla: 'mesa', // 'mesa' | 'productos' | 'pago'
+        pantalla: 'mesa',
         tipoServicio: 'ComerAqui',
         mesaId: null,
         pedidoActual: null,
-        lineas: [], // { id, productoId, productoNombre, cantidad, precioUnitario, subtotal }
+        lineas: [],
+        cuentas: []
     };
 
     function formatMoney(n) {
@@ -191,7 +308,7 @@
                         <strong>${formatMoney(total)}</strong>
                     </div>
                     <button class="lmd-pos-btn-primario lmd-pos-btn-pagar" ${state.lineas.length === 0 ? 'disabled' : ''}
-                            onclick="pos.irAPantalla('pago')">
+                            onclick="pos.irAPantallaPago()">
                         Ir a pagar
                     </button>
                     <button class="lmd-pos-btn-cancelar" onclick="pos.cancelarPedido()">Cancelar</button>
@@ -204,28 +321,98 @@
         if (!container) return;
 
         const total = state.lineas.reduce((s, l) => s + l.subtotal, 0);
+        const cuentas = state.cuentas || [];
+        const pagadas = cuentas.filter(c => c.estado === 'Pagada').length;
+        const todasPagadas = cuentas.length > 0 && pagadas === cuentas.length;
+
+        if (todasPagadas) {
+            container.innerHTML = `
+                <div class="lmd-pos-pantalla" id="pantalla-pago">
+                    <div class="lmd-pos-pago-exito">
+                        <div class="lmd-pos-pago-exito__icono">✅</div>
+                        <h2 class="lmd-pos-pago-exito__titulo">Todas las cuentas pagadas</h2>
+                        <div class="lmd-pos-pago-total">${formatMoney(total)}</div>
+                        <button class="lmd-pos-btn-primario" onclick="pos.nuevoPedido()">Nuevo pedido</button>
+                    </div>
+                </div>`;
+            return;
+        }
+
+        let cuentasHtml = '';
+
+        if (cuentas.length === 0) {
+            cuentasHtml = `
+                <div class="lmd-cuentas-crear">
+                    <p class="lmd-pos-subtitulo">Dividir cuenta en:</p>
+                    <div class="lmd-cuentas-split-grid">
+                        <button class="lmd-pos-tipo-btn" onclick="pos.crearCuentas(2)">÷ 2</button>
+                        <button class="lmd-pos-tipo-btn" onclick="pos.crearCuentas(3)">÷ 3</button>
+                        <button class="lmd-pos-tipo-btn" onclick="pos.crearCuentas(4)">÷ 4</button>
+                        <button class="lmd-pos-tipo-btn" onclick="pos.crearCuentas(5)">÷ 5</button>
+                    </div>
+                    <button class="lmd-pos-btn-secundario" onclick="pos.crearCuentas(1)">Cuenta única</button>
+                </div>`;
+        } else {
+            const cuentaCards = cuentas.map((c) => {
+                const esPagada = c.estado === 'Pagada';
+                const metodos = ['Efectivo', 'Tarjeta', 'Transferencia', 'QR'];
+                const metodoBtns = metodos.map(m => `
+                    <button class="lmd-cuenta-metodo-btn ${c.metodoPagoSeleccionado === m ? 'lmd-cuenta-metodo-btn--activo' : ''}"
+                            onclick="pos.seleccionarMetodo('${c.id}', '${m}')"
+                            ${esPagada ? 'disabled' : ''}>${m}</button>
+                `).join('');
+
+                const propinaBtns = [10, 15, 20].map(p => `
+                    <button class="lmd-cuenta-propina-btn ${c.propinaPorcentaje === p ? 'lmd-cuenta-propina-btn--activo' : ''}"
+                            onclick="pos.seleccionarPropina('${c.id}', ${p})"
+                            ${esPagada ? 'disabled' : ''}>${p}%</button>
+                `).join('');
+
+                const totalConPropina = c.total + (c.propinaMonto || 0);
+
+                return `
+                    <div class="lmd-cuenta-card ${esPagada ? 'lmd-cuenta-card--pagada' : ''}">
+                        <div class="lmd-cuenta-card__header">
+                            <span class="lmd-cuenta-card__numero">Cuenta ${c.numero}</span>
+                            <span class="lmd-cuenta-card__total">${formatMoney(totalConPropina)}</span>
+                        </div>
+                        ${!esPagada ? `
+                        <div class="lmd-cuenta-card__metodos">
+                            ${metodoBtns}
+                        </div>
+                        <div class="lmd-cuenta-card__propina">
+                            <span class="lmd-cuenta-card__propina-label">Propina:</span>
+                            <div class="lmd-cuenta-propina-btns">${propinaBtns}</div>
+                            <input type="number" class="lmd-cuenta-propina-custom" placeholder="Otra $" min="0" step="0.01"
+                                   onchange="pos.propinaCustom('${c.id}', this.value)" />
+                        </div>
+                        <button class="lmd-pos-btn-primario lmd-cuenta-pagar-btn"
+                                onclick="pos.pagarCuenta('${c.id}')"
+                                ${!c.metodoPagoSeleccionado ? 'disabled' : ''}>
+                            Pagar ${formatMoney(totalConPropina)}
+                        </button>
+                        ` : '<div class="lmd-cuenta-pagada-badge">✓ Pagada</div>'}
+                    </div>`;
+            }).join('');
+
+            cuentasHtml = `
+                <div class="lmd-cuentas-grid">
+                    ${cuentaCards}
+                </div>
+                <div class="lmd-cuenta-progress">
+                    <div class="lmd-cuenta-progress__track">
+                        <div class="lmd-cuenta-progress__bar" style="width: ${(pagadas / cuentas.length) * 100}%"></div>
+                    </div>
+                    <span class="lmd-cuenta-progress__text">${pagadas} de ${cuentas.length} cuentas pagadas</span>
+                </div>`;
+        }
 
         container.innerHTML = `
             <div class="lmd-pos-pantalla" id="pantalla-pago">
                 <button class="lmd-pos-btn-atras" onclick="pos.irAPantalla('productos')">← Volver a productos</button>
                 <h2 class="lmd-pos-titulo">Pago</h2>
                 <div class="lmd-pos-pago-total">${formatMoney(total)}</div>
-
-                <div class="lmd-pos-pago-efectivo">
-                    <label class="lmd-pos-pago-label">Efectivo recibido</label>
-                    <div class="lmd-pos-pago-input-group">
-                        <span class="lmd-pos-pago-input-prefijo">$</span>
-                        <input type="number" id="efectivo-input" class="lmd-pos-pago-input" step="0.01" min="0"
-                               placeholder="${total.toFixed(2)}" oninput="pos.calcularCambio()" autofocus />
-                    </div>
-                    <div class="lmd-pos-pago-cambio" id="cambio-display"></div>
-                </div>
-
-                <div class="lmd-pos-pago-acciones">
-                    <button class="lmd-pos-btn-primario" id="btn-pagar-efectivo" onclick="pos.pagarEfectivo()" disabled>Pagar con efectivo</button>
-                    <button class="lmd-pos-btn-secundario" onclick="pos.pagarConTarjeta()">Pagar con tarjeta</button>
-                </div>
-
+                ${cuentasHtml}
                 <button class="lmd-pos-btn-cancelar" onclick="pos.cancelarPedido()">Cancelar pedido</button>
             </div>`;
     }
@@ -250,6 +437,26 @@
             else if (pantalla === 'pago') renderPantallaPago();
         },
 
+        async irAPantallaPago() {
+            state.pantalla = 'pago';
+            if (state.pedidoActual) {
+                try {
+                    await api.marcarEnCobro(state.pedidoActual.id);
+                    const cuentas = await api.obtenerCuentas(state.pedidoActual.id);
+                    state.cuentas = cuentas.map(c => ({
+                        ...c,
+                        metodoPagoSeleccionado: null,
+                        propinaMonto: 0,
+                        propinaPorcentaje: null
+                    }));
+                    await joinPedidoGroup(state.pedidoActual.id);
+                } catch (e) {
+                    console.warn('Error al preparar pago:', e);
+                }
+            }
+            renderPantallaPago();
+        },
+
         filtrarCategoria(cat) {
             document.querySelectorAll('.lmd-pos-cat-tab').forEach(t => t.classList.remove('lmd-pos-cat-tab--activo'));
             const tab = Array.from(document.querySelectorAll('.lmd-pos-cat-tab')).find(t => t.textContent.trim() === cat);
@@ -261,7 +468,6 @@
         },
 
         async agregarProducto(productoId) {
-            // Si no hay pedido activo, crear
             if (!state.pedidoActual) {
                 try {
                     const prod = window.__lmdProductosDisponibles.find(p => p.id === productoId);
@@ -279,6 +485,7 @@
                         precioUnitario: prod.precio,
                         subtotal: prod.precio
                     }];
+                    await joinPedidoGroup(state.pedidoActual.id);
                 } catch (e) {
                     alert('Error al crear pedido: ' + e.message);
                     return;
@@ -328,7 +535,6 @@
                 await api.eliminar(state.pedidoActual.id, lineaId);
                 state.lineas = state.lineas.filter(l => l.id !== lineaId);
                 if (state.lineas.length === 0) {
-                    // Pedido vacío: cancelar implícito
                     state.pedidoActual = null;
                 }
                 renderPantallaProductos();
@@ -362,8 +568,10 @@
             if (!state.pedidoActual || efectivo <= 0) return;
             try {
                 const result = await api.pagarEfectivo(state.pedidoActual.id, efectivo);
+                await leavePedidoGroup();
                 state.pedidoActual = null;
                 state.lineas = [];
+                state.cuentas = [];
                 state.mesaId = null;
                 alert(`✅ ${result.mensaje || 'Pedido pagado.'}`);
                 state.pantalla = 'mesa';
@@ -375,8 +583,10 @@
             if (!state.pedidoActual) return;
             try {
                 await api.cambiarEstado(state.pedidoActual.id, 'Pagar');
+                await leavePedidoGroup();
                 state.pedidoActual = null;
                 state.lineas = [];
+                state.cuentas = [];
                 state.mesaId = null;
                 alert('✅ Pedido pagado con tarjeta.');
                 state.pantalla = 'mesa';
@@ -384,12 +594,78 @@
             } catch (e) { alert('Error: ' + e.message); }
         },
 
+        async crearCuentas(cantidad) {
+            if (!state.pedidoActual) return;
+            try {
+                const cuentas = await api.crearCuentas(state.pedidoActual.id, cantidad);
+                state.cuentas = cuentas.map(c => ({
+                    ...c,
+                    metodoPagoSeleccionado: null,
+                    propinaMonto: 0,
+                    propinaPorcentaje: null
+                }));
+                await joinPedidoGroup(state.pedidoActual.id);
+                renderPantallaPago();
+            } catch (e) { alert('Error al crear cuentas: ' + e.message); }
+        },
+
+        seleccionarMetodo(cuentaId, metodo) {
+            const cuenta = state.cuentas.find(c => c.id === cuentaId);
+            if (!cuenta || cuenta.estado === 'Pagada') return;
+            cuenta.metodoPagoSeleccionado = metodo;
+            renderPantallaPago();
+        },
+
+        seleccionarPropina(cuentaId, porcentaje) {
+            const cuenta = state.cuentas.find(c => c.id === cuentaId);
+            if (!cuenta || cuenta.estado === 'Pagada') return;
+            cuenta.propinaPorcentaje = porcentaje;
+            cuenta.propinaMonto = Math.round(cuenta.total * (porcentaje / 100) * 100) / 100;
+            renderPantallaPago();
+        },
+
+        propinaCustom(cuentaId, valor) {
+            const cuenta = state.cuentas.find(c => c.id === cuentaId);
+            if (!cuenta || cuenta.estado === 'Pagada') return;
+            const monto = parseFloat(valor) || 0;
+            cuenta.propinaPorcentaje = null;
+            cuenta.propinaMonto = monto;
+            renderPantallaPago();
+        },
+
+        async pagarCuenta(cuentaId) {
+            const cuenta = state.cuentas.find(c => c.id === cuentaId);
+            if (!cuenta || !cuenta.metodoPagoSeleccionado || cuenta.estado === 'Pagada') return;
+            try {
+                const result = await api.pagarCuenta(cuentaId, cuenta.metodoPagoSeleccionado, cuenta.propinaMonto || 0);
+                cuenta.estado = 'Pagada';
+                cuenta.metodoPago = cuenta.metodoPagoSeleccionado;
+                cuenta.fechaPago = result.fechaPago;
+                renderPantallaPago();
+
+                const todasPagadas = state.cuentas.every(c => c.estado === 'Pagada');
+                if (todasPagadas) {
+                    setTimeout(() => {
+                        leavePedidoGroup();
+                        state.pedidoActual = null;
+                        state.lineas = [];
+                        state.cuentas = [];
+                        state.mesaId = null;
+                        state.pantalla = 'mesa';
+                        renderPantallaMesa();
+                    }, 3000);
+                }
+            } catch (e) { alert('Error al pagar cuenta: ' + e.message); }
+        },
+
         async cancelarPedido() {
             if (!state.pedidoActual || !confirm('¿Cancelar este pedido?')) return;
             try {
                 await api.cambiarEstado(state.pedidoActual.id, 'Cancelar');
+                await leavePedidoGroup();
                 state.pedidoActual = null;
                 state.lineas = [];
+                state.cuentas = [];
                 state.mesaId = null;
                 state.pantalla = 'mesa';
                 renderPantallaMesa();
@@ -402,6 +678,16 @@
                 await api.cambiarEstado(state.pedidoActual.id, 'MarcarEnPreparacion');
                 alert('✅ Pedido marcado en preparación.');
             } catch (e) { alert('Error: ' + e.message); }
+        },
+
+        nuevoPedido() {
+            leavePedidoGroup();
+            state.pedidoActual = null;
+            state.lineas = [];
+            state.cuentas = [];
+            state.mesaId = null;
+            state.pantalla = 'mesa';
+            renderPantallaMesa();
         }
     };
 
@@ -411,5 +697,6 @@
 
     document.addEventListener('DOMContentLoaded', () => {
         renderPantallaMesa();
+        initSignalR();
     });
 })();
