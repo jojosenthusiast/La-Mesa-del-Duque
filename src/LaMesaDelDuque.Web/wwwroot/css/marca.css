@@ -1215,3 +1215,257 @@ h1, h2, h3, h4, h5, h6 {
         grid-template-columns: repeat(2, 1fr);
     }
 }
+
+/* ═══════════════════════════════════════════════════════
+   Sprint 2 — KDS (Kitchen Display System)
+   ═══════════════════════════════════════════════════════ */
+
+.lmd-kds-body {
+    margin: 0;
+    padding: 0;
+    background: #0f1b2d;
+    color: #f7f4ec;
+    font-family: var(--lmd-fuente-cuerpo);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.lmd-kds-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.75rem 1.25rem;
+    background: color-mix(in oklch, var(--lmd-azul-duque) 94%, black);
+    border-bottom: 2px solid rgba(201, 162, 78, 0.25);
+    flex-shrink: 0;
+}
+
+.lmd-kds-header__left,
+.lmd-kds-header__right {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    min-width: 160px;
+}
+
+.lmd-kds-header__right {
+    justify-content: flex-end;
+}
+
+.lmd-kds-titulo {
+    font-family: var(--lmd-fuente-titulo);
+    font-size: 1.25rem;
+    color: var(--lmd-dorado-real);
+    margin: 0;
+}
+
+.lmd-kds-reloj {
+    font-size: 1rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--lmd-marfil);
+}
+
+.lmd-kds-tabs {
+    display: flex;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.lmd-kds-tab {
+    font-family: var(--lmd-fuente-cuerpo);
+    font-weight: 600;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 0.5rem 1rem;
+    border: 1px solid rgba(201, 162, 78, 0.3);
+    border-radius: 0.35rem;
+    background: transparent;
+    color: var(--lmd-marfil);
+    cursor: pointer;
+    transition: all 0.15s;
+    touch-action: manipulation;
+}
+
+.lmd-kds-tab:hover {
+    border-color: var(--lmd-dorado-real);
+    color: var(--lmd-dorado-real);
+}
+
+.lmd-kds-tab--activo {
+    background: var(--lmd-dorado-real);
+    color: var(--lmd-azul-duque);
+    border-color: var(--lmd-dorado-real);
+}
+
+.lmd-kds-contador {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--lmd-gris-piedra);
+}
+
+.lmd-kds-indicador {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--lmd-terracota);
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.lmd-kds-indicador--activo {
+    opacity: 1;
+    animation: lmd-kds-pulse 1s infinite;
+}
+
+@keyframes lmd-kds-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+}
+
+.lmd-kds-main {
+    flex: 1;
+    padding: 1rem;
+    overflow-y: auto;
+}
+
+.lmd-kds-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1rem;
+}
+
+.lmd-kds-card {
+    background: #fff;
+    border-radius: 0.75rem;
+    padding: 1rem;
+    color: var(--lmd-azul-duque);
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    border-left: 8px solid #28a745;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    transition: border-color 0.3s;
+}
+
+.lmd-kds-card--fresh { border-left-color: #28a745; }
+.lmd-kds-card--warn { border-left-color: #ffc107; }
+.lmd-kds-card--alert {
+    border-left-color: #dc3545;
+    animation: lmd-kds-pulse-border 1.5s infinite;
+}
+
+@keyframes lmd-kds-pulse-border {
+    0%, 100% { border-left-color: #dc3545; }
+    50% { border-left-color: #ff6b6b; }
+}
+
+.lmd-kds-card__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid rgba(15,27,45,0.08);
+    padding-bottom: 0.5rem;
+}
+
+.lmd-kds-card__mesa {
+    font-weight: 700;
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--lmd-gris-piedra);
+}
+
+.lmd-kds-card__timer {
+    font-family: var(--lmd-fuente-titulo);
+    font-size: 1.25rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--lmd-azul-duque);
+}
+
+.lmd-kds-card__body {
+    flex: 1;
+}
+
+.lmd-kds-card__producto {
+    font-size: 1.125rem;
+    font-weight: 700;
+    line-height: 1.3;
+    margin-bottom: 0.25rem;
+}
+
+.lmd-kds-card__cantidad {
+    font-size: 2rem;
+    font-weight: 800;
+    color: var(--lmd-dorado-real);
+}
+
+.lmd-kds-card__notas {
+    font-size: 0.8rem;
+    color: var(--lmd-terracota);
+    margin-top: 0.5rem;
+    font-style: italic;
+}
+
+.lmd-kds-card__footer {
+    padding-top: 0.5rem;
+}
+
+.lmd-kds-btn-listo {
+    width: 100%;
+    padding: 0.875rem;
+    border: none;
+    border-radius: 0.5rem;
+    background: var(--lmd-verde-salvia);
+    color: #fff;
+    font-size: 1rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    touch-action: manipulation;
+    transition: background 0.12s;
+}
+
+.lmd-kds-btn-listo:hover {
+    background: #3d5847;
+}
+
+.lmd-kds-btn-listo:active {
+    transform: scale(0.98);
+}
+
+@media (max-width: 1024px) {
+    .lmd-kds-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    .lmd-kds-tab {
+        font-size: 0.75rem;
+        padding: 0.4rem 0.75rem;
+    }
+    .lmd-kds-btn-listo {
+        padding: 1rem;
+        font-size: 1.125rem;
+    }
+}
+
+@media (max-width: 640px) {
+    .lmd-kds-grid {
+        grid-template-columns: 1fr;
+    }
+    .lmd-kds-header {
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+    .lmd-kds-tabs {
+        order: 3;
+        width: 100%;
+        justify-content: flex-start;
+    }
+}
