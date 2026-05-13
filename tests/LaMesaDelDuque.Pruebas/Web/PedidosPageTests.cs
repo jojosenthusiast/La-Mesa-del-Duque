@@ -81,6 +81,7 @@ internal sealed class FakePedidosServicio : IPedidosServicio
     public Task<List<PedidoDto>> ListarPedidosActivosAsync(CancellationToken cancelacion = default) => Task.FromResult(new List<PedidoDto> { _pedido });
     public Task MarcarEnCobroAsync(Guid pedidoId, CancellationToken cancelacion = default) => Task.CompletedTask;
     public Task<List<CuentaDto>> CrearCuentasAsync(Guid pedidoId, int cantidad, CancellationToken cancelacion = default) => Task.FromResult(new List<CuentaDto>());
+    public Task<List<CuentaDto>> CrearCuentasConItemsAsync(Guid pedidoId, Dictionary<int, List<(Guid detalleId, int cantidad)>> asignaciones, CancellationToken cancelacion = default) => Task.FromResult(new List<CuentaDto>());
     public Task<CuentaDto> PagarCuentaAsync(Guid cuentaId, LaMesaDelDuque.Dominio.Enumeraciones.MetodoPago metodoPago, decimal propinaMonto = 0, CancellationToken cancelacion = default) => Task.FromResult(new CuentaDto());
     public Task<List<CuentaDto>> ObtenerCuentasAsync(Guid pedidoId, CancellationToken cancelacion = default) => Task.FromResult(new List<CuentaDto>());
 }

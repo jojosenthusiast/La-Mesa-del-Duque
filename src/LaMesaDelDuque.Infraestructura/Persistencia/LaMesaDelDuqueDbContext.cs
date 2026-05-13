@@ -33,6 +33,7 @@ public class LaMesaDelDuqueDbContext : DbContext
 
     // Nuevas entidades Sprint 2 — Pago Real
     public DbSet<Cuenta> Cuentas => Set<Cuenta>();
+    public DbSet<CuentaDetalle> CuentaDetalles => Set<CuentaDetalle>();
     public DbSet<Pago> Pagos => Set<Pago>();
 
     protected override void OnModelCreating(ModelBuilder constructorDeModelos)

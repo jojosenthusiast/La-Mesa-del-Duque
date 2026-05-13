@@ -15,10 +15,6 @@ internal class CuentaConfiguracion : IEntityTypeConfiguration<Cuenta>
         constructor.Property(c => c.Numero)
             .IsRequired();
 
-        constructor.Property(c => c.Total)
-            .HasPrecision(18, 2)
-            .IsRequired();
-
         constructor.Property(c => c.PropinaMonto)
             .HasPrecision(18, 2)
             .IsRequired();
@@ -49,5 +45,10 @@ internal class CuentaConfiguracion : IEntityTypeConfiguration<Cuenta>
 
         constructor.HasIndex(c => new { c.PedidoId, c.Estado })
             .HasDatabaseName("IX_Cuentas_PedidoId_Estado");
+
+        constructor.HasMany(c => c.DetallesAsignados)
+            .WithOne()
+            .HasForeignKey(cd => cd.CuentaId)
+            .OnDelete(DeleteBehavior.Cascade);
     }
 }

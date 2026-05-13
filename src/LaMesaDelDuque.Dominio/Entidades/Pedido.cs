@@ -137,9 +137,63 @@ public class Pedido
         for (int i = 1; i <= cantidad; i++)
         {
             decimal monto = i == cantidad ? Total - sumaAsignada : totalPorCuenta;
-            var cuenta = new Cuenta(Id, i, monto);
+            var cuenta = new Cuenta(Id, i);
+            cuenta.EstablecerTotalBase(monto);
             _cuentas.Add(cuenta);
             sumaAsignada += monto;
+        }
+
+        return Cuentas;
+    }
+
+    public IReadOnlyList<Cuenta> CrearCuentasConItems(Dictionary<int, List<(DetallePedido detalle, int cantidad)>> asignaciones)
+    {
+        if (asignaciones is null || asignaciones.Count < 2)
+            throw new ReglaDominioException("Se requieren al menos 2 cuentas para dividir por items.");
+
+        if (_detalles.Count == 0)
+            throw new ReglaDominioException("No se pueden crear cuentas para un pedido sin detalles.");
+
+        var detalleIds = _detalles.Select(d => d.Id).ToHashSet();
+        foreach (var kvp in asignaciones)
+        {
+            foreach (var (detalle, cantidad) in kvp.Value)
+            {
+                if (detalle is null)
+                    throw new ReglaDominioException("El detalle no puede ser nulo.");
+
+                if (!detalleIds.Contains(detalle.Id))
+                    throw new ReglaDominioException("El detalle especificado no pertenece a este pedido.");
+
+                if (cantidad <= 0)
+                    throw new ReglaDominioException("La cantidad asignada debe ser mayor que cero.");
+
+                if (cantidad > detalle.Cantidad)
+                    throw new ReglaDominioException("La cantidad asignada no puede exceder la cantidad del detalle.");
+            }
+        }
+
+        foreach (var detalle in _detalles)
+        {
+            var totalAsignada = asignaciones
+                .SelectMany(a => a.Value)
+                .Where(x => x.detalle.Id == detalle.Id)
+                .Sum(x => x.cantidad);
+
+            if (totalAsignada > detalle.Cantidad)
+                throw new ReglaDominioException($"La cantidad total asignada del item '{detalle.Producto.Nombre}' excede la cantidad pedida.");
+        }
+
+        _cuentas.Clear();
+
+        foreach (var kvp in asignaciones.OrderBy(a => a.Key))
+        {
+            var cuenta = new Cuenta(Id, kvp.Key);
+            foreach (var (detalle, cantidad) in kvp.Value)
+            {
+                cuenta.AsignarItem(detalle, cantidad);
+            }
+            _cuentas.Add(cuenta);
         }
 
         return Cuentas;

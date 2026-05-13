@@ -1,7 +1,7 @@
 /* ============================================================================
    La Mesa del Duque — POS Pedidos (SPA via fetch)
    Tarjetas táctiles, 3 pantallas, sin recargas de página.
-   Cuentas reales + SignalR concurrente.
+   Cuentas reales + SignalR concurrente + Split por items.
    ============================================================================ */
 
 (function () {
@@ -90,6 +90,20 @@
 
             const res = await fetch('?handler=CrearCuentasJson', { method: 'POST', body: form, headers: { 'X-Requested-With': 'XMLHttpRequest' } });
             if (!res.ok) throw new Error((await res.text()) || 'Error al crear cuentas');
+            return res.json();
+        },
+
+        async crearCuentasConItems(pedidoId, asignaciones) {
+            const res = await fetch('?handler=CrearCuentasConItemsJson', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': csrfToken(),
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({ pedidoId, asignaciones })
+            });
+            if (!res.ok) throw new Error((await res.text()) || 'Error al crear cuentas por items');
             return res.json();
         },
 
@@ -200,7 +214,10 @@
         mesaId: null,
         pedidoActual: null,
         lineas: [],
-        cuentas: []
+        cuentas: [],
+        modoSplit: 'igual',
+        splitAsignaciones: {},
+        splitCuentaActiva: 1
     };
 
     function formatMoney(n) {
@@ -341,7 +358,8 @@
         let cuentasHtml = '';
 
         if (cuentas.length === 0) {
-            cuentasHtml = `
+            const modoIgualActivo = state.modoSplit === 'igual';
+            const splitControls = modoIgualActivo ? `
                 <div class="lmd-cuentas-crear">
                     <p class="lmd-pos-subtitulo">Dividir cuenta en:</p>
                     <div class="lmd-cuentas-split-grid">
@@ -351,7 +369,16 @@
                         <button class="lmd-pos-tipo-btn" onclick="pos.crearCuentas(5)">÷ 5</button>
                     </div>
                     <button class="lmd-pos-btn-secundario" onclick="pos.crearCuentas(1)">Cuenta única</button>
-                </div>`;
+                </div>` : renderSplitItemsUI();
+
+            cuentasHtml = `
+                <div class="lmd-pos-split-modo">
+                    <button class="lmd-pos-split-modo-btn ${modoIgualActivo ? 'lmd-pos-split-modo-btn--activo' : ''}"
+                            onclick="pos.cambiarModoSplit('igual')">Partes iguales</button>
+                    <button class="lmd-pos-split-modo-btn ${!modoIgualActivo ? 'lmd-pos-split-modo-btn--activo' : ''}"
+                            onclick="pos.cambiarModoSplit('items')">Por items</button>
+                </div>
+                ${splitControls}`;
         } else {
             const cuentaCards = cuentas.map((c) => {
                 const esPagada = c.estado === 'Pagada';
@@ -414,6 +441,76 @@
                 <div class="lmd-pos-pago-total">${formatMoney(total)}</div>
                 ${cuentasHtml}
                 <button class="lmd-pos-btn-cancelar" onclick="pos.cancelarPedido()">Cancelar pedido</button>
+            </div>`;
+    }
+
+    function renderSplitItemsUI() {
+        const asignaciones = state.splitAsignaciones;
+        const cuentasNums = Object.keys(asignaciones).map(Number).sort((a, b) => a - b);
+        if (cuentasNums.length === 0) {
+            state.splitAsignaciones = { 1: [], 2: [] };
+            cuentasNums.push(1, 2);
+        }
+
+        // Calcular cantidades asignadas por detalle
+        const asignadoPorDetalle = {};
+        Object.values(asignaciones).forEach(items => {
+            items.forEach(it => {
+                asignadoPorDetalle[it.detalleId] = (asignadoPorDetalle[it.detalleId] || 0) + it.cantidad;
+            });
+        });
+
+        const colsHtml = cuentasNums.map(num => {
+            const items = asignaciones[num] || [];
+            const colTotal = items.reduce((s, it) => s + it.cantidad * it.precioUnitario, 0);
+            const esActiva = state.splitCuentaActiva === num;
+            const itemsHtml = items.map((it, idx) => `
+                <div class="lmd-pos-split-item lmd-pos-split-item-asignado" onclick="pos.quitarItemDeCuenta(${num}, ${idx})">
+                    <div class="lmd-pos-split-item-info">
+                        <span class="lmd-pos-split-item-nombre">${it.cantidad}× ${it.productoNombre}</span>
+                        <span class="lmd-pos-split-item-precio">${formatMoney(it.cantidad * it.precioUnitario)}</span>
+                    </div>
+                </div>
+            `).join('');
+
+            return `
+                <div class="lmd-pos-split-col ${esActiva ? 'lmd-pos-split-col--activa' : ''}" onclick="pos.seleccionarCuentaSplit(${num})">
+                    <h4>Cuenta ${num} <span class="lmd-pos-split-col-total">${formatMoney(colTotal)}</span></h4>
+                    <div class="lmd-pos-split-col-items">${itemsHtml || '<span style="color:var(--lmd-gris-piedra);font-size:0.75rem">Toca items para asignar</span>'}</div>
+                </div>`;
+        }).join('');
+
+        const poolItemsHtml = state.lineas.map(l => {
+            const yaAsignado = asignadoPorDetalle[l.id] || 0;
+            const restante = l.cantidad - yaAsignado;
+            if (restante <= 0) return '';
+            return `
+                <div class="lmd-pos-split-item" data-detalle-id="${l.id}" onclick="pos.asignarItemACuenta('${l.id}')">
+                    <div class="lmd-pos-split-item-info">
+                        <span class="lmd-pos-split-item-nombre">${restante}× ${l.productoNombre}</span>
+                        <span class="lmd-pos-split-item-precio">${formatMoney(restante * l.precioUnitario)}</span>
+                    </div>
+                </div>`;
+        }).join('');
+
+        const puedeConfirmar = cuentasNums.length >= 2 && Object.values(asignaciones).some(items => items.length > 0);
+
+        return `
+            <div class="lmd-pos-split-items" id="split-items">
+                <div class="lmd-pos-split-header">
+                    <span>Asignar items a cuentas</span>
+                    <button onclick="pos.agregarCuentaSplit()">+ Cuenta</button>
+                </div>
+                <div class="lmd-pos-split-cols" id="split-cols">
+                    ${colsHtml}
+                </div>
+                <div class="lmd-pos-split-pool">
+                    <h4>Items sin asignar</h4>
+                    ${poolItemsHtml || '<span style="color:var(--lmd-gris-piedra);font-size:0.8125rem">Todos los items asignados</span>'}
+                </div>
+                <button class="lmd-pos-btn-primario" onclick="pos.confirmarSplitItems()" ${puedeConfirmar ? '' : 'disabled'}>
+                    Confirmar división
+                </button>
             </div>`;
     }
 
@@ -592,6 +689,90 @@
                 state.pantalla = 'mesa';
                 renderPantallaMesa();
             } catch (e) { alert('Error: ' + e.message); }
+        },
+
+        cambiarModoSplit(modo) {
+            state.modoSplit = modo;
+            if (modo === 'items') {
+                state.splitAsignaciones = { 1: [], 2: [] };
+                state.splitCuentaActiva = 1;
+            }
+            renderPantallaPago();
+        },
+
+        seleccionarCuentaSplit(num) {
+            state.splitCuentaActiva = num;
+            renderPantallaPago();
+        },
+
+        agregarCuentaSplit() {
+            const nums = Object.keys(state.splitAsignaciones).map(Number);
+            const nuevo = nums.length > 0 ? Math.max(...nums) + 1 : 1;
+            state.splitAsignaciones[nuevo] = [];
+            state.splitCuentaActiva = nuevo;
+            renderPantallaPago();
+        },
+
+        asignarItemACuenta(detalleId) {
+            const linea = state.lineas.find(l => l.id === detalleId);
+            if (!linea) return;
+
+            const asignadoTotal = Object.values(state.splitAsignaciones)
+                .flat()
+                .filter(it => it.detalleId === detalleId)
+                .reduce((s, it) => s + it.cantidad, 0);
+
+            if (asignadoTotal >= linea.cantidad) return;
+
+            const cuentaNum = state.splitCuentaActiva;
+            const existente = state.splitAsignaciones[cuentaNum]?.find(it => it.detalleId === detalleId);
+            if (existente) {
+                existente.cantidad++;
+            } else {
+                state.splitAsignaciones[cuentaNum] = state.splitAsignaciones[cuentaNum] || [];
+                state.splitAsignaciones[cuentaNum].push({
+                    detalleId,
+                    cantidad: 1,
+                    productoNombre: linea.productoNombre,
+                    precioUnitario: linea.precioUnitario
+                });
+            }
+            renderPantallaPago();
+        },
+
+        quitarItemDeCuenta(cuentaNum, itemIdx) {
+            const items = state.splitAsignaciones[cuentaNum];
+            if (!items || itemIdx < 0 || itemIdx >= items.length) return;
+            items.splice(itemIdx, 1);
+            renderPantallaPago();
+        },
+
+        async confirmarSplitItems() {
+            if (!state.pedidoActual) return;
+            const asignaciones = Object.entries(state.splitAsignaciones)
+                .filter(([_, items]) => items.length > 0)
+                .map(([num, items]) => ({
+                    cuentaNumero: parseInt(num),
+                    items: items.map(it => ({ detalleId: it.detalleId, cantidad: it.cantidad }))
+                }));
+
+            if (asignaciones.length < 2) {
+                alert('Asigne items al menos a 2 cuentas.');
+                return;
+            }
+
+            try {
+                const cuentas = await api.crearCuentasConItems(state.pedidoActual.id, asignaciones);
+                state.cuentas = cuentas.map(c => ({
+                    ...c,
+                    metodoPagoSeleccionado: null,
+                    propinaMonto: 0,
+                    propinaPorcentaje: null
+                }));
+                state.splitAsignaciones = {};
+                await joinPedidoGroup(state.pedidoActual.id);
+                renderPantallaPago();
+            } catch (e) { alert('Error al crear cuentas: ' + e.message); }
         },
 
         async crearCuentas(cantidad) {
