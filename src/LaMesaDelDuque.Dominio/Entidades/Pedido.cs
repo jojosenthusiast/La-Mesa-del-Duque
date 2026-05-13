@@ -131,12 +131,15 @@ public class Pedido
 
         _cuentas.Clear();
 
-        decimal totalPorCuenta = Total / cantidad;
+        decimal totalPorCuenta = Math.Floor((Total / cantidad) * 100) / 100;
+        decimal sumaAsignada = 0;
 
         for (int i = 1; i <= cantidad; i++)
         {
-            var cuenta = new Cuenta(Id, i, totalPorCuenta);
+            decimal monto = i == cantidad ? Total - sumaAsignada : totalPorCuenta;
+            var cuenta = new Cuenta(Id, i, monto);
             _cuentas.Add(cuenta);
+            sumaAsignada += monto;
         }
 
         return Cuentas;

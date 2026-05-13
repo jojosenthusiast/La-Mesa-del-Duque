@@ -13,7 +13,7 @@ public class Cuenta
     public MetodoPago? MetodoPago { get; private set; }
     public EstadoCuenta Estado { get; private set; }
     public DateTime? FechaPago { get; private set; }
-    public byte[] RowVersion { get; private set; } = [];
+    public byte[] Version { get; private set; } = Array.Empty<byte>();
 
     private Cuenta() { } // EF Core
 

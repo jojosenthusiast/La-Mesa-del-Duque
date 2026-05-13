@@ -1,5 +1,7 @@
+using LaMesaDelDuque.Dominio.Excepciones;
 using LaMesaDelDuque.Dominio.Repositorios;
 using LaMesaDelDuque.Infraestructura.Persistencia;
+using Microsoft.EntityFrameworkCore;
 
 namespace LaMesaDelDuque.Infraestructura.Repositorios;
 
@@ -46,6 +48,14 @@ internal class UnidadDeTrabajo : IUnidadDeTrabajo
 
     public async Task<int> GuardarCambiosAsync(CancellationToken cancelacion = default)
     {
-        return await _contexto.SaveChangesAsync(cancelacion);
+        try
+        {
+            return await _contexto.SaveChangesAsync(cancelacion);
+        }
+        catch (DbUpdateConcurrencyException ex)
+        {
+            var entidades = string.Join(", ", ex.Entries.Select(e => e.Entity.GetType().Name));
+            throw new ConcurrenciaException($"Conflicto de concurrencia al guardar cambios. Entidades: {entidades}", ex);
+        }
     }
 }

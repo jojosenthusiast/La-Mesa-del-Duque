@@ -36,8 +36,8 @@ internal class CuentaConfiguracion : IEntityTypeConfiguration<Cuenta>
         constructor.Property(c => c.FechaPago)
             .IsRequired(false);
 
-        constructor.Property(c => c.RowVersion)
-            .IsRowVersion();
+        constructor.Property(c => c.Version)
+            .HasColumnType("BLOB");
 
         constructor.HasOne<Pedido>()
             .WithMany(p => p.Cuentas)

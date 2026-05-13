@@ -173,6 +173,62 @@ internal class PedidosServicio : IPedidosServicio
             .ToList();
     }
 
+    public async Task<List<CuentaDto>> CrearCuentasAsync(Guid pedidoId, int cantidad, CancellationToken cancelacion = default)
+    {
+        var pedido = await _uot.Pedidos.ObtenerConCuentasParaActualizarAsync(pedidoId, cancelacion)
+            ?? throw new ArgumentException($"No se encontró el pedido con ID {pedidoId}.", nameof(pedidoId));
+
+        pedido.MarcarEnCobro();
+        var cuentas = pedido.CrearCuentas(cantidad);
+
+        foreach (var cuenta in cuentas)
+        {
+            await _uot.Cuentas.AgregarAsync(cuenta, cancelacion);
+        }
+
+        await _uot.GuardarCambiosAsync(cancelacion);
+        await _notificadorPedidos.NotificarEstadoCambiadoAsync(pedido.Id, pedido.Estado, cancelacion);
+
+        return cuentas.Select(MapToCuentaDto).ToList();
+    }
+
+    public async Task<CuentaDto> PagarCuentaAsync(Guid cuentaId, MetodoPago metodoPago, decimal propinaMonto = 0, CancellationToken cancelacion = default)
+    {
+        for (int intento = 0; intento < 3; intento++)
+        {
+            try
+            {
+                var cuenta = await _uot.Cuentas.ObtenerParaActualizarAsync(cuentaId, cancelacion)
+                    ?? throw new ArgumentException($"No se encontró la cuenta con ID {cuentaId}.", nameof(cuentaId));
+
+                cuenta.Pagar(metodoPago, propinaMonto);
+
+                var pedido = await _uot.Pedidos.ObtenerConCuentasParaActualizarAsync(cuenta.PedidoId, cancelacion);
+                if (pedido is not null && pedido.EstaPagadoCompletamente)
+                {
+                    pedido.MarcarComoPagado();
+                    await LiberarMesaSiCorrespondeAsync(pedido, cancelacion);
+                    await _notificadorPedidos.NotificarEstadoCambiadoAsync(pedido.Id, pedido.Estado, cancelacion);
+                }
+
+                await _uot.GuardarCambiosAsync(cancelacion);
+                return MapToCuentaDto(cuenta);
+            }
+            catch (ConcurrenciaException) when (intento < 2)
+            {
+                await Task.Delay(50, cancelacion);
+            }
+        }
+
+        throw new InvalidOperationException("No se pudo completar el pago por conflictos de concurrencia.");
+    }
+
+    public async Task<List<CuentaDto>> ObtenerCuentasAsync(Guid pedidoId, CancellationToken cancelacion = default)
+    {
+        var cuentas = await _uot.Cuentas.ObtenerPorPedidoAsync(pedidoId, cancelacion);
+        return cuentas.Select(MapToCuentaDto).ToList();
+    }
+
     private async Task LiberarMesaSiCorrespondeAsync(Pedido pedido, CancellationToken cancelacion)
     {
         if (pedido.Mesa is null) return;
@@ -208,6 +264,21 @@ internal class PedidosServicio : IPedidosServicio
                 PrecioUnitario = d.PrecioUnitario,
                 Subtotal = d.Subtotal
             }).ToList()
+        };
+    }
+
+    private static CuentaDto MapToCuentaDto(Cuenta cuenta)
+    {
+        return new CuentaDto
+        {
+            Id = cuenta.Id,
+            PedidoId = cuenta.PedidoId,
+            Numero = cuenta.Numero,
+            Total = cuenta.Total,
+            PropinaMonto = cuenta.PropinaMonto,
+            MetodoPago = cuenta.MetodoPago?.ToString(),
+            Estado = cuenta.Estado.ToString(),
+            FechaPago = cuenta.FechaPago
         };
     }
 }
