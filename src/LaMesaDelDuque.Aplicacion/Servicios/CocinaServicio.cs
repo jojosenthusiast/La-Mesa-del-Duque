@@ -56,7 +56,7 @@ internal class CocinaServicio : ICocinaServicio
 
     public async Task<OrdenCocinaDto> MarcarListoAsync(Guid ordenId, CancellationToken ct = default)
     {
-        var orden = await _uot.OrdenesCocina.ObtenerPorIdAsync(ordenId, ct)
+        var orden = await _uot.OrdenesCocina.ObtenerParaActualizarAsync(ordenId, ct)
             ?? throw new ArgumentException($"No se encontró la orden de cocina con ID {ordenId}.", nameof(ordenId));
 
         orden.MarcarComoListo();
@@ -68,7 +68,7 @@ internal class CocinaServicio : ICocinaServicio
 
     public async Task<OrdenCocinaDto> RecuperarAsync(Guid ordenId, CancellationToken ct = default)
     {
-        var orden = await _uot.OrdenesCocina.ObtenerPorIdAsync(ordenId, ct)
+        var orden = await _uot.OrdenesCocina.ObtenerParaActualizarAsync(ordenId, ct)
             ?? throw new ArgumentException($"No se encontró la orden de cocina con ID {ordenId}.", nameof(ordenId));
 
         orden.Recuperar();

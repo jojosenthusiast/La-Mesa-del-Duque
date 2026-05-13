@@ -22,6 +22,12 @@ internal class OrdenCocinaRepositorio : IOrdenCocinaRepositorio
             .FirstOrDefaultAsync(o => o.Id == id, cancelacion);
     }
 
+    public async Task<OrdenCocina?> ObtenerParaActualizarAsync(Guid id, CancellationToken cancelacion = default)
+    {
+        return await _contexto.Set<OrdenCocina>()
+            .FirstOrDefaultAsync(o => o.Id == id, cancelacion);
+    }
+
     public async Task<List<OrdenCocina>> ListarPendientesAsync(EstacionCocina? estacion = null, CancellationToken cancelacion = default)
     {
         var consulta = _contexto.Set<OrdenCocina>()
