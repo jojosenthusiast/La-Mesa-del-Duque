@@ -2,9 +2,11 @@ using LaMesaDelDuque.Aplicacion.Dtos;
 using LaMesaDelDuque.Aplicacion.Servicios;
 using LaMesaDelDuque.Dominio.Enumeraciones;
 using LaMesaDelDuque.Dominio.Excepciones;
+using LaMesaDelDuque.Web.Hubs;
 using LaMesaDelDuque.Web.Models.Operaciones;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.AspNetCore.SignalR;
 
 namespace LaMesaDelDuque.Web.Pages.Operaciones.Pedidos;
 
@@ -13,15 +15,21 @@ public class IndexModel : PageModel
     private readonly IPedidosServicio _pedidosServicio;
     private readonly ICatalogoProductosServicio _catalogoProductosServicio;
     private readonly IMesasServicio _mesasServicio;
+    private readonly ICocinaServicio _cocinaServicio;
+    private readonly IHubContext<PedidosHub> _hubContext;
 
     public IndexModel(
         IPedidosServicio pedidosServicio,
         ICatalogoProductosServicio catalogoProductosServicio,
-        IMesasServicio mesasServicio)
+        IMesasServicio mesasServicio,
+        ICocinaServicio cocinaServicio,
+        IHubContext<PedidosHub> hubContext)
     {
         _pedidosServicio = pedidosServicio;
         _catalogoProductosServicio = catalogoProductosServicio;
         _mesasServicio = mesasServicio;
+        _cocinaServicio = cocinaServicio;
+        _hubContext = hubContext;
     }
 
     [BindProperty(SupportsGet = true)]
@@ -305,6 +313,26 @@ public class IndexModel : PageModel
             await _pedidosServicio.PagarPedidoAsync(pedidoId);
             var cambio = efectivoRecibido - pedido.Total;
             return new JsonResult(new { ok = true, mensaje = cambio > 0 ? $"Pedido pagado. Cambio: ${cambio:F2}" : "Pedido pagado correctamente." });
+        }
+        catch (Exception ex) { return BadRequest(ex.Message); }
+    }
+
+    public async Task<IActionResult> OnPostEnviarACocinaJsonAsync(Guid pedidoId)
+    {
+        try
+        {
+            await _cocinaServicio.GenerarOrdenesAsync(pedidoId);
+            var pedido = await _pedidosServicio.ObtenerPedidoAsync(pedidoId)
+                ?? throw new ArgumentException("Pedido no encontrado.");
+
+            await _hubContext.Clients.Group("Cocina").SendAsync("NuevaOrdenCocina", new
+            {
+                pedidoId,
+                mesaNumero = pedido.MesaNumero,
+                items = pedido.Detalles.Select(d => new { productoNombre = d.ProductoNombre, cantidad = d.Cantidad })
+            });
+
+            return new JsonResult(new { ok = true });
         }
         catch (Exception ex) { return BadRequest(ex.Message); }
     }

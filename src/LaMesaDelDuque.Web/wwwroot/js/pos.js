@@ -63,6 +63,14 @@
             return res.json();
         },
 
+        async enviarACocina(pedidoId) {
+            const form = new FormData();
+            form.append('__RequestVerificationToken', csrfToken());
+            form.append('pedidoId', pedidoId);
+            const res = await fetch('?handler=EnviarACocinaJson', { method: 'POST', body: form, headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+            return res.json();
+        },
+
         async cambiarEstado(pedidoId, handler) {
             const form = new FormData();
             form.append('__RequestVerificationToken', csrfToken());
@@ -77,14 +85,77 @@
         return el ? el.value : '';
     }
 
+    // ── Toast ───────────────────────────────────────────────
+    const toast = {
+        show(message, type = 'success', duration = 4000) {
+            const zone = document.getElementById('lmd-pos-toast-zone');
+            if (!zone) return;
+            const el = document.createElement('div');
+            el.className = `lmd-toast lmd-toast--${type}`;
+            el.textContent = message;
+            zone.appendChild(el);
+            requestAnimationFrame(() => el.classList.add('lmd-toast--visible'));
+            setTimeout(() => {
+                el.classList.remove('lmd-toast--visible');
+                setTimeout(() => el.remove(), 300);
+            }, duration);
+        }
+    };
+
+    // ── Modal confirm ───────────────────────────────────────
+    function modalConfirm(message) {
+        return new Promise(resolve => {
+            const host = document.getElementById('lmd-pos-modal-host');
+            if (!host) { resolve(false); return; }
+            host.innerHTML = `
+                <div class="lmd-modal-overlay">
+                    <div class="lmd-modal">
+                        <p class="lmd-modal__message">${message}</p>
+                        <div class="lmd-modal__acciones">
+                            <button class="lmd-pos-btn-primario" id="lmd-modal-confirmar">Confirmar</button>
+                            <button class="lmd-pos-btn-cancelar" id="lmd-modal-cancelar">Cancelar</button>
+                        </div>
+                    </div>
+                </div>`;
+            host.querySelector('#lmd-modal-confirmar').onclick = () => { host.innerHTML = ''; resolve(true); };
+            host.querySelector('#lmd-modal-cancelar').onclick = () => { host.innerHTML = ''; resolve(false); };
+        });
+    }
+
     // ── Estado POS ──────────────────────────────────────────
     const state = {
-        pantalla: 'mesa', // 'mesa' | 'productos' | 'pago'
+        pantalla: 'mesa',
         tipoServicio: 'ComerAqui',
         mesaId: null,
         pedidoActual: null,
-        lineas: [], // { id, productoId, productoNombre, cantidad, precioUnitario, subtotal }
+        lineas: [],
+        enviadoACocina: false,
     };
+
+    function persistState() {
+        localStorage.setItem('lmdd_pos_state', JSON.stringify({ ...state, timestamp: Date.now() }));
+    }
+
+    function restoreState() {
+        const saved = localStorage.getItem('lmdd_pos_state');
+        if (!saved) return false;
+        try {
+            const data = JSON.parse(saved);
+            if (Date.now() - data.timestamp > 4 * 60 * 60 * 1000) {
+                localStorage.removeItem('lmdd_pos_state');
+                return false;
+            }
+            Object.assign(state, data);
+            return true;
+        } catch {
+            localStorage.removeItem('lmdd_pos_state');
+            return false;
+        }
+    }
+
+    function clearState() {
+        localStorage.removeItem('lmdd_pos_state');
+    }
 
     function formatMoney(n) {
         return new Intl.NumberFormat('es-SV', { style: 'currency', currency: 'USD' }).format(n);
@@ -172,6 +243,11 @@
             </div>`).join('');
 
         const total = state.lineas.reduce((s, l) => s + l.subtotal, 0);
+        const cocinaHtml = state.pedidoActual && !state.enviadoACocina
+            ? `<button class="lmd-pos-btn-cocina" onclick="pos.enviarACocina()">🍳 Enviar a Cocina</button>`
+            : state.enviadoACocina
+                ? `<div class="lmd-pos-cocina-estado">✅ Enviado a cocina</div>`
+                : '';
 
         container.innerHTML = `
             <div class="lmd-pos-pantalla lmd-pos-productos-pantalla" id="pantalla-productos">
@@ -190,6 +266,7 @@
                         <span>Total</span>
                         <strong>${formatMoney(total)}</strong>
                     </div>
+                    ${cocinaHtml}
                     <button class="lmd-pos-btn-primario lmd-pos-btn-pagar" ${state.lineas.length === 0 ? 'disabled' : ''}
                             onclick="pos.irAPantalla('pago')">
                         Ir a pagar
@@ -236,11 +313,13 @@
             state.tipoServicio = tipo;
             if (tipo === 'ParaLlevar') state.mesaId = null;
             renderPantallaMesa();
+            persistState();
         },
 
         seleccionarMesa(id) {
             state.mesaId = state.mesaId === id ? null : id;
             renderPantallaMesa();
+            persistState();
         },
 
         irAPantalla(pantalla) {
@@ -248,6 +327,7 @@
             if (pantalla === 'mesa') renderPantallaMesa();
             else if (pantalla === 'productos') renderPantallaProductos();
             else if (pantalla === 'pago') renderPantallaPago();
+            persistState();
         },
 
         filtrarCategoria(cat) {
@@ -261,7 +341,6 @@
         },
 
         async agregarProducto(productoId) {
-            // Si no hay pedido activo, crear
             if (!state.pedidoActual) {
                 try {
                     const prod = window.__lmdProductosDisponibles.find(p => p.id === productoId);
@@ -279,8 +358,10 @@
                         precioUnitario: prod.precio,
                         subtotal: prod.precio
                     }];
+                    state.enviadoACocina = false;
+                    toast.show('Pedido creado');
                 } catch (e) {
-                    alert('Error al crear pedido: ' + e.message);
+                    toast.show('Error al crear pedido: ' + e.message, 'error');
                     return;
                 }
             } else {
@@ -301,12 +382,14 @@
                             subtotal: prod.precio
                         });
                     }
+                    toast.show('Producto agregado');
                 } catch (e) {
-                    alert('Error: ' + e.message);
+                    toast.show('Error: ' + e.message, 'error');
                     return;
                 }
             }
             renderPantallaProductos();
+            persistState();
         },
 
         async cambiarCantidad(lineaId, nuevaCantidad) {
@@ -319,20 +402,24 @@
                 linea.cantidad = nuevaCantidad;
                 linea.subtotal = nuevaCantidad * linea.precioUnitario;
                 renderPantallaProductos();
-            } catch (e) { alert('Error: ' + e.message); }
+                persistState();
+            } catch (e) { toast.show('Error: ' + e.message, 'error'); }
         },
 
         async eliminarLinea(lineaId) {
-            if (!state.pedidoActual || !confirm('¿Quitar este producto?')) return;
+            if (!state.pedidoActual) return;
+            const confirmed = await modalConfirm('¿Quitar este producto?');
+            if (!confirmed) return;
             try {
                 await api.eliminar(state.pedidoActual.id, lineaId);
                 state.lineas = state.lineas.filter(l => l.id !== lineaId);
                 if (state.lineas.length === 0) {
-                    // Pedido vacío: cancelar implícito
                     state.pedidoActual = null;
+                    state.enviadoACocina = false;
                 }
                 renderPantallaProductos();
-            } catch (e) { alert('Error: ' + e.message); }
+                persistState();
+            } catch (e) { toast.show('Error: ' + e.message, 'error'); }
         },
 
         calcularCambio() {
@@ -365,10 +452,12 @@
                 state.pedidoActual = null;
                 state.lineas = [];
                 state.mesaId = null;
-                alert(`✅ ${result.mensaje || 'Pedido pagado.'}`);
+                state.enviadoACocina = false;
+                clearState();
+                toast.show(result.mensaje || 'Pedido pagado.', 'success');
                 state.pantalla = 'mesa';
                 renderPantallaMesa();
-            } catch (e) { alert('Error: ' + e.message); }
+            } catch (e) { toast.show('Error: ' + e.message, 'error'); }
         },
 
         async pagarConTarjeta() {
@@ -378,30 +467,54 @@
                 state.pedidoActual = null;
                 state.lineas = [];
                 state.mesaId = null;
-                alert('✅ Pedido pagado con tarjeta.');
+                state.enviadoACocina = false;
+                clearState();
+                toast.show('Pedido pagado con tarjeta.', 'success');
                 state.pantalla = 'mesa';
                 renderPantallaMesa();
-            } catch (e) { alert('Error: ' + e.message); }
+            } catch (e) { toast.show('Error: ' + e.message, 'error'); }
         },
 
         async cancelarPedido() {
-            if (!state.pedidoActual || !confirm('¿Cancelar este pedido?')) return;
+            if (!state.pedidoActual) {
+                state.pantalla = 'mesa';
+                renderPantallaMesa();
+                persistState();
+                return;
+            }
+            const confirmed = await modalConfirm('¿Cancelar este pedido?');
+            if (!confirmed) return;
             try {
                 await api.cambiarEstado(state.pedidoActual.id, 'Cancelar');
                 state.pedidoActual = null;
                 state.lineas = [];
                 state.mesaId = null;
+                state.enviadoACocina = false;
+                clearState();
                 state.pantalla = 'mesa';
                 renderPantallaMesa();
-            } catch (e) { alert('Error: ' + e.message); }
+            } catch (e) { toast.show('Error: ' + e.message, 'error'); }
         },
 
         async marcarEnPreparacion() {
             if (!state.pedidoActual) return;
             try {
                 await api.cambiarEstado(state.pedidoActual.id, 'MarcarEnPreparacion');
-                alert('✅ Pedido marcado en preparación.');
-            } catch (e) { alert('Error: ' + e.message); }
+                toast.show('Pedido marcado en preparación.', 'success');
+            } catch (e) { toast.show('Error: ' + e.message, 'error'); }
+        },
+
+        async enviarACocina() {
+            if (!state.pedidoActual || state.enviadoACocina) return;
+            try {
+                await api.enviarACocina(state.pedidoActual.id);
+                state.enviadoACocina = true;
+                toast.show('Pedido enviado a cocina.', 'success');
+                renderPantallaProductos();
+                persistState();
+            } catch (e) {
+                toast.show('Error al enviar: ' + e.message, 'error');
+            }
         }
     };
 
@@ -410,6 +523,13 @@
     window.__lmdProductosDisponibles = window.__lmdProductosDisponibles || [];
 
     document.addEventListener('DOMContentLoaded', () => {
-        renderPantallaMesa();
+        const restored = restoreState();
+        if (restored) {
+            if (state.pantalla === 'mesa') renderPantallaMesa();
+            else if (state.pantalla === 'productos') renderPantallaProductos();
+            else if (state.pantalla === 'pago') renderPantallaPago();
+        } else {
+            renderPantallaMesa();
+        }
     });
 })();

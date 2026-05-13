@@ -392,7 +392,141 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 /* ═══════════════════════════════════════════════════════
-   Sprint 1 — Shell operativo
+   Sprint 2 — POS UX: Toast, Modal, Cocina
+   ═══════════════════════════════════════════════════════ */
+
+.lmd-pos-toast-zone {
+    position: fixed;
+    bottom: 1.5rem;
+    right: 1.5rem;
+    z-index: 2000;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    pointer-events: none;
+}
+
+.lmd-toast {
+    background: #fff;
+    color: var(--lmd-azul-duque);
+    padding: 0.875rem 1.25rem;
+    border-radius: 0.75rem;
+    box-shadow: var(--lmd-sombra-lg);
+    font-weight: 600;
+    font-size: 0.9375rem;
+    min-width: 260px;
+    max-width: 360px;
+    transform: translateX(120%);
+    transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+    pointer-events: auto;
+    border-left: 5px solid var(--lmd-acento);
+}
+
+.lmd-toast--visible {
+    transform: translateX(0);
+}
+
+.lmd-toast--success {
+    border-left-color: var(--lmd-verde-salvia);
+}
+
+.lmd-toast--error {
+    border-left-color: var(--lmd-terracota);
+    color: var(--lmd-terracota);
+}
+
+.lmd-toast--info {
+    border-left-color: #2a568a;
+    color: var(--lmd-azul-duque);
+}
+
+.lmd-pos-modal-host {
+    position: fixed;
+    inset: 0;
+    z-index: 3000;
+    pointer-events: none;
+}
+
+.lmd-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 27, 45, 0.55);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    pointer-events: auto;
+    animation: lmd-modal-fade-in 0.2s ease;
+}
+
+@keyframes lmd-modal-fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.lmd-modal {
+    background: #fff;
+    border-radius: 1rem;
+    padding: 1.5rem;
+    max-width: 420px;
+    width: 100%;
+    box-shadow: var(--lmd-sombra-lg);
+    animation: lmd-modal-slide-in 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes lmd-modal-slide-in {
+    from { transform: translateY(20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+.lmd-modal__message {
+    font-size: 1.0625rem;
+    font-weight: 600;
+    margin-bottom: 1.25rem;
+    color: var(--lmd-azul-duque);
+    text-align: center;
+}
+
+.lmd-modal__acciones {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+}
+
+.lmd-pos-btn-cocina {
+    width: 100%;
+    margin-bottom: 0.5rem;
+    padding: 0.875rem;
+    border: none;
+    border-radius: 0.75rem;
+    background: var(--lmd-verde-salvia);
+    color: #fff;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    touch-action: manipulation;
+    transition: background 0.12s;
+}
+
+.lmd-pos-btn-cocina:hover {
+    background: #3d5847;
+}
+
+.lmd-pos-btn-cocina:active {
+    transform: scale(0.98);
+}
+
+.lmd-pos-cocina-estado {
+    text-align: center;
+    padding: 0.75rem;
+    font-weight: 600;
+    color: var(--lmd-verde-salvia);
+    font-size: 0.9375rem;
+    margin-bottom: 0.5rem;
+}
+
+/* ═══════════════════════════════════════════════════════
+   Sprint 2 — KDS (Kitchen Display System)
    ═══════════════════════════════════════════════════════ */
 
 .lmd-shell-container { max-width: 1400px; }

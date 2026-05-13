@@ -1,6 +1,8 @@
 using LaMesaDelDuque.Aplicacion.Dtos;
 using LaMesaDelDuque.Aplicacion.Servicios;
+using LaMesaDelDuque.Web.Hubs;
 using LaMesaDelDuque.Web.Pages.Operaciones.Pedidos;
+using Microsoft.AspNetCore.SignalR;
 
 namespace LaMesaDelDuque.Pruebas.Web;
 
@@ -12,8 +14,10 @@ public class PedidosPageTests
         var catalogo = new FakeCatalogoPedidosProductosServicio();
         var mesas = new FakePedidosMesasServicio();
         var pedidos = new FakePedidosServicio();
+        var cocina = new FakeCocinaServicio();
+        var hub = new FakeHubContext<PedidosHub>();
 
-        var page = new IndexModel(pedidos, catalogo, mesas);
+        var page = new IndexModel(pedidos, catalogo, mesas, cocina, hub);
 
         await page.OnGetAsync();
 
@@ -22,11 +26,28 @@ public class PedidosPageTests
         Assert.NotEmpty(page.Vm.MesasDisponibles);
         Assert.NotEmpty(page.Vm.PedidosActivos);
     }
+
+    [Fact]
+    public async Task OnPostEnviarACocinaJsonAsync_genera_ordenes_y_devuelve_ok()
+    {
+        var pedidos = new FakePedidosServicio();
+        var cocina = new FakeCocinaServicio();
+        var hub = new FakeHubContext<PedidosHub>();
+        var page = new IndexModel(pedidos, new FakeCatalogoPedidosProductosServicio(), new FakePedidosMesasServicio(), cocina, hub);
+
+        var result = await page.OnPostEnviarACocinaJsonAsync(pedidos._pedido.Id);
+
+        Assert.IsType<JsonResult>(result);
+        var json = (JsonResult)result;
+        Assert.True(json.Value?.GetType().GetProperty("ok")?.GetValue(json.Value) as bool?);
+        Assert.True(cocina.WasCalled);
+        Assert.True(hub.WasCalled);
+    }
 }
 
 internal sealed class FakePedidosServicio : IPedidosServicio
 {
-    private readonly PedidoDto _pedido = new()
+    public readonly PedidoDto _pedido = new()
     {
         Id = Guid.NewGuid(),
         Estado = "Abierto",
@@ -80,4 +101,66 @@ internal sealed class FakePedidosMesasServicio : IMesasServicio
     public Task<MesaDto> ActualizarMesaAsync(Guid mesaId, int numero, int capacidad, CancellationToken cancelacion = default) => throw new NotImplementedException();
     public Task CambiarEstadoMesaAsync(Guid mesaId, string nuevoEstado, CancellationToken cancelacion = default) => throw new NotImplementedException();
     public Task DesactivarMesaAsync(Guid mesaId, CancellationToken cancelacion = default) => throw new NotImplementedException();
+}
+
+internal sealed class FakeCocinaServicio : ICocinaServicio
+{
+    public bool WasCalled { get; private set; }
+
+    public Task GenerarOrdenesAsync(Guid pedidoId, CancellationToken ct = default)
+    {
+        WasCalled = true;
+        return Task.CompletedTask;
+    }
+
+    public Task<List<OrdenCocinaDto>> ListarPendientesAsync(LaMesaDelDuque.Dominio.Enumeraciones.EstacionCocina? estacion = null, CancellationToken ct = default)
+        => Task.FromResult(new List<OrdenCocinaDto>());
+
+    public Task<OrdenCocinaDto> MarcarListoAsync(Guid ordenId, CancellationToken ct = default)
+        => throw new NotImplementedException();
+
+    public Task<OrdenCocinaDto> RecuperarAsync(Guid ordenId, CancellationToken ct = default)
+        => throw new NotImplementedException();
+}
+
+internal sealed class FakeHubContext<THub> : IHubContext<THub> where THub : Hub
+{
+    public bool WasCalled { get; private set; }
+
+    public IHubClients Clients => new FakeHubClients(() => WasCalled = true);
+    public IGroupManager Groups => new FakeGroupManager();
+}
+
+internal sealed class FakeHubClients : IHubClients
+{
+    private readonly Action _onSend;
+
+    public FakeHubClients(Action onSend) { _onSend = onSend; }
+
+    public IClientProxy All => new FakeClientProxy(_onSend);
+    public IClientProxy AllExcept(IReadOnlyList<string> excludedConnectionIds) => new FakeClientProxy(_onSend);
+    public IClientProxy Client(string connectionId) => new FakeClientProxy(_onSend);
+    public IClientProxy Clients(IReadOnlyList<string> connectionIds) => new FakeClientProxy(_onSend);
+    public IClientProxy Group(string groupName) => new FakeClientProxy(_onSend);
+    public IClientProxy Groups(IReadOnlyList<string> groupNames) => new FakeClientProxy(_onSend);
+    public IClientProxy User(string userId) => new FakeClientProxy(_onSend);
+    public IClientProxy Users(IReadOnlyList<string> userIds) => new FakeClientProxy(_onSend);
+}
+
+internal sealed class FakeClientProxy : IClientProxy
+{
+    private readonly Action _onSend;
+    public FakeClientProxy(Action onSend) { _onSend = onSend; }
+
+    public Task SendCoreAsync(string method, object?[]? args, CancellationToken cancellationToken = default)
+    {
+        _onSend();
+        return Task.CompletedTask;
+    }
+}
+
+internal sealed class FakeGroupManager : IGroupManager
+{
+    public Task AddToGroupAsync(string connectionId, string groupName, CancellationToken cancellationToken = default) => Task.CompletedTask;
+    public Task RemoveFromGroupAsync(string connectionId, string groupName, CancellationToken cancellationToken = default) => Task.CompletedTask;
 }
