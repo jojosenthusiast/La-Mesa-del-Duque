@@ -6,13 +6,16 @@ namespace LaMesaDelDuque.Dominio.Entidades;
 public class Pedido
 {
     private readonly List<DetallePedido> _detalles = [];
+    private readonly List<Cuenta> _cuentas = [];
 
     public Guid Id { get; private set; }
     public TipoServicio TipoServicio { get; private set; }
     public Mesa? Mesa { get; private set; }
     public EstadoPedido Estado { get; private set; }
     public IReadOnlyList<DetallePedido> Detalles => _detalles.AsReadOnly();
+    public IReadOnlyList<Cuenta> Cuentas => _cuentas.AsReadOnly();
     public decimal Total => _detalles.Sum(d => d.Subtotal);
+    public bool EstaPagadoCompletamente => Cuentas.Count > 0 && Cuentas.All(c => c.Estado == EstadoCuenta.Pagada);
 
     private Pedido()
     {
@@ -40,6 +43,14 @@ public class Pedido
         Estado = EstadoPedido.EnPreparacion;
     }
 
+    public void MarcarEnCobro()
+    {
+        if (Estado != EstadoPedido.EnPreparacion)
+            throw new ReglaDominioException("Solo se puede marcar en cobro un pedido en preparación.");
+
+        Estado = EstadoPedido.EnCobro;
+    }
+
     public void MarcarComoPagado()
     {
         if (Estado == EstadoPedido.Pagado)
@@ -50,6 +61,9 @@ public class Pedido
 
         if (_detalles.Count == 0)
             throw new ReglaDominioException("No se puede pagar un pedido sin detalles.");
+
+        if (Cuentas.Count > 0 && !EstaPagadoCompletamente)
+            throw new ReglaDominioException("No se puede marcar como pagado un pedido con cuentas pendientes.");
 
         Estado = EstadoPedido.Pagado;
     }
@@ -94,5 +108,37 @@ public class Pedido
             ?? throw new ReglaDominioException("El detalle especificado no pertenece a este pedido.");
 
         _detalles.Remove(detalle);
+    }
+
+    public void AgregarCuenta(Cuenta cuenta)
+    {
+        if (cuenta is null)
+            throw new ReglaDominioException("La cuenta no puede ser nula.");
+
+        if (cuenta.PedidoId != Id)
+            throw new ReglaDominioException("La cuenta no pertenece a este pedido.");
+
+        _cuentas.Add(cuenta);
+    }
+
+    public IReadOnlyList<Cuenta> CrearCuentas(int cantidad)
+    {
+        if (cantidad < 1)
+            throw new ReglaDominioException("La cantidad de cuentas debe ser al menos 1.");
+
+        if (_detalles.Count == 0)
+            throw new ReglaDominioException("No se pueden crear cuentas para un pedido sin detalles.");
+
+        _cuentas.Clear();
+
+        decimal totalPorCuenta = Total / cantidad;
+
+        for (int i = 1; i <= cantidad; i++)
+        {
+            var cuenta = new Cuenta(Id, i, totalPorCuenta);
+            _cuentas.Add(cuenta);
+        }
+
+        return Cuentas;
     }
 }
