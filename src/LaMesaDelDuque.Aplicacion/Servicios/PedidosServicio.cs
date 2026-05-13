@@ -11,11 +11,13 @@ internal class PedidosServicio : IPedidosServicio
 {
     private readonly IUnidadDeTrabajo _uot;
     private readonly INotificadorPedidos _notificadorPedidos;
+    private readonly ICocinaServicio? _cocinaServicio;
 
-    public PedidosServicio(IUnidadDeTrabajo uot, INotificadorPedidos notificadorPedidos)
+    public PedidosServicio(IUnidadDeTrabajo uot, INotificadorPedidos notificadorPedidos, ICocinaServicio? cocinaServicio = null)
     {
         _uot = uot;
         _notificadorPedidos = notificadorPedidos;
+        _cocinaServicio = cocinaServicio;
     }
 
     public async Task<PedidoDto> CrearPedidoAsync(TipoServicio tipoServicio, Guid? mesaId, List<DetalleCreacionDto> detalles, CancellationToken cancelacion = default)
@@ -54,6 +56,9 @@ internal class PedidosServicio : IPedidosServicio
         await _uot.Pedidos.AgregarAsync(pedido, cancelacion);
         await _uot.GuardarCambiosAsync(cancelacion);
         await _notificadorPedidos.NotificarPedidoCreadoAsync(pedido.Id, pedido.Estado, cancelacion);
+
+        if (_cocinaServicio is not null)
+            await _cocinaServicio.GenerarOrdenesAsync(pedido.Id, cancelacion);
 
         return MapToDto(pedido);
     }

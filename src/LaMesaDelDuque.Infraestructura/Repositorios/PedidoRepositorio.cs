@@ -30,6 +30,7 @@ internal class PedidoRepositorio : IPedidoRepositorio
             .Include(p => p.Mesa)
             .Include(p => p.Detalles)
                 .ThenInclude(d => d.Producto)
+                    .ThenInclude(prod => prod.Categoria)
             .FirstOrDefaultAsync(p => p.Id == id, cancelacion);
     }
 
@@ -39,6 +40,7 @@ internal class PedidoRepositorio : IPedidoRepositorio
             .Include(p => p.Mesa)
             .Include(p => p.Detalles)
                 .ThenInclude(d => d.Producto)
+                    .ThenInclude(prod => prod.Categoria)
             .FirstOrDefaultAsync(p => p.Id == id, cancelacion);
     }
 

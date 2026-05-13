@@ -12,6 +12,7 @@ public static class InyeccionAplicacion
         servicios.AddScoped<IMesasServicio, MesasServicio>();
         servicios.AddScoped<IPedidosServicio, PedidosServicio>();
         servicios.AddScoped<IUsuariosServicio, UsuariosServicio>();
+        servicios.AddScoped<ICocinaServicio, CocinaServicio>();
 
         return servicios;
     }
