@@ -17,7 +17,8 @@ internal class UnidadDeTrabajo : IUnidadDeTrabajo
         RolRepositorio rolRepositorio,
         UsuarioRepositorio usuarioRepositorio,
         AuditoriaRepositorio auditoriaRepositorio,
-        RecetaProductoRepositorio recetaProductoRepositorio)
+        RecetaProductoRepositorio recetaProductoRepositorio,
+        CuentaRepositorio cuentaRepositorio)
     {
         _contexto = contexto;
         Categorias = categoriaRepositorio;
@@ -29,6 +30,7 @@ internal class UnidadDeTrabajo : IUnidadDeTrabajo
         Usuarios = usuarioRepositorio;
         Auditorias = auditoriaRepositorio;
         RecetasProductos = recetaProductoRepositorio;
+        Cuentas = cuentaRepositorio;
     }
 
     public ICategoriaProductoRepositorio Categorias { get; }
@@ -40,6 +42,7 @@ internal class UnidadDeTrabajo : IUnidadDeTrabajo
     public IRolRepositorio Roles { get; }
     public IUsuarioRepositorio Usuarios { get; }
     public IAuditoriaRepositorio Auditorias { get; }
+    public ICuentaRepositorio Cuentas { get; }
 
     public async Task<int> GuardarCambiosAsync(CancellationToken cancelacion = default)
     {

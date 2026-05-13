@@ -72,4 +72,15 @@ internal class PedidoRepositorio : IPedidoRepositorio
             .Where(p => p.Mesa != null && p.Mesa.Id == mesaId && p.Estado != EstadoPedido.Cancelado)
             .ToListAsync(cancelacion);
     }
+
+    public async Task<Pedido?> ObtenerConCuentasParaActualizarAsync(Guid id, CancellationToken cancelacion = default)
+    {
+        return await _contexto.Set<Pedido>()
+            .Include(p => p.Mesa)
+            .Include(p => p.Detalles)
+                .ThenInclude(d => d.Producto)
+                    .ThenInclude(prod => prod.Categoria)
+            .Include(p => p.Cuentas)
+            .FirstOrDefaultAsync(p => p.Id == id, cancelacion);
+    }
 }

@@ -38,7 +38,8 @@ public class MesasServicioTests : IDisposable
             new RolRepositorio(_contexto),
             new UsuarioRepositorio(_contexto),
             new AuditoriaRepositorio(_contexto),
-            new RecetaProductoRepositorio(_contexto));
+            new RecetaProductoRepositorio(_contexto),
+            new CuentaRepositorio(_contexto));
 
         _servicio = new MesasServicio(_uot);
     }

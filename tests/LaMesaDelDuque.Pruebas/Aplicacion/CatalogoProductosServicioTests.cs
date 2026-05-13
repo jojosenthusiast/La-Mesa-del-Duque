@@ -39,7 +39,8 @@ public class CatalogoProductosServicioTests : IDisposable
             new RolRepositorio(_contexto),
             new UsuarioRepositorio(_contexto),
             new AuditoriaRepositorio(_contexto),
-            new RecetaProductoRepositorio(_contexto));
+            new RecetaProductoRepositorio(_contexto),
+            new CuentaRepositorio(_contexto));
 
         _servicio = new CatalogoProductosServicio(_uot);
     }
