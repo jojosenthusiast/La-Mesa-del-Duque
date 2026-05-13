@@ -147,13 +147,19 @@
         ).join('');
 
         const allProductCards = Object.entries(categorias).map(([cat, prods]) =>
-            prods.map(p => `
+            prods.map(p => {
+                const imgHtml = p.imagenUrl
+                    ? `<img class="lmd-pos-producto-card__img" src="${p.imagenUrl}" alt="${p.nombre}" loading="lazy" />`
+                    : `<div class="lmd-pos-producto-card__placeholder"><span>🍽️</span><small>Sin foto</small></div>`;
+                return `
                 <button class="lmd-pos-producto-card" data-categoria="${cat.replace(/'/g, "\\'")}"
                         onclick="pos.agregarProducto('${p.id}')">
+                    ${imgHtml}
                     <div class="lmd-pos-producto-card__nombre">${p.nombre}</div>
                     <div class="lmd-pos-producto-card__precio">${formatMoney(p.precio)}</div>
                     <div class="lmd-pos-producto-card__tiempo">${p.tiempoPreparacionMin}min</div>
-                </button>`).join('')
+                </button>`;
+            }).join('')
         ).join('');
 
         const lineasHtml = state.lineas.map(l => `

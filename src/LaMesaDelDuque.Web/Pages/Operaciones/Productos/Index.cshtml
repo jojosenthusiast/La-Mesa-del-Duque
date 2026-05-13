@@ -55,8 +55,9 @@
     </form>
 
     <div class="collapse mb-3 @(Model.ModelState.ErrorCount > 0 ? "show" : string.Empty)" id="producto-form">
-        <form method="post" asp-page-handler="Guardar" class="border rounded p-3">
+        <form method="post" asp-page-handler="Guardar" class="border rounded p-3" enctype="multipart/form-data">
             <input type="hidden" asp-for="Vm.Form.Id" />
+            <input type="hidden" asp-for="Vm.Form.ImagenUrl" />
             <div asp-validation-summary="ModelOnly" class="text-danger mb-2"></div>
             <div class="row g-2">
                 <div class="col-md-4">
@@ -89,8 +90,19 @@
                     <input class="form-control form-control-sm" asp-for="Vm.Form.Descripcion" />
                 </div>
                 <div class="col-md-6">
-                    <label class="form-label" asp-for="Vm.Form.ImagenUrl"></label>
-                    <input class="form-control form-control-sm" asp-for="Vm.Form.ImagenUrl" />
+                    <label class="form-label" asp-for="Vm.Form.ImagenFile">Foto del producto</label>
+                    <input class="form-control form-control-sm" asp-for="Vm.Form.ImagenFile" type="file" accept=".jpg,.jpeg,.png,.webp" />
+                    <span class="text-danger" asp-validation-for="Vm.Form.ImagenFile"></span>
+                    @if (!string.IsNullOrWhiteSpace(Model.Vm.Form.ImagenUrl))
+                    {
+                        <div class="mt-2 d-flex align-items-center gap-2">
+                            <img src="@Model.Vm.Form.ImagenUrl" alt="Vista previa" style="height:48px;width:64px;object-fit:cover;border-radius:4px;" />
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" asp-for="Vm.Form.EliminarImagen" />
+                                <label class="form-check-label" asp-for="Vm.Form.EliminarImagen">Eliminar foto actual</label>
+                            </div>
+                        </div>
+                    }
                 </div>
             </div>
             <div class="mt-3 d-flex gap-2">
@@ -109,6 +121,7 @@
             <table class="lmd-ops-table">
                 <thead>
                     <tr>
+                        <th>Foto</th>
                         <th>Nombre</th>
                         <th>Categoría</th>
                         <th>Precio</th>
@@ -120,6 +133,16 @@
                     @foreach (var producto in Model.Vm.Productos)
                     {
                         <tr>
+                            <td>
+                                @if (!string.IsNullOrWhiteSpace(producto.ImagenUrl))
+                                {
+                                    <img src="@producto.ImagenUrl" alt="@producto.Nombre" style="height:40px;width:50px;object-fit:cover;border-radius:4px;" />
+                                }
+                                else
+                                {
+                                    <span class="text-muted" style="font-size:1.25rem;">🍽️</span>
+                                }
+                            </td>
                             <td>@producto.Nombre</td>
                             <td>@producto.CategoriaNombre</td>
                             <td class="lmd-money">@producto.Precio.ToString("C")</td>
@@ -139,6 +162,13 @@
                                         data-producto-tiempo-preparacion="@producto.TiempoPreparacionMin">
                                     Editar
                                 </button>
+                                @if (!string.IsNullOrWhiteSpace(producto.ImagenUrl))
+                                {
+                                    <form method="post" asp-page-handler="EliminarFoto" class="d-inline lmd-confirm-destructive" data-confirm-message="¿Eliminar la foto de este producto?">
+                                        <input type="hidden" name="id" value="@producto.Id" />
+                                        <button type="submit" class="btn btn-sm lmd-action-neutral">🗑 Foto</button>
+                                    </form>
+                                }
                                 @if (producto.Activo)
                                 {
                                     <form method="post" asp-page-handler="Desactivar" class="d-inline lmd-confirm-destructive" data-confirm-message="¿Desactivar este producto?">

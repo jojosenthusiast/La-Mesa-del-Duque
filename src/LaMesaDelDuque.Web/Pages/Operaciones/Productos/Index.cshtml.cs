@@ -11,10 +11,15 @@ namespace LaMesaDelDuque.Web.Pages.Operaciones.Productos;
 public class IndexModel : PageModel
 {
     private readonly ICatalogoProductosServicio _catalogoProductosServicio;
+    private readonly IWebHostEnvironment _env;
 
-    public IndexModel(ICatalogoProductosServicio catalogoProductosServicio)
+    private static readonly string[] ExtensionesPermitidas = [".jpg", ".jpeg", ".png", ".webp"];
+    private const long TamanioMaximoBytes = 5 * 1024 * 1024;
+
+    public IndexModel(ICatalogoProductosServicio catalogoProductosServicio, IWebHostEnvironment env)
     {
         _catalogoProductosServicio = catalogoProductosServicio;
+        _env = env;
     }
 
     [BindProperty(SupportsGet = true)]
@@ -44,6 +49,22 @@ public class IndexModel : PageModel
     public async Task<IActionResult> OnPostGuardarAsync()
     {
         SetUiContext();
+
+        var archivo = Vm.Form.ImagenFile;
+        if (archivo is not null && archivo.Length > 0)
+        {
+            if (archivo.Length > TamanioMaximoBytes)
+            {
+                ModelState.AddModelError("Vm.Form.ImagenFile", "La imagen no puede exceder 5MB.");
+            }
+
+            var extension = Path.GetExtension(archivo.FileName).ToLowerInvariant();
+            if (!ExtensionesPermitidas.Contains(extension))
+            {
+                ModelState.AddModelError("Vm.Form.ImagenFile", "Solo se permiten imagenes JPG, PNG o WebP.");
+            }
+        }
+
         if (!ModelState.IsValid)
         {
             await CargarDatosAsync();
@@ -52,27 +73,56 @@ public class IndexModel : PageModel
 
         try
         {
+            string? imagenUrl = Vm.Form.ImagenUrl;
+            Guid productoId;
+
             if (Vm.Form.Id.HasValue)
             {
+                productoId = Vm.Form.Id.Value;
+                if (Vm.Form.EliminarImagen)
+                {
+                    EliminarArchivoImagen(productoId);
+                    imagenUrl = null;
+                }
+                else if (archivo is not null && archivo.Length > 0)
+                {
+                    imagenUrl = await GuardarArchivoImagenAsync(productoId, archivo);
+                }
+
                 await _catalogoProductosServicio.ActualizarProductoAsync(
-                    Vm.Form.Id.Value,
+                    productoId,
                     Vm.Form.Nombre,
                     Vm.Form.Precio,
                     Vm.Form.CategoriaId,
                     Vm.Form.Descripcion,
-                    Vm.Form.ImagenUrl,
+                    imagenUrl,
                     Vm.Form.TiempoPreparacionMin);
                 ToastSuccess = "Producto actualizado correctamente.";
             }
             else
             {
-                await _catalogoProductosServicio.CrearProductoAsync(
+                var creado = await _catalogoProductosServicio.CrearProductoAsync(
                     Vm.Form.Nombre,
                     Vm.Form.Precio,
                     Vm.Form.CategoriaId,
                     Vm.Form.Descripcion,
-                    Vm.Form.ImagenUrl,
+                    null,
                     Vm.Form.TiempoPreparacionMin ?? 5);
+                productoId = creado.Id;
+
+                if (archivo is not null && archivo.Length > 0)
+                {
+                    imagenUrl = await GuardarArchivoImagenAsync(productoId, archivo);
+                    await _catalogoProductosServicio.ActualizarProductoAsync(
+                        productoId,
+                        creado.Nombre,
+                        creado.Precio,
+                        creado.CategoriaId,
+                        creado.Descripcion,
+                        imagenUrl,
+                        creado.TiempoPreparacionMin);
+                }
+
                 ToastSuccess = "Producto creado correctamente.";
             }
 
@@ -109,6 +159,75 @@ public class IndexModel : PageModel
         }
 
         return RedirectToPage(new { Buscar, CategoriaId, Estado });
+    }
+
+    public async Task<IActionResult> OnPostEliminarFotoAsync(Guid id)
+    {
+        SetUiContext();
+        try
+        {
+            var producto = (await _catalogoProductosServicio.ListarProductosAsync())
+                .FirstOrDefault(p => p.Id == id);
+
+            if (producto is not null)
+            {
+                EliminarArchivoImagen(id);
+                await _catalogoProductosServicio.ActualizarProductoAsync(
+                    id,
+                    producto.Nombre,
+                    producto.Precio,
+                    producto.CategoriaId,
+                    producto.Descripcion,
+                    null,
+                    producto.TiempoPreparacionMin);
+                ToastSuccess = "Foto eliminada correctamente.";
+            }
+        }
+        catch (Exception ex)
+        {
+            ToastError = ex.Message;
+        }
+
+        return RedirectToPage(new { Buscar, CategoriaId, Estado });
+    }
+
+    private async Task<string> GuardarArchivoImagenAsync(Guid productoId, IFormFile archivo)
+    {
+        var uploadsDir = Path.Combine(_env.WebRootPath, "uploads", "productos");
+        Directory.CreateDirectory(uploadsDir);
+
+        var extension = Path.GetExtension(archivo.FileName).ToLowerInvariant();
+        if (extension == ".jpeg") extension = ".jpg";
+
+        var filePath = Path.Combine(uploadsDir, $"{productoId}{extension}");
+
+        // Eliminar archivos previos con cualquier extension
+        foreach (var ext in ExtensionesPermitidas)
+        {
+            var previo = Path.Combine(uploadsDir, $"{productoId}{ext}");
+            if (System.IO.File.Exists(previo))
+            {
+                System.IO.File.Delete(previo);
+            }
+        }
+
+        using var stream = System.IO.File.Create(filePath);
+        await archivo.CopyToAsync(stream);
+
+        return $"/uploads/productos/{productoId}{extension}";
+    }
+
+    private void EliminarArchivoImagen(Guid productoId)
+    {
+        var uploadsDir = Path.Combine(_env.WebRootPath, "uploads", "productos");
+        foreach (var ext in ExtensionesPermitidas)
+        {
+            var filePath = Path.Combine(uploadsDir, $"{productoId}{ext}");
+            if (System.IO.File.Exists(filePath))
+            {
+                System.IO.File.Delete(filePath);
+            }
+        }
     }
 
     private async Task CargarDatosAsync()
