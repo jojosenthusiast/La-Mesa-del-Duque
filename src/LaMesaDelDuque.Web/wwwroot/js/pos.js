@@ -176,6 +176,19 @@
     }
 
     // ── Render por pantalla ────────────────────────────────
+    function stepsHtml(pantalla) {
+        const idx = { mesa: 0, productos: 1, pago: 2 };
+        const i = idx[pantalla] ?? 0;
+        return `
+            <div class="lmd-pos-steps">
+                <span class="lmd-pos-step ${i === 0 ? 'lmd-pos-step--active' : i > 0 ? 'lmd-pos-step--done' : ''}">1</span>
+                <span class="lmd-pos-step-connector"></span>
+                <span class="lmd-pos-step ${i === 1 ? 'lmd-pos-step--active' : i > 1 ? 'lmd-pos-step--done' : ''}">2</span>
+                <span class="lmd-pos-step-connector"></span>
+                <span class="lmd-pos-step ${i === 2 ? 'lmd-pos-step--active' : ''}">3</span>
+            </div>`;
+    }
+
     function renderPantallaMesa() {
         const container = document.getElementById('lmd-pos-contenido');
         if (!container) return;
@@ -212,6 +225,7 @@
 
         container.innerHTML = `
             <div class="lmd-pos-pantalla" id="pantalla-mesa">
+                ${stepsHtml(state.pantalla)}
                 <h2 class="lmd-pos-titulo">Nuevo pedido</h2>
                 <div class="lmd-pos-tipo-servicio">
                     <button class="lmd-pos-tipo-btn ${state.tipoServicio === 'ComerAqui' ? 'lmd-pos-tipo-btn--activo' : ''}"
@@ -286,6 +300,7 @@
 
         container.innerHTML = `
             <div class="lmd-pos-pantalla lmd-pos-productos-pantalla" id="pantalla-productos">
+                ${stepsHtml(state.pantalla)}
                 <div class="lmd-pos-catalogo">
                     <div class="lmd-pos-topbar">
                         <button class="lmd-pos-btn-atras" onclick="pos.irAPantalla('mesa')">← ${state.tipoServicio === 'ComerAqui' ? 'Cambiar mesa' : 'Tipo servicio'}</button>
@@ -325,6 +340,7 @@
 
         container.innerHTML = `
             <div class="lmd-pos-pantalla" id="pantalla-pago">
+                ${stepsHtml(state.pantalla)}
                 <button class="lmd-pos-btn-atras" onclick="pos.irAPantalla('productos')">← Volver a productos</button>
                 <h2 class="lmd-pos-titulo">Pago</h2>
                 <div class="lmd-pos-pago-total">${formatMoney(total)}</div>
@@ -457,6 +473,11 @@
                     toast.show('Error: ' + e.message, 'error');
                     return;
                 }
+            }
+            const card = document.querySelector(`.lmd-pos-producto-card[onclick*="${productoId}"]`);
+            if (card) {
+                card.classList.add('lmd-pos-producto-card--added');
+                setTimeout(() => card.classList.remove('lmd-pos-producto-card--added'), 300);
             }
             renderPantallaProductos();
             persistState();
@@ -654,6 +675,19 @@
             else if (state.pantalla === 'pago') renderPantallaPago();
         } else {
             renderPantallaMesa();
+        }
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            if (state.pantalla === 'productos') pos.irAPantalla('mesa');
+            else if (state.pantalla === 'pago') pos.irAPantalla('productos');
+        }
+        if (e.ctrlKey && e.key === 'Enter') {
+            if (state.pantalla === 'pago') pos.pagarEfectivo();
+        }
+        if (e.ctrlKey && e.key === 'e') {
+            if (state.pantalla === 'productos' && state.pedidoActual) pos.enviarACocina();
         }
     });
 })();
