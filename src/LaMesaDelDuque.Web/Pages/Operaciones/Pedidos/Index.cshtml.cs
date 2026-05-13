@@ -317,6 +317,35 @@ public class IndexModel : PageModel
         catch (Exception ex) { return BadRequest(ex.Message); }
     }
 
+    public async Task<IActionResult> OnGetEstadoMesasJsonAsync()
+    {
+        try
+        {
+            var mesas = await _mesasServicio.ListarMesasAsync();
+            var pedidos = await _pedidosServicio.ListarPedidosActivosAsync();
+
+            var resultado = mesas.Where(m => m.Activa).Select(m =>
+            {
+                var pedidosMesa = pedidos.Where(p => p.MesaId == m.Id).ToList();
+                return new
+                {
+                    m.Id,
+                    m.Numero,
+                    m.Capacidad,
+                    m.Estado,
+                    pedidosActivos = new
+                    {
+                        count = pedidosMesa.Count,
+                        total = pedidosMesa.Sum(p => p.Total)
+                    }
+                };
+            });
+
+            return new JsonResult(resultado);
+        }
+        catch (Exception ex) { return BadRequest(ex.Message); }
+    }
+
     public async Task<IActionResult> OnPostPagarConPropinaJsonAsync(Guid pedidoId, decimal efectivoRecibido, decimal propina)
     {
         try

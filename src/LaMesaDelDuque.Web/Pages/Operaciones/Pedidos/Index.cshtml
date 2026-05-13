@@ -21,7 +21,13 @@
 
 <script>
     window.__lmdMesasDisponibles = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
-        Model.Vm.MesasDisponibles.Select(m => new { m.Id, m.Numero, m.Capacidad, m.Estado })));
+        Model.Vm.MesasDisponibles.Select(m => new {
+            m.Id, m.Numero, m.Capacidad, m.Estado,
+            pedidosActivos = Model.Vm.PedidosActivos
+                .Where(p => p.MesaId == m.Id)
+                .Select(p => new { p.Total })
+                .ToList()
+        })));
 
     window.__lmdProductosDisponibles = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
         Model.Vm.ProductosDisponibles.Select(p => new { p.Id, p.Nombre, p.Precio, p.CategoriaNombre, p.TiempoPreparacionMin })));

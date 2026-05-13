@@ -827,10 +827,10 @@ h1, h2, h3, h4, h5, h6 {
     font-family: var(--lmd-fuente-cuerpo);
 }
 
-.lmd-mesa-card--disponible { border-top-color: #1f5f3d; }
-.lmd-mesa-card--ocupada { border-top-color: #8e6f1a; }
-.lmd-mesa-card--reservada { border-top-color: #2a568a; }
-.lmd-mesa-card--mantenimiento { border-top-color: #a34f38; }
+.lmd-mesa-card--disponible { border-top-color: #1f5f3d; border-left-color: #28a745; }
+.lmd-mesa-card--ocupada { border-top-color: #8e6f1a; border-left-color: #ffc107; }
+.lmd-mesa-card--reservada { border-top-color: #2a568a; border-left-color: #17a2b8; }
+.lmd-mesa-card--mantenimiento { border-top-color: #a34f38; border-left-color: #6c757d; opacity: 0.6; pointer-events: none; }
 .lmd-mesa-card--inactiva { border-top-color: #6b6f76; }
 
 /* ═══════════════════════════════════════════════════════
@@ -988,6 +988,19 @@ h1, h2, h3, h4, h5, h6 {
     font-size: 0.8125rem;
     color: var(--lmd-gris-piedra);
     font-weight: 600;
+}
+
+.lmd-mesa-card__cuenta {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--lmd-terracota);
+    margin-top: 0.25rem;
+}
+
+.lmd-mesa-card__tiempo {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    color: var(--lmd-gris-piedra);
 }
 
 /* Continuar */

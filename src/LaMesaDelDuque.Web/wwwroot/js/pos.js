@@ -180,13 +180,34 @@
         const container = document.getElementById('lmd-pos-contenido');
         if (!container) return;
 
+        const estadoClase = {
+            'Disponible': 'lmd-mesa-card--disponible',
+            'Ocupada': 'lmd-mesa-card--ocupada',
+            'Reservada': 'lmd-mesa-card--reservada',
+            'EnMantenimiento': 'lmd-mesa-card--mantenimiento'
+        };
+
         const mesasHtml = window.__lmdMesasDisponibles
-            .map(m => `
-                <button class="lmd-mesa-card ${state.mesaId === m.id ? 'lmd-mesa-card--selected' : ''}"
-                        data-mesa-id="${m.id}" onclick="pos.seleccionarMesa('${m.id}')">
+            .map(m => {
+                const claseEstado = estadoClase[m.estado] || '';
+                const esDisponible = m.estado === 'Disponible';
+                const esOcupada = m.estado === 'Ocupada';
+                const pedidoInfo = esOcupada && m.pedidosActivos && m.pedidosActivos.length > 0
+                    ? `<span class="lmd-mesa-card__cuenta">$${m.pedidosActivos.reduce((s, p) => s + p.total, 0).toFixed(2)}</span>`
+                    : '';
+                const clickHandler = esDisponible
+                    ? `onclick="pos.seleccionarMesa('${m.id}')"`
+                    : esOcupada
+                        ? `onclick="pos.verCuentaMesa('${m.id}')"`
+                        : '';
+                return `
+                <button class="lmd-mesa-card ${claseEstado} ${state.mesaId === m.id ? 'lmd-mesa-card--selected' : ''}"
+                        data-mesa-id="${m.id}" ${clickHandler} ${!esDisponible && !esOcupada ? 'disabled' : ''}>
                     <span class="lmd-mesa-card__numero">${m.numero}</span>
                     <span class="lmd-mesa-card__capacidad">${m.capacidad}p</span>
-                </button>`)
+                    ${pedidoInfo}
+                </button>`;
+            })
             .join('');
 
         container.innerHTML = `
@@ -359,6 +380,16 @@
             state.mesaId = state.mesaId === id ? null : id;
             renderPantallaMesa();
             persistState();
+        },
+
+        verCuentaMesa(id) {
+            const mesa = window.__lmdMesasDisponibles.find(m => m.id === id);
+            if (!mesa || !mesa.pedidosActivos || mesa.pedidosActivos.length === 0) {
+                toast.show('No hay pedidos activos en esta mesa.', 'info');
+                return;
+            }
+            const total = mesa.pedidosActivos.reduce((s, p) => s + p.total, 0);
+            toast.show(`Mesa ${mesa.numero}: ${mesa.pedidosActivos.length} pedido(s). Total: ${formatMoney(total)}`, 'info');
         },
 
         irAPantalla(pantalla) {
