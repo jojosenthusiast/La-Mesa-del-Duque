@@ -1,3 +1,4 @@
+using LaMesaDelDuque.Aplicacion.Dtos;
 using LaMesaDelDuque.Aplicacion.Notificaciones;
 using LaMesaDelDuque.Dominio.Enumeraciones;
 using LaMesaDelDuque.Web.Hubs;
@@ -25,6 +26,15 @@ public sealed class SignalRNotificadorPedidos : INotificadorPedidos
     public Task NotificarPedidoCanceladoAsync(Guid pedidoId, CancellationToken cancelacion = default) =>
         EnviarAsync(new { tipo = "PedidoCancelado", pedidoId }, cancelacion);
 
+    public Task NotificarOrdenCocinaAsync(string estacion, OrdenCocinaDto dto, CancellationToken cancelacion = default) =>
+        EnviarAGrupoAsync($"cocina-{estacion}", "NuevaOrden", dto, cancelacion);
+
+    public Task NotificarItemListoAsync(string estacion, Guid ordenId, CancellationToken cancelacion = default) =>
+        EnviarAGrupoAsync($"cocina-{estacion}", "ItemListo", ordenId, cancelacion);
+
+    public Task NotificarItemRecuperadoAsync(string estacion, OrdenCocinaDto dto, CancellationToken cancelacion = default) =>
+        EnviarAGrupoAsync($"cocina-{estacion}", "ItemRecuperado", dto, cancelacion);
+
     private async Task EnviarAsync(object payload, CancellationToken cancelacion)
     {
         try
@@ -34,6 +44,18 @@ public sealed class SignalRNotificadorPedidos : INotificadorPedidos
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "No se pudo emitir notificación de pedido por SignalR.");
+        }
+    }
+
+    private async Task EnviarAGrupoAsync(string groupName, string methodName, object payload, CancellationToken cancelacion)
+    {
+        try
+        {
+            await _hub.Clients.Group(groupName).SendAsync(methodName, payload, cancelacion);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "No se pudo emitir notificación de cocina por SignalR al grupo {GroupName}.", groupName);
         }
     }
 }

@@ -11,6 +11,7 @@ public interface IUnidadDeTrabajo
     IRolRepositorio Roles { get; }
     IUsuarioRepositorio Usuarios { get; }
     IAuditoriaRepositorio Auditorias { get; }
+    IOrdenCocinaRepositorio OrdenesCocina { get; }
 
     Task<int> GuardarCambiosAsync(CancellationToken cancelacion = default);
 }
