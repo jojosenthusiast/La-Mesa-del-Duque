@@ -27,6 +27,9 @@
         Model.Vm.ProductosDisponibles.Select(p => new { p.Id, p.Nombre, p.Precio, p.CategoriaNombre, p.TiempoPreparacionMin, p.ImagenUrl }), jsonOpts));
 </script>
 
+<div id="lmd-toast-zone"></div>
+<div id="lmd-modal-host"></div>
+
 @section Scripts {
     <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.7/signalr.min.js"
             integrity="sha512-7SRCYIJ8cT6+S4fuC1t7F/LPLoWvMhX7Oxf2N3Qu5jVoYW/P73eBEb0lHNPD0sSR9Cpsu+TtKz9vg8WYkJDtIw=="

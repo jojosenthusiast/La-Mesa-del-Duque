@@ -135,6 +135,36 @@
         return el ? el.value : '';
     }
 
+    // ── Toast notifications ─────────────────────────────────
+    const toast = {
+        show(message, type = 'error', duration = 4000) {
+            const container = document.getElementById('lmd-toast-zone') || (() => {
+                const div = document.createElement('div'); div.id = 'lmd-toast-zone';
+                document.body.appendChild(div); return div;
+            })();
+            const el = document.createElement('div');
+            el.className = `lmd-toast lmd-toast--${type}`;
+            el.textContent = message;
+            container.appendChild(el);
+            setTimeout(() => { el.classList.add('lmd-toast--out'); setTimeout(() => el.remove(), 300); }, duration);
+        }
+    };
+
+    function modalConfirm(message) {
+        return new Promise(resolve => {
+            const overlay = document.createElement('div'); overlay.className = 'lmd-modal-overlay';
+            const modal = document.createElement('div'); modal.className = 'lmd-modal';
+            modal.innerHTML = `<p>${message}</p>
+                <div class="lmd-modal-actions">
+                    <button class="lmd-pos-btn-cancelar" id="modal-no">Cancelar</button>
+                    <button class="lmd-pos-btn-primario" id="modal-si">Confirmar</button>
+                </div>`;
+            overlay.appendChild(modal); document.body.appendChild(overlay);
+            document.getElementById('modal-si').onclick = () => { overlay.remove(); resolve(true); };
+            document.getElementById('modal-no').onclick = () => { overlay.remove(); resolve(false); };
+        });
+    }
+
     // ── SignalR ─────────────────────────────────────────────
     let connection = null;
 
@@ -584,7 +614,7 @@
                     }];
                     await joinPedidoGroup(state.pedidoActual.id);
                 } catch (e) {
-                    alert('Error al crear pedido: ' + e.message);
+                    toast.show('Error al crear pedido: ' + e.message, 'error');
                     return;
                 }
             } else {
@@ -606,7 +636,7 @@
                         });
                     }
                 } catch (e) {
-                    alert('Error: ' + e.message);
+                    toast.show('Error: ' + e.message, 'error');
                     return;
                 }
             }
@@ -623,11 +653,11 @@
                 linea.cantidad = nuevaCantidad;
                 linea.subtotal = nuevaCantidad * linea.precioUnitario;
                 renderPantallaProductos();
-            } catch (e) { alert('Error: ' + e.message); }
+            } catch (e) { toast.show('Error: ' + e.message, 'error'); }
         },
 
         async eliminarLinea(lineaId) {
-            if (!state.pedidoActual || !confirm('¿Quitar este producto?')) return;
+            if (!state.pedidoActual || !await modalConfirm('¿Quitar este producto?')) return;
             try {
                 await api.eliminar(state.pedidoActual.id, lineaId);
                 state.lineas = state.lineas.filter(l => l.id !== lineaId);
@@ -635,7 +665,7 @@
                     state.pedidoActual = null;
                 }
                 renderPantallaProductos();
-            } catch (e) { alert('Error: ' + e.message); }
+            } catch (e) { toast.show('Error: ' + e.message, 'error'); }
         },
 
         calcularCambio() {
@@ -670,10 +700,10 @@
                 state.lineas = [];
                 state.cuentas = [];
                 state.mesaId = null;
-                alert(`✅ ${result.mensaje || 'Pedido pagado.'}`);
+                toast.show(result.mensaje || 'Pedido pagado.', 'success');
                 state.pantalla = 'mesa';
                 renderPantallaMesa();
-            } catch (e) { alert('Error: ' + e.message); }
+            } catch (e) { toast.show('Error: ' + e.message, 'error'); }
         },
 
         async pagarConTarjeta() {
@@ -685,10 +715,10 @@
                 state.lineas = [];
                 state.cuentas = [];
                 state.mesaId = null;
-                alert('✅ Pedido pagado con tarjeta.');
+                toast.show('Pedido pagado con tarjeta.', 'success');
                 state.pantalla = 'mesa';
                 renderPantallaMesa();
-            } catch (e) { alert('Error: ' + e.message); }
+            } catch (e) { toast.show('Error: ' + e.message, 'error'); }
         },
 
         cambiarModoSplit(modo) {
@@ -757,7 +787,7 @@
                 }));
 
             if (asignaciones.length < 2) {
-                alert('Asigne items al menos a 2 cuentas.');
+                toast.show('Asigne items al menos a 2 cuentas.', 'error');
                 return;
             }
 
@@ -772,7 +802,7 @@
                 state.splitAsignaciones = {};
                 await joinPedidoGroup(state.pedidoActual.id);
                 renderPantallaPago();
-            } catch (e) { alert('Error al crear cuentas: ' + e.message); }
+            } catch (e) { toast.show('Error al crear cuentas: ' + e.message, 'error'); }
         },
 
         async crearCuentas(cantidad) {
@@ -787,7 +817,7 @@
                 }));
                 await joinPedidoGroup(state.pedidoActual.id);
                 renderPantallaPago();
-            } catch (e) { alert('Error al crear cuentas: ' + e.message); }
+            } catch (e) { toast.show('Error al crear cuentas: ' + e.message, 'error'); }
         },
 
         seleccionarMetodo(cuentaId, metodo) {
@@ -836,11 +866,11 @@
                         renderPantallaMesa();
                     }, 3000);
                 }
-            } catch (e) { alert('Error al pagar cuenta: ' + e.message); }
+            } catch (e) { toast.show('Error al pagar cuenta: ' + e.message, 'error'); }
         },
 
         async cancelarPedido() {
-            if (!state.pedidoActual || !confirm('¿Cancelar este pedido?')) return;
+            if (!state.pedidoActual || !await modalConfirm('¿Cancelar este pedido?')) return;
             try {
                 await api.cambiarEstado(state.pedidoActual.id, 'Cancelar');
                 await leavePedidoGroup();
@@ -850,15 +880,15 @@
                 state.mesaId = null;
                 state.pantalla = 'mesa';
                 renderPantallaMesa();
-            } catch (e) { alert('Error: ' + e.message); }
+            } catch (e) { toast.show('Error: ' + e.message, 'error'); }
         },
 
         async marcarEnPreparacion() {
             if (!state.pedidoActual) return;
             try {
                 await api.cambiarEstado(state.pedidoActual.id, 'MarcarEnPreparacion');
-                alert('✅ Pedido marcado en preparación.');
-            } catch (e) { alert('Error: ' + e.message); }
+                toast.show('Pedido marcado en preparación.', 'success');
+            } catch (e) { toast.show('Error: ' + e.message, 'error'); }
         },
 
         nuevoPedido() {
