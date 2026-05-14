@@ -4,12 +4,14 @@ using LaMesaDelDuque.Dominio.Enumeraciones;
 using LaMesaDelDuque.Dominio.Excepciones;
 using LaMesaDelDuque.Web.Hubs;
 using LaMesaDelDuque.Web.Models.Operaciones;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.SignalR;
 
 namespace LaMesaDelDuque.Web.Pages.Operaciones.Pedidos;
 
+[Authorize(Roles = "Administrador,Encargado,Mesero")]
 public class IndexModel : PageModel
 {
     private readonly IPedidosServicio _pedidosServicio;
