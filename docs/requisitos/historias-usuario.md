@@ -112,14 +112,14 @@ Este documento describe las historias de usuario (HU) que definen los requisitos
 
 | HU    | Título                          | Sprint | Estado       |
 |-------|---------------------------------|--------|--------------|
-| HU-001| Registrar pedido (POS)          | 1      | En desarrollo |
-| HU-002| Modificar pedido no pagado      | 1      | En desarrollo |
-| HU-003| Eliminar pedido pendiente       | 1      | En desarrollo |
-| HU-011| Gestionar productos             | 1      | En desarrollo |
-| HU-014| Recetas de productos            | 1      | En desarrollo |
-| HU-016| Gestión de mesas                | 1      | En desarrollo |
-| HU-021| Gestión de usuarios y roles     | 1      | En desarrollo |
-| HU-025| Login, RBAC, CSRF               | 1      | En desarrollo |
+| HU-001| Registrar pedido (POS)          | 1      | Implementado   |
+| HU-002| Modificar pedido no pagado      | 1      | Implementado   |
+| HU-003| Eliminar pedido pendiente       | 1      | Implementado   |
+| HU-011| Gestionar productos             | 1      | Implementado   |
+| HU-014| Recetas de productos            | 1      | Implementado   |
+| HU-016| Gestión de mesas                | 1      | Implementado   |
+| HU-021| Gestión de usuarios y roles     | 1      | Implementado   |
+| HU-025| Login, RBAC, CSRF               | 1      | Implementado   |
 
 ---
 
