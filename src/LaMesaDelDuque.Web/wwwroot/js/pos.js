@@ -83,21 +83,94 @@
 
     // ── Offline Queue (IndexedDB) ───────────────────────────
     const DB_NAME = 'LMDD-Offline';
-    const DB_VERSION = 1;
+    const DB_VERSION = 2;
     const STORE_PEDIDOS = 'pedidosPendientes';
+    const STORE_PAGOS = 'pagosPendientes';
 
     function openDB() {
         return new Promise((resolve, reject) => {
             const req = indexedDB.open(DB_NAME, DB_VERSION);
-            req.onupgradeneeded = () => {
+            req.onupgradeneeded = (e) => {
                 const db = req.result;
                 if (!db.objectStoreNames.contains(STORE_PEDIDOS)) {
                     db.createObjectStore(STORE_PEDIDOS, { keyPath: 'id' });
+                }
+                if (!db.objectStoreNames.contains(STORE_PAGOS)) {
+                    db.createObjectStore(STORE_PAGOS, { keyPath: 'id' });
+                }
+                // Migration from v1 to v2: ensure pagos store exists
+                if (e.oldVersion < 2 && !db.objectStoreNames.contains(STORE_PAGOS)) {
+                    db.createObjectStore(STORE_PAGOS, { keyPath: 'id' });
                 }
             };
             req.onsuccess = () => resolve(req.result);
             req.onerror = () => reject(req.error);
         });
+    }
+
+    async function queuePayment(datos) {
+        const db = await openDB();
+        return new Promise((resolve, reject) => {
+            const tx = db.transaction(STORE_PAGOS, 'readwrite');
+            const store = tx.objectStore(STORE_PAGOS);
+            const item = {
+                id: crypto.randomUUID(),
+                timestamp: Date.now(),
+                ...datos
+            };
+            const req = store.add(item);
+            req.onsuccess = () => resolve(item.id);
+            req.onerror = () => reject(req.error);
+        });
+    }
+
+    async function obtenerPagosPendientes() {
+        const db = await openDB();
+        return new Promise((resolve, reject) => {
+            const tx = db.transaction(STORE_PAGOS, 'readonly');
+            const store = tx.objectStore(STORE_PAGOS);
+            const req = store.getAll();
+            req.onsuccess = () => resolve(req.result || []);
+            req.onerror = () => reject(req.error);
+        });
+    }
+
+    async function eliminarPagoPendiente(id) {
+        const db = await openDB();
+        return new Promise((resolve, reject) => {
+            const tx = db.transaction(STORE_PAGOS, 'readwrite');
+            const store = tx.objectStore(STORE_PAGOS);
+            const req = store.delete(id);
+            req.onsuccess = () => resolve();
+            req.onerror = () => reject(req.error);
+        });
+    }
+
+    async function sincronizarPagosPendientes() {
+        const pendientes = await obtenerPagosPendientes();
+        if (pendientes.length === 0) return;
+
+        let sincronizados = 0;
+        for (const pago of pendientes.sort((a, b) => a.timestamp - b.timestamp)) {
+            try {
+                const form = new FormData();
+                form.append('__RequestVerificationToken', csrfToken());
+                form.append('pedidoId', pago.pedidoId);
+                form.append('efectivoRecibido', pago.amount);
+
+                const res = await fetch('?handler=PagarEfectivoJson', { method: 'POST', body: form, headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+                if (!res.ok) throw new Error(await res.text());
+                await eliminarPagoPendiente(pago.id);
+                sincronizados++;
+            } catch (e) {
+                console.error('Sync failed for pago:', pago.id, e);
+                break;
+            }
+        }
+
+        if (sincronizados > 0) {
+            mostrarToastOffline('Sincronizados ' + sincronizados + ' pago' + (sincronizados === 1 ? '' : 's') + ' pendientes.');
+        }
     }
 
     async function guardarPedidoPendiente(datos) {
@@ -218,12 +291,45 @@
         actualizarOfflineUI();
         mostrarToastOffline('Conexión restaurada. Sincronizando...');
         sincronizarPendientes();
+        sincronizarPagosPendientes();
     });
 
     window.addEventListener('offline', () => {
         actualizarOfflineUI();
         mostrarToastOffline('Sin conexión. Los pedidos se guardan localmente.');
     });
+
+    // ── SignalR (POS) ───────────────────────────────────────
+    let posConnection = null;
+    async function iniciarSignalRPOS() {
+        if (!window.signalR) return;
+        posConnection = new signalR.HubConnectionBuilder()
+            .withUrl('/hubs/pedidos')
+            .withAutomaticReconnect()
+            .build();
+
+        posConnection.on('ProductoAgotado', (productoId) => {
+            const card = document.querySelector(`.lmd-pos-producto-card[data-id="${productoId}"]`);
+            if (card) {
+                card.classList.add('lmd-pos-producto-card--agotado');
+                card.disabled = true;
+            }
+        });
+
+        posConnection.on('ProductoReactivado', (productoId) => {
+            const card = document.querySelector(`.lmd-pos-producto-card[data-id="${productoId}"]`);
+            if (card) {
+                card.classList.remove('lmd-pos-producto-card--agotado');
+                card.disabled = false;
+            }
+        });
+
+        try {
+            await posConnection.start();
+        } catch (e) {
+            console.warn('SignalR POS start failed', e);
+        }
+    }
 
     // ── Estado POS ──────────────────────────────────────────
     const state = {
@@ -241,7 +347,8 @@
         ingredientes: [], // { id, nombre, cantidadRequerida, unidadMedida, quitado, motivo, ingredienteReemplazo }
         alergias: [],     // ['mani', 'lacteos']
         extras: [],       // ['queso extra', 'tocino']
-        notaCustom: ''
+        notaCustom: '',
+        curso: 'PlatoFuerte'
     };
 
     function formatMoney(n) {
@@ -342,6 +449,15 @@
         const overlay = document.getElementById('lmd-modificador-overlay');
         if (!overlay) return;
 
+        const cursoHtml = `
+            <div class="lmd-modificador-curso">
+                <span>Curso:</span>
+                <button class="${modificadores.curso === 'Entrada' ? 'activo' : ''}" onclick="pos.setCurso('Entrada')">🥗 Entrada</button>
+                <button class="${modificadores.curso === 'PlatoFuerte' ? 'activo' : ''}" onclick="pos.setCurso('PlatoFuerte')">🍖 Plato fuerte</button>
+                <button class="${modificadores.curso === 'Postre' ? 'activo' : ''}" onclick="pos.setCurso('Postre')">🍰 Postre</button>
+            </div>
+        `;
+
         const ingredientesHtml = modificadores.ingredientes.map(ing => `
             <div class="lmd-modificador-item" id="mod-ing-${ing.id}">
                 <span class="lmd-modificador-item-nombre">
@@ -376,6 +492,8 @@
                     <h3>${modificadores.productoNombre}</h3>
                     <button class="lmd-modificador-cerrar" onclick="pos.cerrarModificadores()">✕</button>
                 </div>
+
+                ${cursoHtml}
 
                 <div class="lmd-modificador-alergias">
                     <h4>⚠ Alergias rápidas</h4>
@@ -472,7 +590,7 @@
         const allProductCards = Object.entries(categorias).map(([cat, prods]) =>
             prods.map(p => `
                 <div class="lmd-pos-producto-card-wrapper" data-categoria="${cat.replace(/'/g, "\\'")}">
-                    <button class="lmd-pos-producto-card"
+                    <button class="lmd-pos-producto-card" data-id="${p.id}"
                             onclick="pos.agregarProducto('${p.id}')">
                         <div class="lmd-pos-producto-card__nombre">${p.nombre}</div>
                         <div class="lmd-pos-producto-card__precio">${formatMoney(p.precio)}</div>
@@ -746,6 +864,12 @@
             modificadores.alergias = [];
             modificadores.extras = [];
             modificadores.notaCustom = '';
+            modificadores.curso = 'PlatoFuerte';
+        },
+
+        setCurso(curso) {
+            modificadores.curso = curso;
+            renderModificadorModal();
         },
 
         toggleQuitar(ingredienteId) {
@@ -828,6 +952,17 @@
                     ingredienteNombre: extra,
                     accion: 'extra',
                     motivo: 'preferencia',
+                    ingredienteReemplazo: null
+                });
+            }
+
+            // Add curso
+            if (modificadores.curso) {
+                modificaciones.push({
+                    ingredienteId: '00000000-0000-0000-0000-000000000001',
+                    ingredienteNombre: modificadores.curso,
+                    accion: 'curso',
+                    motivo: 'curso',
                     ingredienteReemplazo: null
                 });
             }
@@ -925,8 +1060,15 @@
             const input = document.getElementById('efectivo-input');
             const efectivo = parseFloat(input?.value || 0);
             if (!state.pedidoActual || efectivo <= 0) return;
+            const total = state.lineas.reduce((s, l) => s + l.subtotal, 0);
             if (!navigator.onLine || state.pedidoActual.isLocal) {
-                alert('No se puede pagar en modo offline. Conecte a internet para procesar el pago.');
+                await queuePayment({ pedidoId: state.pedidoActual.id, method: 'Efectivo', amount: efectivo, tip: efectivo - total, timestamp: Date.now() });
+                mostrarToastOffline('Pago guardado. Se procesará al restaurar conexión.');
+                state.pedidoActual = null;
+                state.lineas = [];
+                state.mesaId = null;
+                state.pantalla = 'mesa';
+                renderPantallaMesa();
                 return;
             }
             try {
@@ -942,8 +1084,15 @@
 
         async pagarConTarjeta() {
             if (!state.pedidoActual) return;
+            const total = state.lineas.reduce((s, l) => s + l.subtotal, 0);
             if (!navigator.onLine || state.pedidoActual.isLocal) {
-                alert('No se puede pagar en modo offline. Conecte a internet para procesar el pago.');
+                await queuePayment({ pedidoId: state.pedidoActual.id, method: 'Tarjeta', amount: total, tip: 0, timestamp: Date.now() });
+                mostrarToastOffline('Pago guardado. Se procesará al restaurar conexión.');
+                state.pedidoActual = null;
+                state.lineas = [];
+                state.mesaId = null;
+                state.pantalla = 'mesa';
+                renderPantallaMesa();
                 return;
             }
             try {
@@ -998,5 +1147,6 @@
     document.addEventListener('DOMContentLoaded', () => {
         renderPantallaMesa();
         actualizarOfflineUI();
+        iniciarSignalRPOS();
     });
 })();
