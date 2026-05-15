@@ -2,33 +2,29 @@ using LaMesaDelDuque.Aplicacion.Dtos;
 using LaMesaDelDuque.Aplicacion.Servicios;
 using LaMesaDelDuque.Dominio.Enumeraciones;
 using LaMesaDelDuque.Dominio.Excepciones;
-using LaMesaDelDuque.Web.Hubs;
 using LaMesaDelDuque.Web.Models.Operaciones;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using Microsoft.AspNetCore.SignalR;
 
 namespace LaMesaDelDuque.Web.Pages.Operaciones.Pedidos;
 
-[Authorize(Roles = "Administrador,Encargado,Mesero")]
 public class IndexModel : PageModel
 {
     private readonly IPedidosServicio _pedidosServicio;
     private readonly ICatalogoProductosServicio _catalogoProductosServicio;
     private readonly IMesasServicio _mesasServicio;
-    private readonly IHubContext<PedidosHub> _hubContext;
+    private readonly IRecetasProductosServicio _recetasProductosServicio;
 
     public IndexModel(
         IPedidosServicio pedidosServicio,
         ICatalogoProductosServicio catalogoProductosServicio,
         IMesasServicio mesasServicio,
-        IHubContext<PedidosHub> hubContext)
+        IRecetasProductosServicio recetasProductosServicio)
     {
         _pedidosServicio = pedidosServicio;
         _catalogoProductosServicio = catalogoProductosServicio;
         _mesasServicio = mesasServicio;
-        _hubContext = hubContext;
+        _recetasProductosServicio = recetasProductosServicio;
     }
 
     [BindProperty(SupportsGet = true)]
@@ -85,7 +81,8 @@ public class IndexModel : PageModel
             {
                 ProductoId = linea.ProductoId,
                 Cantidad = linea.Cantidad,
-                PrecioUnitario = producto.Precio
+                PrecioUnitario = producto.Precio,
+                Notas = linea.Notas
             });
         }
 
@@ -112,14 +109,14 @@ public class IndexModel : PageModel
     }
 
     // ── Agregar / actualizar / eliminar línea ─────────────────
-    public async Task<IActionResult> OnPostAgregarLineaAsync(Guid pedidoId, Guid productoId, int cantidad, decimal precioUnitario)
+    public async Task<IActionResult> OnPostAgregarLineaAsync(Guid pedidoId, Guid productoId, int cantidad, decimal precioUnitario, string? notas = null)
         => await EjecutarAccionPedidoAsync(async () =>
         {
             var producto = (await _catalogoProductosServicio.ListarProductosAsync())
                 .FirstOrDefault(p => p.Id == productoId && p.Activo)
                 ?? throw new ArgumentException("Debe seleccionar un producto activo válido.", nameof(productoId));
 
-            await _pedidosServicio.AgregarDetalleAsync(pedidoId, productoId, cantidad, producto.Precio);
+            await _pedidosServicio.AgregarDetalleAsync(pedidoId, productoId, cantidad, producto.Precio, notas);
             ToastSuccess = "Línea agregada.";
             return RedirectToPage(new { PedidoActualId = pedidoId });
         });
@@ -240,6 +237,25 @@ public class IndexModel : PageModel
         });
 
     // ── JSON handlers para SPA (AJAX, sin recarga) ───────────
+    public async Task<IActionResult> OnGetIngredientesProductoJsonAsync(Guid productoId)
+    {
+        var receta = await _recetasProductosServicio.ObtenerPorProductoIdAsync(productoId);
+        if (receta is null)
+        {
+            return new JsonResult(new { productoId, productoNombre = (string?)null, ingredientes = Array.Empty<object>() });
+        }
+
+        var ingredientes = receta.Ingredientes.Select(i => new
+        {
+            id = i.IngredienteId,
+            nombre = i.IngredienteNombre,
+            cantidadRequerida = i.CantidadRequerida,
+            unidadMedida = "unidad" // El DTO actual no expone unidad; se mejora en evolución
+        }).ToList();
+
+        return new JsonResult(new { productoId, productoNombre = receta.ProductoNombre, ingredientes });
+    }
+
     public async Task<IActionResult> OnPostCrearJsonAsync()
     {
         if (Vm.CrearPedido.Lineas.Count == 0 || Vm.CrearPedido.Lineas[0].ProductoId == Guid.Empty)
@@ -254,7 +270,7 @@ public class IndexModel : PageModel
         foreach (var l in Vm.CrearPedido.Lineas)
         {
             if (!prods.TryGetValue(l.ProductoId, out var prod)) return BadRequest("Producto inválido.");
-            detalles.Add(new DetalleCreacionDto { ProductoId = l.ProductoId, Cantidad = l.Cantidad, PrecioUnitario = prod.Precio });
+            detalles.Add(new DetalleCreacionDto { ProductoId = l.ProductoId, Cantidad = l.Cantidad, PrecioUnitario = prod.Precio, Notas = l.Notas, ModificacionesJson = l.ModificacionesJson });
         }
 
         try
@@ -265,14 +281,14 @@ public class IndexModel : PageModel
         catch (Exception ex) { return BadRequest(ex.Message); }
     }
 
-    public async Task<IActionResult> OnPostAgregarLineaJsonAsync(Guid pedidoId, Guid productoId, int cantidad)
+    public async Task<IActionResult> OnPostAgregarLineaJsonAsync(Guid pedidoId, Guid productoId, int cantidad, string? notas = null, string? modificacionesJson = null)
     {
         try
         {
             var prods = await _catalogoProductosServicio.ListarProductosAsync();
             var prod = prods.FirstOrDefault(p => p.Id == productoId && p.Activo)
                 ?? throw new ArgumentException("Producto no encontrado.");
-            await _pedidosServicio.AgregarDetalleAsync(pedidoId, productoId, cantidad, prod.Precio);
+            await _pedidosServicio.AgregarDetalleAsync(pedidoId, productoId, cantidad, prod.Precio, notas, modificacionesJson);
             return new JsonResult(new { ok = true });
         }
         catch (Exception ex) { return BadRequest(ex.Message); }
@@ -312,76 +328,6 @@ public class IndexModel : PageModel
             await _pedidosServicio.PagarPedidoAsync(pedidoId);
             var cambio = efectivoRecibido - pedido.Total;
             return new JsonResult(new { ok = true, mensaje = cambio > 0 ? $"Pedido pagado. Cambio: ${cambio:F2}" : "Pedido pagado correctamente." });
-        }
-        catch (Exception ex) { return BadRequest(ex.Message); }
-    }
-
-    // ── Cuentas y pago dividido (JSON) ────────────────────────
-
-    public async Task<IActionResult> OnPostMarcarEnCobroJsonAsync(Guid pedidoId)
-    {
-        try
-        {
-            await _pedidosServicio.MarcarEnCobroAsync(pedidoId);
-            await _hubContext.Clients.Group($"pedido-{pedidoId}").SendAsync("EstadoCambiado", pedidoId, "EnCobro");
-            return new JsonResult(new { ok = true });
-        }
-        catch (Exception ex) { return BadRequest(ex.Message); }
-    }
-
-    public async Task<IActionResult> OnPostCrearCuentasJsonAsync(Guid pedidoId, int cantidad)
-    {
-        try
-        {
-            var cuentas = await _pedidosServicio.CrearCuentasAsync(pedidoId, cantidad);
-            await _hubContext.Clients.Group($"pedido-{pedidoId}").SendAsync("CuentasCreadas", pedidoId, cuentas);
-            return new JsonResult(cuentas);
-        }
-        catch (Exception ex) { return BadRequest(ex.Message); }
-    }
-
-    public async Task<IActionResult> OnPostCrearCuentasConItemsJsonAsync([FromBody] CrearCuentasConItemsRequest request)
-    {
-        try
-        {
-            if (request?.Asignaciones == null || request.Asignaciones.Count < 2)
-                return BadRequest("Se requieren al menos 2 cuentas.");
-
-            if (request.PedidoId == Guid.Empty)
-                return BadRequest("El ID del pedido es requerido.");
-
-            var asignaciones = request.Asignaciones.ToDictionary(
-                a => a.CuentaNumero,
-                a => a.Items.Select(i => (i.DetalleId, i.Cantidad)).ToList()
-            );
-
-            var cuentas = await _pedidosServicio.CrearCuentasConItemsAsync(request.PedidoId, asignaciones);
-            await _hubContext.Clients.Group($"pedido-{request.PedidoId}").SendAsync("CuentasCreadas", request.PedidoId, cuentas);
-            return new JsonResult(cuentas);
-        }
-        catch (Exception ex) { return BadRequest(ex.Message); }
-    }
-
-    public async Task<IActionResult> OnPostObtenerCuentasJsonAsync(Guid pedidoId)
-    {
-        try
-        {
-            var cuentas = await _pedidosServicio.ObtenerCuentasAsync(pedidoId);
-            return new JsonResult(cuentas);
-        }
-        catch (Exception ex) { return BadRequest(ex.Message); }
-    }
-
-    public async Task<IActionResult> OnPostPagarCuentaJsonAsync(Guid cuentaId, string metodoPago, decimal propinaMonto)
-    {
-        try
-        {
-            if (!Enum.TryParse<MetodoPago>(metodoPago, true, out var metodo))
-                return BadRequest("Método de pago inválido.");
-
-            var cuenta = await _pedidosServicio.PagarCuentaAsync(cuentaId, metodo, propinaMonto);
-            await _hubContext.Clients.Group($"pedido-{cuenta.PedidoId}").SendAsync("CuentaPagada", cuenta.Id, cuenta.PedidoId);
-            return new JsonResult(cuenta);
         }
         catch (Exception ex) { return BadRequest(ex.Message); }
     }

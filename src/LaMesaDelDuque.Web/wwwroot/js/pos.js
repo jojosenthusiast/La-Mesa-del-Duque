@@ -1,7 +1,6 @@
 /* ============================================================================
    La Mesa del Duque — POS Pedidos (SPA via fetch)
    Tarjetas táctiles, 3 pantallas, sin recargas de página.
-   Cuentas reales + SignalR concurrente + Split por items.
    ============================================================================ */
 
 (function () {
@@ -16,6 +15,8 @@
                 form.append(`Vm.CrearPedido.Lineas[${i}].ProductoId`, l.productoId);
                 form.append(`Vm.CrearPedido.Lineas[${i}].Cantidad`, l.cantidad);
                 form.append(`Vm.CrearPedido.Lineas[${i}].PrecioUnitario`, '0');
+                if (l.notas) form.append(`Vm.CrearPedido.Lineas[${i}].Notas`, l.notas);
+                if (l.modificacionesJson) form.append(`Vm.CrearPedido.Lineas[${i}].ModificacionesJson`, l.modificacionesJson);
             });
 
             const res = await fetch('?handler=CrearJson', { method: 'POST', body: form, headers: { 'X-Requested-With': 'XMLHttpRequest' } });
@@ -23,12 +24,14 @@
             return res.json();
         },
 
-        async agregar(pedidoId, productoId, cantidad) {
+        async agregar(pedidoId, productoId, cantidad, notas, modificacionesJson) {
             const form = new FormData();
             form.append('__RequestVerificationToken', csrfToken());
             form.append('pedidoId', pedidoId);
             form.append('productoId', productoId);
             form.append('cantidad', cantidad);
+            if (notas) form.append('notas', notas);
+            if (modificacionesJson) form.append('modificacionesJson', modificacionesJson);
 
             const res = await fetch('?handler=AgregarLineaJson', { method: 'POST', body: form, headers: { 'X-Requested-With': 'XMLHttpRequest' } });
             if (!res.ok) throw new Error((await res.text()) || 'Error al agregar');
@@ -70,63 +73,6 @@
             form.append('pedidoId', pedidoId);
 
             await fetch(`?handler=${handler}`, { method: 'POST', body: form, headers: { 'X-Requested-With': 'XMLHttpRequest' } });
-        },
-
-        async marcarEnCobro(pedidoId) {
-            const form = new FormData();
-            form.append('__RequestVerificationToken', csrfToken());
-            form.append('pedidoId', pedidoId);
-
-            const res = await fetch('?handler=MarcarEnCobroJson', { method: 'POST', body: form, headers: { 'X-Requested-With': 'XMLHttpRequest' } });
-            if (!res.ok) throw new Error((await res.text()) || 'Error al marcar en cobro');
-            return res.json();
-        },
-
-        async crearCuentas(pedidoId, cantidad) {
-            const form = new FormData();
-            form.append('__RequestVerificationToken', csrfToken());
-            form.append('pedidoId', pedidoId);
-            form.append('cantidad', cantidad);
-
-            const res = await fetch('?handler=CrearCuentasJson', { method: 'POST', body: form, headers: { 'X-Requested-With': 'XMLHttpRequest' } });
-            if (!res.ok) throw new Error((await res.text()) || 'Error al crear cuentas');
-            return res.json();
-        },
-
-        async crearCuentasConItems(pedidoId, asignaciones) {
-            const res = await fetch('?handler=CrearCuentasConItemsJson', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'RequestVerificationToken': csrfToken(),
-                    'X-Requested-With': 'XMLHttpRequest'
-                },
-                body: JSON.stringify({ pedidoId, asignaciones })
-            });
-            if (!res.ok) throw new Error((await res.text()) || 'Error al crear cuentas por items');
-            return res.json();
-        },
-
-        async obtenerCuentas(pedidoId) {
-            const form = new FormData();
-            form.append('__RequestVerificationToken', csrfToken());
-            form.append('pedidoId', pedidoId);
-
-            const res = await fetch('?handler=ObtenerCuentasJson', { method: 'POST', body: form, headers: { 'X-Requested-With': 'XMLHttpRequest' } });
-            if (!res.ok) throw new Error((await res.text()) || 'Error al obtener cuentas');
-            return res.json();
-        },
-
-        async pagarCuenta(cuentaId, metodoPago, propinaMonto) {
-            const form = new FormData();
-            form.append('__RequestVerificationToken', csrfToken());
-            form.append('cuentaId', cuentaId);
-            form.append('metodoPago', metodoPago);
-            form.append('propinaMonto', propinaMonto);
-
-            const res = await fetch('?handler=PagarCuentaJson', { method: 'POST', body: form, headers: { 'X-Requested-With': 'XMLHttpRequest' } });
-            if (!res.ok) throw new Error((await res.text()) || 'Error al pagar cuenta');
-            return res.json();
         }
     };
 
@@ -135,123 +81,192 @@
         return el ? el.value : '';
     }
 
-    // ── Toast notifications ─────────────────────────────────
-    const toast = {
-        show(message, type = 'error', duration = 4000) {
-            const container = document.getElementById('lmd-toast-zone') || (() => {
-                const div = document.createElement('div'); div.id = 'lmd-toast-zone';
-                document.body.appendChild(div); return div;
-            })();
-            const el = document.createElement('div');
-            el.className = `lmd-toast lmd-toast--${type}`;
-            el.textContent = message;
-            container.appendChild(el);
-            setTimeout(() => { el.classList.add('lmd-toast--out'); setTimeout(() => el.remove(), 300); }, duration);
-        }
-    };
-
-    function modalConfirm(message) {
-        return new Promise(resolve => {
-            const overlay = document.createElement('div'); overlay.className = 'lmd-modal-overlay';
-            const modal = document.createElement('div'); modal.className = 'lmd-modal';
-            modal.innerHTML = `<p>${message}</p>
-                <div class="lmd-modal-actions">
-                    <button class="lmd-pos-btn-cancelar" id="modal-no">Cancelar</button>
-                    <button class="lmd-pos-btn-primario" id="modal-si">Confirmar</button>
-                </div>`;
-            overlay.appendChild(modal); document.body.appendChild(overlay);
-            document.getElementById('modal-si').onclick = () => { overlay.remove(); resolve(true); };
-            document.getElementById('modal-no').onclick = () => { overlay.remove(); resolve(false); };
-        });
-    }
-
-    // ── SignalR ─────────────────────────────────────────────
-    let connection = null;
-
-    function initSignalR() {
-        if (typeof signalR === 'undefined') {
-            console.warn('SignalR no disponible');
-            return;
-        }
-        connection = new signalR.HubConnectionBuilder()
-            .withUrl('/hubs/pedidos')
-            .withAutomaticReconnect()
-            .build();
-
-        connection.on('CuentaPagada', (cuentaId, pedidoId) => {
-            if (state.pedidoActual && state.pedidoActual.id === pedidoId) {
-                const cuenta = state.cuentas.find(c => c.id === cuentaId);
-                if (cuenta) {
-                    cuenta.estado = 'Pagada';
-                    renderPantallaPago();
-                }
-            }
-        });
-
-        connection.on('CuentasCreadas', (pedidoId, cuentas) => {
-            if (state.pedidoActual && state.pedidoActual.id === pedidoId) {
-                state.cuentas = cuentas.map(c => ({
-                    ...c,
-                    metodoPagoSeleccionado: null,
-                    propinaMonto: 0,
-                    propinaPorcentaje: null
-                }));
-                renderPantallaPago();
-            }
-        });
-
-        connection.on('EstadoCambiado', (pedidoId, nuevoEstado) => {
-            if (state.pedidoActual && state.pedidoActual.id === pedidoId) {
-                state.pedidoActual.estado = nuevoEstado;
-            }
-        });
-
-        startConnection();
-    }
-
-    async function startConnection() {
-        if (!connection) return;
-        try {
-            await connection.start();
-            console.log('SignalR conectado.');
-            if (state.pedidoActual) {
-                await connection.invoke('UnirseAPedido', state.pedidoActual.id);
-            }
-        } catch (e) {
-            console.error('SignalR error:', e);
-            setTimeout(startConnection, 5000);
-        }
-    }
-
-    async function leavePedidoGroup() {
-        if (!connection || !state.pedidoActual) return;
-        try {
-            await connection.invoke('SalirDePedido', state.pedidoActual.id);
-        } catch (e) { /* ignore */ }
-    }
-
-    async function joinPedidoGroup(pedidoId) {
-        if (!connection) return;
-        try {
-            await connection.invoke('UnirseAPedido', pedidoId);
-        } catch (e) { /* ignore */ }
-    }
-
     // ── Estado POS ──────────────────────────────────────────
     const state = {
-        pantalla: 'mesa',
+        pantalla: 'mesa', // 'mesa' | 'productos' | 'pago'
         tipoServicio: 'ComerAqui',
         mesaId: null,
         pedidoActual: null,
-        lineas: [],
-        cuentas: [],
-        modoSplit: 'igual',
-        splitAsignaciones: {},
-        splitCuentaActiva: 1
+        lineas: [], // { id, productoId, productoNombre, cantidad, precioUnitario, subtotal, notas, modificacionesJson }
+    };
+
+    // ── Estado modificadores ────────────────────────────────
+    const modificadores = {
+        productoId: null,
+        productoNombre: '',
+        ingredientes: [], // { id, nombre, cantidadRequerida, unidadMedida, quitado, motivo, ingredienteReemplazo }
+        alergias: [],     // ['mani', 'lacteos']
+        extras: [],       // ['queso extra', 'tocino']
+        notaCustom: ''
     };
 
     function formatMoney(n) {
         return new Intl.NumberFormat('es-SV', { style: 'currency', currency: 'USD' }).format(n);
+    }
+
+    // ── Modal de notas / alérgenos (rápido) ─────────────────
+    function pedirNota(producto) {
+        return new Promise((resolve) => {
+            // Eliminar modal previo si existe
+            const previo = document.getElementById('lmd-pos-nota-modal');
+            if (previo) previo.remove();
+
+            const modal = document.createElement('div');
+            modal.id = 'lmd-pos-nota-modal';
+            modal.style.cssText = `
+                position: fixed; inset: 0; z-index: 9999;
+                background: rgba(15,27,45,0.55);
+                display: flex; align-items: center; justify-content: center;
+                font-family: 'Montserrat', sans-serif;
+            `;
+            modal.innerHTML = `
+                <div style="background:#fff;border-radius:1rem;padding:1.5rem;width:92%;max-width:420px;box-shadow:0 12px 40px rgba(0,0,0,0.25);">
+                    <h3 style="margin:0 0 0.75rem;font-family:'Cinzel',serif;font-size:1.25rem;color:#0F1B2D;">
+                        ${producto.nombre}
+                    </h3>
+                    <p style="margin:0 0 1rem;color:#6B6F76;font-size:0.875rem;">Añadir notas para cocina</p>
+
+                    <div style="margin-bottom:1rem;">
+                        <label style="display:block;font-weight:700;font-size:0.8125rem;margin-bottom:0.5rem;color:#0F1B2D;">Alérgenos</label>
+                        <div style="display:flex;flex-wrap:wrap;gap:0.5rem;">
+                            <label style="display:flex;align-items:center;gap:0.35rem;font-size:0.875rem;cursor:pointer;padding:0.35rem 0.6rem;border:1px solid rgba(15,27,45,0.12);border-radius:0.5rem;">
+                                <input type="checkbox" value="maní" data-alergeno /> 🥜 Maní
+                            </label>
+                            <label style="display:flex;align-items:center;gap:0.35rem;font-size:0.875rem;cursor:pointer;padding:0.35rem 0.6rem;border:1px solid rgba(15,27,45,0.12);border-radius:0.5rem;">
+                                <input type="checkbox" value="lácteos" data-alergeno /> 🥛 Lácteos
+                            </label>
+                            <label style="display:flex;align-items:center;gap:0.35rem;font-size:0.875rem;cursor:pointer;padding:0.35rem 0.6rem;border:1px solid rgba(15,27,45,0.12);border-radius:0.5rem;">
+                                <input type="checkbox" value="gluten" data-alergeno /> 🌾 Gluten
+                            </label>
+                            <label style="display:flex;align-items:center;gap:0.35rem;font-size:0.875rem;cursor:pointer;padding:0.35rem 0.6rem;border:1px solid rgba(15,27,45,0.12);border-radius:0.5rem;">
+                                <input type="checkbox" value="mariscos" data-alergeno /> 🦐 Mariscos
+                            </label>
+                        </div>
+                    </div>
+
+                    <div style="margin-bottom:1.25rem;">
+                        <label style="display:block;font-weight:700;font-size:0.8125rem;margin-bottom:0.5rem;color:#0F1B2D;">Nota especial</label>
+                        <textarea id="lmd-pos-nota-texto" rows="2" placeholder="Ej: Sin cebolla, término medio..."
+                            style="width:100%;border:2px solid rgba(15,27,45,0.12);border-radius:0.5rem;padding:0.6rem;font-size:0.9rem;resize:vertical;box-sizing:border-box;"></textarea>
+                    </div>
+
+                    <div style="display:flex;gap:0.75rem;">
+                        <button id="lmd-pos-nota-agregar" style="flex:1;padding:0.75rem;border:none;border-radius:0.5rem;background:#C9A24E;color:#0F1B2D;font-weight:700;font-size:0.95rem;cursor:pointer;">Agregar</button>
+                        <button id="lmd-pos-nota-cancelar" style="flex:1;padding:0.75rem;border:1px solid rgba(15,27,45,0.12);border-radius:0.5rem;background:#fff;color:#6B6F76;font-weight:700;font-size:0.95rem;cursor:pointer;">Cancelar</button>
+                    </div>
+                </div>
+            `;
+
+            document.body.appendChild(modal);
+
+            const agregar = modal.querySelector('#lmd-pos-nota-agregar');
+            const cancelar = modal.querySelector('#lmd-pos-nota-cancelar');
+            const textarea = modal.querySelector('#lmd-pos-nota-texto');
+
+            const cerrar = () => { modal.remove(); };
+
+            agregar.addEventListener('click', () => {
+                const alergenos = Array.from(modal.querySelectorAll('[data-alergeno]:checked')).map(cb => cb.value).join(', ');
+                const notaTexto = textarea.value.trim();
+                const partes = [];
+                if (alergenos) partes.push(`ALÉRGENOS: ${alergenos}`);
+                if (notaTexto) partes.push(notaTexto);
+                const notaFinal = partes.join(' | ');
+                cerrar();
+                resolve(notaFinal || null);
+            });
+
+            cancelar.addEventListener('click', () => {
+                cerrar();
+                resolve(null);
+            });
+
+            // Cerrar al hacer click fuera
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    cerrar();
+                    resolve(null);
+                }
+            });
+
+            textarea.focus();
+        });
+    }
+
+    // ── Modal de modificadores de ingredientes ──────────────
+    function renderModificadorModal() {
+        const overlay = document.getElementById('lmd-modificador-overlay');
+        if (!overlay) return;
+
+        const ingredientesHtml = modificadores.ingredientes.map(ing => `
+            <div class="lmd-modificador-item" id="mod-ing-${ing.id}">
+                <span class="lmd-modificador-item-nombre">
+                    ${ing.cantidadRequerida}${ing.unidadMedida} ${ing.nombre}
+                </span>
+                <div class="lmd-modificador-item-controles">
+                    <button class="lmd-modificador-item-quitar ${ing.quitado ? 'activo' : ''}"
+                            onclick="pos.toggleQuitar('${ing.id}')">
+                        ${ing.quitado ? '✓ Quitado' : 'Quitar'}
+                    </button>
+                    ${ing.quitado ? `
+                        <select class="lmd-modificador-item-motivo" onchange="pos.setMotivo('${ing.id}', this.value)">
+                            <option value="">Motivo...</option>
+                            <option value="alergia" ${ing.motivo === 'alergia' ? 'selected' : ''}>🚫 Alergia</option>
+                            <option value="preferencia" ${ing.motivo === 'preferencia' ? 'selected' : ''}>👤 Preferencia</option>
+                            <option value="intercambio" ${ing.motivo === 'intercambio' ? 'selected' : ''}>🔄 Intercambio</option>
+                        </select>
+                    ` : ''}
+                </div>
+            </div>
+        `).join('');
+
+        const extrasHtml = modificadores.extras.map((extra, idx) => `
+            <span class="lmd-modificador-extra-tag">${extra}
+                <button onclick="pos.quitarExtra(${idx})">✕</button>
+            </span>
+        `).join('');
+
+        overlay.innerHTML = `
+            <div class="lmd-modificador-modal">
+                <div class="lmd-modificador-header">
+                    <h3>${modificadores.productoNombre}</h3>
+                    <button class="lmd-modificador-cerrar" onclick="pos.cerrarModificadores()">✕</button>
+                </div>
+
+                <div class="lmd-modificador-alergias">
+                    <h4>⚠ Alergias rápidas</h4>
+                    <button class="lmd-modificador-alergia-btn ${modificadores.alergias.includes('mani') ? 'activo' : ''}"
+                            onclick="pos.toggleAlergia('mani')">🥜 Maní</button>
+                    <button class="lmd-modificador-alergia-btn ${modificadores.alergias.includes('lacteos') ? 'activo' : ''}"
+                            onclick="pos.toggleAlergia('lacteos')">🥛 Lácteos</button>
+                    <button class="lmd-modificador-alergia-btn ${modificadores.alergias.includes('gluten') ? 'activo' : ''}"
+                            onclick="pos.toggleAlergia('gluten')">🌾 Gluten</button>
+                    <button class="lmd-modificador-alergia-btn ${modificadores.alergias.includes('mariscos') ? 'activo' : ''}"
+                            onclick="pos.toggleAlergia('mariscos')">🦐 Mariscos</button>
+                </div>
+
+                <div class="lmd-modificador-ingredientes">
+                    <h4>Ingredientes</h4>
+                    ${ingredientesHtml || '<p class="lmd-modificador-vacio">Este producto no tiene ingredientes configurados.</p>'}
+                </div>
+
+                <div class="lmd-modificador-extras">
+                    <h4>➕ Extras</h4>
+                    <div class="lmd-modificador-extra-btns">
+                        <button class="lmd-modificador-extra-btn" onclick="pos.agregarExtra('Queso extra')">Queso extra</button>
+                        <button class="lmd-modificador-extra-btn" onclick="pos.agregarExtra('Tocino')">Tocino</button>
+                        <button class="lmd-modificador-extra-btn" onclick="pos.agregarExtra('Aguacate')">Aguacate</button>
+                    </div>
+                    <div class="lmd-modificador-extra-lista">${extrasHtml}</div>
+                    <button class="lmd-modificador-nota-btn" onclick="pos.agregarNotaPersonalizada()">📝 Nota personalizada...</button>
+                    ${modificadores.notaCustom ? `<p class="lmd-modificador-nota-texto">${modificadores.notaCustom}</p>` : ''}
+                </div>
+
+                <button class="lmd-modificador-confirmar" onclick="pos.confirmarModificadores()">
+                    Confirmar y agregar al pedido
+                </button>
+            </div>
+        `;
     }
 
     // ── Render por pantalla ────────────────────────────────
@@ -312,12 +327,18 @@
 
         const allProductCards = Object.entries(categorias).map(([cat, prods]) =>
             prods.map(p => `
-                <button class="lmd-pos-producto-card" data-categoria="${cat.replace(/'/g, "\\'")}"
-                        onclick="pos.agregarProducto('${p.id}')">
-                    <div class="lmd-pos-producto-card__nombre">${p.nombre}</div>
-                    <div class="lmd-pos-producto-card__precio">${formatMoney(p.precio)}</div>
-                    <div class="lmd-pos-producto-card__tiempo">${p.tiempoPreparacionMin}min</div>
-                </button>`).join('')
+                <div class="lmd-pos-producto-card-wrapper" data-categoria="${cat.replace(/'/g, "\\'")}">
+                    <button class="lmd-pos-producto-card"
+                            onclick="pos.agregarProducto('${p.id}')">
+                        <div class="lmd-pos-producto-card__nombre">${p.nombre}</div>
+                        <div class="lmd-pos-producto-card__precio">${formatMoney(p.precio)}</div>
+                        <div class="lmd-pos-producto-card__tiempo">${p.tiempoPreparacionMin}min</div>
+                    </button>
+                    <button class="lmd-pos-producto-card__editar" onclick="event.stopPropagation(); pos.abrirModificadores('${p.id}')"
+                            title="Modificar ingredientes">
+                        ✏️ Modificar
+                    </button>
+                </div>`).join('')
         ).join('');
 
         const lineasHtml = state.lineas.map(l => `
@@ -325,6 +346,7 @@
                 <div class="lmd-pos-linea__info">
                     <strong>${l.productoNombre}</strong>
                     <small>${formatMoney(l.precioUnitario)} c/u</small>
+                    ${l.notas ? `<small style="color:#C75A3C;font-weight:600;">${l.notas}</small>` : ''}
                 </div>
                 <div class="lmd-pos-linea__acciones">
                     <button class="lmd-pos-linea__qty" onclick="pos.cambiarCantidad('${l.id}', ${l.cantidad - 1})" ${l.cantidad <= 1 ? 'disabled' : ''}>−</button>
@@ -355,7 +377,7 @@
                         <strong>${formatMoney(total)}</strong>
                     </div>
                     <button class="lmd-pos-btn-primario lmd-pos-btn-pagar" ${state.lineas.length === 0 ? 'disabled' : ''}
-                            onclick="pos.irAPantallaPago()">
+                            onclick="pos.irAPantalla('pago')">
                         Ir a pagar
                     </button>
                     <button class="lmd-pos-btn-cancelar" onclick="pos.cancelarPedido()">Cancelar</button>
@@ -368,179 +390,29 @@
         if (!container) return;
 
         const total = state.lineas.reduce((s, l) => s + l.subtotal, 0);
-        const cuentas = state.cuentas || [];
-        const pagadas = cuentas.filter(c => c.estado === 'Pagada').length;
-        const todasPagadas = cuentas.length > 0 && pagadas === cuentas.length;
-
-        if (todasPagadas) {
-            container.innerHTML = `
-                <div class="lmd-pos-pantalla" id="pantalla-pago">
-                    <div class="lmd-pos-pago-exito">
-                        <div class="lmd-pos-pago-exito__icono">✅</div>
-                        <h2 class="lmd-pos-pago-exito__titulo">Todas las cuentas pagadas</h2>
-                        <div class="lmd-pos-pago-total">${formatMoney(total)}</div>
-                        <button class="lmd-pos-btn-primario" onclick="pos.nuevoPedido()">Nuevo pedido</button>
-                    </div>
-                </div>`;
-            return;
-        }
-
-        let cuentasHtml = '';
-
-        if (cuentas.length === 0) {
-            const modoIgualActivo = state.modoSplit === 'igual';
-            const splitControls = modoIgualActivo ? `
-                <div class="lmd-cuentas-crear">
-                    <p class="lmd-pos-subtitulo">Dividir cuenta en:</p>
-                    <div class="lmd-cuentas-split-grid">
-                        <button class="lmd-pos-tipo-btn" onclick="pos.crearCuentas(2)">÷ 2</button>
-                        <button class="lmd-pos-tipo-btn" onclick="pos.crearCuentas(3)">÷ 3</button>
-                        <button class="lmd-pos-tipo-btn" onclick="pos.crearCuentas(4)">÷ 4</button>
-                        <button class="lmd-pos-tipo-btn" onclick="pos.crearCuentas(5)">÷ 5</button>
-                    </div>
-                    <button class="lmd-pos-btn-secundario" onclick="pos.crearCuentas(1)">Cuenta única</button>
-                </div>` : renderSplitItemsUI();
-
-            cuentasHtml = `
-                <div class="lmd-pos-split-modo">
-                    <button class="lmd-pos-split-modo-btn ${modoIgualActivo ? 'lmd-pos-split-modo-btn--activo' : ''}"
-                            onclick="pos.cambiarModoSplit('igual')">Partes iguales</button>
-                    <button class="lmd-pos-split-modo-btn ${!modoIgualActivo ? 'lmd-pos-split-modo-btn--activo' : ''}"
-                            onclick="pos.cambiarModoSplit('items')">Por items</button>
-                </div>
-                ${splitControls}`;
-        } else {
-            const cuentaCards = cuentas.map((c) => {
-                const esPagada = c.estado === 'Pagada';
-                const metodos = ['Efectivo', 'Tarjeta', 'Transferencia', 'QR'];
-                const metodoBtns = metodos.map(m => `
-                    <button class="lmd-cuenta-metodo-btn ${c.metodoPagoSeleccionado === m ? 'lmd-cuenta-metodo-btn--activo' : ''}"
-                            onclick="pos.seleccionarMetodo('${c.id}', '${m}')"
-                            ${esPagada ? 'disabled' : ''}>${m}</button>
-                `).join('');
-
-                const propinaBtns = [10, 15, 20].map(p => `
-                    <button class="lmd-cuenta-propina-btn ${c.propinaPorcentaje === p ? 'lmd-cuenta-propina-btn--activo' : ''}"
-                            onclick="pos.seleccionarPropina('${c.id}', ${p})"
-                            ${esPagada ? 'disabled' : ''}>${p}%</button>
-                `).join('');
-
-                const totalConPropina = c.total + (c.propinaMonto || 0);
-
-                return `
-                    <div class="lmd-cuenta-card ${esPagada ? 'lmd-cuenta-card--pagada' : ''}">
-                        <div class="lmd-cuenta-card__header">
-                            <span class="lmd-cuenta-card__numero">Cuenta ${c.numero}</span>
-                            <span class="lmd-cuenta-card__total">${formatMoney(totalConPropina)}</span>
-                        </div>
-                        ${!esPagada ? `
-                        <div class="lmd-cuenta-card__metodos">
-                            ${metodoBtns}
-                        </div>
-                        <div class="lmd-cuenta-card__propina">
-                            <span class="lmd-cuenta-card__propina-label">Propina:</span>
-                            <div class="lmd-cuenta-propina-btns">${propinaBtns}</div>
-                            <input type="number" class="lmd-cuenta-propina-custom" placeholder="Otra $" min="0" step="0.01"
-                                   onchange="pos.propinaCustom('${c.id}', this.value)" />
-                        </div>
-                        <button class="lmd-pos-btn-primario lmd-cuenta-pagar-btn"
-                                onclick="pos.pagarCuenta('${c.id}')"
-                                ${!c.metodoPagoSeleccionado ? 'disabled' : ''}>
-                            Pagar ${formatMoney(totalConPropina)}
-                        </button>
-                        ` : '<div class="lmd-cuenta-pagada-badge">✓ Pagada</div>'}
-                    </div>`;
-            }).join('');
-
-            cuentasHtml = `
-                <div class="lmd-cuentas-grid">
-                    ${cuentaCards}
-                </div>
-                <div class="lmd-cuenta-progress">
-                    <div class="lmd-cuenta-progress__track">
-                        <div class="lmd-cuenta-progress__bar" style="width: ${(pagadas / cuentas.length) * 100}%"></div>
-                    </div>
-                    <span class="lmd-cuenta-progress__text">${pagadas} de ${cuentas.length} cuentas pagadas</span>
-                </div>`;
-        }
 
         container.innerHTML = `
             <div class="lmd-pos-pantalla" id="pantalla-pago">
                 <button class="lmd-pos-btn-atras" onclick="pos.irAPantalla('productos')">← Volver a productos</button>
                 <h2 class="lmd-pos-titulo">Pago</h2>
                 <div class="lmd-pos-pago-total">${formatMoney(total)}</div>
-                ${cuentasHtml}
+
+                <div class="lmd-pos-pago-efectivo">
+                    <label class="lmd-pos-pago-label">Efectivo recibido</label>
+                    <div class="lmd-pos-pago-input-group">
+                        <span class="lmd-pos-pago-input-prefijo">$</span>
+                        <input type="number" id="efectivo-input" class="lmd-pos-pago-input" step="0.01" min="0"
+                               placeholder="${total.toFixed(2)}" oninput="pos.calcularCambio()" autofocus />
+                    </div>
+                    <div class="lmd-pos-pago-cambio" id="cambio-display"></div>
+                </div>
+
+                <div class="lmd-pos-pago-acciones">
+                    <button class="lmd-pos-btn-primario" id="btn-pagar-efectivo" onclick="pos.pagarEfectivo()" disabled>Pagar con efectivo</button>
+                    <button class="lmd-pos-btn-secundario" onclick="pos.pagarConTarjeta()">Pagar con tarjeta</button>
+                </div>
+
                 <button class="lmd-pos-btn-cancelar" onclick="pos.cancelarPedido()">Cancelar pedido</button>
-            </div>`;
-    }
-
-    function renderSplitItemsUI() {
-        const asignaciones = state.splitAsignaciones;
-        const cuentasNums = Object.keys(asignaciones).map(Number).sort((a, b) => a - b);
-        if (cuentasNums.length === 0) {
-            state.splitAsignaciones = { 1: [], 2: [] };
-            cuentasNums.push(1, 2);
-        }
-
-        // Calcular cantidades asignadas por detalle
-        const asignadoPorDetalle = {};
-        Object.values(asignaciones).forEach(items => {
-            items.forEach(it => {
-                asignadoPorDetalle[it.detalleId] = (asignadoPorDetalle[it.detalleId] || 0) + it.cantidad;
-            });
-        });
-
-        const colsHtml = cuentasNums.map(num => {
-            const items = asignaciones[num] || [];
-            const colTotal = items.reduce((s, it) => s + it.cantidad * it.precioUnitario, 0);
-            const esActiva = state.splitCuentaActiva === num;
-            const itemsHtml = items.map((it, idx) => `
-                <div class="lmd-pos-split-item lmd-pos-split-item-asignado" onclick="pos.quitarItemDeCuenta(${num}, ${idx})">
-                    <div class="lmd-pos-split-item-info">
-                        <span class="lmd-pos-split-item-nombre">${it.cantidad}× ${it.productoNombre}</span>
-                        <span class="lmd-pos-split-item-precio">${formatMoney(it.cantidad * it.precioUnitario)}</span>
-                    </div>
-                </div>
-            `).join('');
-
-            return `
-                <div class="lmd-pos-split-col ${esActiva ? 'lmd-pos-split-col--activa' : ''}" onclick="pos.seleccionarCuentaSplit(${num})">
-                    <h4>Cuenta ${num} <span class="lmd-pos-split-col-total">${formatMoney(colTotal)}</span></h4>
-                    <div class="lmd-pos-split-col-items">${itemsHtml || '<span style="color:var(--lmd-gris-piedra);font-size:0.75rem">Toca items para asignar</span>'}</div>
-                </div>`;
-        }).join('');
-
-        const poolItemsHtml = state.lineas.map(l => {
-            const yaAsignado = asignadoPorDetalle[l.id] || 0;
-            const restante = l.cantidad - yaAsignado;
-            if (restante <= 0) return '';
-            return `
-                <div class="lmd-pos-split-item" data-detalle-id="${l.id}" onclick="pos.asignarItemACuenta('${l.id}')">
-                    <div class="lmd-pos-split-item-info">
-                        <span class="lmd-pos-split-item-nombre">${restante}× ${l.productoNombre}</span>
-                        <span class="lmd-pos-split-item-precio">${formatMoney(restante * l.precioUnitario)}</span>
-                    </div>
-                </div>`;
-        }).join('');
-
-        const puedeConfirmar = cuentasNums.length >= 2 && Object.values(asignaciones).some(items => items.length > 0);
-
-        return `
-            <div class="lmd-pos-split-items" id="split-items">
-                <div class="lmd-pos-split-header">
-                    <span>Asignar items a cuentas</span>
-                    <button onclick="pos.agregarCuentaSplit()">+ Cuenta</button>
-                </div>
-                <div class="lmd-pos-split-cols" id="split-cols">
-                    ${colsHtml}
-                </div>
-                <div class="lmd-pos-split-pool">
-                    <h4>Items sin asignar</h4>
-                    ${poolItemsHtml || '<span style="color:var(--lmd-gris-piedra);font-size:0.8125rem">Todos los items asignados</span>'}
-                </div>
-                <button class="lmd-pos-btn-primario" onclick="pos.confirmarSplitItems()" ${puedeConfirmar ? '' : 'disabled'}>
-                    Confirmar división
-                </button>
             </div>`;
     }
 
@@ -564,44 +436,42 @@
             else if (pantalla === 'pago') renderPantallaPago();
         },
 
-        async irAPantallaPago() {
-            state.pantalla = 'pago';
-            if (state.pedidoActual) {
-                try {
-                    await api.marcarEnCobro(state.pedidoActual.id);
-                    const cuentas = await api.obtenerCuentas(state.pedidoActual.id);
-                    state.cuentas = cuentas.map(c => ({
-                        ...c,
-                        metodoPagoSeleccionado: null,
-                        propinaMonto: 0,
-                        propinaPorcentaje: null
-                    }));
-                    await joinPedidoGroup(state.pedidoActual.id);
-                } catch (e) {
-                    console.warn('Error al preparar pago:', e);
-                }
-            }
-            renderPantallaPago();
-        },
-
         filtrarCategoria(cat) {
             document.querySelectorAll('.lmd-pos-cat-tab').forEach(t => t.classList.remove('lmd-pos-cat-tab--activo'));
             const tab = Array.from(document.querySelectorAll('.lmd-pos-cat-tab')).find(t => t.textContent.trim() === cat);
             if (tab) tab.classList.add('lmd-pos-cat-tab--activo');
 
-            document.querySelectorAll('.lmd-pos-producto-card').forEach(c => {
+            document.querySelectorAll('.lmd-pos-producto-card-wrapper').forEach(c => {
                 c.style.display = cat && c.dataset.categoria !== cat ? 'none' : '';
             });
         },
 
-        async agregarProducto(productoId) {
+        async agregarProducto(productoId, modificaciones, notas) {
+            const prod = window.__lmdProductosDisponibles.find(p => p.id === productoId);
+            if (!prod) return;
+
+            let notasFinal = notas;
+            let modificacionesJson = null;
+
+            if (modificaciones && modificaciones.length > 0) {
+                modificacionesJson = JSON.stringify(modificaciones);
+            }
+
+            // Si no vienen modificaciones pre-armadas, pedir nota rápida
+            if (!modificaciones && notas === undefined) {
+                notasFinal = await pedirNota(prod);
+                if (notasFinal === null) return; // usuario canceló
+            }
+
+            // Si no hay pedido activo, crear
             if (!state.pedidoActual) {
                 try {
-                    const prod = window.__lmdProductosDisponibles.find(p => p.id === productoId);
                     const result = await api.crear(state.tipoServicio, state.mesaId, [{
                         productoId,
                         cantidad: 1,
-                        precioUnitario: prod.precio
+                        precioUnitario: prod.precio,
+                        notas: notasFinal,
+                        modificacionesJson
                     }]);
                     state.pedidoActual = { id: result.pedidoId, estado: result.estado };
                     state.lineas = result.lineas || [{
@@ -610,18 +480,18 @@
                         productoNombre: prod.nombre,
                         cantidad: 1,
                         precioUnitario: prod.precio,
-                        subtotal: prod.precio
+                        subtotal: prod.precio,
+                        notas: notasFinal,
+                        modificacionesJson
                     }];
-                    await joinPedidoGroup(state.pedidoActual.id);
                 } catch (e) {
-                    toast.show('Error al crear pedido: ' + e.message, 'error');
+                    alert('Error al crear pedido: ' + e.message);
                     return;
                 }
             } else {
                 try {
-                    await api.agregar(state.pedidoActual.id, productoId, 1);
-                    const prod = window.__lmdProductosDisponibles.find(p => p.id === productoId);
-                    const existente = state.lineas.find(l => l.productoId === productoId);
+                    await api.agregar(state.pedidoActual.id, productoId, 1, notasFinal, modificacionesJson);
+                    const existente = state.lineas.find(l => l.productoId === productoId && l.notas === notasFinal && l.modificacionesJson === modificacionesJson);
                     if (existente) {
                         existente.cantidad++;
                         existente.subtotal = existente.cantidad * existente.precioUnitario;
@@ -632,15 +502,171 @@
                             productoNombre: prod.nombre,
                             cantidad: 1,
                             precioUnitario: prod.precio,
-                            subtotal: prod.precio
+                            subtotal: prod.precio,
+                            notas: notasFinal,
+                            modificacionesJson
                         });
                     }
                 } catch (e) {
-                    toast.show('Error: ' + e.message, 'error');
+                    alert('Error: ' + e.message);
                     return;
                 }
             }
             renderPantallaProductos();
+        },
+
+        async abrirModificadores(productoId) {
+            const prod = window.__lmdProductosDisponibles.find(p => p.id === productoId);
+            if (!prod) return;
+
+            // Fetch ingredients from API
+            const res = await fetch(`?handler=IngredientesProductoJson&productoId=${productoId}`);
+            const data = await res.json();
+
+            // Reset state
+            modificadores.productoId = productoId;
+            modificadores.productoNombre = prod.nombre;
+            modificadores.ingredientes = (data.ingredientes || []).map(ing => ({
+                ...ing,
+                quitado: false,
+                motivo: '',
+                ingredienteReemplazo: null
+            }));
+            modificadores.alergias = [];
+            modificadores.extras = [];
+            modificadores.notaCustom = '';
+
+            // Create overlay
+            const previo = document.getElementById('lmd-modificador-overlay');
+            if (previo) previo.remove();
+
+            const overlay = document.createElement('div');
+            overlay.id = 'lmd-modificador-overlay';
+            overlay.className = 'lmd-modificador-overlay';
+            document.body.appendChild(overlay);
+
+            renderModificadorModal();
+        },
+
+        cerrarModificadores() {
+            const overlay = document.getElementById('lmd-modificador-overlay');
+            if (overlay) overlay.remove();
+            modificadores.productoId = null;
+            modificadores.ingredientes = [];
+            modificadores.alergias = [];
+            modificadores.extras = [];
+            modificadores.notaCustom = '';
+        },
+
+        toggleQuitar(ingredienteId) {
+            const ing = modificadores.ingredientes.find(i => i.id === ingredienteId);
+            if (ing) {
+                ing.quitado = !ing.quitado;
+                if (!ing.quitado) {
+                    ing.motivo = '';
+                    ing.ingredienteReemplazo = null;
+                }
+                renderModificadorModal();
+            }
+        },
+
+        setMotivo(ingredienteId, motivo) {
+            const ing = modificadores.ingredientes.find(i => i.id === ingredienteId);
+            if (ing) {
+                ing.motivo = motivo;
+                if (motivo === 'intercambio') {
+                    const reemplazo = prompt('¿Con qué ingrediente lo intercambia?');
+                    ing.ingredienteReemplazo = reemplazo || '';
+                } else {
+                    ing.ingredienteReemplazo = null;
+                }
+            }
+        },
+
+        toggleAlergia(alergia) {
+            const idx = modificadores.alergias.indexOf(alergia);
+            if (idx >= 0) {
+                modificadores.alergias.splice(idx, 1);
+            } else {
+                modificadores.alergias.push(alergia);
+            }
+            renderModificadorModal();
+        },
+
+        agregarExtra(extra) {
+            if (!modificadores.extras.includes(extra)) {
+                modificadores.extras.push(extra);
+            }
+            renderModificadorModal();
+        },
+
+        quitarExtra(idx) {
+            modificadores.extras.splice(idx, 1);
+            renderModificadorModal();
+        },
+
+        agregarNotaPersonalizada() {
+            const nota = prompt('Escriba su nota personalizada:');
+            if (nota !== null) {
+                modificadores.notaCustom = nota.trim();
+            }
+            renderModificadorModal();
+        },
+
+        async confirmarModificadores() {
+            const productoId = modificadores.productoId;
+            if (!productoId) return;
+
+            // Build modifications array
+            const modificaciones = [];
+
+            // Add quitados / intercambios
+            for (const ing of modificadores.ingredientes.filter(i => i.quitado)) {
+                modificaciones.push({
+                    ingredienteId: ing.id,
+                    ingredienteNombre: ing.nombre,
+                    accion: ing.motivo === 'intercambio' ? 'intercambiar' : 'quitar',
+                    motivo: ing.motivo || 'preferencia',
+                    ingredienteReemplazo: ing.ingredienteReemplazo || null
+                });
+            }
+
+            // Add extras
+            for (const extra of modificadores.extras) {
+                modificaciones.push({
+                    ingredienteId: '00000000-0000-0000-0000-000000000000',
+                    ingredienteNombre: extra,
+                    accion: 'extra',
+                    motivo: 'preferencia',
+                    ingredienteReemplazo: null
+                });
+            }
+
+            // Build alergenos string from selections
+            const alergenos = modificadores.alergias.join(', ');
+
+            // Build notes
+            const quitadosText = modificaciones
+                .filter(m => m.accion === 'quitar')
+                .map(m => `Sin ${m.ingredienteNombre}`)
+                .join(', ');
+            const intercambiosText = modificaciones
+                .filter(m => m.accion === 'intercambiar')
+                .map(m => `${m.ingredienteNombre} → ${m.ingredienteReemplazo}`)
+                .join(', ');
+            const extrasText = modificadores.extras.join(', ');
+            const notas = [
+                alergenos ? `Alergias: ${alergenos}` : '',
+                quitadosText,
+                intercambiosText,
+                extrasText ? `Extra: ${extrasText}` : '',
+                modificadores.notaCustom
+            ].filter(Boolean).join(' | ');
+
+            this.cerrarModificadores();
+
+            // Call original agregarProducto with modifications
+            await this.agregarProducto(productoId, modificaciones, notas);
         },
 
         async cambiarCantidad(lineaId, nuevaCantidad) {
@@ -653,19 +679,20 @@
                 linea.cantidad = nuevaCantidad;
                 linea.subtotal = nuevaCantidad * linea.precioUnitario;
                 renderPantallaProductos();
-            } catch (e) { toast.show('Error: ' + e.message, 'error'); }
+            } catch (e) { alert('Error: ' + e.message); }
         },
 
         async eliminarLinea(lineaId) {
-            if (!state.pedidoActual || !await modalConfirm('¿Quitar este producto?')) return;
+            if (!state.pedidoActual || !confirm('¿Quitar este producto?')) return;
             try {
                 await api.eliminar(state.pedidoActual.id, lineaId);
                 state.lineas = state.lineas.filter(l => l.id !== lineaId);
                 if (state.lineas.length === 0) {
+                    // Pedido vacío: cancelar implícito
                     state.pedidoActual = null;
                 }
                 renderPantallaProductos();
-            } catch (e) { toast.show('Error: ' + e.message, 'error'); }
+            } catch (e) { alert('Error: ' + e.message); }
         },
 
         calcularCambio() {
@@ -695,210 +722,46 @@
             if (!state.pedidoActual || efectivo <= 0) return;
             try {
                 const result = await api.pagarEfectivo(state.pedidoActual.id, efectivo);
-                await leavePedidoGroup();
                 state.pedidoActual = null;
                 state.lineas = [];
-                state.cuentas = [];
                 state.mesaId = null;
-                toast.show(result.mensaje || 'Pedido pagado.', 'success');
+                alert(`✅ ${result.mensaje || 'Pedido pagado.'}`);
                 state.pantalla = 'mesa';
                 renderPantallaMesa();
-            } catch (e) { toast.show('Error: ' + e.message, 'error'); }
+            } catch (e) { alert('Error: ' + e.message); }
         },
 
         async pagarConTarjeta() {
             if (!state.pedidoActual) return;
             try {
                 await api.cambiarEstado(state.pedidoActual.id, 'Pagar');
-                await leavePedidoGroup();
                 state.pedidoActual = null;
                 state.lineas = [];
-                state.cuentas = [];
                 state.mesaId = null;
-                toast.show('Pedido pagado con tarjeta.', 'success');
+                alert('✅ Pedido pagado con tarjeta.');
                 state.pantalla = 'mesa';
                 renderPantallaMesa();
-            } catch (e) { toast.show('Error: ' + e.message, 'error'); }
-        },
-
-        cambiarModoSplit(modo) {
-            state.modoSplit = modo;
-            if (modo === 'items') {
-                state.splitAsignaciones = { 1: [], 2: [] };
-                state.splitCuentaActiva = 1;
-            }
-            renderPantallaPago();
-        },
-
-        seleccionarCuentaSplit(num) {
-            state.splitCuentaActiva = num;
-            renderPantallaPago();
-        },
-
-        agregarCuentaSplit() {
-            const nums = Object.keys(state.splitAsignaciones).map(Number);
-            const nuevo = nums.length > 0 ? Math.max(...nums) + 1 : 1;
-            state.splitAsignaciones[nuevo] = [];
-            state.splitCuentaActiva = nuevo;
-            renderPantallaPago();
-        },
-
-        asignarItemACuenta(detalleId) {
-            const linea = state.lineas.find(l => l.id === detalleId);
-            if (!linea) return;
-
-            const asignadoTotal = Object.values(state.splitAsignaciones)
-                .flat()
-                .filter(it => it.detalleId === detalleId)
-                .reduce((s, it) => s + it.cantidad, 0);
-
-            if (asignadoTotal >= linea.cantidad) return;
-
-            const cuentaNum = state.splitCuentaActiva;
-            const existente = state.splitAsignaciones[cuentaNum]?.find(it => it.detalleId === detalleId);
-            if (existente) {
-                existente.cantidad++;
-            } else {
-                state.splitAsignaciones[cuentaNum] = state.splitAsignaciones[cuentaNum] || [];
-                state.splitAsignaciones[cuentaNum].push({
-                    detalleId,
-                    cantidad: 1,
-                    productoNombre: linea.productoNombre,
-                    precioUnitario: linea.precioUnitario
-                });
-            }
-            renderPantallaPago();
-        },
-
-        quitarItemDeCuenta(cuentaNum, itemIdx) {
-            const items = state.splitAsignaciones[cuentaNum];
-            if (!items || itemIdx < 0 || itemIdx >= items.length) return;
-            items.splice(itemIdx, 1);
-            renderPantallaPago();
-        },
-
-        async confirmarSplitItems() {
-            if (!state.pedidoActual) return;
-            const asignaciones = Object.entries(state.splitAsignaciones)
-                .filter(([_, items]) => items.length > 0)
-                .map(([num, items]) => ({
-                    cuentaNumero: parseInt(num),
-                    items: items.map(it => ({ detalleId: it.detalleId, cantidad: it.cantidad }))
-                }));
-
-            if (asignaciones.length < 2) {
-                toast.show('Asigne items al menos a 2 cuentas.', 'error');
-                return;
-            }
-
-            try {
-                const cuentas = await api.crearCuentasConItems(state.pedidoActual.id, asignaciones);
-                state.cuentas = cuentas.map(c => ({
-                    ...c,
-                    metodoPagoSeleccionado: null,
-                    propinaMonto: 0,
-                    propinaPorcentaje: null
-                }));
-                state.splitAsignaciones = {};
-                await joinPedidoGroup(state.pedidoActual.id);
-                renderPantallaPago();
-            } catch (e) { toast.show('Error al crear cuentas: ' + e.message, 'error'); }
-        },
-
-        async crearCuentas(cantidad) {
-            if (!state.pedidoActual) return;
-            try {
-                const cuentas = await api.crearCuentas(state.pedidoActual.id, cantidad);
-                state.cuentas = cuentas.map(c => ({
-                    ...c,
-                    metodoPagoSeleccionado: null,
-                    propinaMonto: 0,
-                    propinaPorcentaje: null
-                }));
-                await joinPedidoGroup(state.pedidoActual.id);
-                renderPantallaPago();
-            } catch (e) { toast.show('Error al crear cuentas: ' + e.message, 'error'); }
-        },
-
-        seleccionarMetodo(cuentaId, metodo) {
-            const cuenta = state.cuentas.find(c => c.id === cuentaId);
-            if (!cuenta || cuenta.estado === 'Pagada') return;
-            cuenta.metodoPagoSeleccionado = metodo;
-            renderPantallaPago();
-        },
-
-        seleccionarPropina(cuentaId, porcentaje) {
-            const cuenta = state.cuentas.find(c => c.id === cuentaId);
-            if (!cuenta || cuenta.estado === 'Pagada') return;
-            cuenta.propinaPorcentaje = porcentaje;
-            cuenta.propinaMonto = Math.round(cuenta.total * (porcentaje / 100) * 100) / 100;
-            renderPantallaPago();
-        },
-
-        propinaCustom(cuentaId, valor) {
-            const cuenta = state.cuentas.find(c => c.id === cuentaId);
-            if (!cuenta || cuenta.estado === 'Pagada') return;
-            const monto = parseFloat(valor) || 0;
-            cuenta.propinaPorcentaje = null;
-            cuenta.propinaMonto = monto;
-            renderPantallaPago();
-        },
-
-        async pagarCuenta(cuentaId) {
-            const cuenta = state.cuentas.find(c => c.id === cuentaId);
-            if (!cuenta || !cuenta.metodoPagoSeleccionado || cuenta.estado === 'Pagada') return;
-            try {
-                const result = await api.pagarCuenta(cuentaId, cuenta.metodoPagoSeleccionado, cuenta.propinaMonto || 0);
-                cuenta.estado = 'Pagada';
-                cuenta.metodoPago = cuenta.metodoPagoSeleccionado;
-                cuenta.fechaPago = result.fechaPago;
-                renderPantallaPago();
-
-                const todasPagadas = state.cuentas.every(c => c.estado === 'Pagada');
-                if (todasPagadas) {
-                    setTimeout(() => {
-                        leavePedidoGroup();
-                        state.pedidoActual = null;
-                        state.lineas = [];
-                        state.cuentas = [];
-                        state.mesaId = null;
-                        state.pantalla = 'mesa';
-                        renderPantallaMesa();
-                    }, 3000);
-                }
-            } catch (e) { toast.show('Error al pagar cuenta: ' + e.message, 'error'); }
+            } catch (e) { alert('Error: ' + e.message); }
         },
 
         async cancelarPedido() {
-            if (!state.pedidoActual || !await modalConfirm('¿Cancelar este pedido?')) return;
+            if (!state.pedidoActual || !confirm('¿Cancelar este pedido?')) return;
             try {
                 await api.cambiarEstado(state.pedidoActual.id, 'Cancelar');
-                await leavePedidoGroup();
                 state.pedidoActual = null;
                 state.lineas = [];
-                state.cuentas = [];
                 state.mesaId = null;
                 state.pantalla = 'mesa';
                 renderPantallaMesa();
-            } catch (e) { toast.show('Error: ' + e.message, 'error'); }
+            } catch (e) { alert('Error: ' + e.message); }
         },
 
         async marcarEnPreparacion() {
             if (!state.pedidoActual) return;
             try {
                 await api.cambiarEstado(state.pedidoActual.id, 'MarcarEnPreparacion');
-                toast.show('Pedido marcado en preparación.', 'success');
-            } catch (e) { toast.show('Error: ' + e.message, 'error'); }
-        },
-
-        nuevoPedido() {
-            leavePedidoGroup();
-            state.pedidoActual = null;
-            state.lineas = [];
-            state.cuentas = [];
-            state.mesaId = null;
-            state.pantalla = 'mesa';
-            renderPantallaMesa();
+                alert('✅ Pedido marcado en preparación.');
+            } catch (e) { alert('Error: ' + e.message); }
         }
     };
 
@@ -908,12 +771,5 @@
 
     document.addEventListener('DOMContentLoaded', () => {
         renderPantallaMesa();
-        initSignalR();
-    });
-
-    window.addEventListener('beforeunload', () => {
-        if (connection && state.pedidoActual) {
-            connection.invoke('SalirDePedido', state.pedidoActual.id).catch(() => {});
-        }
     });
 })();

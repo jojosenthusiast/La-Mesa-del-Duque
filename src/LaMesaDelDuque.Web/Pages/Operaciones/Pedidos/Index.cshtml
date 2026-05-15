@@ -16,23 +16,14 @@
     <div class="text-center py-5 text-muted">Cargando...</div>
 </section>
 
-@{
-    var jsonOpts = new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase };
-}
 <script>
     window.__lmdMesasDisponibles = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
-        Model.Vm.MesasDisponibles.Select(m => new { m.Id, m.Numero, m.Capacidad, m.Estado, pedidosActivos = new { count = 0, total = 0m } }), jsonOpts));
+        Model.Vm.MesasDisponibles.Where(m => m.Estado == "Disponible").Select(m => new { m.Id, m.Numero, m.Capacidad })));
 
     window.__lmdProductosDisponibles = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
-        Model.Vm.ProductosDisponibles.Select(p => new { p.Id, p.Nombre, p.Precio, p.CategoriaNombre, p.TiempoPreparacionMin, p.ImagenUrl }), jsonOpts));
+        Model.Vm.ProductosDisponibles.Select(p => new { p.Id, p.Nombre, p.Precio, p.CategoriaNombre, p.TiempoPreparacionMin, p.ImagenUrl })));
 </script>
 
-<div id="lmd-toast-zone"></div>
-<div id="lmd-modal-host"></div>
-
 @section Scripts {
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.7/signalr.min.js"
-            integrity="sha512-7SRCYIJ8cT6+S4fuC1t7F/LPLoWvMhX7Oxf2N3Qu5jVoYW/P73eBEb0lHNPD0sSR9Cpsu+TtKz9vg8WYkJDtIw=="
-            crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="~/js/pos.js" asp-append-version="true"></script>
 }
