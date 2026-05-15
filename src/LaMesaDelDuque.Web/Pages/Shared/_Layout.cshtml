@@ -13,8 +13,13 @@
     <link rel="stylesheet" href="~/css/marca.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/LaMesaDelDuque.Web.styles.css" asp-append-version="true" />
+    <link rel="manifest" href="~/manifest.json" />
 </head>
 <body>
+    <div id="lmd-offline-banner" class="lmd-offline-banner" style="display:none;">
+        <span id="lmd-offline-texto">Modo offline</span>
+        <span id="lmd-offline-pendientes" class="lmd-offline-pendientes-badge" style="display:none;"></span>
+    </div>
     <nav class="navbar navbar-expand-lg lmd-ops-nav">
         <div class="container lmd-shell-container">
             <a class="navbar-brand lmd-ops-brand" asp-page="/Index">
@@ -85,6 +90,13 @@
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
 
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/js/sw.js').catch(function(err) {
+                console.warn('SW registration failed:', err);
+            });
+        }
+    </script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

@@ -1583,6 +1583,78 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 /* ═══════════════════════════════════════════════════════
+   Sprint 2 — Offline mode indicators
+   ═══════════════════════════════════════════════════════ */
+
+.lmd-offline-banner {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 9999;
+    background: var(--lmd-terracota);
+    color: white;
+    text-align: center;
+    padding: 8px;
+    font-weight: 700;
+    font-size: 0.9rem;
+    font-family: var(--lmd-fuente-cuerpo);
+    display: none;
+    animation: slideDown 0.3s ease;
+}
+
+.lmd-offline-banner.visible {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+.lmd-offline-pendientes-badge {
+    background: white;
+    color: var(--lmd-terracota);
+    border-radius: 50%;
+    min-width: 22px;
+    height: 22px;
+    font-size: 0.75rem;
+    font-weight: 800;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 4px;
+}
+
+@keyframes slideDown {
+    from { transform: translateY(-100%); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+/* Offset body content when offline banner is visible */
+body:has(.lmd-offline-banner.visible) {
+    padding-top: 36px;
+}
+
+.lmd-offline-banner.visible + .lmd-shell-container,
+.lmd-offline-banner.visible ~ .lmd-shell-container {
+    margin-top: 36px;
+}
+
+/* KDS offline indicator */
+.lmd-kds-offline-badge {
+    background: var(--lmd-terracota);
+    color: white;
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 4px;
+    display: none;
+}
+
+.lmd-kds-offline-badge.visible {
+    display: inline-block;
+}
+
+/* ═══════════════════════════════════════════════════════
    Sprint 2 — Modal de modificadores de ingredientes
    ═══════════════════════════════════════════════════════ */
 

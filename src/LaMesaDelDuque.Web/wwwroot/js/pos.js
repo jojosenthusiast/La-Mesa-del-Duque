@@ -81,6 +81,150 @@
         return el ? el.value : '';
     }
 
+    // ── Offline Queue (IndexedDB) ───────────────────────────
+    const DB_NAME = 'LMDD-Offline';
+    const DB_VERSION = 1;
+    const STORE_PEDIDOS = 'pedidosPendientes';
+
+    function openDB() {
+        return new Promise((resolve, reject) => {
+            const req = indexedDB.open(DB_NAME, DB_VERSION);
+            req.onupgradeneeded = () => {
+                const db = req.result;
+                if (!db.objectStoreNames.contains(STORE_PEDIDOS)) {
+                    db.createObjectStore(STORE_PEDIDOS, { keyPath: 'id' });
+                }
+            };
+            req.onsuccess = () => resolve(req.result);
+            req.onerror = () => reject(req.error);
+        });
+    }
+
+    async function guardarPedidoPendiente(datos) {
+        const db = await openDB();
+        return new Promise((resolve, reject) => {
+            const tx = db.transaction(STORE_PEDIDOS, 'readwrite');
+            const store = tx.objectStore(STORE_PEDIDOS);
+            const item = {
+                id: crypto.randomUUID(),
+                timestamp: Date.now(),
+                tipoServicio: datos.tipoServicio,
+                mesaId: datos.mesaId,
+                lineas: datos.lineas,
+                syncAttempts: 0
+            };
+            const req = store.add(item);
+            req.onsuccess = () => resolve(item.id);
+            req.onerror = () => reject(req.error);
+        });
+    }
+
+    async function obtenerPedidosPendientes() {
+        const db = await openDB();
+        return new Promise((resolve, reject) => {
+            const tx = db.transaction(STORE_PEDIDOS, 'readonly');
+            const store = tx.objectStore(STORE_PEDIDOS);
+            const req = store.getAll();
+            req.onsuccess = () => resolve(req.result || []);
+            req.onerror = () => reject(req.error);
+        });
+    }
+
+    async function eliminarPedidoPendiente(id) {
+        const db = await openDB();
+        return new Promise((resolve, reject) => {
+            const tx = db.transaction(STORE_PEDIDOS, 'readwrite');
+            const store = tx.objectStore(STORE_PEDIDOS);
+            const req = store.delete(id);
+            req.onsuccess = () => resolve();
+            req.onerror = () => reject(req.error);
+        });
+    }
+
+    async function contarPedidosPendientes() {
+        const pendientes = await obtenerPedidosPendientes();
+        return pendientes.length;
+    }
+
+    // ── Offline UI helpers ──────────────────────────────────
+    function actualizarOfflineUI() {
+        const banner = document.getElementById('lmd-offline-banner');
+        const badge = document.getElementById('lmd-offline-pendientes');
+        const texto = document.getElementById('lmd-offline-texto');
+        if (!banner) return;
+
+        if (navigator.onLine) {
+            banner.classList.remove('visible');
+            banner.style.display = 'none';
+        } else {
+            banner.style.display = 'flex';
+            banner.classList.add('visible');
+        }
+
+        if (badge) {
+            contarPedidosPendientes().then(count => {
+                if (count > 0) {
+                    badge.style.display = 'inline-flex';
+                    badge.textContent = count;
+                    if (texto) texto.textContent = 'Modo offline — ' + count + ' pedido' + (count === 1 ? ' pendiente' : 's pendientes');
+                } else {
+                    badge.style.display = 'none';
+                    if (texto) texto.textContent = 'Modo offline';
+                }
+            });
+        }
+    }
+
+    function mostrarToastOffline(mensaje) {
+        // Simple toast fallback; reuse site toast if available
+        const zone = document.getElementById('lmd-toast-zone') || document.querySelector('.lmd-toast-zone');
+        if (zone) {
+            const toast = document.createElement('div');
+            toast.className = 'alert alert-warning alert-dismissible fade show py-2 mb-2';
+            toast.setAttribute('data-lmd-toast', 'true');
+            toast.innerHTML = mensaje + '<button type="button" class="btn-close" aria-label="Cerrar"></button>';
+            zone.prepend(toast);
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => toast.remove(), 150);
+            }, 4000);
+        }
+    }
+
+    // ── Sync loop ───────────────────────────────────────────
+    async function sincronizarPendientes() {
+        const pendientes = await obtenerPedidosPendientes();
+        if (pendientes.length === 0) return;
+
+        let sincronizados = 0;
+        for (const pedido of pendientes.sort((a, b) => a.timestamp - b.timestamp)) {
+            try {
+                await api.crear(pedido.tipoServicio, pedido.mesaId, pedido.lineas);
+                await eliminarPedidoPendiente(pedido.id);
+                sincronizados++;
+            } catch (e) {
+                console.error('Sync failed for pedido:', pedido.id, e);
+                break; // Stop on first failure, retry later
+            }
+        }
+
+        if (sincronizados > 0) {
+            mostrarToastOffline('Sincronizados ' + sincronizados + ' pedido' + (sincronizados === 1 ? '' : 's') + ' pendientes.');
+            actualizarOfflineUI();
+        }
+    }
+
+    window.addEventListener('online', () => {
+        actualizarOfflineUI();
+        mostrarToastOffline('Conexión restaurada. Sincronizando...');
+        sincronizarPendientes();
+    });
+
+    window.addEventListener('offline', () => {
+        actualizarOfflineUI();
+        mostrarToastOffline('Sin conexión. Los pedidos se guardan localmente.');
+    });
+
     // ── Estado POS ──────────────────────────────────────────
     const state = {
         pantalla: 'mesa', // 'mesa' | 'productos' | 'pago'
@@ -463,16 +607,46 @@
                 if (notasFinal === null) return; // usuario canceló
             }
 
-            // Si no hay pedido activo, crear
-            if (!state.pedidoActual) {
-                try {
-                    const result = await api.crear(state.tipoServicio, state.mesaId, [{
+            const nuevaLinea = {
+                productoId,
+                cantidad: 1,
+                precioUnitario: prod.precio,
+                notas: notasFinal,
+                modificacionesJson
+            };
+
+            const agregarLineaLocal = () => {
+                const existente = state.lineas.find(l => l.productoId === productoId && l.notas === notasFinal && l.modificacionesJson === modificacionesJson);
+                if (existente) {
+                    existente.cantidad++;
+                    existente.subtotal = existente.cantidad * existente.precioUnitario;
+                } else {
+                    state.lineas.push({
+                        id: crypto.randomUUID(),
                         productoId,
+                        productoNombre: prod.nombre,
                         cantidad: 1,
                         precioUnitario: prod.precio,
+                        subtotal: prod.precio,
                         notas: notasFinal,
                         modificacionesJson
-                    }]);
+                    });
+                }
+            };
+
+            // Offline: no hay pedido activo → crear local y queue
+            if (!state.pedidoActual) {
+                if (!navigator.onLine) {
+                    state.pedidoActual = { id: 'local-' + crypto.randomUUID(), estado: 'Pendiente', isLocal: true };
+                    agregarLineaLocal();
+                    await guardarPedidoPendiente({ tipoServicio: state.tipoServicio, mesaId: state.mesaId, lineas: [...state.lineas] });
+                    actualizarOfflineUI();
+                    mostrarToastOffline('Pedido guardado localmente. Se sincronizará al restaurar conexión.');
+                    renderPantallaProductos();
+                    return;
+                }
+                try {
+                    const result = await api.crear(state.tipoServicio, state.mesaId, [nuevaLinea]);
                     state.pedidoActual = { id: result.pedidoId, estado: result.estado };
                     state.lineas = result.lineas || [{
                         id: result.lineaId || crypto.randomUUID(),
@@ -485,31 +659,47 @@
                         modificacionesJson
                     }];
                 } catch (e) {
-                    alert('Error al crear pedido: ' + e.message);
-                    return;
+                    if (e.message && (e.message.includes('fetch') || e.message.includes('NetworkError') || !navigator.onLine)) {
+                        state.pedidoActual = { id: 'local-' + crypto.randomUUID(), estado: 'Pendiente', isLocal: true };
+                        agregarLineaLocal();
+                        await guardarPedidoPendiente({ tipoServicio: state.tipoServicio, mesaId: state.mesaId, lineas: [...state.lineas] });
+                        actualizarOfflineUI();
+                        mostrarToastOffline('Pedido guardado localmente. Se sincronizará al restaurar conexión.');
+                    } else {
+                        alert('Error al crear pedido: ' + e.message);
+                        return;
+                    }
                 }
             } else {
+                // Pedido activo existente
+                if (!navigator.onLine || state.pedidoActual.isLocal) {
+                    agregarLineaLocal();
+                    if (state.pedidoActual.isLocal) {
+                        // Update the queued pedido with the new lineas
+                        const pendientes = await obtenerPedidosPendientes();
+                        const pendiente = pendientes.find(p => p.id === state.pedidoActual.id.replace('local-', ''));
+                        if (pendiente) {
+                            // Replace lineas in the queue item
+                            // (Simplification: we delete old and create new to avoid partial updates)
+                            await eliminarPedidoPendiente(pendiente.id);
+                        }
+                        await guardarPedidoPendiente({ tipoServicio: state.tipoServicio, mesaId: state.mesaId, lineas: [...state.lineas] });
+                        actualizarOfflineUI();
+                    }
+                    renderPantallaProductos();
+                    return;
+                }
                 try {
                     await api.agregar(state.pedidoActual.id, productoId, 1, notasFinal, modificacionesJson);
-                    const existente = state.lineas.find(l => l.productoId === productoId && l.notas === notasFinal && l.modificacionesJson === modificacionesJson);
-                    if (existente) {
-                        existente.cantidad++;
-                        existente.subtotal = existente.cantidad * existente.precioUnitario;
-                    } else {
-                        state.lineas.push({
-                            id: crypto.randomUUID(),
-                            productoId,
-                            productoNombre: prod.nombre,
-                            cantidad: 1,
-                            precioUnitario: prod.precio,
-                            subtotal: prod.precio,
-                            notas: notasFinal,
-                            modificacionesJson
-                        });
-                    }
+                    agregarLineaLocal();
                 } catch (e) {
-                    alert('Error: ' + e.message);
-                    return;
+                    if (e.message && (e.message.includes('fetch') || e.message.includes('NetworkError') || !navigator.onLine)) {
+                        agregarLineaLocal();
+                        mostrarToastOffline('Producto agregado localmente. Se sincronizará al restaurar conexión.');
+                    } else {
+                        alert('Error: ' + e.message);
+                        return;
+                    }
                 }
             }
             renderPantallaProductos();
@@ -674,6 +864,13 @@
             const linea = state.lineas.find(l => l.id === lineaId);
             if (!linea) return;
 
+            if (!navigator.onLine || state.pedidoActual.isLocal) {
+                linea.cantidad = nuevaCantidad;
+                linea.subtotal = nuevaCantidad * linea.precioUnitario;
+                renderPantallaProductos();
+                return;
+            }
+
             try {
                 await api.actualizarCantidad(state.pedidoActual.id, linea.id, nuevaCantidad);
                 linea.cantidad = nuevaCantidad;
@@ -684,6 +881,14 @@
 
         async eliminarLinea(lineaId) {
             if (!state.pedidoActual || !confirm('¿Quitar este producto?')) return;
+            if (!navigator.onLine || state.pedidoActual.isLocal) {
+                state.lineas = state.lineas.filter(l => l.id !== lineaId);
+                if (state.lineas.length === 0) {
+                    state.pedidoActual = null;
+                }
+                renderPantallaProductos();
+                return;
+            }
             try {
                 await api.eliminar(state.pedidoActual.id, lineaId);
                 state.lineas = state.lineas.filter(l => l.id !== lineaId);
@@ -720,6 +925,10 @@
             const input = document.getElementById('efectivo-input');
             const efectivo = parseFloat(input?.value || 0);
             if (!state.pedidoActual || efectivo <= 0) return;
+            if (!navigator.onLine || state.pedidoActual.isLocal) {
+                alert('No se puede pagar en modo offline. Conecte a internet para procesar el pago.');
+                return;
+            }
             try {
                 const result = await api.pagarEfectivo(state.pedidoActual.id, efectivo);
                 state.pedidoActual = null;
@@ -733,6 +942,10 @@
 
         async pagarConTarjeta() {
             if (!state.pedidoActual) return;
+            if (!navigator.onLine || state.pedidoActual.isLocal) {
+                alert('No se puede pagar en modo offline. Conecte a internet para procesar el pago.');
+                return;
+            }
             try {
                 await api.cambiarEstado(state.pedidoActual.id, 'Pagar');
                 state.pedidoActual = null;
@@ -746,6 +959,19 @@
 
         async cancelarPedido() {
             if (!state.pedidoActual || !confirm('¿Cancelar este pedido?')) return;
+            if (state.pedidoActual.isLocal) {
+                // Cancelar pedido local: eliminar de IndexedDB
+                const pendientes = await obtenerPedidosPendientes();
+                const pendiente = pendientes.find(p => state.pedidoActual.id.includes(p.id));
+                if (pendiente) await eliminarPedidoPendiente(pendiente.id);
+                state.pedidoActual = null;
+                state.lineas = [];
+                state.mesaId = null;
+                state.pantalla = 'mesa';
+                renderPantallaMesa();
+                actualizarOfflineUI();
+                return;
+            }
             try {
                 await api.cambiarEstado(state.pedidoActual.id, 'Cancelar');
                 state.pedidoActual = null;
@@ -771,5 +997,6 @@
 
     document.addEventListener('DOMContentLoaded', () => {
         renderPantallaMesa();
+        actualizarOfflineUI();
     });
 })();

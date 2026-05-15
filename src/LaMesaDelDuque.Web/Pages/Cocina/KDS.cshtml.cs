@@ -54,6 +54,37 @@ public class KDSModel : PageModel
         return new JsonResult(ordenes);
     }
 
+    public async Task<IActionResult> OnGetEstadoActualJsonAsync(string estacion)
+    {
+        EstacionCocina? filtro = null;
+        if (!string.IsNullOrWhiteSpace(estacion) && estacion != "Todas" && Enum.TryParse<EstacionCocina>(estacion, out var estacionEnum))
+        {
+            filtro = estacionEnum;
+        }
+
+        var ordenes = await _cocinaServicio.ListarPendientesAsync(filtro);
+        return new JsonResult(new {
+            ordenesCocina = ordenes.Select(o => new {
+                o.Id,
+                o.PedidoId,
+                o.ProductoNombre,
+                o.Cantidad,
+                o.Estado,
+                o.HoraRecibido,
+                o.Estacion,
+                o.Notas,
+                o.Alergenos,
+                o.IngredientesQuitados,
+                o.IngredientesExtra,
+                o.MinutosTranscurridos,
+                o.MesaNumero,
+                o.TipoServicio,
+                o.CocineroId
+            }),
+            timestamp = DateTime.UtcNow
+        });
+    }
+
     public async Task<IActionResult> OnPostMarcarListoJsonAsync(Guid ordenId)
     {
         try

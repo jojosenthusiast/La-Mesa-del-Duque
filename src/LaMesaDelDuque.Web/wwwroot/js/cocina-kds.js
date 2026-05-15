@@ -197,10 +197,12 @@
 
     // ── SignalR ─────────────────────────────────────────────
     let connection = null;
+    let pollingInterval = null;
 
     async function iniciarSignalR() {
         if (!window.signalR) {
             console.warn('SignalR no está cargado.');
+            startPolling();
             return;
         }
 
@@ -226,8 +228,71 @@
             actualizarContadores();
         });
 
-        await connection.start();
-        await conectarAEstacion(estacionActual);
+        connection.onclose(() => {
+            console.log('SignalR disconnected — starting polling fallback');
+            startPolling();
+        });
+
+        connection.onreconnecting(() => {
+            console.log('SignalR reconnecting...');
+        });
+
+        connection.onreconnected(async () => {
+            console.log('SignalR reconnected — stopping polling');
+            stopPolling();
+            await cargarOrdenesIniciales();
+        });
+
+        try {
+            await connection.start();
+            await conectarAEstacion(estacionActual);
+        } catch (e) {
+            console.warn('SignalR start failed — falling back to polling', e);
+            startPolling();
+        }
+    }
+
+    // ── Polling fallback ────────────────────────────────────
+    function startPolling() {
+        if (pollingInterval) return;
+        mostrarIndicadorOffline(true);
+        pollingInterval = setInterval(async () => {
+            try {
+                const res = await fetch(`?handler=EstadoActualJson&estacion=${encodeURIComponent(estacionActual)}`, {
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                });
+                if (!res.ok) return;
+                const data = await res.json();
+                if (data && data.ordenesCocina) {
+                    COOKS.forEach(cook => {
+                        const container = document.getElementById(`kds-cards-${cook.id}`);
+                        if (container) container.innerHTML = '';
+                    });
+                    data.ordenesCocina.forEach(orden => {
+                        if (estacionActual !== 'Todas' && orden.estacion !== estacionActual) return;
+                        renderOrden(orden);
+                    });
+                    actualizarContadores();
+                }
+            } catch (e) {
+                // Server unreachable — keep what we have
+            }
+        }, 5000);
+    }
+
+    function stopPolling() {
+        if (pollingInterval) {
+            clearInterval(pollingInterval);
+            pollingInterval = null;
+        }
+        mostrarIndicadorOffline(false);
+    }
+
+    function mostrarIndicadorOffline(visible) {
+        const badge = document.getElementById('lmd-kds-offline-badge');
+        if (badge) {
+            badge.classList.toggle('visible', visible);
+        }
     }
 
     async function conectarAEstacion(estacion) {
