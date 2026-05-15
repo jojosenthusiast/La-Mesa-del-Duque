@@ -1,3 +1,4 @@
+using System.Text.Json;
 using LaMesaDelDuque.Aplicacion.Dtos;
 using LaMesaDelDuque.Aplicacion.Notificaciones;
 using LaMesaDelDuque.Dominio.Entidades;
@@ -26,6 +27,10 @@ internal class CocinaServicio : ICocinaServicio
         {
             var estacion = detalle.Producto.Categoria?.EstacionCocina ?? EstacionCocina.Expo;
 
+            var (alergenos, quitados, extras) = ParsearModificaciones(detalle.ModificacionesJson);
+
+            var notasCombinadas = CombinarNotas(detalle.Notas, alergenos, quitados, extras);
+
             var orden = new OrdenCocina(
                 pedidoId,
                 detalle.Id,
@@ -34,7 +39,10 @@ internal class CocinaServicio : ICocinaServicio
                 estacion,
                 pedido.Mesa?.Numero,
                 pedido.TipoServicio.ToString(),
-                detalle.Notas);
+                notasCombinadas,
+                alergenos,
+                quitados,
+                extras);
 
             await _uot.OrdenesCocina.AgregarAsync(orden, ct);
         }
@@ -77,6 +85,65 @@ internal class CocinaServicio : ICocinaServicio
         await _notificador.NotificarItemRecuperadoAsync(orden.Estacion.ToString(), MapToDto(orden), ct);
 
         return MapToDto(orden);
+    }
+
+    private static (string? alergenos, string? quitados, string? extras) ParsearModificaciones(string? modificacionesJson)
+    {
+        if (string.IsNullOrWhiteSpace(modificacionesJson))
+            return (null, null, null);
+
+        try
+        {
+            var modificaciones = JsonSerializer.Deserialize<List<ModificacionIngrediente>>(modificacionesJson, new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            });
+
+            if (modificaciones is null || modificaciones.Count == 0)
+                return (null, null, null);
+
+            var alergenosList = new List<string>();
+            var quitadosList = new List<string>();
+            var extrasList = new List<string>();
+
+            foreach (var m in modificaciones)
+            {
+                if (m.Motivo == "alergia" && !string.IsNullOrWhiteSpace(m.IngredienteNombre))
+                {
+                    alergenosList.Add(m.IngredienteNombre);
+                }
+
+                if (m.Accion == "quitar" || m.Accion == "intercambiar")
+                {
+                    quitadosList.Add(m.IngredienteNombre);
+                }
+                else if (m.Accion == "extra")
+                {
+                    extrasList.Add(m.IngredienteNombre);
+                }
+            }
+
+            return (
+                alergenosList.Count > 0 ? string.Join(", ", alergenosList) : null,
+                quitadosList.Count > 0 ? string.Join(", ", quitadosList) : null,
+                extrasList.Count > 0 ? string.Join(", ", extrasList) : null
+            );
+        }
+        catch
+        {
+            return (null, null, null);
+        }
+    }
+
+    private static string? CombinarNotas(string? notasBase, string? alergenos, string? quitados, string? extras)
+    {
+        var partes = new List<string>();
+        if (!string.IsNullOrWhiteSpace(notasBase)) partes.Add(notasBase);
+        if (!string.IsNullOrWhiteSpace(alergenos)) partes.Add($"Alergias: {alergenos}");
+        if (!string.IsNullOrWhiteSpace(quitados)) partes.Add($"Sin: {quitados}");
+        if (!string.IsNullOrWhiteSpace(extras)) partes.Add($"Extra: {extras}");
+
+        return partes.Count > 0 ? string.Join(" | ", partes) : null;
     }
 
     private static OrdenCocinaDto MapToDto(OrdenCocina orden)

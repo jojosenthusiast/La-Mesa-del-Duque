@@ -16,6 +16,7 @@
                 form.append(`Vm.CrearPedido.Lineas[${i}].Cantidad`, l.cantidad);
                 form.append(`Vm.CrearPedido.Lineas[${i}].PrecioUnitario`, '0');
                 if (l.notas) form.append(`Vm.CrearPedido.Lineas[${i}].Notas`, l.notas);
+                if (l.modificacionesJson) form.append(`Vm.CrearPedido.Lineas[${i}].ModificacionesJson`, l.modificacionesJson);
             });
 
             const res = await fetch('?handler=CrearJson', { method: 'POST', body: form, headers: { 'X-Requested-With': 'XMLHttpRequest' } });
@@ -23,13 +24,14 @@
             return res.json();
         },
 
-        async agregar(pedidoId, productoId, cantidad, notas) {
+        async agregar(pedidoId, productoId, cantidad, notas, modificacionesJson) {
             const form = new FormData();
             form.append('__RequestVerificationToken', csrfToken());
             form.append('pedidoId', pedidoId);
             form.append('productoId', productoId);
             form.append('cantidad', cantidad);
             if (notas) form.append('notas', notas);
+            if (modificacionesJson) form.append('modificacionesJson', modificacionesJson);
 
             const res = await fetch('?handler=AgregarLineaJson', { method: 'POST', body: form, headers: { 'X-Requested-With': 'XMLHttpRequest' } });
             if (!res.ok) throw new Error((await res.text()) || 'Error al agregar');
@@ -85,14 +87,24 @@
         tipoServicio: 'ComerAqui',
         mesaId: null,
         pedidoActual: null,
-        lineas: [], // { id, productoId, productoNombre, cantidad, precioUnitario, subtotal, notas }
+        lineas: [], // { id, productoId, productoNombre, cantidad, precioUnitario, subtotal, notas, modificacionesJson }
+    };
+
+    // ── Estado modificadores ────────────────────────────────
+    const modificadores = {
+        productoId: null,
+        productoNombre: '',
+        ingredientes: [], // { id, nombre, cantidadRequerida, unidadMedida, quitado, motivo, ingredienteReemplazo }
+        alergias: [],     // ['mani', 'lacteos']
+        extras: [],       // ['queso extra', 'tocino']
+        notaCustom: ''
     };
 
     function formatMoney(n) {
         return new Intl.NumberFormat('es-SV', { style: 'currency', currency: 'USD' }).format(n);
     }
 
-    // ── Modal de notas / alérgenos ──────────────────────────
+    // ── Modal de notas / alérgenos (rápido) ─────────────────
     function pedirNota(producto) {
         return new Promise((resolve) => {
             // Eliminar modal previo si existe
@@ -181,6 +193,82 @@
         });
     }
 
+    // ── Modal de modificadores de ingredientes ──────────────
+    function renderModificadorModal() {
+        const overlay = document.getElementById('lmd-modificador-overlay');
+        if (!overlay) return;
+
+        const ingredientesHtml = modificadores.ingredientes.map(ing => `
+            <div class="lmd-modificador-item" id="mod-ing-${ing.id}">
+                <span class="lmd-modificador-item-nombre">
+                    ${ing.cantidadRequerida}${ing.unidadMedida} ${ing.nombre}
+                </span>
+                <div class="lmd-modificador-item-controles">
+                    <button class="lmd-modificador-item-quitar ${ing.quitado ? 'activo' : ''}"
+                            onclick="pos.toggleQuitar('${ing.id}')">
+                        ${ing.quitado ? '✓ Quitado' : 'Quitar'}
+                    </button>
+                    ${ing.quitado ? `
+                        <select class="lmd-modificador-item-motivo" onchange="pos.setMotivo('${ing.id}', this.value)">
+                            <option value="">Motivo...</option>
+                            <option value="alergia" ${ing.motivo === 'alergia' ? 'selected' : ''}>🚫 Alergia</option>
+                            <option value="preferencia" ${ing.motivo === 'preferencia' ? 'selected' : ''}>👤 Preferencia</option>
+                            <option value="intercambio" ${ing.motivo === 'intercambio' ? 'selected' : ''}>🔄 Intercambio</option>
+                        </select>
+                    ` : ''}
+                </div>
+            </div>
+        `).join('');
+
+        const extrasHtml = modificadores.extras.map((extra, idx) => `
+            <span class="lmd-modificador-extra-tag">${extra}
+                <button onclick="pos.quitarExtra(${idx})">✕</button>
+            </span>
+        `).join('');
+
+        overlay.innerHTML = `
+            <div class="lmd-modificador-modal">
+                <div class="lmd-modificador-header">
+                    <h3>${modificadores.productoNombre}</h3>
+                    <button class="lmd-modificador-cerrar" onclick="pos.cerrarModificadores()">✕</button>
+                </div>
+
+                <div class="lmd-modificador-alergias">
+                    <h4>⚠ Alergias rápidas</h4>
+                    <button class="lmd-modificador-alergia-btn ${modificadores.alergias.includes('mani') ? 'activo' : ''}"
+                            onclick="pos.toggleAlergia('mani')">🥜 Maní</button>
+                    <button class="lmd-modificador-alergia-btn ${modificadores.alergias.includes('lacteos') ? 'activo' : ''}"
+                            onclick="pos.toggleAlergia('lacteos')">🥛 Lácteos</button>
+                    <button class="lmd-modificador-alergia-btn ${modificadores.alergias.includes('gluten') ? 'activo' : ''}"
+                            onclick="pos.toggleAlergia('gluten')">🌾 Gluten</button>
+                    <button class="lmd-modificador-alergia-btn ${modificadores.alergias.includes('mariscos') ? 'activo' : ''}"
+                            onclick="pos.toggleAlergia('mariscos')">🦐 Mariscos</button>
+                </div>
+
+                <div class="lmd-modificador-ingredientes">
+                    <h4>Ingredientes</h4>
+                    ${ingredientesHtml || '<p class="lmd-modificador-vacio">Este producto no tiene ingredientes configurados.</p>'}
+                </div>
+
+                <div class="lmd-modificador-extras">
+                    <h4>➕ Extras</h4>
+                    <div class="lmd-modificador-extra-btns">
+                        <button class="lmd-modificador-extra-btn" onclick="pos.agregarExtra('Queso extra')">Queso extra</button>
+                        <button class="lmd-modificador-extra-btn" onclick="pos.agregarExtra('Tocino')">Tocino</button>
+                        <button class="lmd-modificador-extra-btn" onclick="pos.agregarExtra('Aguacate')">Aguacate</button>
+                    </div>
+                    <div class="lmd-modificador-extra-lista">${extrasHtml}</div>
+                    <button class="lmd-modificador-nota-btn" onclick="pos.agregarNotaPersonalizada()">📝 Nota personalizada...</button>
+                    ${modificadores.notaCustom ? `<p class="lmd-modificador-nota-texto">${modificadores.notaCustom}</p>` : ''}
+                </div>
+
+                <button class="lmd-modificador-confirmar" onclick="pos.confirmarModificadores()">
+                    Confirmar y agregar al pedido
+                </button>
+            </div>
+        `;
+    }
+
     // ── Render por pantalla ────────────────────────────────
     function renderPantallaMesa() {
         const container = document.getElementById('lmd-pos-contenido');
@@ -239,12 +327,18 @@
 
         const allProductCards = Object.entries(categorias).map(([cat, prods]) =>
             prods.map(p => `
-                <button class="lmd-pos-producto-card" data-categoria="${cat.replace(/'/g, "\\'")}"
-                        onclick="pos.agregarProducto('${p.id}')">
-                    <div class="lmd-pos-producto-card__nombre">${p.nombre}</div>
-                    <div class="lmd-pos-producto-card__precio">${formatMoney(p.precio)}</div>
-                    <div class="lmd-pos-producto-card__tiempo">${p.tiempoPreparacionMin}min</div>
-                </button>`).join('')
+                <div class="lmd-pos-producto-card-wrapper" data-categoria="${cat.replace(/'/g, "\\'")}">
+                    <button class="lmd-pos-producto-card"
+                            onclick="pos.agregarProducto('${p.id}')">
+                        <div class="lmd-pos-producto-card__nombre">${p.nombre}</div>
+                        <div class="lmd-pos-producto-card__precio">${formatMoney(p.precio)}</div>
+                        <div class="lmd-pos-producto-card__tiempo">${p.tiempoPreparacionMin}min</div>
+                    </button>
+                    <button class="lmd-pos-producto-card__editar" onclick="event.stopPropagation(); pos.abrirModificadores('${p.id}')"
+                            title="Modificar ingredientes">
+                        ✏️ Modificar
+                    </button>
+                </div>`).join('')
         ).join('');
 
         const lineasHtml = state.lineas.map(l => `
@@ -347,18 +441,27 @@
             const tab = Array.from(document.querySelectorAll('.lmd-pos-cat-tab')).find(t => t.textContent.trim() === cat);
             if (tab) tab.classList.add('lmd-pos-cat-tab--activo');
 
-            document.querySelectorAll('.lmd-pos-producto-card').forEach(c => {
+            document.querySelectorAll('.lmd-pos-producto-card-wrapper').forEach(c => {
                 c.style.display = cat && c.dataset.categoria !== cat ? 'none' : '';
             });
         },
 
-        async agregarProducto(productoId) {
+        async agregarProducto(productoId, modificaciones, notas) {
             const prod = window.__lmdProductosDisponibles.find(p => p.id === productoId);
             if (!prod) return;
 
-            // Pedir nota antes de agregar
-            const notas = await pedirNota(prod);
-            if (notas === null) return; // usuario canceló
+            let notasFinal = notas;
+            let modificacionesJson = null;
+
+            if (modificaciones && modificaciones.length > 0) {
+                modificacionesJson = JSON.stringify(modificaciones);
+            }
+
+            // Si no vienen modificaciones pre-armadas, pedir nota rápida
+            if (!modificaciones && notas === undefined) {
+                notasFinal = await pedirNota(prod);
+                if (notasFinal === null) return; // usuario canceló
+            }
 
             // Si no hay pedido activo, crear
             if (!state.pedidoActual) {
@@ -367,7 +470,8 @@
                         productoId,
                         cantidad: 1,
                         precioUnitario: prod.precio,
-                        notas
+                        notas: notasFinal,
+                        modificacionesJson
                     }]);
                     state.pedidoActual = { id: result.pedidoId, estado: result.estado };
                     state.lineas = result.lineas || [{
@@ -377,7 +481,8 @@
                         cantidad: 1,
                         precioUnitario: prod.precio,
                         subtotal: prod.precio,
-                        notas
+                        notas: notasFinal,
+                        modificacionesJson
                     }];
                 } catch (e) {
                     alert('Error al crear pedido: ' + e.message);
@@ -385,8 +490,8 @@
                 }
             } else {
                 try {
-                    await api.agregar(state.pedidoActual.id, productoId, 1, notas);
-                    const existente = state.lineas.find(l => l.productoId === productoId && l.notas === notas);
+                    await api.agregar(state.pedidoActual.id, productoId, 1, notasFinal, modificacionesJson);
+                    const existente = state.lineas.find(l => l.productoId === productoId && l.notas === notasFinal && l.modificacionesJson === modificacionesJson);
                     if (existente) {
                         existente.cantidad++;
                         existente.subtotal = existente.cantidad * existente.precioUnitario;
@@ -398,7 +503,8 @@
                             cantidad: 1,
                             precioUnitario: prod.precio,
                             subtotal: prod.precio,
-                            notas
+                            notas: notasFinal,
+                            modificacionesJson
                         });
                     }
                 } catch (e) {
@@ -407,6 +513,160 @@
                 }
             }
             renderPantallaProductos();
+        },
+
+        async abrirModificadores(productoId) {
+            const prod = window.__lmdProductosDisponibles.find(p => p.id === productoId);
+            if (!prod) return;
+
+            // Fetch ingredients from API
+            const res = await fetch(`?handler=IngredientesProductoJson&productoId=${productoId}`);
+            const data = await res.json();
+
+            // Reset state
+            modificadores.productoId = productoId;
+            modificadores.productoNombre = prod.nombre;
+            modificadores.ingredientes = (data.ingredientes || []).map(ing => ({
+                ...ing,
+                quitado: false,
+                motivo: '',
+                ingredienteReemplazo: null
+            }));
+            modificadores.alergias = [];
+            modificadores.extras = [];
+            modificadores.notaCustom = '';
+
+            // Create overlay
+            const previo = document.getElementById('lmd-modificador-overlay');
+            if (previo) previo.remove();
+
+            const overlay = document.createElement('div');
+            overlay.id = 'lmd-modificador-overlay';
+            overlay.className = 'lmd-modificador-overlay';
+            document.body.appendChild(overlay);
+
+            renderModificadorModal();
+        },
+
+        cerrarModificadores() {
+            const overlay = document.getElementById('lmd-modificador-overlay');
+            if (overlay) overlay.remove();
+            modificadores.productoId = null;
+            modificadores.ingredientes = [];
+            modificadores.alergias = [];
+            modificadores.extras = [];
+            modificadores.notaCustom = '';
+        },
+
+        toggleQuitar(ingredienteId) {
+            const ing = modificadores.ingredientes.find(i => i.id === ingredienteId);
+            if (ing) {
+                ing.quitado = !ing.quitado;
+                if (!ing.quitado) {
+                    ing.motivo = '';
+                    ing.ingredienteReemplazo = null;
+                }
+                renderModificadorModal();
+            }
+        },
+
+        setMotivo(ingredienteId, motivo) {
+            const ing = modificadores.ingredientes.find(i => i.id === ingredienteId);
+            if (ing) {
+                ing.motivo = motivo;
+                if (motivo === 'intercambio') {
+                    const reemplazo = prompt('¿Con qué ingrediente lo intercambia?');
+                    ing.ingredienteReemplazo = reemplazo || '';
+                } else {
+                    ing.ingredienteReemplazo = null;
+                }
+            }
+        },
+
+        toggleAlergia(alergia) {
+            const idx = modificadores.alergias.indexOf(alergia);
+            if (idx >= 0) {
+                modificadores.alergias.splice(idx, 1);
+            } else {
+                modificadores.alergias.push(alergia);
+            }
+            renderModificadorModal();
+        },
+
+        agregarExtra(extra) {
+            if (!modificadores.extras.includes(extra)) {
+                modificadores.extras.push(extra);
+            }
+            renderModificadorModal();
+        },
+
+        quitarExtra(idx) {
+            modificadores.extras.splice(idx, 1);
+            renderModificadorModal();
+        },
+
+        agregarNotaPersonalizada() {
+            const nota = prompt('Escriba su nota personalizada:');
+            if (nota !== null) {
+                modificadores.notaCustom = nota.trim();
+            }
+            renderModificadorModal();
+        },
+
+        async confirmarModificadores() {
+            const productoId = modificadores.productoId;
+            if (!productoId) return;
+
+            // Build modifications array
+            const modificaciones = [];
+
+            // Add quitados / intercambios
+            for (const ing of modificadores.ingredientes.filter(i => i.quitado)) {
+                modificaciones.push({
+                    ingredienteId: ing.id,
+                    ingredienteNombre: ing.nombre,
+                    accion: ing.motivo === 'intercambio' ? 'intercambiar' : 'quitar',
+                    motivo: ing.motivo || 'preferencia',
+                    ingredienteReemplazo: ing.ingredienteReemplazo || null
+                });
+            }
+
+            // Add extras
+            for (const extra of modificadores.extras) {
+                modificaciones.push({
+                    ingredienteId: '00000000-0000-0000-0000-000000000000',
+                    ingredienteNombre: extra,
+                    accion: 'extra',
+                    motivo: 'preferencia',
+                    ingredienteReemplazo: null
+                });
+            }
+
+            // Build alergenos string from selections
+            const alergenos = modificadores.alergias.join(', ');
+
+            // Build notes
+            const quitadosText = modificaciones
+                .filter(m => m.accion === 'quitar')
+                .map(m => `Sin ${m.ingredienteNombre}`)
+                .join(', ');
+            const intercambiosText = modificaciones
+                .filter(m => m.accion === 'intercambiar')
+                .map(m => `${m.ingredienteNombre} → ${m.ingredienteReemplazo}`)
+                .join(', ');
+            const extrasText = modificadores.extras.join(', ');
+            const notas = [
+                alergenos ? `Alergias: ${alergenos}` : '',
+                quitadosText,
+                intercambiosText,
+                extrasText ? `Extra: ${extrasText}` : '',
+                modificadores.notaCustom
+            ].filter(Boolean).join(' | ');
+
+            this.cerrarModificadores();
+
+            // Call original agregarProducto with modifications
+            await this.agregarProducto(productoId, modificaciones, notas);
         },
 
         async cambiarCantidad(lineaId, nuevaCantidad) {

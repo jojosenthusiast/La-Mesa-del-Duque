@@ -1581,3 +1581,143 @@ h1, h2, h3, h4, h5, h6 {
         justify-content: flex-start;
     }
 }
+
+/* ═══════════════════════════════════════════════════════
+   Sprint 2 — Modal de modificadores de ingredientes
+   ═══════════════════════════════════════════════════════ */
+
+.lmd-modificador-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 2000;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--lmd-fuente-cuerpo);
+}
+
+.lmd-modificador-modal {
+    background: #fff; border-radius: 8px; max-width: 520px; width: 92%;
+    max-height: 88vh; overflow-y: auto; padding: 20px;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.25);
+}
+
+.lmd-modificador-header {
+    display: flex; justify-content: space-between; align-items: center;
+    border-bottom: 2px solid #eee; padding-bottom: 12px; margin-bottom: 16px;
+}
+
+.lmd-modificador-header h3 { color: #2c3e50; font-size: 1.3rem; margin: 0; font-family: var(--lmd-fuente-titulo); }
+
+.lmd-modificador-cerrar {
+    background: none; border: none; font-size: 1.25rem; cursor: pointer; color: var(--lmd-gris-piedra);
+}
+
+.lmd-modificador-alergias { margin-bottom: 16px; }
+
+.lmd-modificador-alergias h4 { color: #e74c3c; font-size: 0.9rem; margin-bottom: 8px; font-family: var(--lmd-fuente-cuerpo); }
+
+.lmd-modificador-alergia-btn {
+    padding: 8px 14px; border: 2px solid #ddd; border-radius: 20px;
+    background: white; cursor: pointer; font-size: 0.85rem; margin: 3px;
+    transition: all 0.2s; font-family: var(--lmd-fuente-cuerpo);
+}
+
+.lmd-modificador-alergia-btn.activo {
+    background: #e74c3c; color: white; border-color: #e74c3c; font-weight: bold;
+}
+
+.lmd-modificador-ingredientes { margin-bottom: 16px; }
+
+.lmd-modificador-ingredientes h4 { color: var(--lmd-azul-duque); font-size: 0.95rem; margin-bottom: 10px; font-family: var(--lmd-fuente-cuerpo); }
+
+.lmd-modificador-item {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 10px 0; border-bottom: 1px solid #f0f0f0; gap: 0.5rem;
+}
+
+.lmd-modificador-item-nombre { flex: 1; font-size: 0.95rem; color: #2c3e50; }
+
+.lmd-modificador-item-controles { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; justify-content: flex-end; }
+
+.lmd-modificador-item-quitar {
+    padding: 6px 14px; border: 2px solid #e74c3c; border-radius: 6px;
+    background: white; color: #e74c3c; cursor: pointer; font-size: 0.85rem;
+    transition: all 0.2s; white-space: nowrap;
+}
+
+.lmd-modificador-item-quitar.activo {
+    background: #e74c3c; color: white;
+}
+
+.lmd-modificador-item-motivo {
+    padding: 6px 10px; border: 1px solid #ddd; border-radius: 6px;
+    background: white; font-size: 0.85rem;
+}
+
+.lmd-modificador-vacio { color: var(--lmd-gris-piedra); font-size: 0.875rem; font-style: italic; }
+
+.lmd-modificador-extras { margin-top: 16px; }
+
+.lmd-modificador-extras h4 { color: var(--lmd-azul-duque); font-size: 0.95rem; margin-bottom: 10px; font-family: var(--lmd-fuente-cuerpo); }
+
+.lmd-modificador-extra-btns { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.5rem; }
+
+.lmd-modificador-extra-btn {
+    padding: 6px 14px; border: 2px solid var(--lmd-acento); border-radius: 6px;
+    background: white; color: var(--lmd-azul-duque); cursor: pointer; font-size: 0.85rem;
+    transition: all 0.2s;
+}
+
+.lmd-modificador-extra-btn:hover { background: var(--lmd-acento); color: var(--lmd-azul-duque); }
+
+.lmd-modificador-extra-lista { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 0.5rem; }
+
+.lmd-modificador-extra-tag {
+    display: inline-flex; align-items: center; gap: 0.25rem;
+    padding: 4px 10px; background: var(--lmd-verde-salvia); color: white;
+    border-radius: 4px; font-size: 0.8rem;
+}
+
+.lmd-modificador-extra-tag button {
+    background: none; border: none; color: white; cursor: pointer; font-size: 0.75rem; padding: 0 2px;
+}
+
+.lmd-modificador-nota-btn {
+    padding: 6px 12px; border: 1px solid #ddd; border-radius: 6px;
+    background: white; cursor: pointer; font-size: 0.85rem; color: var(--lmd-gris-piedra);
+}
+
+.lmd-modificador-nota-texto { font-size: 0.85rem; color: var(--lmd-gris-piedra); margin-top: 4px; font-style: italic; }
+
+.lmd-modificador-confirmar {
+    width: 100%; padding: 14px; background: var(--lmd-acento); color: var(--lmd-azul-duque);
+    border: none; border-radius: 6px; font-size: 1.1rem; font-weight: bold;
+    cursor: pointer; margin-top: 20px; transition: background 0.2s;
+}
+
+.lmd-modificador-confirmar:hover { background: var(--lmd-dorado-hover); color: #fff; }
+
+/* Product card wrapper for modifier button */
+.lmd-pos-producto-card-wrapper {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+}
+
+.lmd-pos-producto-card__editar {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    padding: 4px 8px;
+    border: 1px solid rgba(15,27,45,0.12);
+    border-radius: 0.5rem;
+    background: #fff;
+    color: var(--lmd-gris-piedra);
+    font-size: 0.75rem;
+    cursor: pointer;
+    z-index: 2;
+    transition: all 0.15s;
+}
+
+.lmd-pos-producto-card__editar:hover {
+    background: var(--lmd-acento);
+    color: var(--lmd-azul-duque);
+    border-color: var(--lmd-acento);
+}

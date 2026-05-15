@@ -13,7 +13,8 @@ public class PedidosPageTests
         var mesas = new FakePedidosMesasServicio();
         var pedidos = new FakePedidosServicio();
 
-        var page = new IndexModel(pedidos, catalogo, mesas);
+        var recetas = new FakeRecetasProductosServicio();
+        var page = new IndexModel(pedidos, catalogo, mesas, recetas);
 
         await page.OnGetAsync();
 
@@ -37,7 +38,7 @@ internal sealed class FakePedidosServicio : IPedidosServicio
     };
 
     public Task<PedidoDto> CrearPedidoAsync(LaMesaDelDuque.Dominio.Enumeraciones.TipoServicio tipoServicio, Guid? mesaId, List<DetalleCreacionDto> detalles, CancellationToken cancelacion = default) => Task.FromResult(_pedido);
-    public Task<PedidoDto> AgregarDetalleAsync(Guid pedidoId, Guid productoId, int cantidad, decimal precioUnitario, string? notas = null, CancellationToken cancelacion = default) => Task.FromResult(_pedido);
+    public Task<PedidoDto> AgregarDetalleAsync(Guid pedidoId, Guid productoId, int cantidad, decimal precioUnitario, string? notas = null, string? modificacionesJson = null, CancellationToken cancelacion = default) => Task.FromResult(_pedido);
     public Task<PedidoDto> EliminarDetalleAsync(Guid pedidoId, Guid detalleId, CancellationToken cancelacion = default) => Task.FromResult(_pedido);
     public Task<PedidoDto> ActualizarCantidadDetalleAsync(Guid pedidoId, Guid detalleId, int nuevaCantidad, CancellationToken cancelacion = default) => Task.FromResult(_pedido);
     public Task MarcarEnPreparacionAsync(Guid pedidoId, CancellationToken cancelacion = default) => Task.CompletedTask;
@@ -46,6 +47,15 @@ internal sealed class FakePedidosServicio : IPedidosServicio
     public Task EliminarPedidoPendienteAsync(Guid pedidoId, Guid usuarioId, string? ipAddress = null, CancellationToken cancelacion = default) => Task.CompletedTask;
     public Task<PedidoDto?> ObtenerPedidoAsync(Guid pedidoId, CancellationToken cancelacion = default) => Task.FromResult<PedidoDto?>(_pedido);
     public Task<List<PedidoDto>> ListarPedidosActivosAsync(CancellationToken cancelacion = default) => Task.FromResult(new List<PedidoDto> { _pedido });
+}
+
+internal sealed class FakeRecetasProductosServicio : IRecetasProductosServicio
+{
+    public Task<RecetaProductoDto> CrearRecetaAsync(Guid productoId, string instrucciones, List<RecetaIngredienteCreacionDto> ingredientes, CancellationToken cancelacion = default)
+        => throw new NotImplementedException();
+
+    public Task<RecetaProductoDto?> ObtenerPorProductoIdAsync(Guid productoId, CancellationToken cancelacion = default)
+        => Task.FromResult<RecetaProductoDto?>(null);
 }
 
 internal sealed class FakeCatalogoPedidosProductosServicio : ICatalogoProductosServicio

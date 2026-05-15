@@ -13,15 +13,18 @@ public class IndexModel : PageModel
     private readonly IPedidosServicio _pedidosServicio;
     private readonly ICatalogoProductosServicio _catalogoProductosServicio;
     private readonly IMesasServicio _mesasServicio;
+    private readonly IRecetasProductosServicio _recetasProductosServicio;
 
     public IndexModel(
         IPedidosServicio pedidosServicio,
         ICatalogoProductosServicio catalogoProductosServicio,
-        IMesasServicio mesasServicio)
+        IMesasServicio mesasServicio,
+        IRecetasProductosServicio recetasProductosServicio)
     {
         _pedidosServicio = pedidosServicio;
         _catalogoProductosServicio = catalogoProductosServicio;
         _mesasServicio = mesasServicio;
+        _recetasProductosServicio = recetasProductosServicio;
     }
 
     [BindProperty(SupportsGet = true)]
@@ -234,6 +237,25 @@ public class IndexModel : PageModel
         });
 
     // ── JSON handlers para SPA (AJAX, sin recarga) ───────────
+    public async Task<IActionResult> OnGetIngredientesProductoJsonAsync(Guid productoId)
+    {
+        var receta = await _recetasProductosServicio.ObtenerPorProductoIdAsync(productoId);
+        if (receta is null)
+        {
+            return new JsonResult(new { productoId, productoNombre = (string?)null, ingredientes = Array.Empty<object>() });
+        }
+
+        var ingredientes = receta.Ingredientes.Select(i => new
+        {
+            id = i.IngredienteId,
+            nombre = i.IngredienteNombre,
+            cantidadRequerida = i.CantidadRequerida,
+            unidadMedida = "unidad" // El DTO actual no expone unidad; se mejora en evolución
+        }).ToList();
+
+        return new JsonResult(new { productoId, productoNombre = receta.ProductoNombre, ingredientes });
+    }
+
     public async Task<IActionResult> OnPostCrearJsonAsync()
     {
         if (Vm.CrearPedido.Lineas.Count == 0 || Vm.CrearPedido.Lineas[0].ProductoId == Guid.Empty)
@@ -248,7 +270,7 @@ public class IndexModel : PageModel
         foreach (var l in Vm.CrearPedido.Lineas)
         {
             if (!prods.TryGetValue(l.ProductoId, out var prod)) return BadRequest("Producto inválido.");
-            detalles.Add(new DetalleCreacionDto { ProductoId = l.ProductoId, Cantidad = l.Cantidad, PrecioUnitario = prod.Precio });
+            detalles.Add(new DetalleCreacionDto { ProductoId = l.ProductoId, Cantidad = l.Cantidad, PrecioUnitario = prod.Precio, Notas = l.Notas, ModificacionesJson = l.ModificacionesJson });
         }
 
         try
@@ -259,14 +281,14 @@ public class IndexModel : PageModel
         catch (Exception ex) { return BadRequest(ex.Message); }
     }
 
-    public async Task<IActionResult> OnPostAgregarLineaJsonAsync(Guid pedidoId, Guid productoId, int cantidad, string? notas = null)
+    public async Task<IActionResult> OnPostAgregarLineaJsonAsync(Guid pedidoId, Guid productoId, int cantidad, string? notas = null, string? modificacionesJson = null)
     {
         try
         {
             var prods = await _catalogoProductosServicio.ListarProductosAsync();
             var prod = prods.FirstOrDefault(p => p.Id == productoId && p.Activo)
                 ?? throw new ArgumentException("Producto no encontrado.");
-            await _pedidosServicio.AgregarDetalleAsync(pedidoId, productoId, cantidad, prod.Precio, notas);
+            await _pedidosServicio.AgregarDetalleAsync(pedidoId, productoId, cantidad, prod.Precio, notas, modificacionesJson);
             return new JsonResult(new { ok = true });
         }
         catch (Exception ex) { return BadRequest(ex.Message); }
