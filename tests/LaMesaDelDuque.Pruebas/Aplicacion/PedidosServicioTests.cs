@@ -41,7 +41,7 @@ public class PedidosServicioTests : IDisposable
             new UsuarioRepositorio(_contexto),
             new AuditoriaRepositorio(_contexto),
             new RecetaProductoRepositorio(_contexto),
-            new OrdenCocinaRepositorio(_contexto));
+            new CuentaRepositorio(_contexto));
 
         _notificadorSpy = new NotificadorPedidosSpy();
         _servicio = new PedidosServicio(_uot, _notificadorSpy);

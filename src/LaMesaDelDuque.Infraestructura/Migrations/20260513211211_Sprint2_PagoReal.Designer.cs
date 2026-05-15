@@ -3,6 +3,7 @@ using System;
 using LaMesaDelDuque.Infraestructura.Persistencia;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace LaMesaDelDuque.Infraestructura.Migrations
 {
     [DbContext(typeof(LaMesaDelDuqueDbContext))]
-    partial class LaMesaDelDuqueDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260513211211_Sprint2_PagoReal")]
+    partial class Sprint2_PagoReal
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "8.0.11");
@@ -85,9 +88,6 @@ namespace LaMesaDelDuque.Infraestructura.Migrations
                     b.Property<string>("Descripcion")
                         .HasMaxLength(250)
                         .HasColumnType("TEXT");
-
-                    b.Property<int>("EstacionCocina")
-                        .HasColumnType("integer");
 
                     b.Property<string>("Nombre")
                         .IsRequired()
@@ -282,10 +282,6 @@ namespace LaMesaDelDuque.Infraestructura.Migrations
                     b.Property<int>("Cantidad")
                         .HasColumnType("INTEGER");
 
-                    b.Property<string>("Notas")
-                        .HasMaxLength(250)
-                        .HasColumnType("character varying(250)");
-
                     b.Property<Guid?>("PedidoId")
                         .HasColumnType("TEXT");
 
@@ -435,75 +431,6 @@ namespace LaMesaDelDuque.Infraestructura.Migrations
                         .IsUnique();
 
                     b.ToTable("Mesa");
-                });
-
-            modelBuilder.Entity("LaMesaDelDuque.Dominio.Entidades.OrdenCocina", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("Alergenos")
-                        .HasMaxLength(150)
-                        .HasColumnType("character varying(150)");
-
-                    b.Property<int>("Cantidad")
-                        .HasColumnType("integer");
-
-                    b.Property<int?>("CocineroId")
-                        .HasColumnType("integer");
-
-                    b.Property<Guid?>("DetallePedidoId")
-                        .HasColumnType("uuid");
-
-                    b.Property<int>("Estacion")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("Estado")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime?>("HoraListo")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTime>("HoraRecibido")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("IngredientesExtra")
-                        .HasMaxLength(150)
-                        .HasColumnType("character varying(150)");
-
-                    b.Property<string>("IngredientesQuitados")
-                        .HasMaxLength(150)
-                        .HasColumnType("character varying(150)");
-
-                    b.Property<int?>("MesaNumero")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("Notas")
-                        .HasMaxLength(250)
-                        .HasColumnType("character varying(250)");
-
-                    b.Property<Guid>("PedidoId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("ProductoNombre")
-                        .IsRequired()
-                        .HasMaxLength(150)
-                        .HasColumnType("character varying(150)");
-
-                    b.Property<string>("TipoServicio")
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Estacion", "Estado")
-                        .HasDatabaseName("IX_OrdenesCocina_Estacion_Estado");
-
-                    b.HasIndex("Estado", "HoraRecibido")
-                        .HasDatabaseName("IX_OrdenesCocina_Estado_HoraRecibido");
-
-                    b.ToTable("OrdenesCocina", (string)null);
                 });
 
             modelBuilder.Entity("LaMesaDelDuque.Dominio.Entidades.OrdenCompra", b =>

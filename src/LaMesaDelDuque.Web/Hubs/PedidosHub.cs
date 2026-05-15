@@ -6,13 +6,13 @@ namespace LaMesaDelDuque.Web.Hubs;
 [Authorize]
 public class PedidosHub : Hub
 {
-    public async Task UnirseAGrupo(string groupName)
+    public async Task UnirseAPedido(Guid pedidoId)
     {
-        await Groups.AddToGroupAsync(Context.ConnectionId, groupName);
+        await Groups.AddToGroupAsync(Context.ConnectionId, $"pedido-{pedidoId}");
     }
 
-    public async Task SalirDeGrupo(string groupName)
+    public async Task SalirDePedido(Guid pedidoId)
     {
-        await Groups.RemoveFromGroupAsync(Context.ConnectionId, groupName);
+        await Groups.RemoveFromGroupAsync(Context.ConnectionId, $"pedido-{pedidoId}");
     }
 }

@@ -149,19 +149,13 @@
         tabs.innerHTML = catTabs;
 
         const allCards = Object.entries(categorias).map(([cat, prods]) =>
-            prods.map(p => {
-                const imgHtml = p.imagenUrl
-                    ? `<img class="lmd-tableside-producto__img" src="${p.imagenUrl}" alt="${p.nombre}" loading="lazy" />`
-                    : `<div class="lmd-tableside-producto__placeholder"><span>🍽️</span><small>Sin foto</small></div>`;
-                return `
+            prods.map(p => `
                 <button class="lmd-tableside-producto" data-categoria="${cat.replace(/'/g, "\\'")}"
                         onclick="tableside.agregarProducto('${p.id}')">
-                    ${imgHtml}
                     <div class="lmd-tableside-producto__nombre">${p.nombre}</div>
                     <div class="lmd-tableside-producto__precio">${formatMoney(p.precio)}</div>
                     <div class="lmd-tableside-producto__tiempo">${p.tiempoPreparacionMin} min</div>
-                </button>`;
-            }).join('')
+                </button>`).join('')
         ).join('');
 
         grid.innerHTML = allCards;

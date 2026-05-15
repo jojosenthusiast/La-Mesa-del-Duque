@@ -1217,507 +1217,392 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 /* ═══════════════════════════════════════════════════════
-   Sprint 2 — KDS (Kitchen Display System)
+   Sprint 2 — Cuenta cards (pago dividido real)
    ═══════════════════════════════════════════════════════ */
 
-.lmd-kds-body {
-    margin: 0;
-    padding: 0;
-    background: #0f1b2d;
-    color: #f7f4ec;
-    font-family: var(--lmd-fuente-cuerpo);
-    height: 100vh;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
+.lmd-cuentas-crear {
+    max-width: 500px;
+    margin: 0 auto 2rem;
+    text-align: center;
 }
 
-.lmd-kds-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-    padding: 0.75rem 1.25rem;
-    background: color-mix(in oklch, var(--lmd-azul-duque) 94%, black);
-    border-bottom: 2px solid rgba(201, 162, 78, 0.25);
-    flex-shrink: 0;
-}
-
-.lmd-kds-header__left,
-.lmd-kds-header__right {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    min-width: 160px;
-}
-
-.lmd-kds-header__right {
-    justify-content: flex-end;
-}
-
-.lmd-kds-titulo {
-    font-family: var(--lmd-fuente-titulo);
-    font-size: 1.25rem;
-    color: var(--lmd-dorado-real);
-    margin: 0;
-}
-
-.lmd-kds-reloj {
-    font-size: 1rem;
-    font-weight: 700;
-    font-variant-numeric: tabular-nums;
-    color: var(--lmd-marfil);
-}
-
-.lmd-kds-tabs {
-    display: flex;
-    gap: 0.4rem;
-    flex-wrap: wrap;
-    justify-content: center;
-}
-
-.lmd-kds-tab {
-    font-family: var(--lmd-fuente-cuerpo);
-    font-weight: 600;
-    font-size: 0.8rem;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    padding: 0.5rem 1rem;
-    border: 1px solid rgba(201, 162, 78, 0.3);
-    border-radius: 0.35rem;
-    background: transparent;
-    color: var(--lmd-marfil);
-    cursor: pointer;
-    transition: all 0.15s;
-    touch-action: manipulation;
-}
-
-.lmd-kds-tab:hover {
-    border-color: var(--lmd-dorado-real);
-    color: var(--lmd-dorado-real);
-}
-
-.lmd-kds-tab--activo {
-    background: var(--lmd-dorado-real);
-    color: var(--lmd-azul-duque);
-    border-color: var(--lmd-dorado-real);
-}
-
-.lmd-kds-contador {
-    font-size: 0.875rem;
-    font-weight: 600;
-    color: var(--lmd-gris-piedra);
-}
-
-.lmd-kds-indicador {
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    background: var(--lmd-terracota);
-    opacity: 0;
-    transition: opacity 0.2s;
-}
-
-.lmd-kds-indicador--activo {
-    opacity: 1;
-    animation: lmd-kds-pulse 1s infinite;
-}
-
-@keyframes lmd-kds-pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.3; }
-}
-
-.lmd-kds-main {
-    flex: 1;
-    overflow: hidden;
-}
-
-.lmd-kds-columns {
-    display: flex;
-    height: 100%;
-    gap: 8px;
-    padding: 8px;
-    background: #1a1a1a;
-}
-
-.lmd-kds-col {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    min-width: 0;
-}
-
-.lmd-kds-col-header {
-    padding: 12px;
-    border-radius: 4px 4px 0 0;
-    background: #2d2d2d;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    flex-shrink: 0;
-}
-
-.lmd-kds-col-name {
-    font-size: 1.25rem;
-    font-weight: bold;
-    color: white;
-    font-family: var(--lmd-fuente-cuerpo);
-}
-
-.lmd-kds-col-count {
-    font-size: 0.875rem;
-    color: #aaa;
-    background: #3d3d3d;
-    padding: 4px 12px;
-    border-radius: 12px;
-    font-family: var(--lmd-fuente-cuerpo);
-}
-
-.lmd-kds-col-cards {
-    flex: 1;
-    overflow-y: auto;
-    padding: 8px;
-    display: flex;
-    flex-direction: column;
+.lmd-cuentas-split-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
     gap: 0.75rem;
+    margin-bottom: 1rem;
 }
 
-.lmd-kds-card {
+.lmd-cuentas-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 1rem;
+    max-width: 900px;
+    margin: 0 auto 1.5rem;
+}
+
+.lmd-cuenta-card {
     background: #fff;
-    border-radius: 0.75rem;
-    padding: 1rem;
-    color: var(--lmd-azul-duque);
+    border: 2px solid rgba(15, 27, 45, 0.1);
+    border-radius: 1rem;
+    padding: 1.25rem;
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
-    border-left: 8px solid #28a745;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-    transition: border-color 0.3s;
+    transition: all 0.12s;
 }
 
-.lmd-kds-card--fresh { border-left-color: #28a745; }
-.lmd-kds-card--warn { border-left-color: #ffc107; }
-.lmd-kds-card--alert {
-    border-left-color: #dc3545;
-    animation: lmd-kds-pulse-border 1.5s infinite;
+.lmd-cuenta-card--pagada {
+    border-color: var(--lmd-verde-salvia);
+    background: rgba(78, 107, 88, 0.06);
+    opacity: 0.85;
 }
 
-@keyframes lmd-kds-pulse-border {
-    0%, 100% { border-left-color: #dc3545; }
-    50% { border-left-color: #ff6b6b; }
-}
-
-.lmd-kds-card__header {
+.lmd-cuenta-card__header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    border-bottom: 1px solid rgba(15,27,45,0.08);
-    padding-bottom: 0.5rem;
+    border-bottom: 1px solid rgba(15, 27, 45, 0.08);
+    padding-bottom: 0.75rem;
 }
 
-.lmd-kds-card__mesa {
-    font-weight: 700;
-    font-size: 0.875rem;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: var(--lmd-gris-piedra);
-}
-
-.lmd-kds-card__timer {
+.lmd-cuenta-card__numero {
     font-family: var(--lmd-fuente-titulo);
-    font-size: 1.25rem;
-    font-weight: 700;
-    font-variant-numeric: tabular-nums;
-    color: var(--lmd-azul-duque);
-}
-
-.lmd-kds-card__body {
-    flex: 1;
-}
-
-.lmd-kds-card__producto {
     font-size: 1.125rem;
     font-weight: 700;
-    line-height: 1.3;
-    margin-bottom: 0.25rem;
+    color: var(--lmd-azul-duque);
 }
 
-.lmd-kds-card__cantidad {
-    font-size: 2rem;
+.lmd-cuenta-card__total {
+    font-size: 1.5rem;
     font-weight: 800;
-    color: var(--lmd-dorado-real);
+    color: var(--lmd-acento);
+    font-variant-numeric: tabular-nums;
 }
 
-.lmd-kds-card__notas {
-    font-size: 0.8rem;
-    color: var(--lmd-terracota);
-    margin-top: 0.5rem;
-    font-style: italic;
+.lmd-cuenta-card__metodos {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.5rem;
 }
 
-.lmd-kds-card-alergenos {
-    color: #e74c3c;
-    font-weight: bold;
-    font-size: 0.9rem;
-    margin-top: 8px;
-}
-
-.lmd-kds-card-quitados {
-    color: #f39c12;
-    margin-top: 4px;
-    font-size: 0.85rem;
-}
-
-.lmd-kds-card-extras {
-    color: #2ecc71;
-    margin-top: 4px;
-    font-size: 0.85rem;
-}
-
-.lmd-kds-card-notas {
-    color: #95a5a6;
-    font-style: italic;
-    margin-top: 4px;
-    font-size: 0.85rem;
-}
-
-.lmd-kds-card__footer {
-    padding-top: 0.5rem;
-}
-
-.lmd-kds-btn-listo {
-    width: 100%;
-    padding: 0.875rem;
-    border: none;
-    border-radius: 0.5rem;
-    background: var(--lmd-verde-salvia);
-    color: #fff;
-    font-size: 1rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    cursor: pointer;
-    touch-action: manipulation;
-    transition: background 0.12s;
-}
-
-.lmd-kds-btn-listo:hover {
-    background: #3d5847;
-}
-
-.lmd-kds-btn-listo:active {
-    transform: scale(0.98);
-}
-
-@media (max-width: 1199px) {
-    .lmd-kds-columns {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-    }
-    .lmd-kds-col {
-        min-height: 0;
-    }
-}
-
-@media (max-width: 1024px) {
-    .lmd-kds-tab {
-        font-size: 0.75rem;
-        padding: 0.4rem 0.75rem;
-    }
-    .lmd-kds-btn-listo {
-        padding: 1rem;
-        font-size: 1.125rem;
-    }
-}
-
-@media (max-width: 799px) {
-    .lmd-kds-columns {
-        display: flex;
-        flex-direction: column;
-    }
-    .lmd-kds-col {
-        display: none;
-    }
-    .lmd-kds-col--activa {
-        display: flex;
-    }
-    .lmd-kds-col-tabs {
-        display: flex;
-        gap: 0.25rem;
-        padding: 0.5rem;
-        background: #2d2d2d;
-        flex-shrink: 0;
-        overflow-x: auto;
-    }
-    .lmd-kds-col-tab {
-        font-family: var(--lmd-fuente-cuerpo);
-        font-weight: 600;
-        font-size: 0.8rem;
-        padding: 0.5rem 1rem;
-        border: 1px solid rgba(201, 162, 78, 0.3);
-        border-radius: 0.35rem;
-        background: transparent;
-        color: var(--lmd-marfil);
-        cursor: pointer;
-        transition: all 0.15s;
-        white-space: nowrap;
-    }
-    .lmd-kds-col-tab--activo {
-        background: var(--lmd-dorado-real);
-        color: var(--lmd-azul-duque);
-        border-color: var(--lmd-dorado-real);
-    }
-}
-
-@media (max-width: 640px) {
-    .lmd-kds-header {
-        flex-wrap: wrap;
-        gap: 0.5rem;
-    }
-    .lmd-kds-tabs {
-        order: 3;
-        width: 100%;
-        justify-content: flex-start;
-    }
-}
-
-/* ═══════════════════════════════════════════════════════
-   Sprint 2 — Modal de modificadores de ingredientes
-   ═══════════════════════════════════════════════════════ */
-
-.lmd-modificador-overlay {
-    position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 2000;
-    display: flex; align-items: center; justify-content: center;
-    font-family: var(--lmd-fuente-cuerpo);
-}
-
-.lmd-modificador-modal {
-    background: #fff; border-radius: 8px; max-width: 520px; width: 92%;
-    max-height: 88vh; overflow-y: auto; padding: 20px;
-    box-shadow: 0 12px 40px rgba(0,0,0,0.25);
-}
-
-.lmd-modificador-header {
-    display: flex; justify-content: space-between; align-items: center;
-    border-bottom: 2px solid #eee; padding-bottom: 12px; margin-bottom: 16px;
-}
-
-.lmd-modificador-header h3 { color: #2c3e50; font-size: 1.3rem; margin: 0; font-family: var(--lmd-fuente-titulo); }
-
-.lmd-modificador-cerrar {
-    background: none; border: none; font-size: 1.25rem; cursor: pointer; color: var(--lmd-gris-piedra);
-}
-
-.lmd-modificador-alergias { margin-bottom: 16px; }
-
-.lmd-modificador-alergias h4 { color: #e74c3c; font-size: 0.9rem; margin-bottom: 8px; font-family: var(--lmd-fuente-cuerpo); }
-
-.lmd-modificador-alergia-btn {
-    padding: 8px 14px; border: 2px solid #ddd; border-radius: 20px;
-    background: white; cursor: pointer; font-size: 0.85rem; margin: 3px;
-    transition: all 0.2s; font-family: var(--lmd-fuente-cuerpo);
-}
-
-.lmd-modificador-alergia-btn.activo {
-    background: #e74c3c; color: white; border-color: #e74c3c; font-weight: bold;
-}
-
-.lmd-modificador-ingredientes { margin-bottom: 16px; }
-
-.lmd-modificador-ingredientes h4 { color: var(--lmd-azul-duque); font-size: 0.95rem; margin-bottom: 10px; font-family: var(--lmd-fuente-cuerpo); }
-
-.lmd-modificador-item {
-    display: flex; justify-content: space-between; align-items: center;
-    padding: 10px 0; border-bottom: 1px solid #f0f0f0; gap: 0.5rem;
-}
-
-.lmd-modificador-item-nombre { flex: 1; font-size: 0.95rem; color: #2c3e50; }
-
-.lmd-modificador-item-controles { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; justify-content: flex-end; }
-
-.lmd-modificador-item-quitar {
-    padding: 6px 14px; border: 2px solid #e74c3c; border-radius: 6px;
-    background: white; color: #e74c3c; cursor: pointer; font-size: 0.85rem;
-    transition: all 0.2s; white-space: nowrap;
-}
-
-.lmd-modificador-item-quitar.activo {
-    background: #e74c3c; color: white;
-}
-
-.lmd-modificador-item-motivo {
-    padding: 6px 10px; border: 1px solid #ddd; border-radius: 6px;
-    background: white; font-size: 0.85rem;
-}
-
-.lmd-modificador-vacio { color: var(--lmd-gris-piedra); font-size: 0.875rem; font-style: italic; }
-
-.lmd-modificador-extras { margin-top: 16px; }
-
-.lmd-modificador-extras h4 { color: var(--lmd-azul-duque); font-size: 0.95rem; margin-bottom: 10px; font-family: var(--lmd-fuente-cuerpo); }
-
-.lmd-modificador-extra-btns { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.5rem; }
-
-.lmd-modificador-extra-btn {
-    padding: 6px 14px; border: 2px solid var(--lmd-acento); border-radius: 6px;
-    background: white; color: var(--lmd-azul-duque); cursor: pointer; font-size: 0.85rem;
-    transition: all 0.2s;
-}
-
-.lmd-modificador-extra-btn:hover { background: var(--lmd-acento); color: var(--lmd-azul-duque); }
-
-.lmd-modificador-extra-lista { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 0.5rem; }
-
-.lmd-modificador-extra-tag {
-    display: inline-flex; align-items: center; gap: 0.25rem;
-    padding: 4px 10px; background: var(--lmd-verde-salvia); color: white;
-    border-radius: 4px; font-size: 0.8rem;
-}
-
-.lmd-modificador-extra-tag button {
-    background: none; border: none; color: white; cursor: pointer; font-size: 0.75rem; padding: 0 2px;
-}
-
-.lmd-modificador-nota-btn {
-    padding: 6px 12px; border: 1px solid #ddd; border-radius: 6px;
-    background: white; cursor: pointer; font-size: 0.85rem; color: var(--lmd-gris-piedra);
-}
-
-.lmd-modificador-nota-texto { font-size: 0.85rem; color: var(--lmd-gris-piedra); margin-top: 4px; font-style: italic; }
-
-.lmd-modificador-confirmar {
-    width: 100%; padding: 14px; background: var(--lmd-acento); color: var(--lmd-azul-duque);
-    border: none; border-radius: 6px; font-size: 1.1rem; font-weight: bold;
-    cursor: pointer; margin-top: 20px; transition: background 0.2s;
-}
-
-.lmd-modificador-confirmar:hover { background: var(--lmd-dorado-hover); color: #fff; }
-
-/* Product card wrapper for modifier button */
-.lmd-pos-producto-card-wrapper {
-    position: relative;
-    display: flex;
-    flex-direction: column;
-}
-
-.lmd-pos-producto-card__editar {
-    position: absolute;
-    top: 6px;
-    right: 6px;
-    padding: 4px 8px;
-    border: 1px solid rgba(15,27,45,0.12);
+.lmd-cuenta-metodo-btn {
+    font-size: 0.875rem;
+    font-weight: 600;
+    padding: 0.625rem;
+    border: 1px solid rgba(15, 27, 45, 0.12);
     border-radius: 0.5rem;
     background: #fff;
-    color: var(--lmd-gris-piedra);
-    font-size: 0.75rem;
     cursor: pointer;
-    z-index: 2;
-    transition: all 0.15s;
+    touch-action: manipulation;
+    transition: all 0.12s;
 }
 
-.lmd-pos-producto-card__editar:hover {
+.lmd-cuenta-metodo-btn:hover:not(:disabled) {
+    border-color: var(--lmd-acento);
+}
+
+.lmd-cuenta-metodo-btn--activo {
+    background: var(--lmd-azul-duque);
+    color: #fff;
+    border-color: var(--lmd-azul-duque);
+}
+
+.lmd-cuenta-metodo-btn:disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+
+.lmd-cuenta-card__propina {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.lmd-cuenta-card__propina-label {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--lmd-gris-piedra);
+}
+
+.lmd-cuenta-propina-btns {
+    display: flex;
+    gap: 0.35rem;
+}
+
+.lmd-cuenta-propina-btn {
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 0.35rem 0.6rem;
+    border: 1px solid rgba(15, 27, 45, 0.12);
+    border-radius: 2rem;
+    background: #fff;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+
+.lmd-cuenta-propina-btn--activo {
     background: var(--lmd-acento);
     color: var(--lmd-azul-duque);
     border-color: var(--lmd-acento);
+}
+
+.lmd-cuenta-propina-custom {
+    width: 70px;
+    font-size: 0.8125rem;
+    padding: 0.35rem 0.5rem;
+    border: 1px solid rgba(15, 27, 45, 0.12);
+    border-radius: 0.5rem;
+    outline: none;
+}
+
+.lmd-cuenta-pagar-btn {
+    width: 100%;
+    margin-top: 0.25rem;
+}
+
+.lmd-cuenta-pagar-btn:disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+
+.lmd-cuenta-pagada-badge {
+    text-align: center;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--lmd-verde-salvia);
+    padding: 0.5rem;
+}
+
+.lmd-cuenta-progress {
+    max-width: 500px;
+    margin: 0 auto 2rem;
+    text-align: center;
+}
+
+.lmd-cuenta-progress__track {
+    height: 8px;
+    background: rgba(15, 27, 45, 0.08);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 0.5rem;
+}
+
+.lmd-cuenta-progress__bar {
+    height: 100%;
+    background: var(--lmd-verde-salvia);
+    border-radius: 4px;
+    transition: width 0.3s ease;
+}
+
+.lmd-cuenta-progress__text {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--lmd-gris-piedra);
+}
+
+.lmd-pos-pago-exito {
+    text-align: center;
+    padding: 3rem 1rem;
+}
+
+.lmd-pos-pago-exito__icono {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+}
+
+.lmd-pos-pago-exito__titulo {
+    font-family: var(--lmd-fuente-titulo);
+    font-size: 1.5rem;
+    color: var(--lmd-azul-duque);
+    margin-bottom: 1rem;
+}
+
+/* ═══════════════════════════════════════════════════════
+   Sprint 2 — Tableside (tablet-optimized)
+   ═══════════════════════════════════════════════════════ */
+
+.lmd-tableside-body {
+    margin: 0;
+    padding: 0;
+    font-family: var(--lmd-fuente-cuerpo);
+    background: var(--lmd-fondo);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.lmd-tableside-header {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: var(--lmd-azul-duque);
+    padding: 0.75rem 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.lmd-tableside-header__titulo {
+    font-family: var(--lmd-fuente-titulo);
+    color: var(--lmd-acento);
+    font-size: 1.25rem;
+    margin: 0;
+}
+
+.lmd-tableside-mesa-info {
+    color: var(--lmd-texto-invertido);
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+
+.lmd-tableside-cat-tabs {
+    position: sticky;
+    top: 56px;
+    z-index: 9;
+    background: #fff;
+    display: flex;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    overflow-x: auto;
+    border-bottom: 1px solid rgba(15, 27, 45, 0.08);
+}
+
+.lmd-tableside-cat-tab {
+    font-size: 1rem;
+    font-weight: 700;
+    padding: 0.75rem 1.25rem;
+    border: 2px solid rgba(15, 27, 45, 0.12);
+    border-radius: 2rem;
+    background: #fff;
+    cursor: pointer;
+    white-space: nowrap;
+    touch-action: manipulation;
+    min-height: 48px;
+}
+
+.lmd-tableside-cat-tab--activo {
+    background: var(--lmd-azul-duque);
+    color: #fff;
+    border-color: var(--lmd-azul-duque);
+}
+
+.lmd-tableside-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1rem;
+    padding: 1rem;
+    flex: 1;
+}
+
+.lmd-tableside-producto {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 1.25rem;
+    border: 2px solid rgba(15, 27, 45, 0.08);
+    border-radius: 1rem;
+    background: #fff;
+    cursor: pointer;
+    min-height: 120px;
+    text-align: left;
+    touch-action: manipulation;
+    transition: all 0.12s;
+}
+
+.lmd-tableside-producto:hover {
+    border-color: var(--lmd-acento);
+    box-shadow: 0 2px 8px rgba(201, 162, 78, 0.2);
+}
+
+.lmd-tableside-producto:active {
+    transform: scale(0.97);
+}
+
+.lmd-tableside-producto__nombre {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: var(--lmd-azul-duque);
+    line-height: 1.3;
+}
+
+.lmd-tableside-producto__precio {
+    font-size: 1.375rem;
+    font-weight: 800;
+    color: var(--lmd-acento);
+    font-variant-numeric: tabular-nums;
+}
+
+.lmd-tableside-producto__tiempo {
+    font-size: 0.875rem;
+    color: var(--lmd-gris-piedra);
+    font-weight: 500;
+}
+
+.lmd-tableside-bottom {
+    position: sticky;
+    bottom: 0;
+    background: #fff;
+    border-top: 2px solid rgba(15, 27, 45, 0.1);
+    padding: 0.75rem 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    z-index: 10;
+}
+
+.lmd-tableside-pedido-info {
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+.lmd-tableside-pedido-info strong {
+    color: var(--lmd-azul-duque);
+    font-variant-numeric: tabular-nums;
+}
+
+.lmd-tableside-btn-enviar {
+    font-size: 1rem;
+    font-weight: 700;
+    padding: 0.875rem 1.5rem;
+    border: none;
+    border-radius: 0.75rem;
+    background: var(--lmd-verde-salvia);
+    color: #fff;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+
+.lmd-tableside-btn-enviar:disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+
+.lmd-tableside-btn-volver {
+    font-size: 0.875rem;
+    font-weight: 600;
+    padding: 0.625rem 1rem;
+    border: 1px solid rgba(15, 27, 45, 0.12);
+    border-radius: 0.5rem;
+    background: #fff;
+    cursor: pointer;
+    color: var(--lmd-gris-piedra);
+}
+
+@media (max-width: 768px) {
+    .lmd-tableside-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    .lmd-tableside-producto {
+        min-height: 100px;
+    }
+}
+
+@media (min-width: 1024px) {
+    .lmd-tableside-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
 }

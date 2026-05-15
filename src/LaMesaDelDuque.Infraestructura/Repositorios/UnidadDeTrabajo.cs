@@ -1,5 +1,7 @@
+using LaMesaDelDuque.Dominio.Excepciones;
 using LaMesaDelDuque.Dominio.Repositorios;
 using LaMesaDelDuque.Infraestructura.Persistencia;
+using Microsoft.EntityFrameworkCore;
 
 namespace LaMesaDelDuque.Infraestructura.Repositorios;
 
@@ -18,7 +20,7 @@ internal class UnidadDeTrabajo : IUnidadDeTrabajo
         UsuarioRepositorio usuarioRepositorio,
         AuditoriaRepositorio auditoriaRepositorio,
         RecetaProductoRepositorio recetaProductoRepositorio,
-        OrdenCocinaRepositorio ordenCocinaRepositorio)
+        CuentaRepositorio cuentaRepositorio)
     {
         _contexto = contexto;
         Categorias = categoriaRepositorio;
@@ -30,7 +32,7 @@ internal class UnidadDeTrabajo : IUnidadDeTrabajo
         Usuarios = usuarioRepositorio;
         Auditorias = auditoriaRepositorio;
         RecetasProductos = recetaProductoRepositorio;
-        OrdenesCocina = ordenCocinaRepositorio;
+        Cuentas = cuentaRepositorio;
     }
 
     public ICategoriaProductoRepositorio Categorias { get; }
@@ -42,10 +44,18 @@ internal class UnidadDeTrabajo : IUnidadDeTrabajo
     public IRolRepositorio Roles { get; }
     public IUsuarioRepositorio Usuarios { get; }
     public IAuditoriaRepositorio Auditorias { get; }
-    public IOrdenCocinaRepositorio OrdenesCocina { get; }
+    public ICuentaRepositorio Cuentas { get; }
 
     public async Task<int> GuardarCambiosAsync(CancellationToken cancelacion = default)
     {
-        return await _contexto.SaveChangesAsync(cancelacion);
+        try
+        {
+            return await _contexto.SaveChangesAsync(cancelacion);
+        }
+        catch (DbUpdateConcurrencyException ex)
+        {
+            var entidades = string.Join(", ", ex.Entries.Select(e => e.Entity.GetType().Name));
+            throw new ConcurrenciaException($"Conflicto de concurrencia al guardar cambios. Entidades: {entidades}", ex);
+        }
     }
 }
