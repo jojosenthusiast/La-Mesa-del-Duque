@@ -1,0 +1,49 @@
+@page
+@model LaMesaDelDuque.Web.Pages.Operaciones.Pedidos.TablesideModel
+@{
+    Layout = null;
+    ViewData["Title"] = "Tableside";
+}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>@ViewData["Title"] — La Mesa del Duque</title>
+    <link rel="icon" type="image/png" href="~/img/marca/logo-simbolo.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="~/css/marca.css" asp-append-version="true" />
+    @Html.AntiForgeryToken()
+</head>
+<body class="lmd-tableside-body">
+    <header class="lmd-tableside-header">
+        <h1 class="lmd-tableside-header__titulo">Tableside</h1>
+        <div class="lmd-tableside-mesa-info" id="tableside-mesa-info">Seleccione mesa</div>
+    </header>
+
+    <div class="lmd-tableside-cat-tabs" id="tableside-cat-tabs"></div>
+
+    <div class="lmd-tableside-grid" id="tableside-grid"></div>
+
+    <div class="lmd-tableside-bottom">
+        <button class="lmd-tableside-btn-volver" onclick="tableside.irAMesas()">← Mesas</button>
+        <div class="lmd-tableside-pedido-info" id="tableside-pedido-info">0 items — $0.00</div>
+        <button class="lmd-tableside-btn-enviar" id="tableside-btn-enviar" onclick="tableside.enviarACocina()" disabled>Enviar a Cocina</button>
+    </div>
+
+    <script>
+        window.__lmdMesasDisponibles = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+            Model.Vm.MesasDisponibles.Where(m => m.Estado == "Disponible").Select(m => new { m.Id, m.Numero, m.Capacidad })));
+
+        window.__lmdProductosDisponibles = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+            Model.Vm.ProductosDisponibles.Select(p => new { p.Id, p.Nombre, p.Precio, p.CategoriaNombre, p.TiempoPreparacionMin, p.ImagenUrl })));
+    </script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.7/signalr.min.js"
+            integrity="sha512-7SRCYIJ8cT6+S4fuC1t7F/LPLoWvMhX7Oxf2N3Qu5jVoYW/P73eBEb0lHNPD0sSR9Cpsu+TtKz9vg8WYkJDtIw=="
+            crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="~/js/tableside.js" asp-append-version="true"></script>
+</body>
+</html>

@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using LaMesaDelDuque.Aplicacion.Dtos;
+using Microsoft.AspNetCore.Http;
 
 namespace LaMesaDelDuque.Web.Models.Operaciones;
 
@@ -29,4 +30,9 @@ public class ProductoFormVm
     public string? Descripcion { get; set; }
     public string? ImagenUrl { get; set; }
     public int? TiempoPreparacionMin { get; set; }
+
+    [Display(Name = "Foto del producto")]
+    public IFormFile? ImagenFile { get; set; }
+
+    public bool EliminarImagen { get; set; }
 }
