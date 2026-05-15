@@ -146,6 +146,7 @@
         });
     }
 
+    // Offline payment queue — FIX 5
     async function sincronizarPagosPendientes() {
         const pendientes = await obtenerPagosPendientes();
         if (pendientes.length === 0) return;
