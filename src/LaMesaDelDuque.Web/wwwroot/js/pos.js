@@ -356,6 +356,33 @@
         return new Intl.NumberFormat('es-SV', { style: 'currency', currency: 'USD' }).format(n);
     }
 
+    function persistState() {
+        localStorage.setItem('lmdd_pos_state', JSON.stringify({
+            pedidoActual: state.pedidoActual,
+            lineas: state.lineas,
+            cuentas: state.cuentas || [],
+            tipoServicio: state.tipoServicio,
+            mesaId: state.mesaId
+        }));
+    }
+
+    async function cargarPedidosActivosLocalStorage() {
+        const savedState = localStorage.getItem('lmdd_pos_state');
+        if (savedState) {
+            const data = JSON.parse(savedState);
+            if (data.pedidoActual && data.tipoServicio === state.tipoServicio) {
+                state.pedidoActual = data.pedidoActual;
+                state.lineas = data.lineas || [];
+                state.cuentas = data.cuentas || [];
+                state.mesaId = data.mesaId || null;
+                state.pantalla = 'productos';
+                renderPantallaProductos();
+                return true;
+            }
+        }
+        return false;
+    }
+
     // ── Modal de notas / alérgenos (rápido) ─────────────────
     function pedirNota(producto) {
         return new Promise((resolve) => {
@@ -1145,8 +1172,11 @@
     window.__lmdMesasDisponibles = window.__lmdMesasDisponibles || [];
     window.__lmdProductosDisponibles = window.__lmdProductosDisponibles || [];
 
-    document.addEventListener('DOMContentLoaded', () => {
-        renderPantallaMesa();
+    document.addEventListener('DOMContentLoaded', async () => {
+        const cargado = await cargarPedidosActivosLocalStorage();
+        if (!cargado) {
+            renderPantallaMesa();
+        }
         actualizarOfflineUI();
         iniciarSignalRPOS();
     });

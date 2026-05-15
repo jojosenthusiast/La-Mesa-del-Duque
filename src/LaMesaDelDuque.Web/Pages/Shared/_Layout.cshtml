@@ -60,6 +60,13 @@
                         <a class="nav-link @(ViewData["ActiveTab"]?.ToString() == "Pedidos" ? "active" : "")"
                            asp-page="/Operaciones/Pedidos/Index">Pedidos</a>
                     </li>
+                    @if (esCocinero || esEncargado || esAdmin)
+                    {
+                        <li class="nav-item">
+                            <a class="nav-link @(ViewData["ActiveTab"]?.ToString() == "Cocina" ? "active" : "")"
+                               asp-page="/Cocina/KDS">COCINA</a>
+                        </li>
+                    }
                     @if (esAdmin)
                     {
                         <li class="nav-item">

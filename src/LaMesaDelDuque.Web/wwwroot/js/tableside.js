@@ -61,6 +61,16 @@
         return new Intl.NumberFormat('es-SV', { style: 'currency', currency: 'USD' }).format(n);
     }
 
+    function persistState() {
+        localStorage.setItem('lmdd_pos_state', JSON.stringify({
+            pedidoActual: state.pedidoActual,
+            lineas: state.lineas,
+            cuentas: [],
+            tipoServicio: 'ComerAqui',
+            mesaId: state.mesaId
+        }));
+    }
+
     // ── SignalR ─────────────────────────────────────────────
     let connection = null;
 
@@ -278,6 +288,7 @@
                 state.pedidoActual.enviado = true;
                 state.pedidoActual.estado = 'EnPreparacion';
                 actualizarBottomBar();
+                persistState();
 
                 // Opcional: feedback visual
                 const btn = document.getElementById('tableside-btn-enviar');
