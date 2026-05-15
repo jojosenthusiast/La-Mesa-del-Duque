@@ -33,7 +33,8 @@ internal class CocinaServicio : ICocinaServicio
                 detalle.Cantidad,
                 estacion,
                 pedido.Mesa?.Numero,
-                pedido.TipoServicio.ToString());
+                pedido.TipoServicio.ToString(),
+                detalle.Notas);
 
             await _uot.OrdenesCocina.AgregarAsync(orden, ct);
         }
@@ -86,6 +87,11 @@ internal class CocinaServicio : ICocinaServicio
             PedidoId = orden.PedidoId,
             ProductoNombre = orden.ProductoNombre,
             Cantidad = orden.Cantidad,
+            Notas = orden.Notas,
+            Alergenos = orden.Alergenos,
+            IngredientesQuitados = orden.IngredientesQuitados,
+            IngredientesExtra = orden.IngredientesExtra,
+            CocineroId = orden.CocineroId,
             Estacion = orden.Estacion.ToString(),
             Estado = orden.Estado.ToString(),
             HoraRecibido = orden.HoraRecibido,

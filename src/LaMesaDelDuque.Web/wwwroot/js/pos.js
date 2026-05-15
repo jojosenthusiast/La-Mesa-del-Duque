@@ -15,6 +15,7 @@
                 form.append(`Vm.CrearPedido.Lineas[${i}].ProductoId`, l.productoId);
                 form.append(`Vm.CrearPedido.Lineas[${i}].Cantidad`, l.cantidad);
                 form.append(`Vm.CrearPedido.Lineas[${i}].PrecioUnitario`, '0');
+                if (l.notas) form.append(`Vm.CrearPedido.Lineas[${i}].Notas`, l.notas);
             });
 
             const res = await fetch('?handler=CrearJson', { method: 'POST', body: form, headers: { 'X-Requested-With': 'XMLHttpRequest' } });
@@ -22,12 +23,13 @@
             return res.json();
         },
 
-        async agregar(pedidoId, productoId, cantidad) {
+        async agregar(pedidoId, productoId, cantidad, notas) {
             const form = new FormData();
             form.append('__RequestVerificationToken', csrfToken());
             form.append('pedidoId', pedidoId);
             form.append('productoId', productoId);
             form.append('cantidad', cantidad);
+            if (notas) form.append('notas', notas);
 
             const res = await fetch('?handler=AgregarLineaJson', { method: 'POST', body: form, headers: { 'X-Requested-With': 'XMLHttpRequest' } });
             if (!res.ok) throw new Error((await res.text()) || 'Error al agregar');
@@ -83,11 +85,100 @@
         tipoServicio: 'ComerAqui',
         mesaId: null,
         pedidoActual: null,
-        lineas: [], // { id, productoId, productoNombre, cantidad, precioUnitario, subtotal }
+        lineas: [], // { id, productoId, productoNombre, cantidad, precioUnitario, subtotal, notas }
     };
 
     function formatMoney(n) {
         return new Intl.NumberFormat('es-SV', { style: 'currency', currency: 'USD' }).format(n);
+    }
+
+    // ── Modal de notas / alérgenos ──────────────────────────
+    function pedirNota(producto) {
+        return new Promise((resolve) => {
+            // Eliminar modal previo si existe
+            const previo = document.getElementById('lmd-pos-nota-modal');
+            if (previo) previo.remove();
+
+            const modal = document.createElement('div');
+            modal.id = 'lmd-pos-nota-modal';
+            modal.style.cssText = `
+                position: fixed; inset: 0; z-index: 9999;
+                background: rgba(15,27,45,0.55);
+                display: flex; align-items: center; justify-content: center;
+                font-family: 'Montserrat', sans-serif;
+            `;
+            modal.innerHTML = `
+                <div style="background:#fff;border-radius:1rem;padding:1.5rem;width:92%;max-width:420px;box-shadow:0 12px 40px rgba(0,0,0,0.25);">
+                    <h3 style="margin:0 0 0.75rem;font-family:'Cinzel',serif;font-size:1.25rem;color:#0F1B2D;">
+                        ${producto.nombre}
+                    </h3>
+                    <p style="margin:0 0 1rem;color:#6B6F76;font-size:0.875rem;">Añadir notas para cocina</p>
+
+                    <div style="margin-bottom:1rem;">
+                        <label style="display:block;font-weight:700;font-size:0.8125rem;margin-bottom:0.5rem;color:#0F1B2D;">Alérgenos</label>
+                        <div style="display:flex;flex-wrap:wrap;gap:0.5rem;">
+                            <label style="display:flex;align-items:center;gap:0.35rem;font-size:0.875rem;cursor:pointer;padding:0.35rem 0.6rem;border:1px solid rgba(15,27,45,0.12);border-radius:0.5rem;">
+                                <input type="checkbox" value="maní" data-alergeno /> 🥜 Maní
+                            </label>
+                            <label style="display:flex;align-items:center;gap:0.35rem;font-size:0.875rem;cursor:pointer;padding:0.35rem 0.6rem;border:1px solid rgba(15,27,45,0.12);border-radius:0.5rem;">
+                                <input type="checkbox" value="lácteos" data-alergeno /> 🥛 Lácteos
+                            </label>
+                            <label style="display:flex;align-items:center;gap:0.35rem;font-size:0.875rem;cursor:pointer;padding:0.35rem 0.6rem;border:1px solid rgba(15,27,45,0.12);border-radius:0.5rem;">
+                                <input type="checkbox" value="gluten" data-alergeno /> 🌾 Gluten
+                            </label>
+                            <label style="display:flex;align-items:center;gap:0.35rem;font-size:0.875rem;cursor:pointer;padding:0.35rem 0.6rem;border:1px solid rgba(15,27,45,0.12);border-radius:0.5rem;">
+                                <input type="checkbox" value="mariscos" data-alergeno /> 🦐 Mariscos
+                            </label>
+                        </div>
+                    </div>
+
+                    <div style="margin-bottom:1.25rem;">
+                        <label style="display:block;font-weight:700;font-size:0.8125rem;margin-bottom:0.5rem;color:#0F1B2D;">Nota especial</label>
+                        <textarea id="lmd-pos-nota-texto" rows="2" placeholder="Ej: Sin cebolla, término medio..."
+                            style="width:100%;border:2px solid rgba(15,27,45,0.12);border-radius:0.5rem;padding:0.6rem;font-size:0.9rem;resize:vertical;box-sizing:border-box;"></textarea>
+                    </div>
+
+                    <div style="display:flex;gap:0.75rem;">
+                        <button id="lmd-pos-nota-agregar" style="flex:1;padding:0.75rem;border:none;border-radius:0.5rem;background:#C9A24E;color:#0F1B2D;font-weight:700;font-size:0.95rem;cursor:pointer;">Agregar</button>
+                        <button id="lmd-pos-nota-cancelar" style="flex:1;padding:0.75rem;border:1px solid rgba(15,27,45,0.12);border-radius:0.5rem;background:#fff;color:#6B6F76;font-weight:700;font-size:0.95rem;cursor:pointer;">Cancelar</button>
+                    </div>
+                </div>
+            `;
+
+            document.body.appendChild(modal);
+
+            const agregar = modal.querySelector('#lmd-pos-nota-agregar');
+            const cancelar = modal.querySelector('#lmd-pos-nota-cancelar');
+            const textarea = modal.querySelector('#lmd-pos-nota-texto');
+
+            const cerrar = () => { modal.remove(); };
+
+            agregar.addEventListener('click', () => {
+                const alergenos = Array.from(modal.querySelectorAll('[data-alergeno]:checked')).map(cb => cb.value).join(', ');
+                const notaTexto = textarea.value.trim();
+                const partes = [];
+                if (alergenos) partes.push(`ALÉRGENOS: ${alergenos}`);
+                if (notaTexto) partes.push(notaTexto);
+                const notaFinal = partes.join(' | ');
+                cerrar();
+                resolve(notaFinal || null);
+            });
+
+            cancelar.addEventListener('click', () => {
+                cerrar();
+                resolve(null);
+            });
+
+            // Cerrar al hacer click fuera
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    cerrar();
+                    resolve(null);
+                }
+            });
+
+            textarea.focus();
+        });
     }
 
     // ── Render por pantalla ────────────────────────────────
@@ -161,6 +252,7 @@
                 <div class="lmd-pos-linea__info">
                     <strong>${l.productoNombre}</strong>
                     <small>${formatMoney(l.precioUnitario)} c/u</small>
+                    ${l.notas ? `<small style="color:#C75A3C;font-weight:600;">${l.notas}</small>` : ''}
                 </div>
                 <div class="lmd-pos-linea__acciones">
                     <button class="lmd-pos-linea__qty" onclick="pos.cambiarCantidad('${l.id}', ${l.cantidad - 1})" ${l.cantidad <= 1 ? 'disabled' : ''}>−</button>
@@ -261,14 +353,21 @@
         },
 
         async agregarProducto(productoId) {
+            const prod = window.__lmdProductosDisponibles.find(p => p.id === productoId);
+            if (!prod) return;
+
+            // Pedir nota antes de agregar
+            const notas = await pedirNota(prod);
+            if (notas === null) return; // usuario canceló
+
             // Si no hay pedido activo, crear
             if (!state.pedidoActual) {
                 try {
-                    const prod = window.__lmdProductosDisponibles.find(p => p.id === productoId);
                     const result = await api.crear(state.tipoServicio, state.mesaId, [{
                         productoId,
                         cantidad: 1,
-                        precioUnitario: prod.precio
+                        precioUnitario: prod.precio,
+                        notas
                     }]);
                     state.pedidoActual = { id: result.pedidoId, estado: result.estado };
                     state.lineas = result.lineas || [{
@@ -277,7 +376,8 @@
                         productoNombre: prod.nombre,
                         cantidad: 1,
                         precioUnitario: prod.precio,
-                        subtotal: prod.precio
+                        subtotal: prod.precio,
+                        notas
                     }];
                 } catch (e) {
                     alert('Error al crear pedido: ' + e.message);
@@ -285,9 +385,8 @@
                 }
             } else {
                 try {
-                    await api.agregar(state.pedidoActual.id, productoId, 1);
-                    const prod = window.__lmdProductosDisponibles.find(p => p.id === productoId);
-                    const existente = state.lineas.find(l => l.productoId === productoId);
+                    await api.agregar(state.pedidoActual.id, productoId, 1, notas);
+                    const existente = state.lineas.find(l => l.productoId === productoId && l.notas === notas);
                     if (existente) {
                         existente.cantidad++;
                         existente.subtotal = existente.cantidad * existente.precioUnitario;
@@ -298,7 +397,8 @@
                             productoNombre: prod.nombre,
                             cantidad: 1,
                             precioUnitario: prod.precio,
-                            subtotal: prod.precio
+                            subtotal: prod.precio,
+                            notas
                         });
                     }
                 } catch (e) {

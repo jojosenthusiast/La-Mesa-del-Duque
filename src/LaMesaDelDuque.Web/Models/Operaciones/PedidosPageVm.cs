@@ -35,6 +35,9 @@ public class LineaPedidoFormVm
 
     [Range(typeof(decimal), "0.01", "999999")]
     public decimal PrecioUnitario { get; set; }
+
+    [MaxLength(250)]
+    public string? Notas { get; set; }
 }
 
 public class PagoFormVm

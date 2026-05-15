@@ -19,6 +19,15 @@ internal class OrdenCocinaConfiguracion : IEntityTypeConfiguration<OrdenCocina>
         constructor.Property(o => o.Notas)
             .HasMaxLength(250);
 
+        constructor.Property(o => o.Alergenos)
+            .HasMaxLength(150);
+
+        constructor.Property(o => o.IngredientesQuitados)
+            .HasMaxLength(150);
+
+        constructor.Property(o => o.IngredientesExtra)
+            .HasMaxLength(150);
+
         constructor.Property(o => o.TipoServicio)
             .HasMaxLength(50);
 

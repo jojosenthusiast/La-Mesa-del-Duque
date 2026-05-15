@@ -1,6 +1,6 @@
 /* ============================================================================
    La Mesa del Duque — Kitchen Display System (KDS)
-   SignalR cliente + render de tarjetas + audio + timers.
+   Multi-cocinero 3 columnas + SignalR + audio + timers.
    ============================================================================ */
 
 (function () {
@@ -8,6 +8,20 @@
     let estacionActual = 'Todas';
     let audioContext = null;
     let audioDesbloqueado = false;
+
+    const COOKS = window.__lmdKdsCooks || [
+        { id: 1, name: 'Cocinero 1', color: '#e74c3c' },
+        { id: 2, name: 'Cocinero 2', color: '#3498db' },
+        { id: 3, name: 'Cocinero 3', color: '#2ecc71' }
+    ];
+
+    const STATION_TO_COLUMN = window.__lmdKdsStationMap || {
+        'Parrilla': 1,
+        'Fria': 2,
+        'Caliente': 3,
+        'Bar': 2,
+        'Expo': 1
+    };
 
     // ── Audio (Web Audio API) ───────────────────────────────
     function inicializarAudio() {
@@ -67,9 +81,37 @@
         return 'lmd-kds-card--fresh';
     }
 
+    function columnaParaOrden(orden) {
+        // Si la orden tiene un cocinero asignado manualmente, usarlo
+        if (orden.cocineroId) {
+            return orden.cocineroId;
+        }
+        // Routing automático por estación
+        const estacion = orden.estacion || '';
+        return STATION_TO_COLUMN[estacion] || 1;
+    }
+
+    function renderInstruccionesEspeciales(orden) {
+        let html = '';
+        if (orden.alergenos) {
+            html += `<div class="lmd-kds-card-alergenos">⚠ ALÉRGENOS: ${orden.alergenos}</div>`;
+        }
+        if (orden.ingredientesQuitados) {
+            html += `<div class="lmd-kds-card-quitados">❌ Sin ${orden.ingredientesQuitados}</div>`;
+        }
+        if (orden.ingredientesExtra) {
+            html += `<div class="lmd-kds-card-extras">➕ ${orden.ingredientesExtra}</div>`;
+        }
+        if (orden.notas) {
+            html += `<div class="lmd-kds-card-notas">📝 ${orden.notas}</div>`;
+        }
+        return html;
+    }
+
     function renderOrden(orden) {
-        const grid = document.getElementById('lmd-kds-grid');
-        if (!grid) return;
+        const colId = columnaParaOrden(orden);
+        const container = document.getElementById(`kds-cards-${colId}`);
+        if (!container) return;
 
         const minutos = orden.minutosTranscurridos || 0;
         const colorClass = claseColor(minutos);
@@ -86,7 +128,7 @@
             <div class="lmd-kds-card__body">
                 <div class="lmd-kds-card__producto">${orden.productoNombre}</div>
                 <div class="lmd-kds-card__cantidad">x${orden.cantidad}</div>
-                ${orden.notas ? `<div class="lmd-kds-card__notas">${orden.notas}</div>` : ''}
+                ${renderInstruccionesEspeciales(orden)}
             </div>
             <footer class="lmd-kds-card__footer">
                 <button class="lmd-kds-btn-listo" data-orden-id="${orden.id}">LISTO</button>
@@ -94,20 +136,29 @@
         `;
 
         card.querySelector('.lmd-kds-btn-listo').addEventListener('click', () => marcarListo(orden.id));
-        grid.appendChild(card);
+        container.appendChild(card);
     }
 
     function removerOrden(ordenId) {
         const card = document.querySelector(`.lmd-kds-card[data-orden-id="${ordenId}"]`);
         if (card) card.remove();
-        actualizarContador();
+        actualizarContadores();
     }
 
-    function actualizarContador() {
+    function actualizarContadores() {
         const contador = document.getElementById('lmd-kds-contador');
-        const grid = document.getElementById('lmd-kds-grid');
-        if (contador && grid) {
-            contador.textContent = `${grid.children.length} ordenes`;
+        let total = 0;
+        COOKS.forEach(cook => {
+            const container = document.getElementById(`kds-cards-${cook.id}`);
+            const countEl = document.getElementById(`kds-count-${cook.id}`);
+            const count = container ? container.children.length : 0;
+            total += count;
+            if (countEl) {
+                countEl.textContent = `${count} ${count === 1 ? 'orden' : 'ordenes'}`;
+            }
+        });
+        if (contador) {
+            contador.textContent = `${total} ${total === 1 ? 'orden' : 'ordenes'}`;
         }
     }
 
@@ -161,7 +212,7 @@
         connection.on('NuevaOrden', orden => {
             if (estacionActual !== 'Todas' && orden.estacion !== estacionActual) return;
             renderOrden(orden);
-            actualizarContador();
+            actualizarContadores();
             reproducirAlerta();
         });
 
@@ -172,7 +223,7 @@
         connection.on('ItemRecuperado', orden => {
             if (estacionActual !== 'Todas' && orden.estacion !== estacionActual) return;
             renderOrden(orden);
-            actualizarContador();
+            actualizarContadores();
         });
 
         await connection.start();
@@ -202,9 +253,11 @@
             tab.classList.toggle('lmd-kds-tab--activo', tab.dataset.estacion === estacion);
         });
 
-        // Refrescar grid
-        const grid = document.getElementById('lmd-kds-grid');
-        if (grid) grid.innerHTML = '';
+        // Limpiar columnas
+        COOKS.forEach(cook => {
+            const container = document.getElementById(`kds-cards-${cook.id}`);
+            if (container) container.innerHTML = '';
+        });
         cargarOrdenesIniciales();
         conectarAEstacion(estacion);
     }
@@ -216,13 +269,47 @@
             });
             if (!res.ok) return;
             const ordenes = await res.json();
-            const grid = document.getElementById('lmd-kds-grid');
-            if (grid) grid.innerHTML = '';
+            COOKS.forEach(cook => {
+                const container = document.getElementById(`kds-cards-${cook.id}`);
+                if (container) container.innerHTML = '';
+            });
             (ordenes || []).forEach(renderOrden);
-            actualizarContador();
+            actualizarContadores();
         } catch (e) {
             console.error('Error cargando ordenes:', e);
         }
+    }
+
+    // ── Tabs de columna (mobile) ────────────────────────────
+    function renderColumnTabs() {
+        const main = document.querySelector('.lmd-kds-main');
+        if (!main) return;
+
+        // Si ya existe el contenedor de tabs, no recrear
+        if (document.querySelector('.lmd-kds-col-tabs')) return;
+
+        const tabsContainer = document.createElement('div');
+        tabsContainer.className = 'lmd-kds-col-tabs';
+        tabsContainer.innerHTML = COOKS.map((cook, i) =>
+            `<button class="lmd-kds-col-tab ${i === 0 ? 'lmd-kds-col-tab--activo' : ''}" data-col-id="${cook.id}">${cook.name}</button>`
+        ).join('');
+
+        main.insertBefore(tabsContainer, main.firstChild);
+
+        tabsContainer.querySelectorAll('.lmd-kds-col-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                const colId = tab.dataset.colId;
+                tabsContainer.querySelectorAll('.lmd-kds-col-tab').forEach(t => t.classList.remove('lmd-kds-col-tab--activo'));
+                tab.classList.add('lmd-kds-col-tab--activo');
+                document.querySelectorAll('.lmd-kds-col').forEach(col => col.classList.remove('lmd-kds-col--activa'));
+                const col = document.getElementById(`kds-col-${colId}`);
+                if (col) col.classList.add('lmd-kds-col--activa');
+            });
+        });
+
+        // Activar primera columna por defecto en mobile
+        const firstCol = document.getElementById(`kds-col-${COOKS[0].id}`);
+        if (firstCol) firstCol.classList.add('lmd-kds-col--activa');
     }
 
     // ── Inicialización ──────────────────────────────────────
@@ -230,10 +317,13 @@
         // Desbloquear audio con primer interacción
         document.body.addEventListener('click', inicializarAudio, { once: true });
 
-        // Tabs
+        // Tabs de estación
         document.querySelectorAll('.lmd-kds-tab').forEach(tab => {
             tab.addEventListener('click', () => cambiarEstacion(tab.dataset.estacion));
         });
+
+        // Tabs de columna para mobile
+        renderColumnTabs();
 
         // Cargar ordenes iniciales y conectar SignalR
         cargarOrdenesIniciales();

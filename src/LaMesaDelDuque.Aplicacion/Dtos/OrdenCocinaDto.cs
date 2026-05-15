@@ -6,6 +6,11 @@ public class OrdenCocinaDto
     public Guid PedidoId { get; set; }
     public string ProductoNombre { get; set; } = string.Empty;
     public int Cantidad { get; set; }
+    public string? Notas { get; set; }
+    public string? Alergenos { get; set; }
+    public string? IngredientesQuitados { get; set; }
+    public string? IngredientesExtra { get; set; }
+    public int? CocineroId { get; set; }
     public string Estacion { get; set; } = string.Empty;
     public string Estado { get; set; } = string.Empty;
     public DateTime HoraRecibido { get; set; }

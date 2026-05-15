@@ -33,36 +33,25 @@
     </header>
 
     <main class="lmd-kds-main">
-        <div id="lmd-kds-grid" class="lmd-kds-grid">
-            @foreach (var orden in Model.Ordenes)
+        <div class="lmd-kds-columns">
+            @foreach (var cook in KDSModel.Cooks)
             {
-                var minutos = (int)(DateTime.UtcNow - orden.HoraRecibido).TotalMinutes;
-                var colorClass = minutos > 15 ? "lmd-kds-card--alert"
-                    : minutos >= 5 ? "lmd-kds-card--warn"
-                    : "lmd-kds-card--fresh";
-                var mesaTexto = orden.MesaNumero.HasValue ? $"Mesa {orden.MesaNumero}"
-                    : orden.TipoServicio == "ParaLlevar" ? "Para llevar" : "Sin mesa";
-
-                <article class="lmd-kds-card @colorClass" data-orden-id="@orden.Id">
-                    <header class="lmd-kds-card__header">
-                        <span class="lmd-kds-card__mesa">@mesaTexto</span>
-                        <span class="lmd-kds-card__timer" data-hora-recibido="@orden.HoraRecibido.ToString("O")">
-                            @string.Format("{0:D2}:{1:D2}", minutos, (int)((DateTime.UtcNow - orden.HoraRecibido).TotalSeconds % 60))
-                        </span>
-                    </header>
-                    <div class="lmd-kds-card__body">
-                        <div class="lmd-kds-card__producto">@orden.ProductoNombre</div>
-                        <div class="lmd-kds-card__cantidad">x@orden.Cantidad</div>
+                <div class="lmd-kds-col" id="kds-col-@cook.Id">
+                    <div class="lmd-kds-col-header" style="border-top: 4px solid @cook.Color;">
+                        <span class="lmd-kds-col-name">@cook.Name</span>
+                        <span class="lmd-kds-col-count" id="kds-count-@cook.Id">0 ordenes</span>
                     </div>
-                    <footer class="lmd-kds-card__footer">
-                        <button class="lmd-kds-btn-listo" data-orden-id="@orden.Id">LISTO</button>
-                    </footer>
-                </article>
+                    <div class="lmd-kds-col-cards" id="kds-cards-@cook.Id"></div>
+                </div>
             }
         </div>
     </main>
 
     @Html.AntiForgeryToken()
+    <script>
+        window.__lmdKdsCooks = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(KDSModel.Cooks.Select(c => new { c.Id, c.Name, c.Color })));
+        window.__lmdKdsStationMap = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(KDSModel.StationToColumn));
+    </script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.0/signalr.min.js"></script>
     <script src="~/js/cocina-kds.js" asp-append-version="true"></script>
 </body>
