@@ -210,7 +210,16 @@ Este documento detalla los criterios de aceptación para cada historia de usuari
 | HU-016| 3                     |
 | HU-021| 3                     |
 | HU-025| 8                     |
-| **Total** | **32**          |
+| HU-030| 4                     |
+| HU-031| 2                     |
+| HU-032| 4                     |
+| HU-033| 3                     |
+| HU-034| 1                     |
+| HU-035| 2                     |
+| HU-036| 2                     |
+| HU-037| 1                     |
+| HU-038| 4                     |
+| **Total** | **51**          |
 
 ---
 
@@ -230,4 +239,151 @@ Validación inicial del modelo de dominio con entidades, enumeraciones y reglas 
 
 ---
 
-**Versión**: 1.0 | **Fecha**: Abril 2026 | **Actualizado**: Mayo 2026 — dominio base | **Actualizar con cada HU nueva**
+## 4. Sprint 2 — Criterios de aceptación
+
+### CA-KDS: KDS y multi-cocinero (HU-030, HU-031)
+
+**CA-KDS-01: Colores por tiempo de espera**
+- **Dado** que existen pedidos activos en la pantalla de cocina
+- **Cuando** un pedido lleva más de 10 minutos sin ser atendido
+- **Entonces** el fondo del pedido cambia a rojo; si lleva entre 5 y 10 minutos, cambia a amarillo; si lleva menos de 5 minutos, se muestra en verde.
+
+**CA-KDS-02: Separación por estación**
+- **Dado** que el restaurante tiene configuradas estaciones (parrilla, fríos, postres)
+- **Cuando** se muestran los pedidos en la pantalla de cocina
+- **Entonces** cada estación muestra únicamente los ítems que le corresponden según la receta del producto.
+
+**CA-KDS-03: Completado por ítem**
+- **Dado** que un cocinero visualiza un pedido con múltiples ítems
+- **Cuando** marca un ítem individual como completado
+- **Entonces** ese ítem se tacha visualmente y el pedido permanece activo hasta que todos los ítems estén completados.
+
+**CA-KDS-04: Alerta sonora**
+- **Dado** que la pantalla de cocina está activa
+- **Cuando** ingresa un nuevo pedido al sistema
+- **Entonces** se reproduce un sonido de alerta distinguible y el nuevo pedido aparece resaltado durante 5 segundos.
+
+**CA-KDS-05: Columnas por cocinero**
+- **Dado** que hay 2 o más cocineros activos en el turno
+- **Cuando** se muestra la pantalla compartida de cocina
+- **Entonces** la pantalla se divide en columnas, cada una con el nombre y un color asignado al cocinero, mostrando solo los ítems asignados a cada uno.
+
+**CA-KDS-06: Polling offline en KDS**
+- **Dado** que la conexión SignalR se pierde temporalmente
+- **Cuando** el KDS no recibe actualizaciones por WebSocket
+- **Entonces** el sistema recurre a polling HTTP cada 10 segundos para mantener la pantalla actualizada hasta que SignalR se restablezca.
+
+---
+
+### CA-MOD: Modificadores de ingredientes (HU-032)
+
+**CA-MOD-01: Ver ingredientes de receta**
+- **Dado** que un producto tiene una receta asociada con ingredientes
+- **Cuando** el mesero selecciona ese producto en el POS
+- **Entonces** se despliega un panel con la lista completa de ingredientes de la receta, cada uno con un toggle para desactivarlo.
+
+**CA-MOD-02: Quitar ingrediente con motivo**
+- **Dado** que el mesero ha desplegado los ingredientes de un producto
+- **Cuando** desactiva un ingrediente
+- **Entonces** el sistema solicita seleccionar un motivo (alergia, preferencia, intercambio) y registra la modificación en el detalle del pedido.
+
+**CA-MOD-03: Alergias rápidas**
+- **Dado** que el mesero está retirando ingredientes por alergia
+- **Cuando** selecciona el motivo "alergia"
+- **Entonces** el ítem se marca con un badge visual de ⚠️ en el pedido y en la pantalla de cocina para alertar al cocinero.
+
+**CA-MOD-04: Agregar extra**
+- **Dado** que el mesero está editando los ingredientes de un producto
+- **Cuando** selecciona "agregar ingrediente extra" y elige un ingrediente del inventario
+- **Entonces** el ingrediente extra se agrega al ítem con ajuste de precio si aplica, y se refleja en el total del pedido.
+
+---
+
+### CA-UX: Experiencia POS (HU-033, HU-034)
+
+**CA-UX-01: Notificaciones inline sin alert()**
+- **Dado** que el mesero está operando el POS
+- **Cuando** ocurre un evento del sistema (pedido confirmado, error de validación, ítem agotado)
+- **Entonces** se muestra una notificación tipo toast/banner en la esquina superior derecha, sin bloquear la interfaz ni usar `window.alert()`.
+
+**CA-UX-02: Persistencia de estado en localStorage**
+- **Dado** que el mesero está armando un pedido en el POS
+- **Cuando** la página se recarga accidentalmente o el navegador se cierra
+- **Entonces** al reabrir el POS, el pedido en curso se restaura con todos los ítems y modificadores que tenía antes de la recarga.
+
+**CA-UX-03: Atajos de teclado**
+- **Dado** que el mesero está en la pantalla del POS
+- **Cuando** presiona combinaciones de teclas predefinidas (ej. `Ctrl+Enter` para confirmar pedido, `Escape` para cancelar, `/` para buscar producto)
+- **Entonces** la acción correspondiente se ejecuta inmediatamente sin necesidad de usar el ratón.
+
+**CA-UX-04: Fotos en catálogo**
+- **Dado** que un producto tiene una imagen asociada
+- **Cuando** el mesero navega el catálogo del POS
+- **Entonces** la imagen del producto se muestra como thumbnail junto al nombre y precio, facilitando la identificación visual del plato.
+
+**CA-UX-05: Indicador de pasos**
+- **Dado** que el mesero está en el flujo de creación de pedido
+- **Cuando** avanza por las etapas (seleccionar mesa → agregar productos → revisar → confirmar)
+- **Entonces** una barra de progreso o stepper visual indica en qué paso se encuentra y cuántos quedan por completar.
+
+---
+
+### CA-PAGO: Pago real y división (HU-035, HU-036, HU-037)
+
+**CA-PAGO-01: Crear cuentas individuales**
+- **Dado** que un pedido tiene múltiples ítems y el mesero selecciona "dividir cuenta"
+- **Cuando** elige la opción de crear sub-cuentas por persona
+- **Entonces** el sistema genera una sub-cuenta por comensal, cada una vacía, lista para recibir ítems asignados.
+
+**CA-PAGO-02: Pago individual**
+- **Dado** que existen sub-cuentas creadas en un pedido
+- **Cuando** un comensal paga su sub-cuenta con un método de pago (efectivo, tarjeta, transferencia)
+- **Entonces** se registra el pago, se marca la sub-cuenta como pagada, y las demás sub-cuentas permanecen abiertas sin afectarse.
+
+**CA-PAGO-03: División por ítems**
+- **Dado** que el mesero está dividiendo la cuenta
+- **Cuando** arrastra o asigna un ítem específico del pedido a una sub-cuenta
+- **Entonces** el ítem se transfiere a esa sub-cuenta con su precio y modificadores, y desaparece de la cuenta general.
+
+**CA-PAGO-04: Propina por cuenta**
+- **Dado** que un comensal va a pagar su sub-cuenta
+- **Cuando** el sistema presenta el resumen de pago
+- **Entonces** se ofrece un campo para ingresar propina que aplica exclusivamente a esa sub-cuenta, sin afectar las propinas de las demás.
+
+**CA-PAGO-05: Vista tableside optimizada**
+- **Dado** que el mesero accede al POS desde una tablet
+- **Cuando** se carga la vista tableside
+- **Entonces** la interfaz adapta su layout a pantalla táctil con botones grandes, navegación simplificada y envío directo de pedidos a cocina.
+
+**CA-PAGO-06: SignalR entre terminales**
+- **Dado** que múltiples terminales de POS están conectadas al mismo restaurante
+- **Cuando** un mesero confirma un pedido en una terminal
+- **Entonces** el pedido aparece en tiempo real en la pantalla de cocina y en las demás terminales vía SignalR sin necesidad de recarga manual.
+
+---
+
+### CA-OFF: Modo offline (HU-038)
+
+**CA-OFF-01: Cola IndexedDB**
+- **Dado** que el POS pierde conexión a internet
+- **Cuando** el mesero confirma un pedido
+- **Entonces** el pedido se almacena en IndexedDB localmente con estado "pendiente-sincronización" y la interfaz muestra un indicador visual de modo offline.
+
+**CA-OFF-02: Sincronización automática**
+- **Dado** que existen pedidos en cola local con estado "pendiente-sincronización"
+- **Cuando** se restaura la conexión a internet
+- **Entonces** el sistema envía automáticamente los pedidos pendientes al servidor en orden cronológico y actualiza su estado a "sincronizado" al confirmar cada uno.
+
+**CA-OFF-03: Polling KDS en modo offline**
+- **Dado** que el POS está en modo offline con SignalR desconectado
+- **Cuando** el KDS necesita actualizar los pedidos
+- **Entonces** el sistema recurre a polling HTTP cada 10 segundos para mantener la pantalla actualizada, igual que en CA-KDS-06.
+
+**CA-OFF-04: Bloqueo de pago sin conexión**
+- **Dado** que el POS está en modo offline
+- **Cuando** el mesero intenta procesar un pago
+- **Entonces** el sistema muestra el mensaje "No es posible procesar pagos sin conexión. Espere a que se restaure la conexión." y bloquea la acción de pago hasta que la conectividad se recupere.
+
+---
+
+**Versión**: 2.0 | **Fecha**: Mayo 2026 | **Actualizar con cada HU nueva**

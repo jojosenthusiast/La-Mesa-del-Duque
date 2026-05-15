@@ -68,6 +68,9 @@ internal class PedidosServicio : IPedidosServicio
         var pedido = await _uot.Pedidos.ObtenerConDetallesParaActualizarAsync(pedidoId, cancelacion)
             ?? throw new ArgumentException($"No se encontró el pedido con ID {pedidoId}.", nameof(pedidoId));
 
+        if (pedido.Estado == EstadoPedido.EnCobro || pedido.Estado == EstadoPedido.Pagado || pedido.Estado == EstadoPedido.Cancelado)
+            throw new ReglaDominioException("No se pueden agregar detalles a un pedido en cobro, pagado o cancelado.");
+
         var producto = await _uot.Productos.ObtenerConTrackingAsync(productoId, cancelacion)
             ?? throw new ArgumentException($"No se encontró el producto con ID {productoId}.", nameof(productoId));
 
