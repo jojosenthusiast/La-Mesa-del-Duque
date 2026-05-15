@@ -4,12 +4,14 @@ using LaMesaDelDuque.Dominio.Enumeraciones;
 using LaMesaDelDuque.Dominio.Excepciones;
 using LaMesaDelDuque.Web.Hubs;
 using LaMesaDelDuque.Web.Models.Operaciones;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.SignalR;
 
 namespace LaMesaDelDuque.Web.Pages.Operaciones.Pedidos;
 
+[Authorize(Roles = "Administrador,Encargado,Mesero")]
 public class IndexModel : PageModel
 {
     private readonly IPedidosServicio _pedidosServicio;
@@ -333,6 +335,28 @@ public class IndexModel : PageModel
         {
             var cuentas = await _pedidosServicio.CrearCuentasAsync(pedidoId, cantidad);
             await _hubContext.Clients.Group($"pedido-{pedidoId}").SendAsync("CuentasCreadas", pedidoId, cuentas);
+            return new JsonResult(cuentas);
+        }
+        catch (Exception ex) { return BadRequest(ex.Message); }
+    }
+
+    public async Task<IActionResult> OnPostCrearCuentasConItemsJsonAsync([FromBody] CrearCuentasConItemsRequest request)
+    {
+        try
+        {
+            if (request?.Asignaciones == null || request.Asignaciones.Count < 2)
+                return BadRequest("Se requieren al menos 2 cuentas.");
+
+            if (request.PedidoId == Guid.Empty)
+                return BadRequest("El ID del pedido es requerido.");
+
+            var asignaciones = request.Asignaciones.ToDictionary(
+                a => a.CuentaNumero,
+                a => a.Items.Select(i => (i.DetalleId, i.Cantidad)).ToList()
+            );
+
+            var cuentas = await _pedidosServicio.CrearCuentasConItemsAsync(request.PedidoId, asignaciones);
+            await _hubContext.Clients.Group($"pedido-{request.PedidoId}").SendAsync("CuentasCreadas", request.PedidoId, cuentas);
             return new JsonResult(cuentas);
         }
         catch (Exception ex) { return BadRequest(ex.Message); }

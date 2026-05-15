@@ -12,4 +12,5 @@ public class CuentaDto
     public string? MetodoPago { get; set; }
     public string Estado { get; set; } = string.Empty;
     public DateTime? FechaPago { get; set; }
+    public List<CuentaDetalleDto> Detalles { get; set; } = [];
 }

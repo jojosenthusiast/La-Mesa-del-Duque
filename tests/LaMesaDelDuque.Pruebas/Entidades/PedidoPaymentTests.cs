@@ -96,7 +96,8 @@ public class PedidoPaymentTests
     {
         var pedido1 = CrearPedidoConDetalle();
         var pedido2 = CrearPedidoConDetalle();
-        var cuenta = new Cuenta(pedido2.Id, 1, 10m);
+        var cuenta = new Cuenta(pedido2.Id, 1);
+        cuenta.EstablecerTotalBase(10m);
 
         var ex = Assert.Throws<ReglaDominioException>(() => pedido1.AgregarCuenta(cuenta));
 

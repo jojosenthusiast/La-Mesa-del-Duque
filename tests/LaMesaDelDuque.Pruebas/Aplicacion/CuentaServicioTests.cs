@@ -161,4 +161,64 @@ public class CuentaServicioTests : IDisposable
 
         await Assert.ThrowsAsync<ReglaDominioException>(() => _servicio.PagarCuentaAsync(cuentas[0].Id, MetodoPago.Tarjeta));
     }
+
+    [Fact]
+    public async Task CrearCuentasConItemsAsync_DosCuentasConItemsDistintos_DebeCrearCorrectamente()
+    {
+        var (mesa, producto) = await CrearMesaYProductoAsync(60);
+        var producto2 = new Producto("Ensalada", 8.00m, new CategoriaProducto("Entradas 60"));
+        await _uot.Categorias.AgregarAsync(producto2.Categoria);
+        await _uot.Productos.AgregarAsync(producto2);
+        await _uot.GuardarCambiosAsync();
+
+        var pedido = await _servicio.CrearPedidoAsync(TipoServicio.ComerAqui, mesa.Id, new List<DetalleCreacionDto>
+        {
+            new() { ProductoId = producto.Id, Cantidad = 1, PrecioUnitario = 25.00m },
+            new() { ProductoId = producto2.Id, Cantidad = 1, PrecioUnitario = 8.00m }
+        });
+        await _servicio.MarcarEnPreparacionAsync(pedido.Id);
+
+        var asignaciones = new Dictionary<int, List<(Guid detalleId, int cantidad)>>
+        {
+            [1] = new() { (pedido.Detalles[0].Id, 1) },
+            [2] = new() { (pedido.Detalles[1].Id, 1) }
+        };
+
+        var cuentas = await _servicio.CrearCuentasConItemsAsync(pedido.Id, asignaciones);
+
+        Assert.Equal(2, cuentas.Count);
+        Assert.Equal(25.00m, cuentas[0].Total);
+        Assert.Equal(8.00m, cuentas[1].Total);
+        Assert.Single(cuentas[0].Detalles);
+        Assert.Single(cuentas[1].Detalles);
+    }
+
+    [Fact]
+    public async Task CrearCuentasConItemsAsync_CantidadParcial_DebeDividirItem()
+    {
+        var pedido = await CrearPedidoEnPreparacionAsync();
+        var detalleId = pedido.Detalles[0].Id;
+
+        var asignaciones = new Dictionary<int, List<(Guid detalleId, int cantidad)>>
+        {
+            [1] = new() { (detalleId, 1) },
+            [2] = new() { (detalleId, 1) }
+        };
+
+        var cuentas = await _servicio.CrearCuentasConItemsAsync(pedido.Id, asignaciones);
+
+        Assert.Equal(2, cuentas.Count);
+        Assert.Equal(10.00m, cuentas[0].Total);
+        Assert.Equal(10.00m, cuentas[1].Total);
+    }
+
+    [Fact]
+    public async Task CrearCuentasConItemsAsync_MenosDeDosCuentas_DebeLanzarExcepcion()
+    {
+        var pedido = await CrearPedidoEnPreparacionAsync();
+
+        var ex = await Assert.ThrowsAsync<ArgumentException>(() => _servicio.CrearCuentasConItemsAsync(pedido.Id, new Dictionary<int, List<(Guid, int)>>()));
+
+        Assert.Contains("al menos 2", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
 }
