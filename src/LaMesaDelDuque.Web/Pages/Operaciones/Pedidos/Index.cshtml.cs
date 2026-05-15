@@ -2,11 +2,9 @@ using LaMesaDelDuque.Aplicacion.Dtos;
 using LaMesaDelDuque.Aplicacion.Servicios;
 using LaMesaDelDuque.Dominio.Enumeraciones;
 using LaMesaDelDuque.Dominio.Excepciones;
-using LaMesaDelDuque.Web.Hubs;
 using LaMesaDelDuque.Web.Models.Operaciones;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using Microsoft.AspNetCore.SignalR;
 
 namespace LaMesaDelDuque.Web.Pages.Operaciones.Pedidos;
 
@@ -15,21 +13,18 @@ public class IndexModel : PageModel
     private readonly IPedidosServicio _pedidosServicio;
     private readonly ICatalogoProductosServicio _catalogoProductosServicio;
     private readonly IMesasServicio _mesasServicio;
-    private readonly ICocinaServicio _cocinaServicio;
-    private readonly IHubContext<PedidosHub> _hubContext;
+    private readonly IRecetasProductosServicio _recetasProductosServicio;
 
     public IndexModel(
         IPedidosServicio pedidosServicio,
         ICatalogoProductosServicio catalogoProductosServicio,
         IMesasServicio mesasServicio,
-        ICocinaServicio cocinaServicio,
-        IHubContext<PedidosHub> hubContext)
+        IRecetasProductosServicio recetasProductosServicio)
     {
         _pedidosServicio = pedidosServicio;
         _catalogoProductosServicio = catalogoProductosServicio;
         _mesasServicio = mesasServicio;
-        _cocinaServicio = cocinaServicio;
-        _hubContext = hubContext;
+        _recetasProductosServicio = recetasProductosServicio;
     }
 
     [BindProperty(SupportsGet = true)]
@@ -86,7 +81,8 @@ public class IndexModel : PageModel
             {
                 ProductoId = linea.ProductoId,
                 Cantidad = linea.Cantidad,
-                PrecioUnitario = producto.Precio
+                PrecioUnitario = producto.Precio,
+                Notas = linea.Notas
             });
         }
 
@@ -113,14 +109,14 @@ public class IndexModel : PageModel
     }
 
     // ── Agregar / actualizar / eliminar línea ─────────────────
-    public async Task<IActionResult> OnPostAgregarLineaAsync(Guid pedidoId, Guid productoId, int cantidad, decimal precioUnitario)
+    public async Task<IActionResult> OnPostAgregarLineaAsync(Guid pedidoId, Guid productoId, int cantidad, decimal precioUnitario, string? notas = null)
         => await EjecutarAccionPedidoAsync(async () =>
         {
             var producto = (await _catalogoProductosServicio.ListarProductosAsync())
                 .FirstOrDefault(p => p.Id == productoId && p.Activo)
                 ?? throw new ArgumentException("Debe seleccionar un producto activo válido.", nameof(productoId));
 
-            await _pedidosServicio.AgregarDetalleAsync(pedidoId, productoId, cantidad, producto.Precio);
+            await _pedidosServicio.AgregarDetalleAsync(pedidoId, productoId, cantidad, producto.Precio, notas);
             ToastSuccess = "Línea agregada.";
             return RedirectToPage(new { PedidoActualId = pedidoId });
         });
@@ -241,6 +237,25 @@ public class IndexModel : PageModel
         });
 
     // ── JSON handlers para SPA (AJAX, sin recarga) ───────────
+    public async Task<IActionResult> OnGetIngredientesProductoJsonAsync(Guid productoId)
+    {
+        var receta = await _recetasProductosServicio.ObtenerPorProductoIdAsync(productoId);
+        if (receta is null)
+        {
+            return new JsonResult(new { productoId, productoNombre = (string?)null, ingredientes = Array.Empty<object>() });
+        }
+
+        var ingredientes = receta.Ingredientes.Select(i => new
+        {
+            id = i.IngredienteId,
+            nombre = i.IngredienteNombre,
+            cantidadRequerida = i.CantidadRequerida,
+            unidadMedida = "unidad" // El DTO actual no expone unidad; se mejora en evolución
+        }).ToList();
+
+        return new JsonResult(new { productoId, productoNombre = receta.ProductoNombre, ingredientes });
+    }
+
     public async Task<IActionResult> OnPostCrearJsonAsync()
     {
         if (Vm.CrearPedido.Lineas.Count == 0 || Vm.CrearPedido.Lineas[0].ProductoId == Guid.Empty)
@@ -255,7 +270,7 @@ public class IndexModel : PageModel
         foreach (var l in Vm.CrearPedido.Lineas)
         {
             if (!prods.TryGetValue(l.ProductoId, out var prod)) return BadRequest("Producto inválido.");
-            detalles.Add(new DetalleCreacionDto { ProductoId = l.ProductoId, Cantidad = l.Cantidad, PrecioUnitario = prod.Precio });
+            detalles.Add(new DetalleCreacionDto { ProductoId = l.ProductoId, Cantidad = l.Cantidad, PrecioUnitario = prod.Precio, Notas = l.Notas, ModificacionesJson = l.ModificacionesJson });
         }
 
         try
@@ -266,14 +281,14 @@ public class IndexModel : PageModel
         catch (Exception ex) { return BadRequest(ex.Message); }
     }
 
-    public async Task<IActionResult> OnPostAgregarLineaJsonAsync(Guid pedidoId, Guid productoId, int cantidad)
+    public async Task<IActionResult> OnPostAgregarLineaJsonAsync(Guid pedidoId, Guid productoId, int cantidad, string? notas = null, string? modificacionesJson = null)
     {
         try
         {
             var prods = await _catalogoProductosServicio.ListarProductosAsync();
             var prod = prods.FirstOrDefault(p => p.Id == productoId && p.Activo)
                 ?? throw new ArgumentException("Producto no encontrado.");
-            await _pedidosServicio.AgregarDetalleAsync(pedidoId, productoId, cantidad, prod.Precio);
+            await _pedidosServicio.AgregarDetalleAsync(pedidoId, productoId, cantidad, prod.Precio, notas, modificacionesJson);
             return new JsonResult(new { ok = true });
         }
         catch (Exception ex) { return BadRequest(ex.Message); }
@@ -313,76 +328,6 @@ public class IndexModel : PageModel
             await _pedidosServicio.PagarPedidoAsync(pedidoId);
             var cambio = efectivoRecibido - pedido.Total;
             return new JsonResult(new { ok = true, mensaje = cambio > 0 ? $"Pedido pagado. Cambio: ${cambio:F2}" : "Pedido pagado correctamente." });
-        }
-        catch (Exception ex) { return BadRequest(ex.Message); }
-    }
-
-    public async Task<IActionResult> OnGetEstadoMesasJsonAsync()
-    {
-        try
-        {
-            var mesas = await _mesasServicio.ListarMesasAsync();
-            var pedidos = await _pedidosServicio.ListarPedidosActivosAsync();
-
-            var resultado = mesas.Where(m => m.Activa).Select(m =>
-            {
-                var pedidosMesa = pedidos.Where(p => p.MesaId == m.Id).ToList();
-                return new
-                {
-                    m.Id,
-                    m.Numero,
-                    m.Capacidad,
-                    m.Estado,
-                    pedidosActivos = new
-                    {
-                        count = pedidosMesa.Count,
-                        total = pedidosMesa.Sum(p => p.Total)
-                    }
-                };
-            });
-
-            return new JsonResult(resultado);
-        }
-        catch (Exception ex) { return BadRequest(ex.Message); }
-    }
-
-    public async Task<IActionResult> OnPostPagarConPropinaJsonAsync(Guid pedidoId, decimal efectivoRecibido, decimal propina)
-    {
-        try
-        {
-            var pedidos = await _pedidosServicio.ListarPedidosActivosAsync();
-            var pedido = pedidos.FirstOrDefault(p => p.Id == pedidoId)
-                ?? throw new ArgumentException("Pedido no encontrado.");
-
-            var totalConPropina = pedido.Total + propina;
-            if (efectivoRecibido < totalConPropina)
-                return BadRequest($"Faltan ${totalConPropina - efectivoRecibido:F2}");
-
-            await _pedidosServicio.PagarPedidoAsync(pedidoId);
-            var cambio = efectivoRecibido - totalConPropina;
-            return new JsonResult(new { ok = true, mensaje = cambio > 0
-                ? $"Pedido pagado (propina ${propina:F2}). Cambio: ${cambio:F2}"
-                : $"Pedido pagado (propina ${propina:F2})." });
-        }
-        catch (Exception ex) { return BadRequest(ex.Message); }
-    }
-
-    public async Task<IActionResult> OnPostEnviarACocinaJsonAsync(Guid pedidoId)
-    {
-        try
-        {
-            await _cocinaServicio.GenerarOrdenesAsync(pedidoId);
-            var pedido = await _pedidosServicio.ObtenerPedidoAsync(pedidoId)
-                ?? throw new ArgumentException("Pedido no encontrado.");
-
-            await _hubContext.Clients.Group("Cocina").SendAsync("NuevaOrdenCocina", new
-            {
-                pedidoId,
-                mesaNumero = pedido.MesaNumero,
-                items = pedido.Detalles.Select(d => new { productoNombre = d.ProductoNombre, cantidad = d.Cantidad })
-            });
-
-            return new JsonResult(new { ok = true });
         }
         catch (Exception ex) { return BadRequest(ex.Message); }
     }
