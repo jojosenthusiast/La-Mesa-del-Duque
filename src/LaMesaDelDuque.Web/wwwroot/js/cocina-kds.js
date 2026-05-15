@@ -1,6 +1,6 @@
 /* ============================================================================
    La Mesa del Duque — Kitchen Display System (KDS)
-   Multi-cocinero 3 columnas + SignalR + audio + timers.
+   Multi-cocinero 3 columnas + SignalR + audio + timers + diff updates.
    ============================================================================ */
 
 (function () {
@@ -8,6 +8,7 @@
     let estacionActual = 'Todas';
     let audioContext = null;
     let audioDesbloqueado = false;
+    let ultimoListo = null;
 
     const COOKS = window.__lmdKdsCooks || [
         { id: 1, name: 'Cocinero 1', color: '#e74c3c' },
@@ -21,6 +22,13 @@
         'Caliente': 3,
         'Bar': 2,
         'Expo': 1
+    };
+
+    const CURSO_LABELS = {
+        'Entrada': 'ENTRADAS',
+        'PlatoFuerte': 'PLATOS FUERTES',
+        'Postre': 'POSTRES',
+        'Bebida': 'BEBIDAS'
     };
 
     // ── Audio (Web Audio API) ───────────────────────────────
@@ -75,27 +83,61 @@
         return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
     }
 
-    function claseColor(minutos) {
-        if (minutos > 15) return 'lmd-kds-card--alert';
-        if (minutos >= 5) return 'lmd-kds-card--warn';
+    function calcularColor(orden) {
+        const elapsed = (Date.now() - new Date(orden.horaRecibido).getTime()) / 60000;
+        const maxTime = orden.tiempoPreparacionMin || 15;
+        if (elapsed > maxTime * 1.2) return 'lmd-kds-card--alert';
+        if (elapsed > maxTime * 0.8) return 'lmd-kds-card--warn';
         return 'lmd-kds-card--fresh';
     }
 
     function columnaParaOrden(orden) {
-        // Si la orden tiene un cocinero asignado manualmente, usarlo
         if (orden.cocineroId) {
             return orden.cocineroId;
         }
-        // Routing automático por estación
         const estacion = orden.estacion || '';
         return STATION_TO_COLUMN[estacion] || 1;
     }
 
+    function cursoHeaderId(colId, curso) {
+        return `kds-curso-${colId}-${curso || 'SinCurso'}`;
+    }
+
+    function asegurarCursoHeader(colId, curso) {
+        const container = document.getElementById(`kds-cards-${colId}`);
+        if (!container) return;
+        const headerId = cursoHeaderId(colId, curso);
+        if (document.getElementById(headerId)) return;
+
+        const header = document.createElement('div');
+        header.id = headerId;
+        header.className = 'lmd-kds-curso-header';
+        header.textContent = CURSO_LABELS[curso] || curso || 'SIN CURSO';
+
+        if (curso === 'Entrada') {
+            const fireBtn = document.createElement('button');
+            fireBtn.className = 'lmd-kds-fire-btn';
+            fireBtn.textContent = '🔥 Disparar entradas';
+            fireBtn.addEventListener('click', () => dispararCurso(colId, 'Entrada'));
+            header.appendChild(fireBtn);
+        }
+
+        container.appendChild(header);
+    }
+
+    function dispararCurso(colId, curso) {
+        const container = document.getElementById(`kds-cards-${colId}`);
+        if (!container) return;
+        const cards = container.querySelectorAll('.lmd-kds-card');
+        cards.forEach(card => {
+            if (card.dataset.curso === curso) {
+                card.classList.add('lmd-kds-card--fired');
+            }
+        });
+    }
+
     function renderInstruccionesEspeciales(orden) {
         let html = '';
-        if (orden.alergenos) {
-            html += `<div class="lmd-kds-card-alergenos">⚠ ALÉRGENOS: ${orden.alergenos}</div>`;
-        }
         if (orden.ingredientesQuitados) {
             html += `<div class="lmd-kds-card-quitados">❌ Sin ${orden.ingredientesQuitados}</div>`;
         }
@@ -113,17 +155,25 @@
         const container = document.getElementById(`kds-cards-${colId}`);
         if (!container) return;
 
-        const minutos = orden.minutosTranscurridos || 0;
-        const colorClass = claseColor(minutos);
+        const curso = orden.curso || '';
+        asegurarCursoHeader(colId, curso);
+
+        const colorClass = calcularColor(orden);
         const mesaTexto = orden.mesaNumero ? `Mesa ${orden.mesaNumero}` : (orden.tipoServicio === 'ParaLlevar' ? 'Para llevar' : 'Sin mesa');
 
         const card = document.createElement('article');
         card.className = `lmd-kds-card ${colorClass}`;
+        card.dataset.id = orden.id;
         card.dataset.ordenId = orden.id;
+        card.dataset.curso = curso;
         card.innerHTML = `
+            ${orden.alergenos ? `
+            <div class="lmd-kds-card-alergenos">
+                ⚠ ALÉRGENOS: ${orden.alergenos}
+            </div>` : ''}
             <header class="lmd-kds-card__header">
                 <span class="lmd-kds-card__mesa">${mesaTexto}</span>
-                <span class="lmd-kds-card__timer" data-hora-recibido="${orden.horaRecibido}">${formatearTiempo(minutos)}</span>
+                <span class="lmd-kds-card__timer" data-hora-recibido="${orden.horaRecibido}">${formatearTiempo(orden.minutosTranscurridos || 0)}</span>
             </header>
             <div class="lmd-kds-card__body">
                 <div class="lmd-kds-card__producto">${orden.productoNombre}</div>
@@ -132,17 +182,45 @@
             </div>
             <footer class="lmd-kds-card__footer">
                 <button class="lmd-kds-btn-listo" data-orden-id="${orden.id}">LISTO</button>
+                ${orden.productoId ? `<button class="lmd-kds-btn-86" data-producto-id="${orden.productoId}" title="86 - Agotado">86</button>` : ''}
             </footer>
         `;
 
         card.querySelector('.lmd-kds-btn-listo').addEventListener('click', () => marcarListo(orden.id));
+        const btn86 = card.querySelector('.lmd-kds-btn-86');
+        if (btn86) {
+            btn86.addEventListener('click', () => {
+                if (connection) connection.invoke('MarcarAgotado', orden.productoId);
+            });
+        }
         container.appendChild(card);
+    }
+
+    function agregarCard(orden) {
+        renderOrden(orden);
+        actualizarContadores();
+    }
+
+    function actualizarColorCard(ordenId, colorClass) {
+        const card = document.querySelector(`.lmd-kds-card[data-id="${ordenId}"]`);
+        if (!card) return;
+        card.classList.remove('lmd-kds-card--fresh', 'lmd-kds-card--warn', 'lmd-kds-card--alert');
+        card.classList.add(colorClass);
     }
 
     function removerOrden(ordenId) {
         const card = document.querySelector(`.lmd-kds-card[data-orden-id="${ordenId}"]`);
-        if (card) card.remove();
+        if (card) {
+            ultimoListo = { ordenId, html: card.outerHTML };
+            card.remove();
+        }
         actualizarContadores();
+    }
+
+    function recuperarUltimoListo() {
+        if (!ultimoListo) return;
+        // In a real implementation, this would call the API to recover
+        console.log('Recuperar último listo:', ultimoListo.ordenId);
     }
 
     function actualizarContadores() {
@@ -151,7 +229,7 @@
         COOKS.forEach(cook => {
             const container = document.getElementById(`kds-cards-${cook.id}`);
             const countEl = document.getElementById(`kds-count-${cook.id}`);
-            const count = container ? container.children.length : 0;
+            const count = container ? container.querySelectorAll('.lmd-kds-card').length : 0;
             total += count;
             if (countEl) {
                 countEl.textContent = `${count} ${count === 1 ? 'orden' : 'ordenes'}`;
@@ -170,8 +248,17 @@
 
             const card = el.closest('.lmd-kds-card');
             if (card) {
+                const ordenId = card.dataset.id;
+                const orden = { horaRecibido: el.dataset.horaRecibido, tiempoPreparacionMin: 15 };
+                // Try to read tiempoPreparacionMin from card data if available
+                const maxTime = parseInt(card.dataset.tiempoPreparacionMin) || 15;
+                const elapsed = minutos;
+                let colorClass = 'lmd-kds-card--fresh';
+                if (elapsed > maxTime * 1.2) colorClass = 'lmd-kds-card--alert';
+                else if (elapsed > maxTime * 0.8) colorClass = 'lmd-kds-card--warn';
+
                 card.classList.remove('lmd-kds-card--fresh', 'lmd-kds-card--warn', 'lmd-kds-card--alert');
-                card.classList.add(claseColor(minutos));
+                card.classList.add(colorClass);
             }
         });
     }
@@ -264,15 +351,7 @@
                 if (!res.ok) return;
                 const data = await res.json();
                 if (data && data.ordenesCocina) {
-                    COOKS.forEach(cook => {
-                        const container = document.getElementById(`kds-cards-${cook.id}`);
-                        if (container) container.innerHTML = '';
-                    });
-                    data.ordenesCocina.forEach(orden => {
-                        if (estacionActual !== 'Todas' && orden.estacion !== estacionActual) return;
-                        renderOrden(orden);
-                    });
-                    actualizarContadores();
+                    actualizarCards(data.ordenesCocina);
                 }
             } catch (e) {
                 // Server unreachable — keep what we have
@@ -293,6 +372,30 @@
         if (badge) {
             badge.classList.toggle('visible', visible);
         }
+    }
+
+    function actualizarCards(nuevasOrdenes) {
+        const existingIds = new Set([...document.querySelectorAll('.lmd-kds-card')].map(c => c.dataset.id));
+        const newIds = new Set(nuevasOrdenes.map(o => o.id));
+
+        // Remove cards for completed orders
+        for (const id of existingIds) {
+            if (!newIds.has(id)) {
+                document.querySelector(`.lmd-kds-card[data-id="${id}"]`)?.remove();
+            }
+        }
+
+        // Add new cards
+        for (const orden of nuevasOrdenes) {
+            if (!existingIds.has(orden.id)) {
+                agregarCard(orden);
+            } else {
+                // Update timer color only (don't re-render)
+                actualizarColorCard(orden.id, calcularColor(orden));
+            }
+        }
+
+        actualizarContadores();
     }
 
     async function conectarAEstacion(estacion) {
@@ -376,6 +479,28 @@
         const firstCol = document.getElementById(`kds-col-${COOKS[0].id}`);
         if (firstCol) firstCol.classList.add('lmd-kds-col--activa');
     }
+
+    // ── Keyboard shortcuts (bump bar) ───────────────────────
+    document.addEventListener('keydown', (e) => {
+        // Number keys 1-9: select order
+        if (e.key >= '1' && e.key <= '9' && !e.ctrlKey && !e.metaKey) {
+            const index = parseInt(e.key) - 1;
+            const cards = document.querySelectorAll('.lmd-kds-card');
+            if (cards[index]) cards[index].scrollIntoView({ behavior: 'smooth' });
+        }
+        // Space or Enter: bump selected (mark listo)
+        if (e.key === ' ' || e.key === 'Enter') {
+            const visible = [...document.querySelectorAll('.lmd-kds-card')].find(c => {
+                const rect = c.getBoundingClientRect();
+                return rect.top >= 0 && rect.bottom <= window.innerHeight;
+            });
+            if (visible) visible.querySelector('.lmd-kds-btn-listo')?.click();
+        }
+        // R: recall last bumped
+        if (e.key === 'r' || e.key === 'R') {
+            recuperarUltimoListo();
+        }
+    });
 
     // ── Inicialización ──────────────────────────────────────
     document.addEventListener('DOMContentLoaded', () => {
