@@ -38,6 +38,8 @@ public class LineaPedidoFormVm
 
     [MaxLength(250)]
     public string? Notas { get; set; }
+
+    public string? ModificacionesJson { get; set; }
 }
 
 public class PagoFormVm

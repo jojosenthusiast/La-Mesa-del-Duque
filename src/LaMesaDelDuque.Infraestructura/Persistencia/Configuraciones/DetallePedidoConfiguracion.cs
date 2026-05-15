@@ -20,6 +20,9 @@ internal class DetallePedidoConfiguracion : IEntityTypeConfiguration<DetallePedi
         constructor.Property(d => d.Notas)
             .HasMaxLength(250);
 
+        // ModificacionesJson se mapea como TEXT sin límite (compatible SQLite / SQL Server)
+        constructor.Property(d => d.ModificacionesJson);
+
         // Subtotal es calculado, no se persiste
         constructor.Ignore(d => d.Subtotal);
 

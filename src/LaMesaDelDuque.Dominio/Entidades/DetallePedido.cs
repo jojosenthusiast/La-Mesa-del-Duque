@@ -1,3 +1,4 @@
+using System.Text.Json;
 using LaMesaDelDuque.Dominio.Excepciones;
 
 namespace LaMesaDelDuque.Dominio.Entidades;
@@ -9,6 +10,7 @@ public class DetallePedido
     public int Cantidad { get; private set; }
     public decimal PrecioUnitario { get; private set; }
     public string? Notas { get; private set; }
+    public string? ModificacionesJson { get; private set; }
     public decimal Subtotal => Cantidad * PrecioUnitario;
 
     private DetallePedido()
@@ -16,7 +18,7 @@ public class DetallePedido
         Producto = null!;
     }
 
-    public DetallePedido(Producto producto, int cantidad, decimal precioUnitario, string? notas = null)
+    public DetallePedido(Producto producto, int cantidad, decimal precioUnitario, string? notas = null, string? modificacionesJson = null)
     {
         if (producto is null)
             throw new ReglaDominioException("El detalle debe tener un producto asociado.");
@@ -31,6 +33,7 @@ public class DetallePedido
         Cantidad = cantidad;
         PrecioUnitario = precioUnitario;
         Notas = notas;
+        ModificacionesJson = modificacionesJson;
     }
 
     public void ActualizarCantidad(int nuevaCantidad)
@@ -39,5 +42,30 @@ public class DetallePedido
             throw new ReglaDominioException("La cantidad debe ser mayor que cero.");
 
         Cantidad = nuevaCantidad;
+    }
+
+    public void GuardarModificaciones(List<ModificacionIngrediente> modificaciones)
+    {
+        if (modificaciones is null || modificaciones.Count == 0)
+        {
+            ModificacionesJson = null;
+            return;
+        }
+
+        ModificacionesJson = JsonSerializer.Serialize(modificaciones, new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+        });
+    }
+
+    public List<ModificacionIngrediente> ObtenerModificaciones()
+    {
+        if (string.IsNullOrWhiteSpace(ModificacionesJson))
+            return [];
+
+        return JsonSerializer.Deserialize<List<ModificacionIngrediente>>(ModificacionesJson, new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+        }) ?? [];
     }
 }
