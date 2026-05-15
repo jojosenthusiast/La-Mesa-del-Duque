@@ -49,7 +49,7 @@ internal class PedidosServicio : IPedidosServicio
             var producto = await _uot.Productos.ObtenerConTrackingAsync(d.ProductoId, cancelacion)
                 ?? throw new ArgumentException($"No se encontró el producto con ID {d.ProductoId}.", nameof(detalles));
 
-            var detalle = new DetallePedido(producto, d.Cantidad, d.PrecioUnitario);
+            var detalle = new DetallePedido(producto, d.Cantidad, d.PrecioUnitario, d.Notas);
             pedido.AgregarDetalle(detalle);
         }
 
@@ -63,7 +63,7 @@ internal class PedidosServicio : IPedidosServicio
         return MapToDto(pedido);
     }
 
-    public async Task<PedidoDto> AgregarDetalleAsync(Guid pedidoId, Guid productoId, int cantidad, decimal precioUnitario, CancellationToken cancelacion = default)
+    public async Task<PedidoDto> AgregarDetalleAsync(Guid pedidoId, Guid productoId, int cantidad, decimal precioUnitario, string? notas = null, CancellationToken cancelacion = default)
     {
         var pedido = await _uot.Pedidos.ObtenerConDetallesParaActualizarAsync(pedidoId, cancelacion)
             ?? throw new ArgumentException($"No se encontró el pedido con ID {pedidoId}.", nameof(pedidoId));
@@ -71,7 +71,7 @@ internal class PedidosServicio : IPedidosServicio
         var producto = await _uot.Productos.ObtenerConTrackingAsync(productoId, cancelacion)
             ?? throw new ArgumentException($"No se encontró el producto con ID {productoId}.", nameof(productoId));
 
-        var detalle = new DetallePedido(producto, cantidad, precioUnitario);
+        var detalle = new DetallePedido(producto, cantidad, precioUnitario, notas);
         pedido.AgregarDetalle(detalle);
 
         await _uot.GuardarCambiosAsync(cancelacion);
@@ -211,7 +211,8 @@ internal class PedidosServicio : IPedidosServicio
                 ProductoNombre = d.Producto.Nombre,
                 Cantidad = d.Cantidad,
                 PrecioUnitario = d.PrecioUnitario,
-                Subtotal = d.Subtotal
+                Subtotal = d.Subtotal,
+                Notas = d.Notas
             }).ToList()
         };
     }

@@ -11,6 +11,10 @@ public class OrdenCocina
     public string ProductoNombre { get; private set; } = string.Empty;
     public int Cantidad { get; private set; }
     public string? Notas { get; private set; }
+    public string? Alergenos { get; private set; }
+    public string? IngredientesQuitados { get; private set; }
+    public string? IngredientesExtra { get; private set; }
+    public int? CocineroId { get; private set; }
     public EstacionCocina Estacion { get; private set; }
     public EstadoLineaCocina Estado { get; private set; }
     public DateTime HoraRecibido { get; private set; }
@@ -23,7 +27,9 @@ public class OrdenCocina
     }
 
     public OrdenCocina(Guid pedidoId, Guid? detallePedidoId, string productoNombre,
-        int cantidad, EstacionCocina estacion, int? mesaNumero, string? tipoServicio)
+        int cantidad, EstacionCocina estacion, int? mesaNumero, string? tipoServicio,
+        string? notas = null, string? alergenos = null, string? ingredientesQuitados = null,
+        string? ingredientesExtra = null, int? cocineroId = null)
     {
         if (string.IsNullOrWhiteSpace(productoNombre))
             throw new ReglaDominioException("El nombre del producto es obligatorio.");
@@ -36,6 +42,11 @@ public class OrdenCocina
         DetallePedidoId = detallePedidoId;
         ProductoNombre = productoNombre.Trim();
         Cantidad = cantidad;
+        Notas = notas;
+        Alergenos = alergenos;
+        IngredientesQuitados = ingredientesQuitados;
+        IngredientesExtra = ingredientesExtra;
+        CocineroId = cocineroId;
         Estacion = estacion;
         Estado = EstadoLineaCocina.Pendiente;
         HoraRecibido = DateTime.UtcNow;

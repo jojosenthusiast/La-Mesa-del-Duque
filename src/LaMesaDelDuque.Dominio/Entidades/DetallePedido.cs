@@ -8,6 +8,7 @@ public class DetallePedido
     public Producto Producto { get; private set; }
     public int Cantidad { get; private set; }
     public decimal PrecioUnitario { get; private set; }
+    public string? Notas { get; private set; }
     public decimal Subtotal => Cantidad * PrecioUnitario;
 
     private DetallePedido()
@@ -15,7 +16,7 @@ public class DetallePedido
         Producto = null!;
     }
 
-    public DetallePedido(Producto producto, int cantidad, decimal precioUnitario)
+    public DetallePedido(Producto producto, int cantidad, decimal precioUnitario, string? notas = null)
     {
         if (producto is null)
             throw new ReglaDominioException("El detalle debe tener un producto asociado.");
@@ -29,6 +30,7 @@ public class DetallePedido
         Producto = producto;
         Cantidad = cantidad;
         PrecioUnitario = precioUnitario;
+        Notas = notas;
     }
 
     public void ActualizarCantidad(int nuevaCantidad)

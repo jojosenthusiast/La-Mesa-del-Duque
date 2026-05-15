@@ -78,7 +78,8 @@ public class IndexModel : PageModel
             {
                 ProductoId = linea.ProductoId,
                 Cantidad = linea.Cantidad,
-                PrecioUnitario = producto.Precio
+                PrecioUnitario = producto.Precio,
+                Notas = linea.Notas
             });
         }
 
@@ -105,14 +106,14 @@ public class IndexModel : PageModel
     }
 
     // ── Agregar / actualizar / eliminar línea ─────────────────
-    public async Task<IActionResult> OnPostAgregarLineaAsync(Guid pedidoId, Guid productoId, int cantidad, decimal precioUnitario)
+    public async Task<IActionResult> OnPostAgregarLineaAsync(Guid pedidoId, Guid productoId, int cantidad, decimal precioUnitario, string? notas = null)
         => await EjecutarAccionPedidoAsync(async () =>
         {
             var producto = (await _catalogoProductosServicio.ListarProductosAsync())
                 .FirstOrDefault(p => p.Id == productoId && p.Activo)
                 ?? throw new ArgumentException("Debe seleccionar un producto activo válido.", nameof(productoId));
 
-            await _pedidosServicio.AgregarDetalleAsync(pedidoId, productoId, cantidad, producto.Precio);
+            await _pedidosServicio.AgregarDetalleAsync(pedidoId, productoId, cantidad, producto.Precio, notas);
             ToastSuccess = "Línea agregada.";
             return RedirectToPage(new { PedidoActualId = pedidoId });
         });
@@ -258,14 +259,14 @@ public class IndexModel : PageModel
         catch (Exception ex) { return BadRequest(ex.Message); }
     }
 
-    public async Task<IActionResult> OnPostAgregarLineaJsonAsync(Guid pedidoId, Guid productoId, int cantidad)
+    public async Task<IActionResult> OnPostAgregarLineaJsonAsync(Guid pedidoId, Guid productoId, int cantidad, string? notas = null)
     {
         try
         {
             var prods = await _catalogoProductosServicio.ListarProductosAsync();
             var prod = prods.FirstOrDefault(p => p.Id == productoId && p.Activo)
                 ?? throw new ArgumentException("Producto no encontrado.");
-            await _pedidosServicio.AgregarDetalleAsync(pedidoId, productoId, cantidad, prod.Precio);
+            await _pedidosServicio.AgregarDetalleAsync(pedidoId, productoId, cantidad, prod.Precio, notas);
             return new JsonResult(new { ok = true });
         }
         catch (Exception ex) { return BadRequest(ex.Message); }

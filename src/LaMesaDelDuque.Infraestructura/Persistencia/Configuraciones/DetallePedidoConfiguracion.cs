@@ -17,6 +17,9 @@ internal class DetallePedidoConfiguracion : IEntityTypeConfiguration<DetallePedi
             .HasPrecision(10, 2)
             .IsRequired();
 
+        constructor.Property(d => d.Notas)
+            .HasMaxLength(250);
+
         // Subtotal es calculado, no se persiste
         constructor.Ignore(d => d.Subtotal);
 
