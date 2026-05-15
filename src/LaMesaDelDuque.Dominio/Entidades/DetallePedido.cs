@@ -29,6 +29,7 @@ public class DetallePedido
         if (precioUnitario < 0)
             throw new ReglaDominioException("El precio unitario no puede ser negativo.");
 
+        Id = Guid.NewGuid();
         Producto = producto;
         Cantidad = cantidad;
         PrecioUnitario = precioUnitario;

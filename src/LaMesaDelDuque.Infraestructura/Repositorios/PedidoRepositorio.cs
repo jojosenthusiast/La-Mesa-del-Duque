@@ -83,6 +83,7 @@ internal class PedidoRepositorio : IPedidoRepositorio
                 .ThenInclude(d => d.Producto)
                     .ThenInclude(prod => prod.Categoria)
             .Include(p => p.Cuentas)
+                .ThenInclude(c => c.DetallesAsignados)
             .FirstOrDefaultAsync(p => p.Id == id, cancelacion);
     }
 }

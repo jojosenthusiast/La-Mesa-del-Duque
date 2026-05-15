@@ -207,6 +207,44 @@ internal class PedidosServicio : IPedidosServicio
         return cuentas.Select(MapToCuentaDto).ToList();
     }
 
+    public async Task<List<CuentaDto>> CrearCuentasConItemsAsync(Guid pedidoId, Dictionary<int, List<(Guid detalleId, int cantidad)>> asignaciones, CancellationToken cancelacion = default)
+    {
+        if (asignaciones is null || asignaciones.Count < 2)
+            throw new ArgumentException("Se requieren al menos 2 cuentas para dividir por items.", nameof(asignaciones));
+
+        var pedido = await _uot.Pedidos.ObtenerConCuentasParaActualizarAsync(pedidoId, cancelacion)
+            ?? throw new ArgumentException($"No se encontró el pedido con ID {pedidoId}.", nameof(pedidoId));
+
+        pedido.MarcarEnCobro();
+
+        var detalles = pedido.Detalles.ToDictionary(d => d.Id);
+        var asignacionesEntidades = new Dictionary<int, List<(DetallePedido detalle, int cantidad)>>();
+
+        foreach (var kvp in asignaciones)
+        {
+            var lista = new List<(DetallePedido detalle, int cantidad)>();
+            foreach (var (detalleId, cantidad) in kvp.Value)
+            {
+                if (!detalles.TryGetValue(detalleId, out var detalle))
+                    throw new ArgumentException($"El detalle {detalleId} no pertenece al pedido.");
+                lista.Add((detalle, cantidad));
+            }
+            asignacionesEntidades[kvp.Key] = lista;
+        }
+
+        var cuentas = pedido.CrearCuentasConItems(asignacionesEntidades);
+
+        foreach (var cuenta in cuentas)
+        {
+            await _uot.Cuentas.AgregarAsync(cuenta, cancelacion);
+        }
+
+        await _uot.GuardarCambiosAsync(cancelacion);
+        await _notificadorPedidos.NotificarEstadoCambiadoAsync(pedido.Id, pedido.Estado, cancelacion);
+
+        return cuentas.Select(MapToCuentaDto).ToList();
+    }
+
     public async Task<CuentaDto> PagarCuentaAsync(Guid cuentaId, MetodoPago metodoPago, decimal propinaMonto = 0, CancellationToken cancelacion = default)
     {
         for (int intento = 0; intento < 3; intento++)
@@ -295,7 +333,15 @@ internal class PedidosServicio : IPedidosServicio
             PropinaMonto = cuenta.PropinaMonto,
             MetodoPago = cuenta.MetodoPago?.ToString(),
             Estado = cuenta.Estado.ToString(),
-            FechaPago = cuenta.FechaPago
+            FechaPago = cuenta.FechaPago,
+            Detalles = cuenta.DetallesAsignados.Select(d => new CuentaDetalleDto
+            {
+                Id = d.Id,
+                DetallePedidoId = d.DetallePedidoId,
+                CantidadAsignada = d.CantidadAsignada,
+                PrecioUnitario = d.PrecioUnitario,
+                Subtotal = d.Subtotal
+            }).ToList()
         };
     }
 }
