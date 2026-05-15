@@ -16,6 +16,7 @@ public class PedidosHub : Hub
         await Groups.RemoveFromGroupAsync(Context.ConnectionId, $"pedido-{pedidoId}");
     }
 
+    // FIX 7: SignalR group methods for KDS station filtering
     public async Task UnirseAGrupo(string groupName)
     {
         await Groups.AddToGroupAsync(Context.ConnectionId, groupName);
