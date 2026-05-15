@@ -33,6 +33,7 @@ public class LaMesaDelDuqueDbContext : DbContext
 
     // Nuevas entidades Sprint 2 — KDS
     public DbSet<OrdenCocina> OrdenesCocina => Set<OrdenCocina>();
+    public DbSet<Pago> Pagos => Set<Pago>();
 
     protected override void OnModelCreating(ModelBuilder constructorDeModelos)
     {

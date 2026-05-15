@@ -1,9 +1,11 @@
+using System.Security.Claims;
 using LaMesaDelDuque.Aplicacion.Dtos;
 using LaMesaDelDuque.Aplicacion.Notificaciones;
 using LaMesaDelDuque.Dominio.Entidades;
 using LaMesaDelDuque.Dominio.Enumeraciones;
 using LaMesaDelDuque.Dominio.Excepciones;
 using LaMesaDelDuque.Dominio.Repositorios;
+using Microsoft.AspNetCore.Http;
 
 namespace LaMesaDelDuque.Aplicacion.Servicios;
 
@@ -12,12 +14,14 @@ internal class PedidosServicio : IPedidosServicio
     private readonly IUnidadDeTrabajo _uot;
     private readonly INotificadorPedidos _notificadorPedidos;
     private readonly ICocinaServicio? _cocinaServicio;
+    private readonly IHttpContextAccessor? _httpContextAccessor;
 
-    public PedidosServicio(IUnidadDeTrabajo uot, INotificadorPedidos notificadorPedidos, ICocinaServicio? cocinaServicio = null)
+    public PedidosServicio(IUnidadDeTrabajo uot, INotificadorPedidos notificadorPedidos, ICocinaServicio? cocinaServicio = null, IHttpContextAccessor? httpContextAccessor = null)
     {
         _uot = uot;
         _notificadorPedidos = notificadorPedidos;
         _cocinaServicio = cocinaServicio;
+        _httpContextAccessor = httpContextAccessor;
     }
 
     public async Task<PedidoDto> CrearPedidoAsync(TipoServicio tipoServicio, Guid? mesaId, List<DetalleCreacionDto> detalles, CancellationToken cancelacion = default)
@@ -254,7 +258,11 @@ internal class PedidosServicio : IPedidosServicio
                 var cuenta = await _uot.Cuentas.ObtenerParaActualizarAsync(cuentaId, cancelacion)
                     ?? throw new ArgumentException($"No se encontró la cuenta con ID {cuentaId}.", nameof(cuentaId));
 
-                cuenta.Pagar(metodoPago, propinaMonto);
+                var usuarioId = ObtenerUsuarioIdActual();
+                cuenta.Pagar(metodoPago, propinaMonto, usuarioId);
+
+                var pago = new Pago(cuentaId, cuenta.Total, metodoPago, propinaMonto, usuarioId);
+                await _uot.Pagos.AgregarAsync(pago, cancelacion);
 
                 var pedido = await _uot.Pedidos.ObtenerConCuentasParaActualizarAsync(cuenta.PedidoId, cancelacion);
                 if (pedido is not null && pedido.EstaPagadoCompletamente)
@@ -280,6 +288,19 @@ internal class PedidosServicio : IPedidosServicio
     {
         var cuentas = await _uot.Cuentas.ObtenerPorPedidoAsync(pedidoId, cancelacion);
         return cuentas.Select(MapToCuentaDto).ToList();
+    }
+
+    private Guid ObtenerUsuarioIdActual()
+    {
+        var user = _httpContextAccessor?.HttpContext?.User;
+        if (user?.Identity?.IsAuthenticated != true)
+            return Guid.Empty;
+
+        var userIdClaim = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (!string.IsNullOrWhiteSpace(userIdClaim) && Guid.TryParse(userIdClaim, out var usuarioId))
+            return usuarioId;
+
+        return Guid.Empty;
     }
 
     private async Task LiberarMesaSiCorrespondeAsync(Pedido pedido, CancellationToken cancelacion)

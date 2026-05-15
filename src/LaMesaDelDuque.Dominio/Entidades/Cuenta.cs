@@ -59,7 +59,7 @@ public class Cuenta
         _detallesAsignados.Add(new CuentaDetalle(Id, detalle.Id, cantidad, detalle.PrecioUnitario));
     }
 
-    public void Pagar(MetodoPago metodo, decimal propinaMonto = 0)
+    public void Pagar(MetodoPago metodo, decimal propinaMonto = 0, Guid usuarioId = default)
     {
         if (Estado == EstadoCuenta.Pagada)
             throw new ReglaDominioException("Esta cuenta ya fue pagada.");

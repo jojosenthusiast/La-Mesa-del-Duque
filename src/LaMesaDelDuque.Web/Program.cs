@@ -35,6 +35,7 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
 
 builder.Services.AddAuthorization();
 builder.Services.AddSignalR();
+builder.Services.AddHttpContextAccessor();
 
 // Capa de aplicación (servicios)
 builder.Services.AgregarAplicacion();

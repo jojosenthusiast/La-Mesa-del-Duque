@@ -42,7 +42,8 @@ public class CocinaServicioTests : IDisposable
             new AuditoriaRepositorio(_contexto),
             new RecetaProductoRepositorio(_contexto),
             new OrdenCocinaRepositorio(_contexto),
-            new CuentaRepositorio(_contexto));
+            new CuentaRepositorio(_contexto),
+            new PagoRepositorio(_contexto));
 
         _notificadorSpy = new NotificadorPedidosSpy();
         _servicio = new CocinaServicio(_uot, _notificadorSpy);

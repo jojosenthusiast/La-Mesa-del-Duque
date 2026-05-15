@@ -36,7 +36,9 @@ public class RepositorioIntegrationTests : IDisposable
             new UsuarioRepositorio(_contexto),
             new AuditoriaRepositorio(_contexto),
             new RecetaProductoRepositorio(_contexto),
-            new CuentaRepositorio(_contexto));
+            new OrdenCocinaRepositorio(_contexto),
+            new CuentaRepositorio(_contexto),
+            new PagoRepositorio(_contexto));
     }
 
     public void Dispose()

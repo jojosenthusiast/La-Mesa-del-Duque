@@ -13,6 +13,7 @@ public interface IUnidadDeTrabajo
     IAuditoriaRepositorio Auditorias { get; }
     IOrdenCocinaRepositorio OrdenesCocina { get; }
     ICuentaRepositorio Cuentas { get; }
+    IPagoRepositorio Pagos { get; }
 
     Task<int> GuardarCambiosAsync(CancellationToken cancelacion = default);
 }

@@ -33,6 +33,9 @@ internal class PagoConfiguracion : IEntityTypeConfiguration<Pago>
             .HasForeignKey(p => p.CuentaId)
             .OnDelete(DeleteBehavior.Cascade);
 
+        constructor.Property(p => p.UsuarioId)
+            .IsRequired();
+
         constructor.HasIndex(p => p.CuentaId)
             .HasDatabaseName("IX_Pagos_CuentaId");
     }
