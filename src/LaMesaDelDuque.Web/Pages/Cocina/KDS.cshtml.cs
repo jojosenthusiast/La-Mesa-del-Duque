@@ -79,7 +79,10 @@ public class KDSModel : PageModel
                 o.MinutosTranscurridos,
                 o.MesaNumero,
                 o.TipoServicio,
-                o.CocineroId
+                o.CocineroId,
+                o.Curso,
+                o.ProductoId,
+                o.TiempoPreparacionMin
             }),
             timestamp = DateTime.UtcNow
         });

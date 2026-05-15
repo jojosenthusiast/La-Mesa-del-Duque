@@ -16,5 +16,8 @@ public class OrdenCocinaDto
     public DateTime HoraRecibido { get; set; }
     public int? MesaNumero { get; set; }
     public string? TipoServicio { get; set; }
+    public string? Curso { get; set; }
+    public Guid ProductoId { get; set; }
+    public int TiempoPreparacionMin { get; set; }
     public int MinutosTranscurridos => (int)(DateTime.UtcNow - HoraRecibido).TotalMinutes;
 }

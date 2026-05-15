@@ -3,6 +3,8 @@ using LaMesaDelDuque.Dominio.Excepciones;
 
 namespace LaMesaDelDuque.Dominio.Entidades;
 
+public enum CursoCocina { Entrada, PlatoFuerte, Postre, Bebida }
+
 public class OrdenCocina
 {
     public Guid Id { get; private set; }
@@ -21,6 +23,9 @@ public class OrdenCocina
     public DateTime? HoraListo { get; private set; }
     public int? MesaNumero { get; private set; }
     public string? TipoServicio { get; private set; }
+    public CursoCocina? Curso { get; private set; }
+    public Guid ProductoId { get; private set; }
+    public int TiempoPreparacionMin { get; private set; }
 
     private OrdenCocina()
     {
@@ -29,7 +34,7 @@ public class OrdenCocina
     public OrdenCocina(Guid pedidoId, Guid? detallePedidoId, string productoNombre,
         int cantidad, EstacionCocina estacion, int? mesaNumero, string? tipoServicio,
         string? notas = null, string? alergenos = null, string? ingredientesQuitados = null,
-        string? ingredientesExtra = null, int? cocineroId = null)
+        string? ingredientesExtra = null, int? cocineroId = null, Guid productoId = default, CursoCocina? curso = null, int tiempoPreparacionMin = 15)
     {
         if (string.IsNullOrWhiteSpace(productoNombre))
             throw new ReglaDominioException("El nombre del producto es obligatorio.");
@@ -52,7 +57,12 @@ public class OrdenCocina
         HoraRecibido = DateTime.UtcNow;
         MesaNumero = mesaNumero;
         TipoServicio = tipoServicio;
+        Curso = curso;
+        ProductoId = productoId;
+        TiempoPreparacionMin = tiempoPreparacionMin;
     }
+
+    public void AsignarCurso(CursoCocina curso) => Curso = curso;
 
     public void MarcarEnPreparacion()
     {

@@ -31,6 +31,16 @@ internal class OrdenCocinaConfiguracion : IEntityTypeConfiguration<OrdenCocina>
         constructor.Property(o => o.TipoServicio)
             .HasMaxLength(50);
 
+        constructor.Property(o => o.Curso)
+            .HasConversion<string>()
+            .HasMaxLength(20);
+
+        constructor.Property(o => o.ProductoId)
+            .IsRequired();
+
+        constructor.Property(o => o.TiempoPreparacionMin)
+            .IsRequired();
+
         constructor.HasIndex(o => new { o.Estado, o.HoraRecibido })
             .HasDatabaseName("IX_OrdenesCocina_Estado_HoraRecibido");
 

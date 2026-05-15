@@ -27,9 +27,13 @@ internal class CocinaServicio : ICocinaServicio
         {
             var estacion = detalle.Producto.Categoria?.EstacionCocina ?? EstacionCocina.Expo;
 
-            var (alergenos, quitados, extras) = ParsearModificaciones(detalle.ModificacionesJson);
+            var (alergenos, quitados, extras, curso) = ParsearModificaciones(detalle.ModificacionesJson);
 
             var notasCombinadas = CombinarNotas(detalle.Notas, alergenos, quitados, extras);
+
+            CursoCocina? cursoCocina = null;
+            if (!string.IsNullOrWhiteSpace(curso) && Enum.TryParse<CursoCocina>(curso, out var cursoEnum))
+                cursoCocina = cursoEnum;
 
             var orden = new OrdenCocina(
                 pedidoId,
@@ -42,7 +46,11 @@ internal class CocinaServicio : ICocinaServicio
                 notasCombinadas,
                 alergenos,
                 quitados,
-                extras);
+                extras,
+                null,
+                detalle.Producto.Id,
+                cursoCocina,
+                detalle.Producto.TiempoPreparacionMin);
 
             await _uot.OrdenesCocina.AgregarAsync(orden, ct);
         }
@@ -87,10 +95,10 @@ internal class CocinaServicio : ICocinaServicio
         return MapToDto(orden);
     }
 
-    private static (string? alergenos, string? quitados, string? extras) ParsearModificaciones(string? modificacionesJson)
+    private static (string? alergenos, string? quitados, string? extras, string? curso) ParsearModificaciones(string? modificacionesJson)
     {
         if (string.IsNullOrWhiteSpace(modificacionesJson))
-            return (null, null, null);
+            return (null, null, null, null);
 
         try
         {
@@ -100,14 +108,21 @@ internal class CocinaServicio : ICocinaServicio
             });
 
             if (modificaciones is null || modificaciones.Count == 0)
-                return (null, null, null);
+                return (null, null, null, null);
 
             var alergenosList = new List<string>();
             var quitadosList = new List<string>();
             var extrasList = new List<string>();
+            string? curso = null;
 
             foreach (var m in modificaciones)
             {
+                if (m.Accion == "curso" && !string.IsNullOrWhiteSpace(m.IngredienteNombre))
+                {
+                    curso = m.IngredienteNombre;
+                    continue;
+                }
+
                 if (m.Motivo == "alergia" && !string.IsNullOrWhiteSpace(m.IngredienteNombre))
                 {
                     alergenosList.Add(m.IngredienteNombre);
@@ -126,12 +141,13 @@ internal class CocinaServicio : ICocinaServicio
             return (
                 alergenosList.Count > 0 ? string.Join(", ", alergenosList) : null,
                 quitadosList.Count > 0 ? string.Join(", ", quitadosList) : null,
-                extrasList.Count > 0 ? string.Join(", ", extrasList) : null
+                extrasList.Count > 0 ? string.Join(", ", extrasList) : null,
+                curso
             );
         }
         catch
         {
-            return (null, null, null);
+            return (null, null, null, null);
         }
     }
 
@@ -163,7 +179,10 @@ internal class CocinaServicio : ICocinaServicio
             Estado = orden.Estado.ToString(),
             HoraRecibido = orden.HoraRecibido,
             MesaNumero = orden.MesaNumero,
-            TipoServicio = orden.TipoServicio
+            TipoServicio = orden.TipoServicio,
+            Curso = orden.Curso?.ToString(),
+            ProductoId = orden.ProductoId,
+            TiempoPreparacionMin = orden.TiempoPreparacionMin
         };
     }
 }
