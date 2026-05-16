@@ -568,8 +568,11 @@
             .map(m => `
                 <button class="lmd-mesa-card ${state.mesaId === m.id ? 'lmd-mesa-card--selected' : ''}"
                         data-mesa-id="${m.id}" onclick="pos.seleccionarMesa('${m.id}')">
+                    <span class="lmd-mesa-card__etiqueta">MESA</span>
                     <span class="lmd-mesa-card__numero">${m.numero}</span>
-                    <span class="lmd-mesa-card__capacidad">${m.capacidad}p</span>
+                    <span class="lmd-mesa-card__capacidad">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" style="vertical-align:-1px;margin-right:2px"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>${m.capacidad} personas
+                    </span>
                 </button>`)
             .join('');
 

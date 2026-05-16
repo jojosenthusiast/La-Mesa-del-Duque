@@ -843,17 +843,36 @@ h1, h2, h3, h4, h5, h6 {
     box-shadow: 0 4px 12px rgba(201,162,78,0.25);
 }
 
-.lmd-mesa-card__numero {
-    font-size: 2rem;
+.lmd-mesa-card__etiqueta {
+    font-size: 0.625rem;
     font-weight: 800;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--lmd-gris-piedra);
+    line-height: 1;
+}
+
+.lmd-mesa-card__numero {
+    font-size: 2.25rem;
+    font-weight: 900;
     color: var(--lmd-azul-duque);
     line-height: 1;
 }
 
 .lmd-mesa-card__capacidad {
-    font-size: 0.8125rem;
-    color: var(--lmd-gris-piedra);
-    font-weight: 600;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--lmd-azul-duque);
+    background: rgba(15,27,45,0.06);
+    border-radius: 2rem;
+    padding: 0.15rem 0.6rem;
+    margin-top: 0.1rem;
+    white-space: nowrap;
+}
+
+.lmd-mesa-card--selected .lmd-mesa-card__capacidad {
+    background: rgba(201,162,78,0.2);
+    color: var(--lmd-azul-duque);
 }
 
 /* Continuar */
