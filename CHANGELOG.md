@@ -4,6 +4,87 @@ Todas las modificaciones notables de este proyecto se documentarán en este arch
 
 El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/),
 y este proyecto adhiere al [Versionado Semántico](https://semver.org/lang/es/).
+## [1.1.0](https://github.com/jojosenthusiast/La-Mesa-del-Duque/compare/v1.0.0...v1.1.0) (2026-05-16)
+
+
+### Nuevas funcionalidades
+
+* **aplicacion:** agregar CocinaServicio y DTOs ([665af8d](https://github.com/jojosenthusiast/La-Mesa-del-Duque/commit/665af8dff1fe2727c45927ddfb54f68b221a9def))
+* **aplicacion:** agregar logica de pago real con cuentas ([8a02fff](https://github.com/jojosenthusiast/La-Mesa-del-Duque/commit/8a02fff971ad8fd06f0ca0e78edcdc953f648fef))
+* **dominio:** agregar Cuenta, Pago, MetodoPago y estado EnCobro ([7c64670](https://github.com/jojosenthusiast/La-Mesa-del-Duque/commit/7c64670e23efb564a75ea67542654c47fc36b297))
+* **dominio:** agregar OrdenCocina y EstadoLineaCocina ([bea1e7f](https://github.com/jojosenthusiast/La-Mesa-del-Duque/commit/bea1e7f0503f5c24ece80739110de85887473d50))
+* **fotos:** agregar fotos reales de platos desde Unsplash (libres de uso) ([17a0a60](https://github.com/jojosenthusiast/La-Mesa-del-Duque/commit/17a0a604c76818e3d749fb7f03d063c9ef907c4c))
+* **infra:** agregar repositorio y migracion de OrdenCocina ([fd852d5](https://github.com/jojosenthusiast/La-Mesa-del-Duque/commit/fd852d5e96a94a1af908b5211babc3dcc773d9d1))
+* **infra:** agregar repositorios y migracion de Cuenta y Pago ([6e51990](https://github.com/jojosenthusiast/La-Mesa-del-Duque/commit/6e51990bcfc21a0a236c3ddb473cd349fd064928))
+* **kds:** agregar layout multi-cocinero de 3 columnas con notas y alergenos ([986cc70](https://github.com/jojosenthusiast/La-Mesa-del-Duque/commit/986cc70fcf73c9f4045486e36f5401db36ecbe68))
+* **offline:** implementar modo offline con PWA, cola IndexedDB y polling fallback para KDS ([d63b6d3](https://github.com/jojosenthusiast/La-Mesa-del-Duque/commit/d63b6d36fc65e714e873d457f8c8407bb2bf84bd))
+* **pos-ux:** Phase 1 — toast, modal, localStorage persistence, Enviar a Cocina ([31c71c9](https://github.com/jojosenthusiast/La-Mesa-del-Duque/commit/31c71c9c80714f23075ab1dc72c16d91e24cc7f1))
+* **pos-ux:** toast, modal, localStorage, Enviar a Cocina button (Phase 1 WIP) ([dd5cef0](https://github.com/jojosenthusiast/La-Mesa-del-Duque/commit/dd5cef0c3ddb0043e6d1e6ade5f3823375bd54dd))
+* **pos:** agregar atajos de teclado, indicador de pasos y feedback visual ([ecf3689](https://github.com/jojosenthusiast/La-Mesa-del-Duque/commit/ecf368983020fb12e554338a063ef5061efed813))
+* **pos:** agregar division por items entre cuentas ([bd4c99c](https://github.com/jojosenthusiast/La-Mesa-del-Duque/commit/bd4c99c810eace9e6c0d1d2f719c92481ed7a1c4))
+* **pos:** agregar modificador maestro-detalle de ingredientes con alergias, quitados y extras ([2f619f3](https://github.com/jojosenthusiast/La-Mesa-del-Duque/commit/2f619f391cd3e0df170788cd6f085c67a9b15658))
+* **pos:** agregar propinas y division de cuenta ([79c232a](https://github.com/jojosenthusiast/La-Mesa-del-Duque/commit/79c232a0f9b6798eeca98274dcaeed97738ea3e0))
+* **pos:** agregar vista tableside para tablet ([13d80c8](https://github.com/jojosenthusiast/La-Mesa-del-Duque/commit/13d80c84f38aa251349b737dea21ff1cef32cecb))
+* **pos:** conectar SignalR para sincronizacion entre terminales ([3ab3e7f](https://github.com/jojosenthusiast/La-Mesa-del-Duque/commit/3ab3e7f5d85ff7e10958fd67a55e19a6cd4a07cb))
+* **pos:** mostrar estado visual de mesas con colores ([eb8dbfb](https://github.com/jojosenthusiast/La-Mesa-del-Duque/commit/eb8dbfb0a7d65de54c05d9c7146050df5e44d727))
+* **pos:** reconstruir flujo POS con 3 pantallas SPA, tarjetas táctiles, AJAX sin recargas ([e4a9534](https://github.com/jojosenthusiast/La-Mesa-del-Duque/commit/e4a95348d396f2a4b035d01d556d72e484d89fe7))
+* **pos:** rediseñar flujo de pedidos — radio tipo servicio, mesas solo disponibles, pantalla pago con efectivo/cambio, cambiar tipo mid-orden ([dcf0386](https://github.com/jojosenthusiast/La-Mesa-del-Duque/commit/dcf03865f72e1aa143ded2cadffb39c0ddeef763))
+* **pos:** reemplazar split JS con cuentas reales y SignalR concurrente ([fb29a51](https://github.com/jojosenthusiast/La-Mesa-del-Duque/commit/fb29a51a518a366647967f65499f2c824c7f375f))
+* **signalr:** extender PedidosHub para notificaciones de cocina ([7dc0a3a](https://github.com/jojosenthusiast/La-Mesa-del-Duque/commit/7dc0a3a44f38c8eca3f30b0dc046aaffa0b5866e))
+* **web:** implementar pantalla KDS para cocineros ([baf53b3](https://github.com/jojosenthusiast/La-Mesa-del-Duque/commit/baf53b3697cc4f7e9efc0fcac3e1b5b2a2127af7))
+
+
+### Correcciones
+
+* agregar ICuentaRepositorio a IUnidadDeTrabajo y DI ([e909598](https://github.com/jojosenthusiast/La-Mesa-del-Duque/commit/e90959814d83417b245db073c6ac541aa1227609))
+* **integracion:** arreglar 5 tests, conectar Tableside↔POS, agregar Cocina al navbar, verificar flujos ([fd3370e](https://github.com/jojosenthusiast/La-Mesa-del-Duque/commit/fd3370e8f7c6d5c7472770c90667d0844c0df68b))
+* **kds:** agregar 86 agotado con sync SignalR a POS ([8a34702](https://github.com/jojosenthusiast/La-Mesa-del-Duque/commit/8a34702f0780faa635492fd674e2e76e379de285))
+* **kds:** course firing, timer por producto y atajos de teclado ([b9b8828](https://github.com/jojosenthusiast/La-Mesa-del-Duque/commit/b9b8828e2f661d750cac880a4ca9c2f01e5d992d))
+* **kds:** marcarListo idempotente — ReglaDominioException 'Ya está listo' ([17a0a60](https://github.com/jojosenthusiast/La-Mesa-del-Duque/commit/17a0a604c76818e3d749fb7f03d063c9ef907c4c))
+* **kds:** polling diferencial, alergias visibles con banner rojo ([3ea73ba](https://github.com/jojosenthusiast/La-Mesa-del-Duque/commit/3ea73baad5c774934853730862fb8df0881cf5fd))
+* **kds:** rediseñar tarjeta KDS — banner rojo de alérgenos, nombre de plato ([17a0a60](https://github.com/jojosenthusiast/La-Mesa-del-Duque/commit/17a0a604c76818e3d749fb7f03d063c9ef907c4c))
+* **kds:** reemplazar alert() con toast no bloqueante en error de listo ([17a0a60](https://github.com/jojosenthusiast/La-Mesa-del-Duque/commit/17a0a604c76818e3d749fb7f03d063c9ef907c4c))
+* **merge:** restaurar foto menu y modificadores de ingredientes ([5aed773](https://github.com/jojosenthusiast/La-Mesa-del-Duque/commit/5aed773356b867bf8156be65c6f8669bacaca5d7))
+* **merge:** restaurar foto menu y modificadores post split-items ([dc78dbe](https://github.com/jojosenthusiast/La-Mesa-del-Duque/commit/dc78dbef8ccf0219968a5464092f43162d4f6b84))
+* **merge:** restaurar modificadores de ingredientes en pos.js ([dd31b08](https://github.com/jojosenthusiast/La-Mesa-del-Duque/commit/dd31b08a46ef9bb3e6300d2464b3d9d618d2a512))
+* **mesas:** ocultar 'Nueva mesa' y 'Desactivar' del Mesero (BUG-003) ([17a0a60](https://github.com/jojosenthusiast/La-Mesa-del-Duque/commit/17a0a604c76818e3d749fb7f03d063c9ef907c4c))
+* **nav:** ocultar PEDIDOS del Cocinero en _Layout.cshtml (BUG-002) ([17a0a60](https://github.com/jojosenthusiast/La-Mesa-del-Duque/commit/17a0a604c76818e3d749fb7f03d063c9ef907c4c))
+* **offline:** permitir pagos en modo offline con cola IndexedDB ([49a86a6](https://github.com/jojosenthusiast/La-Mesa-del-Duque/commit/49a86a669a75ba92af55cc1955ee7bfe26ad1040))
+* **pago:** crear Pago entity al cobrar, agregar auditoria de usuario ([98b8b8e](https://github.com/jojosenthusiast/La-Mesa-del-Duque/commit/98b8b8e120c26d33df363b5b16810ca3dcb5a52a))
+* **pedidos:** pasar notas y modificacionesJson en OnPostAgregarLineaJsonAsync ([17a0a60](https://github.com/jojosenthusiast/La-Mesa-del-Duque/commit/17a0a604c76818e3d749fb7f03d063c9ef907c4c))
+* **pos:** corregir serializacion JSON a camelCase para mesas y productos en POS y Tableside ([cc74a2a](https://github.com/jojosenthusiast/La-Mesa-del-Duque/commit/cc74a2a4104f5656bb47b392897c9dd96b2262c9))
+* **pos:** corregir serializacion JSON camelCase para datos de mesas y productos ([45f3978](https://github.com/jojosenthusiast/La-Mesa-del-Duque/commit/45f3978bffa52279ec6d7889221841c060c0bddc))
+* **pos:** mostrar capacidad de mesa de forma legible en selector de mesas ([5e21895](https://github.com/jojosenthusiast/La-Mesa-del-Duque/commit/5e21895c243241d839f1c69426c6f2cf081fa7b9))
+* **pos:** reemplazar alert() y confirm() con toast y modal en rama split-items ([eb30a9c](https://github.com/jojosenthusiast/La-Mesa-del-Duque/commit/eb30a9cfbfa1a03e9e78e5ba041df0e54116f12d))
+* **seed:** asignar EstacionCocina por categoría — Entradas→Caliente, ([17a0a60](https://github.com/jojosenthusiast/La-Mesa-del-Duque/commit/17a0a604c76818e3d749fb7f03d063c9ef907c4c))
+* **seguridad:** restringir POS a Mesero/Encargado/Admin, no Cocinero ([c849fdb](https://github.com/jojosenthusiast/La-Mesa-del-Duque/commit/c849fdb3e295fda86782713f7b83d619db9a0062))
+* **signalr:** corregir nombres de metodos UnirseAGrupo/SalirDeGrupo ([227613e](https://github.com/jojosenthusiast/La-Mesa-del-Duque/commit/227613eba44cd9959f94650e97cfd12ccced376b))
+* **sprint2:** corregir bugs de dogfood — POS state, KDS, RBAC y persistencia ([5c30c0c](https://github.com/jojosenthusiast/La-Mesa-del-Duque/commit/5c30c0c95739298d540e70dc0fce804c662353fc))
+* **sprint2:** KDS glanceability, RBAC nav, modificaciones, fotos de platos ([17a0a60](https://github.com/jojosenthusiast/La-Mesa-del-Duque/commit/17a0a604c76818e3d749fb7f03d063c9ef907c4c))
+* **tableside:** mismo fix de notas/modificacionesJson en Tableside handler ([17a0a60](https://github.com/jojosenthusiast/La-Mesa-del-Duque/commit/17a0a604c76818e3d749fb7f03d063c9ef907c4c))
+* **test:** actualizar FakePedidosServicio con nueva firma de AgregarDetalleAsync ([5c37903](https://github.com/jojosenthusiast/La-Mesa-del-Duque/commit/5c3790351ebc757857f096d29a51ebf0d567c008))
+* **test:** corregir tests que fallan en CI por diferencias Windows/Linux ([095d93e](https://github.com/jojosenthusiast/La-Mesa-del-Duque/commit/095d93eeaaee24c12ebb9f1c26d6d3025450d1e7))
+* **tests:** add missing OrdenCocinaRepositorio and CuentaRepositorio to UnidadDeTrabajo constructor calls ([8b0fa69](https://github.com/jojosenthusiast/La-Mesa-del-Duque/commit/8b0fa696659a1cc09d19460fdcc1557fa7e07323))
+
+
+### Documentación
+
+* actualizar estado de HU Sprint 1 a Implementado ([bfa6282](https://github.com/jojosenthusiast/La-Mesa-del-Duque/commit/bfa62827b4387e9700a64043e30d44d19f2abb70))
+* add Sprint 2 versioned release notes (v1.1.0–v1.8.0) ([fa30507](https://github.com/jojosenthusiast/La-Mesa-del-Duque/commit/fa305073ae6ed4dfe4fdea90da57c6a1437ab8a4))
+* **investigacion:** documentar analisis competitivo de 30+ sistemas POS ([1d9e62c](https://github.com/jojosenthusiast/La-Mesa-del-Duque/commit/1d9e62c501d0beddc0d51846d5da39921b9f3bdc))
+* **investigacion:** documento canonico exhaustivo de 30+ sistemas POS — 5500 palabras, 25 sistemas, 35 tablas ([93b17c2](https://github.com/jojosenthusiast/La-Mesa-del-Duque/commit/93b17c2a20399158d0888e0543b0cb76cd0cb7d1))
+* **release:** agregar notas curadas de release v2.0.0 Sprint 2 ([b7f4970](https://github.com/jojosenthusiast/La-Mesa-del-Duque/commit/b7f4970135eca030c7c3920a1f033ec645d6f5ef))
+
+
+### Pruebas
+
+* **kds:** agregar pruebas de integracion y PageModel ([3e5ee18](https://github.com/jojosenthusiast/La-Mesa-del-Duque/commit/3e5ee1890e1bb11abd8c30d782c36a7c08d047e3))
+
+
+### Tareas de mantenimiento
+
+* ignorar archivos de SQLite dev en gitignore ([1ff7cfc](https://github.com/jojosenthusiast/La-Mesa-del-Duque/commit/1ff7cfcc03acef77b9441950fce28fee75b81a1b))
+
 ## [1.0.0](https://github.com/jojosenthusiast/La-Mesa-del-Duque/compare/v0.13.0...v1.0.0) (2026-05-09)
 
 
