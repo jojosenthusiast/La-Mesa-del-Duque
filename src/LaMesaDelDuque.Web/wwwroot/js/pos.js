@@ -452,7 +452,7 @@
                 if (notaTexto) partes.push(notaTexto);
                 const notaFinal = partes.join(' | ');
                 cerrar();
-                resolve(notaFinal || null);
+                resolve(notaFinal);
             });
 
             cancelar.addEventListener('click', () => {
@@ -692,7 +692,7 @@
                     <div class="lmd-pos-pago-input-group">
                         <span class="lmd-pos-pago-input-prefijo">$</span>
                         <input type="number" id="efectivo-input" class="lmd-pos-pago-input" step="0.01" min="0"
-                               placeholder="${total.toFixed(2)}" oninput="pos.calcularCambio()" autofocus />
+                               value="${total.toFixed(2)}" placeholder="${total.toFixed(2)}" oninput="pos.calcularCambio()" autofocus />
                     </div>
                     <div class="lmd-pos-pago-cambio" id="cambio-display"></div>
                 </div>
@@ -704,6 +704,9 @@
 
                 <button class="lmd-pos-btn-cancelar" onclick="pos.cancelarPedido()">Cancelar pedido</button>
             </div>`;
+
+        // Initialize button state now that input has a value
+        pos.calcularCambio();
     }
 
     // ── API pública ─────────────────────────────────────────
@@ -804,6 +807,7 @@
                         notas: notasFinal,
                         modificacionesJson
                     }];
+                    persistState();
                 } catch (e) {
                     if (e.message && (e.message.includes('fetch') || e.message.includes('NetworkError') || !navigator.onLine)) {
                         state.pedidoActual = { id: 'local-' + crypto.randomUUID(), estado: 'Pendiente', isLocal: true };
@@ -1095,6 +1099,7 @@
                 state.pedidoActual = null;
                 state.lineas = [];
                 state.mesaId = null;
+                persistState();
                 state.pantalla = 'mesa';
                 renderPantallaMesa();
                 return;
@@ -1104,6 +1109,7 @@
                 state.pedidoActual = null;
                 state.lineas = [];
                 state.mesaId = null;
+                persistState();
                 alert(`✅ ${result.mensaje || 'Pedido pagado.'}`);
                 state.pantalla = 'mesa';
                 renderPantallaMesa();
@@ -1119,6 +1125,7 @@
                 state.pedidoActual = null;
                 state.lineas = [];
                 state.mesaId = null;
+                persistState();
                 state.pantalla = 'mesa';
                 renderPantallaMesa();
                 return;
@@ -1128,6 +1135,7 @@
                 state.pedidoActual = null;
                 state.lineas = [];
                 state.mesaId = null;
+                persistState();
                 alert('✅ Pedido pagado con tarjeta.');
                 state.pantalla = 'mesa';
                 renderPantallaMesa();
@@ -1154,6 +1162,7 @@
                 state.pedidoActual = null;
                 state.lineas = [];
                 state.mesaId = null;
+                persistState();
                 state.pantalla = 'mesa';
                 renderPantallaMesa();
             } catch (e) { alert('Error: ' + e.message); }

@@ -9,6 +9,9 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.EntityFrameworkCore;
 
+// Requerido por Npgsql 6+ con Supabase: sin esto los DateTime fallan al leer/escribir
+AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -71,7 +74,10 @@ if (app.Environment.IsDevelopment())
     using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<LaMesaDelDuqueDbContext>();
     Console.WriteLine($"DB PROVIDER: {db.Database.ProviderName}");
-    await db.Database.EnsureCreatedAsync();
+    if (db.Database.ProviderName!.Contains("Sqlite"))
+        await db.Database.EnsureCreatedAsync();
+    else
+        await db.Database.MigrateAsync();
     if (!await db.Set<Rol>().AnyAsync())
     {
         var adminRol = new Rol("Administrador", "Acceso total al sistema");
@@ -111,6 +117,15 @@ if (app.Environment.IsDevelopment())
         for (int i = 1; i <= 10; i++)
             db.Set<Mesa>().Add(new Mesa(i, i <= 8 ? 4 : 8));
         await db.SaveChangesAsync();
+    }
+
+    // Repair stale admin hash — runs every startup, no-op when hash is already correct
+    var adminUser = await db.Set<Usuario>().FirstOrDefaultAsync(u => u.Username == "admin");
+    if (adminUser != null && !BCrypt.Net.BCrypt.Verify("Admin123!", adminUser.PasswordHash))
+    {
+        adminUser.CambiarPasswordHash(BCrypt.Net.BCrypt.HashPassword("Admin123!", 12));
+        await db.SaveChangesAsync();
+        Console.WriteLine("[DEV] admin password hash repaired.");
     }
 }
 

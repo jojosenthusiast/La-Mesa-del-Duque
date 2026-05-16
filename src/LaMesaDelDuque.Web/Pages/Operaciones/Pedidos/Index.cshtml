@@ -18,10 +18,12 @@
 
 <script>
     window.__lmdMesasDisponibles = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
-        Model.Vm.MesasDisponibles.Where(m => m.Estado == "Disponible").Select(m => new { m.Id, m.Numero, m.Capacidad })));
+        Model.Vm.MesasDisponibles.Where(m => m.Estado == "Disponible").Select(m => new { m.Id, m.Numero, m.Capacidad }),
+        new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase }));
 
     window.__lmdProductosDisponibles = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
-        Model.Vm.ProductosDisponibles.Select(p => new { p.Id, p.Nombre, p.Precio, p.CategoriaNombre, p.TiempoPreparacionMin, p.ImagenUrl })));
+        Model.Vm.ProductosDisponibles.Select(p => new { p.Id, p.Nombre, p.Precio, p.CategoriaNombre, p.TiempoPreparacionMin, p.ImagenUrl }),
+        new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase }));
 </script>
 
 @section Scripts {
