@@ -31,6 +31,10 @@ public class LaMesaDelDuqueDbContext : DbContext
     public DbSet<MermaDiaria> MermasDiarias => Set<MermaDiaria>();
     public DbSet<Auditoria> Auditorias => Set<Auditoria>();
 
+    // Nuevas entidades Sprint 2 — KDS
+    public DbSet<OrdenCocina> OrdenesCocina => Set<OrdenCocina>();
+    public DbSet<Pago> Pagos => Set<Pago>();
+
     protected override void OnModelCreating(ModelBuilder constructorDeModelos)
     {
         constructorDeModelos.ApplyConfigurationsFromAssembly(typeof(LaMesaDelDuqueDbContext).Assembly);

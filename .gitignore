@@ -74,6 +74,10 @@ nuget.exe
 .Trashes
 ehthumbs.db
 Thumbs.db
+# SQLite dev database
+lmd-dev.db
+lmd-dev.db-shm
+lmd-dev.db-wal
 Desktop.ini
 
 # -----------------------------------------------------------

@@ -9,6 +9,9 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.EntityFrameworkCore;
 
+// Requerido por Npgsql 6+ con Supabase: sin esto los DateTime fallan al leer/escribir
+AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -35,6 +38,7 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
 
 builder.Services.AddAuthorization();
 builder.Services.AddSignalR();
+builder.Services.AddHttpContextAccessor();
 
 // Capa de aplicación (servicios)
 builder.Services.AgregarAplicacion();
@@ -70,7 +74,10 @@ if (app.Environment.IsDevelopment())
     using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<LaMesaDelDuqueDbContext>();
     Console.WriteLine($"DB PROVIDER: {db.Database.ProviderName}");
-    await db.Database.EnsureCreatedAsync();
+    if (db.Database.ProviderName!.Contains("Sqlite"))
+        await db.Database.EnsureCreatedAsync();
+    else
+        await db.Database.MigrateAsync();
     if (!await db.Set<Rol>().AnyAsync())
     {
         var adminRol = new Rol("Administrador", "Acceso total al sistema");
@@ -92,24 +99,33 @@ if (app.Environment.IsDevelopment())
         );
         await db.SaveChangesAsync();
 
-        var entradas = new CategoriaProducto("Entradas", "Aperitivos y entrantes", 1);
-        var platos = new CategoriaProducto("Platos Fuertes", "Platos principales", 2);
-        var bebidas = new CategoriaProducto("Bebidas", "Bebidas", 3);
-        var postres = new CategoriaProducto("Postres", "Postres y dulces", 4);
+        var entradas = new CategoriaProducto("Entradas", "Aperitivos y entrantes", 1, LaMesaDelDuque.Dominio.Enumeraciones.EstacionCocina.Caliente);
+        var platos = new CategoriaProducto("Platos Fuertes", "Platos principales", 2, LaMesaDelDuque.Dominio.Enumeraciones.EstacionCocina.Parrilla);
+        var bebidas = new CategoriaProducto("Bebidas", "Bebidas", 3, LaMesaDelDuque.Dominio.Enumeraciones.EstacionCocina.Bar);
+        var postres = new CategoriaProducto("Postres", "Postres y dulces", 4, LaMesaDelDuque.Dominio.Enumeraciones.EstacionCocina.Fria);
         db.Set<CategoriaProducto>().AddRange(entradas, platos, bebidas, postres);
         await db.SaveChangesAsync();
 
         db.Set<Producto>().AddRange(
-            new Producto("Bruschetta Clásica", 8.50m, entradas, null, 8),
-            new Producto("Solomillo al Duque", 24.00m, platos, null, 25),
-            new Producto("Agua Mineral", 2.50m, bebidas, null, 1),
-            new Producto("Tiramisú", 9.00m, postres, null, 5)
+            new Producto("Bruschetta Clásica", 8.50m, entradas, "/images/productos/bruschetta.jpg", 8),
+            new Producto("Solomillo al Duque", 24.00m, platos, "/images/productos/solomillo.jpg", 25),
+            new Producto("Agua Mineral", 2.50m, bebidas, "/images/productos/agua-mineral.jpg", 1),
+            new Producto("Tiramisú", 9.00m, postres, "/images/productos/tiramisu.jpg", 5)
         );
         await db.SaveChangesAsync();
 
         for (int i = 1; i <= 10; i++)
             db.Set<Mesa>().Add(new Mesa(i, i <= 8 ? 4 : 8));
         await db.SaveChangesAsync();
+    }
+
+    // Repair stale admin hash — runs every startup, no-op when hash is already correct
+    var adminUser = await db.Set<Usuario>().FirstOrDefaultAsync(u => u.Username == "admin");
+    if (adminUser != null && !BCrypt.Net.BCrypt.Verify("Admin123!", adminUser.PasswordHash))
+    {
+        adminUser.CambiarPasswordHash(BCrypt.Net.BCrypt.HashPassword("Admin123!", 12));
+        await db.SaveChangesAsync();
+        Console.WriteLine("[DEV] admin password hash repaired.");
     }
 }
 

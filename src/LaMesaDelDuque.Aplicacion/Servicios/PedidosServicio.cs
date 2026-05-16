@@ -1,9 +1,11 @@
+using System.Security.Claims;
 using LaMesaDelDuque.Aplicacion.Dtos;
 using LaMesaDelDuque.Aplicacion.Notificaciones;
 using LaMesaDelDuque.Dominio.Entidades;
 using LaMesaDelDuque.Dominio.Enumeraciones;
 using LaMesaDelDuque.Dominio.Excepciones;
 using LaMesaDelDuque.Dominio.Repositorios;
+using Microsoft.AspNetCore.Http;
 
 namespace LaMesaDelDuque.Aplicacion.Servicios;
 
@@ -11,11 +13,15 @@ internal class PedidosServicio : IPedidosServicio
 {
     private readonly IUnidadDeTrabajo _uot;
     private readonly INotificadorPedidos _notificadorPedidos;
+    private readonly ICocinaServicio? _cocinaServicio;
+    private readonly IHttpContextAccessor? _httpContextAccessor;
 
-    public PedidosServicio(IUnidadDeTrabajo uot, INotificadorPedidos notificadorPedidos)
+    public PedidosServicio(IUnidadDeTrabajo uot, INotificadorPedidos notificadorPedidos, ICocinaServicio? cocinaServicio = null, IHttpContextAccessor? httpContextAccessor = null)
     {
         _uot = uot;
         _notificadorPedidos = notificadorPedidos;
+        _cocinaServicio = cocinaServicio;
+        _httpContextAccessor = httpContextAccessor;
     }
 
     public async Task<PedidoDto> CrearPedidoAsync(TipoServicio tipoServicio, Guid? mesaId, List<DetalleCreacionDto> detalles, CancellationToken cancelacion = default)
@@ -47,7 +53,7 @@ internal class PedidosServicio : IPedidosServicio
             var producto = await _uot.Productos.ObtenerConTrackingAsync(d.ProductoId, cancelacion)
                 ?? throw new ArgumentException($"No se encontró el producto con ID {d.ProductoId}.", nameof(detalles));
 
-            var detalle = new DetallePedido(producto, d.Cantidad, d.PrecioUnitario);
+            var detalle = new DetallePedido(producto, d.Cantidad, d.PrecioUnitario, d.Notas, d.ModificacionesJson);
             pedido.AgregarDetalle(detalle);
         }
 
@@ -55,10 +61,13 @@ internal class PedidosServicio : IPedidosServicio
         await _uot.GuardarCambiosAsync(cancelacion);
         await _notificadorPedidos.NotificarPedidoCreadoAsync(pedido.Id, pedido.Estado, cancelacion);
 
+        if (_cocinaServicio is not null)
+            await _cocinaServicio.GenerarOrdenesAsync(pedido.Id, cancelacion);
+
         return MapToDto(pedido);
     }
 
-    public async Task<PedidoDto> AgregarDetalleAsync(Guid pedidoId, Guid productoId, int cantidad, decimal precioUnitario, CancellationToken cancelacion = default)
+    public async Task<PedidoDto> AgregarDetalleAsync(Guid pedidoId, Guid productoId, int cantidad, decimal precioUnitario, string? notas = null, string? modificacionesJson = null, CancellationToken cancelacion = default)
     {
         var pedido = await _uot.Pedidos.ObtenerConDetallesParaActualizarAsync(pedidoId, cancelacion)
             ?? throw new ArgumentException($"No se encontró el pedido con ID {pedidoId}.", nameof(pedidoId));
@@ -66,7 +75,7 @@ internal class PedidosServicio : IPedidosServicio
         var producto = await _uot.Productos.ObtenerConTrackingAsync(productoId, cancelacion)
             ?? throw new ArgumentException($"No se encontró el producto con ID {productoId}.", nameof(productoId));
 
-        var detalle = new DetallePedido(producto, cantidad, precioUnitario);
+        var detalle = new DetallePedido(producto, cantidad, precioUnitario, notas, modificacionesJson);
         pedido.AgregarDetalle(detalle);
 
         await _uot.GuardarCambiosAsync(cancelacion);
@@ -173,6 +182,127 @@ internal class PedidosServicio : IPedidosServicio
             .ToList();
     }
 
+    public async Task MarcarEnCobroAsync(Guid pedidoId, CancellationToken cancelacion = default)
+    {
+        var pedido = await _uot.Pedidos.ObtenerConDetallesParaActualizarAsync(pedidoId, cancelacion)
+            ?? throw new ArgumentException($"No se encontró el pedido con ID {pedidoId}.", nameof(pedidoId));
+
+        pedido.MarcarEnCobro();
+        await _uot.GuardarCambiosAsync(cancelacion);
+        await _notificadorPedidos.NotificarEstadoCambiadoAsync(pedido.Id, pedido.Estado, cancelacion);
+    }
+
+    public async Task<List<CuentaDto>> CrearCuentasAsync(Guid pedidoId, int cantidad, CancellationToken cancelacion = default)
+    {
+        var pedido = await _uot.Pedidos.ObtenerConCuentasParaActualizarAsync(pedidoId, cancelacion)
+            ?? throw new ArgumentException($"No se encontró el pedido con ID {pedidoId}.", nameof(pedidoId));
+
+        pedido.MarcarEnCobro();
+        var cuentas = pedido.CrearCuentas(cantidad);
+
+        foreach (var cuenta in cuentas)
+        {
+            await _uot.Cuentas.AgregarAsync(cuenta, cancelacion);
+        }
+
+        await _uot.GuardarCambiosAsync(cancelacion);
+        await _notificadorPedidos.NotificarEstadoCambiadoAsync(pedido.Id, pedido.Estado, cancelacion);
+
+        return cuentas.Select(MapToCuentaDto).ToList();
+    }
+
+    public async Task<List<CuentaDto>> CrearCuentasConItemsAsync(Guid pedidoId, Dictionary<int, List<(Guid detalleId, int cantidad)>> asignaciones, CancellationToken cancelacion = default)
+    {
+        if (asignaciones is null || asignaciones.Count < 2)
+            throw new ArgumentException("Se requieren al menos 2 cuentas para dividir por items.", nameof(asignaciones));
+
+        var pedido = await _uot.Pedidos.ObtenerConCuentasParaActualizarAsync(pedidoId, cancelacion)
+            ?? throw new ArgumentException($"No se encontró el pedido con ID {pedidoId}.", nameof(pedidoId));
+
+        pedido.MarcarEnCobro();
+
+        var detalles = pedido.Detalles.ToDictionary(d => d.Id);
+        var asignacionesEntidades = new Dictionary<int, List<(DetallePedido detalle, int cantidad)>>();
+
+        foreach (var kvp in asignaciones)
+        {
+            var lista = new List<(DetallePedido detalle, int cantidad)>();
+            foreach (var (detalleId, cantidad) in kvp.Value)
+            {
+                if (!detalles.TryGetValue(detalleId, out var detalle))
+                    throw new ArgumentException($"El detalle {detalleId} no pertenece al pedido.");
+                lista.Add((detalle, cantidad));
+            }
+            asignacionesEntidades[kvp.Key] = lista;
+        }
+
+        var cuentas = pedido.CrearCuentasConItems(asignacionesEntidades);
+
+        foreach (var cuenta in cuentas)
+        {
+            await _uot.Cuentas.AgregarAsync(cuenta, cancelacion);
+        }
+
+        await _uot.GuardarCambiosAsync(cancelacion);
+        await _notificadorPedidos.NotificarEstadoCambiadoAsync(pedido.Id, pedido.Estado, cancelacion);
+
+        return cuentas.Select(MapToCuentaDto).ToList();
+    }
+
+    public async Task<CuentaDto> PagarCuentaAsync(Guid cuentaId, MetodoPago metodoPago, decimal propinaMonto = 0, CancellationToken cancelacion = default)
+    {
+        for (int intento = 0; intento < 3; intento++)
+        {
+            try
+            {
+                var cuenta = await _uot.Cuentas.ObtenerParaActualizarAsync(cuentaId, cancelacion)
+                    ?? throw new ArgumentException($"No se encontró la cuenta con ID {cuentaId}.", nameof(cuentaId));
+
+                var usuarioId = ObtenerUsuarioIdActual();
+                cuenta.Pagar(metodoPago, propinaMonto, usuarioId);
+
+                var pago = new Pago(cuentaId, cuenta.Total, metodoPago, propinaMonto, usuarioId);
+                await _uot.Pagos.AgregarAsync(pago, cancelacion);
+
+                var pedido = await _uot.Pedidos.ObtenerConCuentasParaActualizarAsync(cuenta.PedidoId, cancelacion);
+                if (pedido is not null && pedido.EstaPagadoCompletamente)
+                {
+                    pedido.MarcarComoPagado();
+                    await LiberarMesaSiCorrespondeAsync(pedido, cancelacion);
+                    await _notificadorPedidos.NotificarEstadoCambiadoAsync(pedido.Id, pedido.Estado, cancelacion);
+                }
+
+                await _uot.GuardarCambiosAsync(cancelacion);
+                return MapToCuentaDto(cuenta);
+            }
+            catch (ConcurrenciaException) when (intento < 2)
+            {
+                await Task.Delay(50, cancelacion);
+            }
+        }
+
+        throw new InvalidOperationException("No se pudo completar el pago por conflictos de concurrencia.");
+    }
+
+    public async Task<List<CuentaDto>> ObtenerCuentasAsync(Guid pedidoId, CancellationToken cancelacion = default)
+    {
+        var cuentas = await _uot.Cuentas.ObtenerPorPedidoAsync(pedidoId, cancelacion);
+        return cuentas.Select(MapToCuentaDto).ToList();
+    }
+
+    private Guid ObtenerUsuarioIdActual()
+    {
+        var user = _httpContextAccessor?.HttpContext?.User;
+        if (user?.Identity?.IsAuthenticated != true)
+            return Guid.Empty;
+
+        var userIdClaim = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (!string.IsNullOrWhiteSpace(userIdClaim) && Guid.TryParse(userIdClaim, out var usuarioId))
+            return usuarioId;
+
+        return Guid.Empty;
+    }
+
     private async Task LiberarMesaSiCorrespondeAsync(Pedido pedido, CancellationToken cancelacion)
     {
         if (pedido.Mesa is null) return;
@@ -205,6 +335,31 @@ internal class PedidosServicio : IPedidosServicio
                 ProductoId = d.Producto.Id,
                 ProductoNombre = d.Producto.Nombre,
                 Cantidad = d.Cantidad,
+                PrecioUnitario = d.PrecioUnitario,
+                Subtotal = d.Subtotal,
+                Notas = d.Notas,
+                ModificacionesJson = d.ModificacionesJson
+            }).ToList()
+        };
+    }
+
+    private static CuentaDto MapToCuentaDto(Cuenta cuenta)
+    {
+        return new CuentaDto
+        {
+            Id = cuenta.Id,
+            PedidoId = cuenta.PedidoId,
+            Numero = cuenta.Numero,
+            Total = cuenta.Total,
+            PropinaMonto = cuenta.PropinaMonto,
+            MetodoPago = cuenta.MetodoPago?.ToString(),
+            Estado = cuenta.Estado.ToString(),
+            FechaPago = cuenta.FechaPago,
+            Detalles = cuenta.DetallesAsignados.Select(d => new CuentaDetalleDto
+            {
+                Id = d.Id,
+                DetallePedidoId = d.DetallePedidoId,
+                CantidadAsignada = d.CantidadAsignada,
                 PrecioUnitario = d.PrecioUnitario,
                 Subtotal = d.Subtotal
             }).ToList()

@@ -819,3 +819,208 @@ BEGIN
 END $EF$;
 COMMIT;
 
+START TRANSACTION;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260513173357_Sprint2_KDS') THEN
+    ALTER TABLE "CategoriaProducto" ADD "EstacionCocina" integer NOT NULL DEFAULT 0;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260513173357_Sprint2_KDS') THEN
+    CREATE TABLE "OrdenesCocina" (
+        "Id" uuid NOT NULL,
+        "PedidoId" uuid NOT NULL,
+        "DetallePedidoId" uuid,
+        "ProductoNombre" character varying(150) NOT NULL,
+        "Cantidad" integer NOT NULL,
+        "Notas" character varying(250),
+        "Estacion" integer NOT NULL,
+        "Estado" integer NOT NULL,
+        "HoraRecibido" timestamp with time zone NOT NULL,
+        "HoraListo" timestamp with time zone,
+        "MesaNumero" integer,
+        "TipoServicio" character varying(50),
+        CONSTRAINT "PK_OrdenesCocina" PRIMARY KEY ("Id")
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260513173357_Sprint2_KDS') THEN
+    CREATE INDEX "IX_OrdenesCocina_Estacion_Estado" ON "OrdenesCocina" ("Estacion", "Estado");
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260513173357_Sprint2_KDS') THEN
+    CREATE INDEX "IX_OrdenesCocina_Estado_HoraRecibido" ON "OrdenesCocina" ("Estado", "HoraRecibido");
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260513173357_Sprint2_KDS') THEN
+    INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+    VALUES ('20260513173357_Sprint2_KDS', '8.0.11');
+    END IF;
+END $EF$;
+COMMIT;
+
+START TRANSACTION;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260513211211_Sprint2_PagoReal') THEN
+    CREATE TABLE "Cuentas" (
+        "Id" uuid NOT NULL,
+        "PedidoId" uuid NOT NULL,
+        "Numero" integer NOT NULL,
+        "Total" numeric(18,2) NOT NULL,
+        "PropinaMonto" numeric(18,2) NOT NULL,
+        "MetodoPago" character varying(20),
+        "Estado" character varying(20) NOT NULL,
+        "FechaPago" timestamp with time zone,
+        "RowVersion" bytea NOT NULL,
+        CONSTRAINT "PK_Cuentas" PRIMARY KEY ("Id"),
+        CONSTRAINT "FK_Cuentas_Pedido_PedidoId" FOREIGN KEY ("PedidoId") REFERENCES "Pedido" ("Id") ON DELETE CASCADE
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260513211211_Sprint2_PagoReal') THEN
+    CREATE TABLE "Pagos" (
+        "Id" uuid NOT NULL,
+        "CuentaId" uuid NOT NULL,
+        "Monto" numeric(18,2) NOT NULL,
+        "PropinaMonto" numeric(18,2) NOT NULL,
+        "Metodo" character varying(20) NOT NULL,
+        "FechaPago" timestamp with time zone NOT NULL,
+        CONSTRAINT "PK_Pagos" PRIMARY KEY ("Id"),
+        CONSTRAINT "FK_Pagos_Cuentas_CuentaId" FOREIGN KEY ("CuentaId") REFERENCES "Cuentas" ("Id") ON DELETE CASCADE
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260513211211_Sprint2_PagoReal') THEN
+    CREATE INDEX "IX_Cuentas_PedidoId" ON "Cuentas" ("PedidoId");
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260513211211_Sprint2_PagoReal') THEN
+    CREATE INDEX "IX_Cuentas_PedidoId_Estado" ON "Cuentas" ("PedidoId", "Estado");
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260513211211_Sprint2_PagoReal') THEN
+    CREATE INDEX "IX_Pagos_CuentaId" ON "Pagos" ("CuentaId");
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260513211211_Sprint2_PagoReal') THEN
+    INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+    VALUES ('20260513211211_Sprint2_PagoReal', '8.0.11');
+    END IF;
+END $EF$;
+COMMIT;
+
+START TRANSACTION;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260515002220_Sprint2_KDS_MultiCook') THEN
+    ALTER TABLE "OrdenesCocina" ADD "Alergenos" character varying(150);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260515002220_Sprint2_KDS_MultiCook') THEN
+    ALTER TABLE "OrdenesCocina" ADD "CocineroId" integer;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260515002220_Sprint2_KDS_MultiCook') THEN
+    ALTER TABLE "OrdenesCocina" ADD "IngredientesExtra" character varying(150);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260515002220_Sprint2_KDS_MultiCook') THEN
+    ALTER TABLE "OrdenesCocina" ADD "IngredientesQuitados" character varying(150);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260515002220_Sprint2_KDS_MultiCook') THEN
+    ALTER TABLE "DetallePedido" ADD "Notas" character varying(250);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260515002220_Sprint2_KDS_MultiCook') THEN
+    INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+    VALUES ('20260515002220_Sprint2_KDS_MultiCook', '8.0.11');
+    END IF;
+END $EF$;
+COMMIT;
+
+START TRANSACTION;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260515120000_Sprint2_ColumnasFaltantes') THEN
+    ALTER TABLE "OrdenesCocina" ADD "Curso" character varying(20);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260515120000_Sprint2_ColumnasFaltantes') THEN
+    ALTER TABLE "OrdenesCocina" ADD "ProductoId" uuid NOT NULL DEFAULT '00000000-0000-0000-0000-000000000000';
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260515120000_Sprint2_ColumnasFaltantes') THEN
+    ALTER TABLE "OrdenesCocina" ADD "TiempoPreparacionMin" integer NOT NULL DEFAULT 0;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260515120000_Sprint2_ColumnasFaltantes') THEN
+    ALTER TABLE "DetallePedido" ADD "ModificacionesJson" text;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260515120000_Sprint2_ColumnasFaltantes') THEN
+    INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+    VALUES ('20260515120000_Sprint2_ColumnasFaltantes', '8.0.11');
+    END IF;
+END $EF$;
+COMMIT;
+

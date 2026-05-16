@@ -19,6 +19,7 @@ public class Producto
     public DateTime CreatedAt { get; private set; }
     public DateTime UpdatedAt { get; private set; }
     public IReadOnlyList<ProductoIngrediente> Ingredientes => _ingredientes.AsReadOnly();
+    public bool TieneImagen => !string.IsNullOrWhiteSpace(ImagenUrl);
 
     private Producto()
     {

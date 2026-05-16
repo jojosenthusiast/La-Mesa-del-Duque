@@ -10,6 +10,8 @@ public class PedidosPageVm
     public PedidoDto? PedidoActual { get; set; }
     public List<PedidoDto> PedidosActivos { get; set; } = [];
     public CrearPedidoFormVm CrearPedido { get; set; } = new();
+    public PagoFormVm Pago { get; set; } = new();
+    public bool MostrarPago { get; set; }
 }
 
 public class CrearPedidoFormVm
@@ -33,4 +35,17 @@ public class LineaPedidoFormVm
 
     [Range(typeof(decimal), "0.01", "999999")]
     public decimal PrecioUnitario { get; set; }
+
+    [MaxLength(250)]
+    public string? Notas { get; set; }
+
+    public string? ModificacionesJson { get; set; }
+}
+
+public class PagoFormVm
+{
+    [Range(0, 999999, ErrorMessage = "El monto recibido debe ser mayor o igual a 0.")]
+    public decimal? EfectivoRecibido { get; set; }
+
+    public decimal? Cambio { get; set; }
 }

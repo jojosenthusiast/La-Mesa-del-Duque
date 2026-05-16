@@ -1,0 +1,69 @@
+@page
+@model LaMesaDelDuque.Web.Pages.Cocina.KDSModel
+@{
+    Layout = null;
+}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>KDS — La Mesa del Duque</title>
+    <link rel="stylesheet" href="~/css/marca.css" asp-append-version="true" />
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600&family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet" />
+    <link rel="manifest" href="~/manifest.json" />
+</head>
+<body class="lmd-kds-body">
+    <header class="lmd-kds-header">
+        <div class="lmd-kds-header__left">
+            <h1 class="lmd-kds-titulo">Cocina</h1>
+            <span id="lmd-kds-reloj" class="lmd-kds-reloj">--:--</span>
+        </div>
+        <nav class="lmd-kds-tabs">
+            <button class="lmd-kds-tab lmd-kds-tab--activo" data-estacion="Todas">Todas</button>
+            <button class="lmd-kds-tab" data-estacion="Parrilla">Parrilla</button>
+            <button class="lmd-kds-tab" data-estacion="Fria">Fría</button>
+            <button class="lmd-kds-tab" data-estacion="Caliente">Caliente</button>
+            <button class="lmd-kds-tab" data-estacion="Bar">Bar</button>
+            <button class="lmd-kds-tab" data-estacion="Expo">Expo</button>
+        </nav>
+        <div class="lmd-kds-header__right">
+            <span id="lmd-kds-offline-badge" class="lmd-kds-offline-badge">OFFLINE</span>
+            <span id="lmd-kds-contador" class="lmd-kds-contador">0 ordenes</span>
+            <div id="lmd-kds-indicador-visual" class="lmd-kds-indicador"></div>
+        </div>
+    </header>
+
+    <main class="lmd-kds-main">
+        <div class="lmd-kds-columns">
+            @foreach (var cook in KDSModel.Cooks)
+            {
+                <div class="lmd-kds-col" id="kds-col-@cook.Id">
+                    <div class="lmd-kds-col-header" style="border-top: 4px solid @cook.Color;">
+                        <span class="lmd-kds-col-name">@cook.Name</span>
+                        <span class="lmd-kds-col-count" id="kds-count-@cook.Id">0 ordenes</span>
+                    </div>
+                    <div class="lmd-kds-col-cards" id="kds-cards-@cook.Id"></div>
+                </div>
+            }
+        </div>
+    </main>
+
+    @Html.AntiForgeryToken()
+    <script>
+        window.__lmdKdsCooks = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+            KDSModel.Cooks.Select(c => new { c.Id, c.Name, c.Color }),
+            new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase }));
+        window.__lmdKdsStationMap = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(KDSModel.StationToColumn));
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.0/signalr.min.js"></script>
+    <script src="~/js/cocina-kds.js" asp-append-version="true"></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/js/sw.js').catch(function(err) {
+                console.warn('SW registration failed:', err);
+            });
+        }
+    </script>
+</body>
+</html>

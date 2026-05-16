@@ -8,4 +8,6 @@ public class DetallePedidoDto
     public int Cantidad { get; set; }
     public decimal PrecioUnitario { get; set; }
     public decimal Subtotal { get; set; }
+    public string? Notas { get; set; }
+    public string? ModificacionesJson { get; set; }
 }
