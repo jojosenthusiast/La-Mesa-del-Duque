@@ -69,14 +69,14 @@ public class TablesideModel : PageModel
         catch (Exception ex) { return BadRequest(ex.Message); }
     }
 
-    public async Task<IActionResult> OnPostAgregarLineaJsonAsync(Guid pedidoId, Guid productoId, int cantidad)
+    public async Task<IActionResult> OnPostAgregarLineaJsonAsync(Guid pedidoId, Guid productoId, int cantidad, string? notas = null, string? modificacionesJson = null)
     {
         try
         {
             var prods = await _catalogoProductosServicio.ListarProductosAsync();
             var prod = prods.FirstOrDefault(p => p.Id == productoId && p.Activo)
                 ?? throw new ArgumentException("Producto no encontrado.");
-            await _pedidosServicio.AgregarDetalleAsync(pedidoId, productoId, cantidad, prod.Precio);
+            await _pedidosServicio.AgregarDetalleAsync(pedidoId, productoId, cantidad, prod.Precio, notas, modificacionesJson);
             return new JsonResult(new { ok = true });
         }
         catch (Exception ex) { return BadRequest(ex.Message); }

@@ -136,18 +136,24 @@
         });
     }
 
-    function renderInstruccionesEspeciales(orden) {
-        let html = '';
+    function renderModificaciones(orden) {
+        const partes = [];
+
         if (orden.ingredientesQuitados) {
-            html += `<div class="lmd-kds-card-quitados">❌ Sin ${orden.ingredientesQuitados}</div>`;
+            orden.ingredientesQuitados.split(',').forEach(ing => {
+                const limpio = ing.trim();
+                if (limpio) partes.push(`<li class="lmd-kds-mod lmd-kds-mod--quitar">SIN ${limpio.toUpperCase()}</li>`);
+            });
         }
+
         if (orden.ingredientesExtra) {
-            html += `<div class="lmd-kds-card-extras">➕ ${orden.ingredientesExtra}</div>`;
+            orden.ingredientesExtra.split(',').forEach(ing => {
+                const limpio = ing.trim();
+                if (limpio) partes.push(`<li class="lmd-kds-mod lmd-kds-mod--extra">+ EXTRA ${limpio.toUpperCase()}</li>`);
+            });
         }
-        if (orden.notas) {
-            html += `<div class="lmd-kds-card-notas">📝 ${orden.notas}</div>`;
-        }
-        return html;
+
+        return partes.length > 0 ? `<ul class="lmd-kds-mods-list">${partes.join('')}</ul>` : '';
     }
 
     function renderOrden(orden) {
@@ -159,30 +165,36 @@
         asegurarCursoHeader(colId, curso);
 
         const colorClass = calcularColor(orden);
-        const mesaTexto = orden.mesaNumero ? `Mesa ${orden.mesaNumero}` : (orden.tipoServicio === 'ParaLlevar' ? 'Para llevar' : 'Sin mesa');
+        const mesaTexto = orden.mesaNumero
+            ? `Mesa ${orden.mesaNumero}`
+            : (orden.tipoServicio === 'ParaLlevar' ? '🛍 Para llevar' : 'Sin mesa');
+
+        const tieneModificaciones = orden.ingredientesQuitados || orden.ingredientesExtra;
+        const tieneNotas = !!orden.notas;
+        const tieneAlergenos = !!orden.alergenos;
 
         const card = document.createElement('article');
-        card.className = `lmd-kds-card ${colorClass}`;
+        card.className = `lmd-kds-card ${colorClass}${tieneAlergenos ? ' lmd-kds-card--alerta-alergeno' : ''}`;
         card.dataset.id = orden.id;
         card.dataset.ordenId = orden.id;
         card.dataset.curso = curso;
+        card.dataset.tiempoPreparacionMin = orden.tiempoPreparacionMin || 15;
+
         card.innerHTML = `
-            ${orden.alergenos ? `
-            <div class="lmd-kds-card-alergenos">
-                ⚠ ALÉRGENOS: ${orden.alergenos}
-            </div>` : ''}
+            ${tieneAlergenos ? `<div class="lmd-kds-alergeno-banner">⚠ ALÉRGENO: ${orden.alergenos.toUpperCase()}</div>` : ''}
             <header class="lmd-kds-card__header">
                 <span class="lmd-kds-card__mesa">${mesaTexto}</span>
                 <span class="lmd-kds-card__timer" data-hora-recibido="${orden.horaRecibido}">${formatearTiempo(orden.minutosTranscurridos || 0)}</span>
             </header>
-            <div class="lmd-kds-card__body">
-                <div class="lmd-kds-card__producto">${orden.productoNombre}</div>
-                <div class="lmd-kds-card__cantidad">x${orden.cantidad}</div>
-                ${renderInstruccionesEspeciales(orden)}
+            <div class="lmd-kds-card__dish-row">
+                <span class="lmd-kds-card__producto">${orden.productoNombre}</span>
+                <span class="lmd-kds-card__cantidad">${orden.cantidad}</span>
             </div>
+            ${tieneModificaciones ? `<div class="lmd-kds-card__modificaciones">${renderModificaciones(orden)}</div>` : ''}
+            ${tieneNotas ? `<div class="lmd-kds-card__notas-block"><span class="lmd-kds-notas-label">NOTA</span> ${orden.notas}</div>` : ''}
             <footer class="lmd-kds-card__footer">
-                <button class="lmd-kds-btn-listo" data-orden-id="${orden.id}">LISTO</button>
-                ${orden.productoId ? `<button class="lmd-kds-btn-86" data-producto-id="${orden.productoId}" title="86 - Agotado">86</button>` : ''}
+                <button class="lmd-kds-btn-listo" data-orden-id="${orden.id}">✓ LISTO</button>
+                ${orden.productoId ? `<button class="lmd-kds-btn-86" data-producto-id="${orden.productoId}" title="86 — Agotado">86</button>` : ''}
             </footer>
         `;
 
@@ -265,6 +277,9 @@
 
     // ── API ─────────────────────────────────────────────────
     async function marcarListo(ordenId) {
+        const card = document.querySelector(`.lmd-kds-card[data-orden-id="${ordenId}"]`);
+        if (card) card.classList.add('lmd-kds-card--completing');
+
         const form = new FormData();
         form.append('__RequestVerificationToken', csrfToken());
         form.append('ordenId', ordenId);
@@ -275,11 +290,30 @@
                 body: form,
                 headers: { 'X-Requested-With': 'XMLHttpRequest' }
             });
-            if (!res.ok) throw new Error(await res.text());
+            if (!res.ok) {
+                const msg = await res.text();
+                if (card) card.classList.remove('lmd-kds-card--completing');
+                mostrarToastKds('Error: ' + msg, 'error');
+                return;
+            }
             removerOrden(ordenId);
         } catch (e) {
-            alert('Error al marcar como listo: ' + e.message);
+            if (card) card.classList.remove('lmd-kds-card--completing');
+            mostrarToastKds('Sin conexión — reintentando...', 'warn');
         }
+    }
+
+    function mostrarToastKds(msg, tipo) {
+        let toast = document.getElementById('lmd-kds-toast');
+        if (!toast) {
+            toast = document.createElement('div');
+            toast.id = 'lmd-kds-toast';
+            document.body.appendChild(toast);
+        }
+        toast.textContent = msg;
+        toast.className = `lmd-kds-toast lmd-kds-toast--${tipo} lmd-kds-toast--visible`;
+        clearTimeout(toast._timeout);
+        toast._timeout = setTimeout(() => toast.classList.remove('lmd-kds-toast--visible'), 3000);
     }
 
     // ── SignalR ─────────────────────────────────────────────

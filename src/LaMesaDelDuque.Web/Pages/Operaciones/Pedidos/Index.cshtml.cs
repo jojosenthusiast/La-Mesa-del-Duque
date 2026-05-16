@@ -254,7 +254,7 @@ public class IndexModel : PageModel
         foreach (var l in Vm.CrearPedido.Lineas)
         {
             if (!prods.TryGetValue(l.ProductoId, out var prod)) return BadRequest("Producto inválido.");
-            detalles.Add(new DetalleCreacionDto { ProductoId = l.ProductoId, Cantidad = l.Cantidad, PrecioUnitario = prod.Precio });
+            detalles.Add(new DetalleCreacionDto { ProductoId = l.ProductoId, Cantidad = l.Cantidad, PrecioUnitario = prod.Precio, Notas = l.Notas, ModificacionesJson = l.ModificacionesJson });
         }
 
         try
@@ -265,14 +265,14 @@ public class IndexModel : PageModel
         catch (Exception ex) { return BadRequest(ex.Message); }
     }
 
-    public async Task<IActionResult> OnPostAgregarLineaJsonAsync(Guid pedidoId, Guid productoId, int cantidad)
+    public async Task<IActionResult> OnPostAgregarLineaJsonAsync(Guid pedidoId, Guid productoId, int cantidad, string? notas = null, string? modificacionesJson = null)
     {
         try
         {
             var prods = await _catalogoProductosServicio.ListarProductosAsync();
             var prod = prods.FirstOrDefault(p => p.Id == productoId && p.Activo)
                 ?? throw new ArgumentException("Producto no encontrado.");
-            await _pedidosServicio.AgregarDetalleAsync(pedidoId, productoId, cantidad, prod.Precio);
+            await _pedidosServicio.AgregarDetalleAsync(pedidoId, productoId, cantidad, prod.Precio, notas, modificacionesJson);
             return new JsonResult(new { ok = true });
         }
         catch (Exception ex) { return BadRequest(ex.Message); }

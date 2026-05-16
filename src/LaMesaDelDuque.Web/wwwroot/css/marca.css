@@ -1383,132 +1383,195 @@ h1, h2, h3, h4, h5, h6 {
     gap: 0.75rem;
 }
 
+/* ── KDS Card — redesigned for glanceability under pressure ── */
 .lmd-kds-card {
-    background: #fff;
+    background: #1a1f2e;
     border-radius: 0.75rem;
-    padding: 1rem;
-    color: var(--lmd-azul-duque);
+    overflow: hidden;
+    color: #f0f0f0;
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
-    border-left: 8px solid #28a745;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-    transition: border-color 0.3s;
+    border-left: 6px solid #28a745;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+    transition: border-color 0.3s, opacity 0.2s;
 }
 
-.lmd-kds-card--fresh { border-left-color: #28a745; }
-.lmd-kds-card--warn { border-left-color: #ffc107; }
-.lmd-kds-card--alert {
+.lmd-kds-card--fresh  { border-left-color: #28a745; }
+.lmd-kds-card--warn   { border-left-color: #ffc107; }
+.lmd-kds-card--alert  {
     border-left-color: #dc3545;
-    animation: lmd-kds-pulse-border 1.5s infinite;
+    animation: lmd-kds-pulse-border 1.2s infinite;
 }
+.lmd-kds-card--completing { opacity: 0.4; pointer-events: none; }
 
 @keyframes lmd-kds-pulse-border {
-    0%, 100% { border-left-color: #dc3545; }
-    50% { border-left-color: #ff6b6b; }
+    0%, 100% { border-left-color: #dc3545; box-shadow: 0 4px 16px rgba(220,53,69,0.3); }
+    50%       { border-left-color: #ff6b6b; box-shadow: 0 4px 24px rgba(220,53,69,0.6); }
+}
+
+/* Allergen banner — full-width red band, impossible to miss */
+.lmd-kds-alergeno-banner {
+    background: #c0392b;
+    color: #fff;
+    font-size: 0.8rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 0.35rem 1rem;
+    text-align: center;
 }
 
 .lmd-kds-card__header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    border-bottom: 1px solid rgba(15,27,45,0.08);
-    padding-bottom: 0.5rem;
+    padding: 0.5rem 1rem;
+    background: rgba(255,255,255,0.05);
+    border-bottom: 1px solid rgba(255,255,255,0.08);
 }
 
 .lmd-kds-card__mesa {
-    font-weight: 700;
-    font-size: 0.875rem;
+    font-weight: 800;
+    font-size: 0.95rem;
     text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: var(--lmd-gris-piedra);
+    letter-spacing: 0.06em;
+    color: #aab4c4;
 }
 
 .lmd-kds-card__timer {
     font-family: var(--lmd-fuente-titulo);
-    font-size: 1.25rem;
+    font-size: 1.35rem;
     font-weight: 700;
     font-variant-numeric: tabular-nums;
-    color: var(--lmd-azul-duque);
+    color: #f0f0f0;
 }
+.lmd-kds-card--warn  .lmd-kds-card__timer { color: #ffc107; }
+.lmd-kds-card--alert .lmd-kds-card__timer { color: #ff6b6b; }
 
-.lmd-kds-card__body {
-    flex: 1;
+/* Dish name + quantity on same row */
+.lmd-kds-card__dish-row {
+    display: flex;
+    align-items: baseline;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem 0.25rem;
 }
 
 .lmd-kds-card__producto {
-    font-size: 1.125rem;
-    font-weight: 700;
-    line-height: 1.3;
-    margin-bottom: 0.25rem;
+    font-size: 1.25rem;
+    font-weight: 800;
+    line-height: 1.2;
+    color: #ffffff;
+    flex: 1;
 }
 
 .lmd-kds-card__cantidad {
-    font-size: 2rem;
-    font-weight: 800;
-    color: var(--lmd-dorado-real);
+    font-size: 2.25rem;
+    font-weight: 900;
+    color: var(--lmd-dorado-real, #c9a96e);
+    line-height: 1;
+    min-width: 2rem;
+    text-align: right;
 }
 
-.lmd-kds-card__notas {
+/* Modification list — each mod on its own line */
+.lmd-kds-card__modificaciones {
+    padding: 0 1rem 0.25rem;
+}
+
+.lmd-kds-mods-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+}
+
+.lmd-kds-mod {
     font-size: 0.8rem;
-    color: var(--lmd-terracota);
-    margin-top: 0.5rem;
-    font-style: italic;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    padding: 0.2rem 0.5rem;
+    border-radius: 0.3rem;
 }
 
-.lmd-kds-card-alergenos {
-    color: #e74c3c;
-    font-weight: bold;
-    font-size: 0.9rem;
-    margin-top: 8px;
+.lmd-kds-mod--quitar {
+    background: rgba(220,53,69,0.2);
+    color: #ff8a8a;
+    border-left: 3px solid #dc3545;
 }
 
-.lmd-kds-card-quitados {
-    color: #f39c12;
-    margin-top: 4px;
-    font-size: 0.85rem;
+.lmd-kds-mod--extra {
+    background: rgba(40,167,69,0.2);
+    color: #7de8a0;
+    border-left: 3px solid #28a745;
 }
 
-.lmd-kds-card-extras {
-    color: #2ecc71;
-    margin-top: 4px;
-    font-size: 0.85rem;
+/* Notes — amber sticky-note style */
+.lmd-kds-card__notas-block {
+    margin: 0.25rem 1rem;
+    background: rgba(255,193,7,0.15);
+    border-left: 3px solid #ffc107;
+    border-radius: 0 0.3rem 0.3rem 0;
+    padding: 0.3rem 0.5rem;
+    font-size: 0.825rem;
+    color: #ffe082;
+    line-height: 1.4;
 }
 
-.lmd-kds-card-notas {
-    color: #95a5a6;
-    font-style: italic;
-    margin-top: 4px;
-    font-size: 0.85rem;
+.lmd-kds-notas-label {
+    font-weight: 800;
+    font-size: 0.7rem;
+    letter-spacing: 0.08em;
+    margin-right: 0.35rem;
+    opacity: 0.7;
 }
 
 .lmd-kds-card__footer {
-    padding-top: 0.5rem;
+    padding: 0.75rem 1rem 1rem;
+    display: flex;
+    gap: 0.5rem;
+    margin-top: auto;
 }
 
 .lmd-kds-btn-listo {
-    width: 100%;
-    padding: 0.875rem;
+    flex: 1;
+    padding: 0.9rem;
     border: none;
     border-radius: 0.5rem;
-    background: var(--lmd-verde-salvia);
+    background: #2e7d4f;
     color: #fff;
-    font-size: 1rem;
-    font-weight: 700;
+    font-size: 1.1rem;
+    font-weight: 800;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.06em;
     cursor: pointer;
     touch-action: manipulation;
-    transition: background 0.12s;
+    transition: background 0.12s, transform 0.1s;
 }
 
-.lmd-kds-btn-listo:hover {
-    background: #3d5847;
+/* KDS toast notification */
+.lmd-kds-toast {
+    position: fixed;
+    bottom: 1.5rem;
+    left: 50%;
+    transform: translateX(-50%) translateY(4rem);
+    background: #2c3e50;
+    color: #fff;
+    padding: 0.75rem 1.5rem;
+    border-radius: 2rem;
+    font-weight: 700;
+    font-size: 0.9rem;
+    z-index: 9999;
+    transition: transform 0.25s;
+    pointer-events: none;
 }
+.lmd-kds-toast--visible { transform: translateX(-50%) translateY(0); }
+.lmd-kds-toast--error { background: #c0392b; }
+.lmd-kds-toast--warn  { background: #f39c12; }
 
-.lmd-kds-btn-listo:active {
-    transform: scale(0.98);
-}
+.lmd-kds-btn-listo:hover  { background: #3a9e62; }
+.lmd-kds-btn-listo:active { transform: scale(0.97); background: #236b3e; }
 
 @media (max-width: 1199px) {
     .lmd-kds-columns {

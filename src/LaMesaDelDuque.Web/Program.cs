@@ -99,18 +99,18 @@ if (app.Environment.IsDevelopment())
         );
         await db.SaveChangesAsync();
 
-        var entradas = new CategoriaProducto("Entradas", "Aperitivos y entrantes", 1);
-        var platos = new CategoriaProducto("Platos Fuertes", "Platos principales", 2);
-        var bebidas = new CategoriaProducto("Bebidas", "Bebidas", 3);
-        var postres = new CategoriaProducto("Postres", "Postres y dulces", 4);
+        var entradas = new CategoriaProducto("Entradas", "Aperitivos y entrantes", 1, LaMesaDelDuque.Dominio.Enumeraciones.EstacionCocina.Caliente);
+        var platos = new CategoriaProducto("Platos Fuertes", "Platos principales", 2, LaMesaDelDuque.Dominio.Enumeraciones.EstacionCocina.Parrilla);
+        var bebidas = new CategoriaProducto("Bebidas", "Bebidas", 3, LaMesaDelDuque.Dominio.Enumeraciones.EstacionCocina.Bar);
+        var postres = new CategoriaProducto("Postres", "Postres y dulces", 4, LaMesaDelDuque.Dominio.Enumeraciones.EstacionCocina.Fria);
         db.Set<CategoriaProducto>().AddRange(entradas, platos, bebidas, postres);
         await db.SaveChangesAsync();
 
         db.Set<Producto>().AddRange(
-            new Producto("Bruschetta Clásica", 8.50m, entradas, null, 8),
-            new Producto("Solomillo al Duque", 24.00m, platos, null, 25),
-            new Producto("Agua Mineral", 2.50m, bebidas, null, 1),
-            new Producto("Tiramisú", 9.00m, postres, null, 5)
+            new Producto("Bruschetta Clásica", 8.50m, entradas, "/images/productos/bruschetta.jpg", 8),
+            new Producto("Solomillo al Duque", 24.00m, platos, "/images/productos/solomillo.jpg", 25),
+            new Producto("Agua Mineral", 2.50m, bebidas, "/images/productos/agua-mineral.jpg", 1),
+            new Producto("Tiramisú", 9.00m, postres, "/images/productos/tiramisu.jpg", 5)
         );
         await db.SaveChangesAsync();
 

@@ -1,6 +1,7 @@
 using LaMesaDelDuque.Aplicacion.Dtos;
 using LaMesaDelDuque.Aplicacion.Servicios;
 using LaMesaDelDuque.Dominio.Enumeraciones;
+using LaMesaDelDuque.Dominio.Excepciones;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
@@ -93,9 +94,13 @@ public class KDSModel : PageModel
         try
         {
             var dto = await _cocinaServicio.MarcarListoAsync(ordenId);
-            return new JsonResult(dto);
+            return new JsonResult(new { ok = true });
         }
-        catch (ArgumentException ex)
+        catch (ReglaDominioException ex) when (ex.Message.Contains("Ya está listo"))
+        {
+            return new JsonResult(new { ok = true });
+        }
+        catch (Exception ex)
         {
             return BadRequest(ex.Message);
         }
