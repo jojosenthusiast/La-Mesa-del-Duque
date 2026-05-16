@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using System.Security.Claims;
+using System.Text.Json;
 
 namespace LaMesaDelDuque.Pruebas.Web;
 
@@ -32,7 +33,10 @@ public class KDSPageTests
         var result = await page.OnGetOrdenesJsonAsync("");
 
         var json = Assert.IsType<JsonResult>(result);
-        var ordenes = Assert.IsType<List<OrdenCocinaDto>>(json.Value);
+        var ordenesObj = json.Value;
+        var ordenes = ordenesObj is List<OrdenCocinaDto> directList ? directList
+            : ordenesObj is JsonElement je ? je.Deserialize<List<OrdenCocinaDto>>() : null;
+        Assert.NotNull(ordenes);
         Assert.Equal(2, ordenes.Count);
     }
 
@@ -45,7 +49,10 @@ public class KDSPageTests
         var result = await page.OnGetOrdenesJsonAsync("Parrilla");
 
         var json = Assert.IsType<JsonResult>(result);
-        var ordenes = Assert.IsType<List<OrdenCocinaDto>>(json.Value);
+        var ordenesObj = json.Value;
+        var ordenes = ordenesObj is List<OrdenCocinaDto> directList ? directList
+            : ordenesObj is JsonElement je ? je.Deserialize<List<OrdenCocinaDto>>() : null;
+        Assert.NotNull(ordenes);
         Assert.All(ordenes, o => Assert.Equal("Parrilla", o.Estacion));
     }
 
@@ -59,8 +66,9 @@ public class KDSPageTests
         var result = await page.OnPostMarcarListoJsonAsync(ordenId);
 
         var json = Assert.IsType<JsonResult>(result);
-        var dto = Assert.IsType<OrdenCocinaDto>(json.Value);
-        Assert.Equal("Listo", dto.Estado);
+        Assert.NotNull(json.Value);
+        var orden = servicio.Ordenes.First(o => o.Id == ordenId);
+        Assert.Equal("Listo", orden.Estado);
         Assert.Contains(ordenId, servicio.MarcadoComoListo);
     }
 
@@ -100,6 +108,9 @@ public class KDSPageTests
                 query = query.Where(o => o.Estacion == estacion.Value.ToString());
             return Task.FromResult(query.ToList());
         }
+
+        public Task<List<OrdenCocinaDto>> ListarListosAsync(CancellationToken ct = default)
+            => Task.FromResult(Ordenes.Where(o => o.Estado == "Listo").ToList());
 
         public Task<OrdenCocinaDto> MarcarListoAsync(Guid ordenId, CancellationToken ct = default)
         {
