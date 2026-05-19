@@ -4,6 +4,11 @@
    ============================================================================ */
 
 (function () {
+    function mostrarToast(mensaje, tipo = 'error') {
+        if (window.lmdToast) {
+            window.lmdToast(mensaje, tipo);
+        }
+    }
     const api = {
         async crear(tipoServicio, mesaId, lineas) {
             const form = new FormData();
@@ -245,7 +250,7 @@
                     }];
                     await joinPedidoGroup(state.pedidoActual.id);
                 } catch (e) {
-                    alert('Error al crear pedido: ' + e.message);
+                    mostrarToast('Error al crear pedido: ' + e.message, 'error');
                     return;
                 }
             } else {
@@ -266,7 +271,7 @@
                         });
                     }
                 } catch (e) {
-                    alert('Error: ' + e.message);
+                    mostrarToast('Error: ' + e.message, 'error');
                     return;
                 }
             }
@@ -298,7 +303,7 @@
                     setTimeout(() => btn.textContent = original, 2000);
                 }
             } catch (e) {
-                alert('Error: ' + e.message);
+                mostrarToast('Error: ' + e.message, 'error');
             }
         }
     };

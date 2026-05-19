@@ -36,6 +36,10 @@ public class IndexModel : PageModel
     public async Task<IActionResult> OnPostGuardarAsync()
     {
         SetUiContext();
+        if (!(User.IsInRole("Administrador") || User.IsInRole("Encargado")))
+        {
+            return Forbid();
+        }
         if (!ModelState.IsValid)
         {
             await CargarDatosAsync();
@@ -75,6 +79,10 @@ public class IndexModel : PageModel
     public async Task<IActionResult> OnPostCambiarEstadoAsync(Guid id, string nuevoEstado)
     {
         SetUiContext();
+        if (!(User.IsInRole("Administrador") || User.IsInRole("Encargado")))
+        {
+            return Forbid();
+        }
         try
         {
             await _mesasServicio.CambiarEstadoMesaAsync(id, nuevoEstado);
@@ -95,6 +103,10 @@ public class IndexModel : PageModel
     public async Task<IActionResult> OnPostDesactivarAsync(Guid id)
     {
         SetUiContext();
+        if (!(User.IsInRole("Administrador") || User.IsInRole("Encargado")))
+        {
+            return Forbid();
+        }
         try
         {
             await _mesasServicio.DesactivarMesaAsync(id);

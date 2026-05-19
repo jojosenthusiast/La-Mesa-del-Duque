@@ -181,13 +181,14 @@ public class IndexModel : PageModel
     {
         SetUiContext();
 
-        if (!Vm.PedidosActivos.Any(p => p.Id == pedidoId))
+        var pedidosActivos = await _pedidosServicio.ListarPedidosActivosAsync();
+        var pedido = pedidosActivos.FirstOrDefault(p => p.Id == pedidoId);
+
+        if (pedido is null)
         {
             ToastError = "El pedido ya no está activo.";
             return RedirectToPage();
         }
-
-        var pedido = Vm.PedidosActivos.First(p => p.Id == pedidoId);
 
         if (efectivoRecibido < pedido.Total)
         {

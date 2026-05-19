@@ -8,6 +8,58 @@
         setTimeout(function () { toast.remove(); }, 150);
     }
 
+    function getToastZone() {
+        return document.getElementById("lmd-toast-zone") || document.querySelector(".lmd-toast-zone");
+    }
+
+    window.lmdToast = function (message, type) {
+        var toastZone = getToastZone();
+        if (!toastZone) {
+            return;
+        }
+
+        var css = "alert alert-dismissible fade show py-2 mb-2 ";
+        switch (type) {
+            case "success": css += "alert-success"; break;
+            case "info": css += "alert-info"; break;
+            case "warning": css += "alert-warning"; break;
+            default: css += "alert-danger"; break;
+        }
+
+        var toast = document.createElement("div");
+        toast.className = css;
+        toast.setAttribute("data-lmd-toast", "true");
+        toast.innerHTML = message + '<button type="button" class="btn-close" aria-label="Cerrar"></button>';
+        toastZone.prepend(toast);
+        setTimeout(function () { closeToast(toast); }, 4000);
+    };
+
+    window.lmdConfirm = function (message) {
+        return new Promise(function (resolve) {
+            var overlay = document.createElement("div");
+            overlay.className = "lmd-modal-overlay";
+
+            var modal = document.createElement("div");
+            modal.className = "lmd-modal";
+            modal.innerHTML = '<p>' + message + '</p>' +
+                '<div class="lmd-modal-actions">' +
+                '  <button type="button" class="btn btn-sm lmd-action-neutral" data-lmd-cancel>Cancelar</button>' +
+                '  <button type="button" class="btn btn-sm lmd-action-danger" data-lmd-confirm>Confirmar</button>' +
+                '</div>';
+
+            overlay.appendChild(modal);
+            document.body.appendChild(overlay);
+
+            function cleanup(result) {
+                overlay.remove();
+                resolve(result);
+            }
+
+            modal.querySelector("[data-lmd-cancel]").addEventListener("click", function () { cleanup(false); });
+            modal.querySelector("[data-lmd-confirm]").addEventListener("click", function () { cleanup(true); });
+        });
+    };
+
     document.addEventListener("click", function (event) {
         var closeButton = event.target.closest("[data-lmd-toast='true'] .btn-close");
         if (!closeButton) {
@@ -28,10 +80,12 @@
     });
 
     document.querySelectorAll(".lmd-confirm-destructive").forEach(function (form) {
-        form.addEventListener("submit", function (event) {
+        form.addEventListener("submit", async function (event) {
+            event.preventDefault();
             var message = form.getAttribute("data-confirm-message") || "¿Confirmás esta acción?";
-            if (!window.confirm(message)) {
-                event.preventDefault();
+            var ok = await window.lmdConfirm(message);
+            if (ok) {
+                form.submit();
             }
         });
     });
@@ -70,21 +124,12 @@
             .build();
 
         connection.on("RecibirNotificacionPedido", function (payload) {
-            var toastZone = document.getElementById("lmd-toast-zone") || document.querySelector(".lmd-toast-zone");
-            if (!toastZone) {
-                return;
-            }
-
             var text = "Pedido actualizado.";
             if (payload && payload.tipo) {
                 text = payload.tipo + (payload.estado ? " · " + payload.estado : "");
             }
 
-            var toast = document.createElement("div");
-            toast.className = "alert alert-info alert-dismissible fade show py-2 mb-2";
-            toast.setAttribute("data-lmd-toast", "true");
-            toast.innerHTML = text + '<button type="button" class="btn-close" aria-label="Cerrar"></button>';
-            toastZone.prepend(toast);
+            window.lmdToast(text, "info");
         });
 
         connection.start().catch(function () {

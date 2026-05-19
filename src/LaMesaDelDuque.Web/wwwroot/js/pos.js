@@ -251,6 +251,10 @@
 
     function mostrarToastOffline(mensaje) {
         // Simple toast fallback; reuse site toast if available
+        if (window.lmdToast) {
+            window.lmdToast(mensaje, 'warning');
+            return;
+        }
         const zone = document.getElementById('lmd-toast-zone') || document.querySelector('.lmd-toast-zone');
         if (zone) {
             const toast = document.createElement('div');
@@ -263,6 +267,29 @@
                 setTimeout(() => toast.remove(), 150);
             }, 4000);
         }
+    }
+
+    function mostrarToastUi(mensaje, tipo = 'error') {
+        if (window.lmdToast) {
+            window.lmdToast(mensaje, tipo);
+            return;
+        }
+        mostrarToastOffline(mensaje);
+    }
+
+    async function confirmarUi(mensaje) {
+        if (window.lmdConfirm) {
+            return await window.lmdConfirm(mensaje);
+        }
+        return true;
+    }
+
+    function mostrarError(mensaje) {
+        mostrarToastUi(mensaje, 'error');
+    }
+
+    function mostrarExito(mensaje) {
+        mostrarToastUi(mensaje, 'success');
     }
 
     // ── Sync loop ───────────────────────────────────────────
@@ -819,7 +846,7 @@
                         actualizarOfflineUI();
                         mostrarToastOffline('Pedido guardado localmente. Se sincronizará al restaurar conexión.');
                     } else {
-                        alert('Error al crear pedido: ' + e.message);
+                        mostrarError('Error al crear pedido: ' + e.message);
                         return;
                     }
                 }
@@ -850,7 +877,7 @@
                         agregarLineaLocal();
                         mostrarToastOffline('Producto agregado localmente. Se sincronizará al restaurar conexión.');
                     } else {
-                        alert('Error: ' + e.message);
+                        mostrarError('Error: ' + e.message);
                         return;
                     }
                 }
@@ -1046,11 +1073,11 @@
                 linea.cantidad = nuevaCantidad;
                 linea.subtotal = nuevaCantidad * linea.precioUnitario;
                 renderPantallaProductos();
-            } catch (e) { alert('Error: ' + e.message); }
+            } catch (e) { mostrarError('Error: ' + e.message); }
         },
 
         async eliminarLinea(lineaId) {
-            if (!state.pedidoActual || !confirm('¿Quitar este producto?')) return;
+            if (!state.pedidoActual || !(await confirmarUi('¿Quitar este producto?'))) return;
             if (!navigator.onLine || state.pedidoActual.isLocal) {
                 state.lineas = state.lineas.filter(l => l.id !== lineaId);
                 if (state.lineas.length === 0) {
@@ -1067,7 +1094,7 @@
                     state.pedidoActual = null;
                 }
                 renderPantallaProductos();
-            } catch (e) { alert('Error: ' + e.message); }
+            } catch (e) { mostrarError('Error: ' + e.message); }
         },
 
         calcularCambio() {
@@ -1113,10 +1140,10 @@
                 state.lineas = [];
                 state.mesaId = null;
                 persistState();
-                alert(`✅ ${result.mensaje || 'Pedido pagado.'}`);
+                mostrarExito(result.mensaje || 'Pedido pagado.');
                 state.pantalla = 'mesa';
                 renderPantallaMesa();
-            } catch (e) { alert('Error: ' + e.message); }
+            } catch (e) { mostrarError('Error: ' + e.message); }
         },
 
         async pagarConTarjeta() {
@@ -1139,14 +1166,14 @@
                 state.lineas = [];
                 state.mesaId = null;
                 persistState();
-                alert('✅ Pedido pagado con tarjeta.');
+                mostrarExito('Pedido pagado con tarjeta.');
                 state.pantalla = 'mesa';
                 renderPantallaMesa();
-            } catch (e) { alert('Error: ' + e.message); }
+            } catch (e) { mostrarError('Error: ' + e.message); }
         },
 
         async cancelarPedido() {
-            if (!state.pedidoActual || !confirm('¿Cancelar este pedido?')) return;
+            if (!state.pedidoActual || !(await confirmarUi('¿Cancelar este pedido?'))) return;
             if (state.pedidoActual.isLocal) {
                 // Cancelar pedido local: eliminar de IndexedDB
                 const pendientes = await obtenerPedidosPendientes();
@@ -1168,15 +1195,15 @@
                 persistState();
                 state.pantalla = 'mesa';
                 renderPantallaMesa();
-            } catch (e) { alert('Error: ' + e.message); }
+            } catch (e) { mostrarError('Error: ' + e.message); }
         },
 
         async marcarEnPreparacion() {
             if (!state.pedidoActual) return;
             try {
                 await api.cambiarEstado(state.pedidoActual.id, 'MarcarEnPreparacion');
-                alert('✅ Pedido marcado en preparación.');
-            } catch (e) { alert('Error: ' + e.message); }
+                mostrarExito('Pedido marcado en preparación.');
+            } catch (e) { mostrarError('Error: ' + e.message); }
         }
     };
 

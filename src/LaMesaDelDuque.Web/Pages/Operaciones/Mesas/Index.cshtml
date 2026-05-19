@@ -56,6 +56,7 @@
 
     <div class="collapse mb-4 @(Model.ModelState.ErrorCount > 0 ? "show" : string.Empty)" id="mesa-form">
         <form method="post" asp-page-handler="Guardar" class="border rounded p-3">
+            @Html.AntiForgeryToken()
             <input type="hidden" asp-for="Vm.Form.Id" />
             <div asp-validation-summary="ModelOnly" class="text-danger mb-2"></div>
             <div class="row g-2">
@@ -95,33 +96,41 @@
                     </div>
 
                     <div class="d-flex flex-wrap gap-2">
-                        <form method="post" asp-page-handler="CambiarEstado" class="d-inline">
-                            <input type="hidden" name="id" value="@mesa.Id" />
-                            <input type="hidden" name="nuevoEstado" value="Disponible" />
-                            <button type="submit" class="btn btn-sm lmd-action-success" @(mesa.Estado == "Disponible" ? "disabled" : null)>Disponible</button>
-                        </form>
-                        <form method="post" asp-page-handler="CambiarEstado" class="d-inline">
-                            <input type="hidden" name="id" value="@mesa.Id" />
-                            <input type="hidden" name="nuevoEstado" value="Ocupada" />
-                            <button type="submit" class="btn btn-sm lmd-action-primary" @(mesa.Estado == "Ocupada" ? "disabled" : null)>Ocupada</button>
-                        </form>
-                        <form method="post" asp-page-handler="CambiarEstado" class="d-inline">
-                            <input type="hidden" name="id" value="@mesa.Id" />
-                            <input type="hidden" name="nuevoEstado" value="Reservada" />
-                            <button type="submit" class="btn btn-sm lmd-action-neutral" @(mesa.Estado == "Reservada" ? "disabled" : null)>Reservada</button>
-                        </form>
-                        <form method="post" asp-page-handler="CambiarEstado" class="d-inline">
-                            <input type="hidden" name="id" value="@mesa.Id" />
-                            <input type="hidden" name="nuevoEstado" value="Mantenimiento" />
-                            <button type="submit" class="btn btn-sm lmd-action-danger" @(mesa.Estado == "Mantenimiento" ? "disabled" : null)>Mantenimiento</button>
-                        </form>
-
-                        @if (mesa.Activa && (User.IsInRole("Administrador") || User.IsInRole("Encargado")))
+                        @if (User.IsInRole("Administrador") || User.IsInRole("Encargado"))
                         {
-                            <form method="post" asp-page-handler="Desactivar" class="d-inline lmd-confirm-destructive" data-confirm-message="¿Desactivar esta mesa?">
+                            <form method="post" asp-page-handler="CambiarEstado" class="d-inline lmd-confirm-destructive" data-confirm-message="La mesa tiene pedidos activos. ¿Desea marcarla como Disponible?">
+                                @Html.AntiForgeryToken()
                                 <input type="hidden" name="id" value="@mesa.Id" />
-                                <button type="submit" class="btn btn-sm lmd-action-danger">Desactivar</button>
+                                <input type="hidden" name="nuevoEstado" value="Disponible" />
+                                <button type="submit" class="btn btn-sm lmd-action-success" @(mesa.Estado == "Disponible" ? "disabled" : null)>Disponible</button>
                             </form>
+                            <form method="post" asp-page-handler="CambiarEstado" class="d-inline">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="id" value="@mesa.Id" />
+                                <input type="hidden" name="nuevoEstado" value="Ocupada" />
+                                <button type="submit" class="btn btn-sm lmd-action-primary" @(mesa.Estado == "Ocupada" ? "disabled" : null)>Ocupada</button>
+                            </form>
+                            <form method="post" asp-page-handler="CambiarEstado" class="d-inline">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="id" value="@mesa.Id" />
+                                <input type="hidden" name="nuevoEstado" value="Reservada" />
+                                <button type="submit" class="btn btn-sm lmd-action-neutral" @(mesa.Estado == "Reservada" ? "disabled" : null)>Reservada</button>
+                            </form>
+                            <form method="post" asp-page-handler="CambiarEstado" class="d-inline">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="id" value="@mesa.Id" />
+                                <input type="hidden" name="nuevoEstado" value="Mantenimiento" />
+                                <button type="submit" class="btn btn-sm lmd-action-danger" @(mesa.Estado == "Mantenimiento" ? "disabled" : null)>Mantenimiento</button>
+                            </form>
+
+                            @if (mesa.Activa)
+                            {
+                                <form method="post" asp-page-handler="Desactivar" class="d-inline lmd-confirm-destructive" data-confirm-message="¿Desactivar esta mesa?">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="id" value="@mesa.Id" />
+                                    <button type="submit" class="btn btn-sm lmd-action-danger">Desactivar</button>
+                                </form>
+                            }
                         }
                     </div>
                 </article>
