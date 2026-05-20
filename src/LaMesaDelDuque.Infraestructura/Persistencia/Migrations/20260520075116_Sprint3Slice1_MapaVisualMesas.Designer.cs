@@ -3,17 +3,20 @@ using System;
 using LaMesaDelDuque.Infraestructura.Persistencia;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace LaMesaDelDuque.Infraestructura.Migrations
+namespace LaMesaDelDuque.Infraestructura.Persistencia.Migrations
 {
     [DbContext(typeof(LaMesaDelDuqueDbContext))]
-    partial class LaMesaDelDuqueDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260520075116_Sprint3Slice1_MapaVisualMesas")]
+    partial class Sprint3Slice1_MapaVisualMesas
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "8.0.11");

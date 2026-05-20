@@ -14,6 +14,7 @@ public interface IUnidadDeTrabajo
     IOrdenCocinaRepositorio OrdenesCocina { get; }
     ICuentaRepositorio Cuentas { get; }
     IPagoRepositorio Pagos { get; }
+    IZonaSalonRepositorio ZonasSalon { get; }
 
     Task<int> GuardarCambiosAsync(CancellationToken cancelacion = default);
 }
