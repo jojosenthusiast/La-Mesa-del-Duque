@@ -13,15 +13,17 @@ internal class PedidosServicio : IPedidosServicio
 {
     private readonly IUnidadDeTrabajo _uot;
     private readonly INotificadorPedidos _notificadorPedidos;
+    private readonly INotificadorDashboard? _notificadorDashboard;
     private readonly ICocinaServicio? _cocinaServicio;
     private readonly IHttpContextAccessor? _httpContextAccessor;
 
-    public PedidosServicio(IUnidadDeTrabajo uot, INotificadorPedidos notificadorPedidos, ICocinaServicio? cocinaServicio = null, IHttpContextAccessor? httpContextAccessor = null)
+    public PedidosServicio(IUnidadDeTrabajo uot, INotificadorPedidos notificadorPedidos, ICocinaServicio? cocinaServicio = null, IHttpContextAccessor? httpContextAccessor = null, INotificadorDashboard? notificadorDashboard = null)
     {
         _uot = uot;
         _notificadorPedidos = notificadorPedidos;
         _cocinaServicio = cocinaServicio;
         _httpContextAccessor = httpContextAccessor;
+        _notificadorDashboard = notificadorDashboard;
     }
 
     public async Task<PedidoDto> CrearPedidoAsync(TipoServicio tipoServicio, Guid? mesaId, List<DetalleCreacionDto> detalles, CancellationToken cancelacion = default)
@@ -60,6 +62,7 @@ internal class PedidosServicio : IPedidosServicio
         await _uot.Pedidos.AgregarAsync(pedido, cancelacion);
         await _uot.GuardarCambiosAsync(cancelacion);
         await _notificadorPedidos.NotificarPedidoCreadoAsync(pedido.Id, pedido.Estado, cancelacion);
+        await NotificarMetricasInvalidadasSiExisteAsync(cancelacion);
 
         if (_cocinaServicio is not null)
             await _cocinaServicio.GenerarOrdenesAsync(pedido.Id, cancelacion);
@@ -91,6 +94,7 @@ internal class PedidosServicio : IPedidosServicio
         pedido.MarcarEnPreparacion();
         await _uot.GuardarCambiosAsync(cancelacion);
         await _notificadorPedidos.NotificarEstadoCambiadoAsync(pedido.Id, pedido.Estado, cancelacion);
+        await NotificarMetricasInvalidadasSiExisteAsync(cancelacion);
     }
 
     public async Task PagarPedidoAsync(Guid pedidoId, CancellationToken cancelacion = default)
@@ -102,6 +106,7 @@ internal class PedidosServicio : IPedidosServicio
         await LiberarMesaSiCorrespondeAsync(pedido, cancelacion);
         await _uot.GuardarCambiosAsync(cancelacion);
         await _notificadorPedidos.NotificarEstadoCambiadoAsync(pedido.Id, pedido.Estado, cancelacion);
+        await NotificarMetricasInvalidadasSiExisteAsync(cancelacion);
     }
 
     public async Task<PedidoDto> EliminarDetalleAsync(Guid pedidoId, Guid detalleId, CancellationToken cancelacion = default)
@@ -144,6 +149,7 @@ internal class PedidosServicio : IPedidosServicio
         await LiberarMesaSiCorrespondeAsync(pedido, cancelacion);
         await _uot.GuardarCambiosAsync(cancelacion);
         await _notificadorPedidos.NotificarPedidoCanceladoAsync(pedido.Id, cancelacion);
+        await NotificarMetricasInvalidadasSiExisteAsync(cancelacion);
     }
 
     public async Task EliminarPedidoPendienteAsync(Guid pedidoId, Guid usuarioId, string? ipAddress = null, CancellationToken cancelacion = default)
@@ -190,6 +196,7 @@ internal class PedidosServicio : IPedidosServicio
         pedido.MarcarEnCobro();
         await _uot.GuardarCambiosAsync(cancelacion);
         await _notificadorPedidos.NotificarEstadoCambiadoAsync(pedido.Id, pedido.Estado, cancelacion);
+        await NotificarMetricasInvalidadasSiExisteAsync(cancelacion);
     }
 
     public async Task<List<CuentaDto>> CrearCuentasAsync(Guid pedidoId, int cantidad, CancellationToken cancelacion = default)
@@ -207,6 +214,7 @@ internal class PedidosServicio : IPedidosServicio
 
         await _uot.GuardarCambiosAsync(cancelacion);
         await _notificadorPedidos.NotificarEstadoCambiadoAsync(pedido.Id, pedido.Estado, cancelacion);
+        await NotificarMetricasInvalidadasSiExisteAsync(cancelacion);
 
         return cuentas.Select(MapToCuentaDto).ToList();
     }
@@ -245,6 +253,7 @@ internal class PedidosServicio : IPedidosServicio
 
         await _uot.GuardarCambiosAsync(cancelacion);
         await _notificadorPedidos.NotificarEstadoCambiadoAsync(pedido.Id, pedido.Estado, cancelacion);
+        await NotificarMetricasInvalidadasSiExisteAsync(cancelacion);
 
         return cuentas.Select(MapToCuentaDto).ToList();
     }
@@ -273,6 +282,7 @@ internal class PedidosServicio : IPedidosServicio
                 }
 
                 await _uot.GuardarCambiosAsync(cancelacion);
+                await NotificarMetricasInvalidadasSiExisteAsync(cancelacion);
                 return MapToCuentaDto(cuenta);
             }
             catch (ConcurrenciaException) when (intento < 2)
@@ -301,6 +311,12 @@ internal class PedidosServicio : IPedidosServicio
             return usuarioId;
 
         return Guid.Empty;
+    }
+
+    private async Task NotificarMetricasInvalidadasSiExisteAsync(CancellationToken cancelacion)
+    {
+        if (_notificadorDashboard is not null)
+            await _notificadorDashboard.NotificarMetricasInvalidadasAsync(cancelacion);
     }
 
     private async Task LiberarMesaSiCorrespondeAsync(Pedido pedido, CancellationToken cancelacion)

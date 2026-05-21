@@ -43,6 +43,7 @@ builder.Services.AddHttpContextAccessor();
 // Capa de aplicación (servicios)
 builder.Services.AgregarAplicacion();
 builder.Services.AddScoped<INotificadorPedidos, SignalRNotificadorPedidos>();
+builder.Services.AddScoped<INotificadorDashboard, SignalRNotificadorDashboard>();
 
 // Persistencia con fail-fast si no hay connection string
 builder.Services.AgregarPersistencia(builder.Configuration, builder.Environment.IsDevelopment());
