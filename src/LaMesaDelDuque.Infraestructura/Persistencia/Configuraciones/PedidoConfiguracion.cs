@@ -10,6 +10,9 @@ internal class PedidoConfiguracion : IEntityTypeConfiguration<Pedido>
     {
         constructor.HasKey(p => p.Id);
 
+        constructor.Property(p => p.FechaCreacion)
+            .IsRequired();
+
         constructor.Property(p => p.TipoServicio)
             .HasConversion<string>()
             .HasMaxLength(20)
