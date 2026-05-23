@@ -1,0 +1,32 @@
+@page
+@model LaMesaDelDuque.Web.Pages.Operaciones.Cierre.IndexModel
+@{ ViewData["Title"] = "Cierre de Día"; }
+@Html.AntiForgeryToken()
+
+<section class="lmd-page-header rounded-top"><h1>Cierre de Día</h1><p class="lmd-page-subtitle">Apertura, cierre de caja e historial.</p></section>
+
+<section class="bg-white p-3 rounded-bottom">
+    @if(Model.CierreAbierto is not null)
+    {
+        <div class="alert alert-success">Día abierto: @Model.CierreAbierto.Fecha.ToString("dd/MM/yyyy")</div>
+        <form method="post" asp-page-handler="Cerrar">
+            <div class="row g-3">
+                <div class="col-md-4"><label class="form-label">Efectivo en caja</label><input type="number" step="0.01" name="EfectivoReal" class="form-control" required /></div>
+                <div class="col-md-4"><label class="form-label">Tarjeta real</label><input type="number" step="0.01" name="TarjetaReal" class="form-control" required /></div>
+                <div class="col-md-4 d-flex align-items-end"><button type="submit" class="btn btn-danger w-100">Cerrar Día</button></div>
+            </div>
+        </form>
+    }
+    else
+    {
+        <div class="alert alert-warning">No hay cierre abierto hoy.</div>
+        <form method="post" asp-page-handler="Abrir"><button type="submit" class="btn btn-success">Abrir Día</button></form>
+    }
+
+    <hr />
+    <h4>Historial</h4>
+    <table class="table table-striped"><thead><tr><th>Fecha</th><th>Ventas</th><th>Efectivo</th><th>Tarjeta</th><th>Pedidos</th><th>Cancel.</th><th>Merma</th></tr></thead>
+    <tbody>
+    @foreach(var c in Model.Historial){<tr><td>@c.Fecha.ToString("dd/MM")</td><td>@c.TotalVentas.ToString("C")</td><td>@c.TotalEfectivo.ToString("C")</td><td>@c.TotalTarjeta.ToString("C")</td><td>@c.TotalPedidos</td><td>@c.Cancelados</td><td>@c.TotalMerma.ToString("C")</td></tr>}
+    </tbody></table>
+</section>
