@@ -451,8 +451,8 @@
     // ── UI Tabs ─────────────────────────────────────────────
     function cambiarEstacion(estacion) {
         estacionActual = estacion;
-        document.querySelectorAll('.lmd-kds-tab').forEach(tab => {
-            tab.classList.toggle('lmd-kds-tab--activo', tab.dataset.estacion === estacion);
+        document.querySelectorAll('.lmd-kds-station-btn').forEach(tab => {
+            tab.classList.toggle('lmd-kds-station-btn--active', tab.dataset.estacion === estacion);
         });
 
         // Limpiar columnas
@@ -542,7 +542,7 @@
         document.body.addEventListener('click', inicializarAudio, { once: true });
 
         // Tabs de estación
-        document.querySelectorAll('.lmd-kds-tab').forEach(tab => {
+        document.querySelectorAll('.lmd-kds-station-btn').forEach(tab => {
             tab.addEventListener('click', () => cambiarEstacion(tab.dataset.estacion));
         });
 
