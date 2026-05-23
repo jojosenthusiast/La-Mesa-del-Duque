@@ -23,7 +23,7 @@ public sealed class PersistenciaConfigTests
 
         var ambiente = new FakeHostEnvironment { EnvironmentName = Environments.Development };
 
-        servicios.AgregarPersistencia(configuracion, ambiente);
+        servicios.AgregarPersistencia(configuracion, true);
 
         using var proveedor = servicios.BuildServiceProvider();
         using var scope = proveedor.CreateScope();
