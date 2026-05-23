@@ -8,14 +8,17 @@ namespace LaMesaDelDuque.Web.Pages.Operaciones.Inventario;
 public class IndexModel : PageModel
 {
     private readonly IInventarioServicio _inv;
+    private readonly IMermaServicio _merma;
     public List<IngredienteDto> Ingredientes { get; set; } = [];
     public List<ProveedorDto> Proveedores { get; set; } = [];
+    public List<MermaDiariaDto> Mermas { get; set; } = [];
 
-    public IndexModel(IInventarioServicio inv) => _inv = inv;
+    public IndexModel(IInventarioServicio inv, IMermaServicio merma) { _inv = inv; _merma = merma; }
 
     public async Task OnGetAsync()
     {
         Ingredientes = await _inv.ListarIngredientesAsync();
         Proveedores = await _inv.ListarProveedoresAsync();
+        Mermas = await _merma.ObtenerMermasDelDiaAsync();
     }
 }

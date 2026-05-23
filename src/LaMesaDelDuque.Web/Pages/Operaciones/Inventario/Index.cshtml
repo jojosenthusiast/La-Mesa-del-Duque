@@ -31,7 +31,13 @@
     </div>
 
     <div class="lmd-inv-panel" id="panel-mermas">
-        <p class="text-muted p-3">Registro de mermas diarias.</p>
+        <table class="table table-striped"><thead><tr><th>Ingrediente</th><th>Cant.</th><th>Costo</th><th>Tipo</th><th>Lote</th><th>Notas</th><th>Fecha</th></tr></thead>
+        <tbody>
+        @if(Model.Mermas.Count == 0){<tr><td colspan="7" class="text-muted">Sin mermas registradas hoy.</td></tr>}
+        @foreach(var m in Model.Mermas){
+            <tr><td>@m.IngredienteNombre</td><td>@m.Cantidad</td><td>@m.Costo.ToString("C")</td><td>@m.Tipo</td><td>@m.Lote</td><td>@m.Notas</td><td>@m.Fecha.ToString("HH:mm")</td></tr>
+        }
+        </tbody></table>
     </div>
 </section>
 
