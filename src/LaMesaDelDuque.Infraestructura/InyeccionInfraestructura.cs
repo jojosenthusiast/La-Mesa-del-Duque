@@ -64,6 +64,8 @@ public static class InyeccionInfraestructura
         servicios.AddScoped<IClienteRepositorio, ClienteLoyaltyRepositorio>();
         servicios.AddScoped<RecompensaLoyaltyRepositorio>();
         servicios.AddScoped<IRecompensaRepositorio, RecompensaLoyaltyRepositorio>();
+        servicios.AddScoped<ProveedorLoyaltyRepositorio>();
+        servicios.AddScoped<IProveedorRepositorio, ProveedorLoyaltyRepositorio>();
 
         // Unidad de Trabajo
         servicios.AddScoped<IUnidadDeTrabajo, UnidadDeTrabajo>();

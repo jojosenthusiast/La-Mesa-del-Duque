@@ -77,6 +77,11 @@
                                asp-page="/Admin/Usuarios/Index">Usuarios</a>
                         </li>
                     }
+                        <li class="nav-item">
+                            <a class="nav-link @(ViewData["ActiveTab"]?.ToString() == "Inventario" ? "active" : "")"
+                               asp-page="/Operaciones/Inventario/Index">Inventario</a>
+                        </li>
+                    }
                 </ul>
 
                 <div class="lmd-user-info d-flex align-items-center gap-2 ms-auto">

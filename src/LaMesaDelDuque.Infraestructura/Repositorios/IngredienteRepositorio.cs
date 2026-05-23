@@ -21,6 +21,11 @@ internal class IngredienteRepositorio : IIngredienteRepositorio
 
     public async Task<List<Ingrediente>> ObtenerTodosAsync(CancellationToken cancelacion = default)
     {
-        return await _contexto.Set<Ingrediente>().Include(i => i.ProveedorDefault).AsNoTracking().ToListAsync(cancelacion);
+        return await _contexto.Set<Ingrediente>().AsNoTracking().ToListAsync(cancelacion);
+    }
+
+    public async Task AgregarAsync(Ingrediente ingrediente, CancellationToken cancelacion = default)
+    {
+        await _contexto.Set<Ingrediente>().AddAsync(ingrediente, cancelacion);
     }
 }
