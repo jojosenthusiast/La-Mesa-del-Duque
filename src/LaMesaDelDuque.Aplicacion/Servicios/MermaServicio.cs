@@ -6,7 +6,7 @@ namespace LaMesaDelDuque.Aplicacion.Servicios;
 
 public interface IMermaServicio
 {
-    Task<MermaDiariaDto> RegistrarMermaAsync(RegistrarMermaRequest req, CancellationToken ct = default);
+    Task<MermaDiariaDto> RegistrarMermaAsync(RegistrarMermaRequest req, Guid usuarioId, CancellationToken ct = default);
     Task<List<MermaDiariaDto>> ObtenerMermasDelDiaAsync(CancellationToken ct = default);
 }
 
@@ -15,14 +15,22 @@ public class MermaServicio : IMermaServicio
     private readonly IUnidadDeTrabajo _uot;
     public MermaServicio(IUnidadDeTrabajo uot) => _uot = uot;
 
-    public async Task<MermaDiariaDto> RegistrarMermaAsync(RegistrarMermaRequest req, CancellationToken ct = default)
+    public async Task<MermaDiariaDto> RegistrarMermaAsync(RegistrarMermaRequest req, Guid usuarioId, CancellationToken ct = default)
     {
         var ingrediente = await _uot.Ingredientes.ObtenerPorIdAsync(req.IngredienteId, ct)
             ?? throw new ArgumentException("Ingrediente no encontrado.");
-        var cierre = await _uot.CierresDia.ObtenerAbiertoAsync(DateOnly.FromDateTime(DateTime.UtcNow), ct)
-            ?? throw new InvalidOperationException("No hay cierre de día abierto. Ejecute el cierre primero.");
 
-        var merma = new MermaDiaria(cierre, ingrediente, req.Cantidad, null!, req.Tipo, ingrediente.CostoUnitario * req.Cantidad, req.Notas, req.Lote);
+        var cierre = await _uot.CierresDia.ObtenerAbiertoAsync(DateOnly.FromDateTime(DateTime.UtcNow), ct)
+            ?? throw new InvalidOperationException("No hay cierre de día abierto. Abrí el día antes de registrar mermas.");
+
+        var usuario = await _uot.Usuarios.ObtenerPorIdAsync(usuarioId, ct)
+            ?? throw new ArgumentException("Usuario no encontrado para registrar la merma.");
+
+        var costoEstimado = ingrediente.CostoUnitario * req.Cantidad;
+        var merma = new MermaDiaria(cierre, ingrediente, req.Cantidad, usuario, req.Tipo, costoEstimado, req.Notas, req.Lote);
+
+        ingrediente.DescontarStock(req.Cantidad);
+
         await _uot.Mermas.AgregarAsync(merma, ct);
         await _uot.GuardarCambiosAsync(ct);
         return Map(merma);
@@ -36,8 +44,14 @@ public class MermaServicio : IMermaServicio
 
     private static MermaDiariaDto Map(MermaDiaria m) => new()
     {
-        Id = m.Id, IngredienteNombre = m.Ingrediente?.Nombre ?? "", Cantidad = m.CantidadDescartada,
-        Costo = m.CostoEstimado, Tipo = m.Tipo.ToString(), Lote = m.Lote, Notas = m.Notas, Fecha = m.CreatedAt
+        Id = m.Id,
+        IngredienteNombre = m.Ingrediente?.Nombre ?? "",
+        Cantidad = m.CantidadDescartada,
+        Costo = m.CostoEstimado,
+        Tipo = m.Tipo.ToString(),
+        Lote = m.Lote,
+        Notas = m.Notas,
+        Fecha = m.CreatedAt
     };
 }
 

@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using System.ComponentModel.DataAnnotations;
+using System.Security.Claims;
 
 namespace LaMesaDelDuque.Web.Pages.Operaciones.Inventario;
 
@@ -43,6 +44,13 @@ public class IndexModel : PageModel
             return Page();
         }
 
+        var usuarioIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (!Guid.TryParse(usuarioIdClaim, out var usuarioId))
+        {
+            ToastError = "No se pudo identificar el usuario autenticado.";
+            return RedirectToPage(null, "mermas");
+        }
+
         try
         {
             await _merma.RegistrarMermaAsync(new RegistrarMermaRequest
@@ -52,8 +60,8 @@ public class IndexModel : PageModel
                 Tipo = MermaForm.Tipo,
                 Lote = MermaForm.Lote,
                 Notas = MermaForm.Notas
-            });
-            ToastSuccess = "Merma registrada correctamente.";
+            }, usuarioId);
+            ToastSuccess = "Merma registrada. Stock actualizado.";
         }
         catch (InvalidOperationException ex)
         {

@@ -46,6 +46,13 @@ internal class CierreDiaConfiguracion : IEntityTypeConfiguration<CierreDia>
             .HasDefaultValueSql("NOW()")
             .IsRequired();
 
+        constructor.Property(c => c.EsCerrado)
+            .IsRequired()
+            .HasDefaultValue(false);
+
+        constructor.Property(c => c.CerradoEn)
+            .HasColumnType("timestamp with time zone");
+
         constructor.HasOne(c => c.Usuario)
             .WithMany()
             .HasForeignKey(c => c.UsuarioId)
