@@ -56,7 +56,7 @@ public class TablesideModel : PageModel
             var pedido = await _pedidosServicio.CrearPedidoAsync(tipoServicio, mesaId, detalles);
             return new JsonResult(new { pedidoId = pedido.Id, estado = pedido.Estado, lineas = pedido.Detalles });
         }
-        catch (Exception ex) { return BadRequest(ex.Message); }
+        catch (Exception ex) { return BadRequest(ErrorSeguro(ex)); }
     }
 
     public async Task<IActionResult> OnPostEnviarACocinaJsonAsync(Guid pedidoId)
@@ -66,7 +66,7 @@ public class TablesideModel : PageModel
             await _pedidosServicio.MarcarEnPreparacionAsync(pedidoId);
             return new JsonResult(new { ok = true, estado = "EnPreparacion" });
         }
-        catch (Exception ex) { return BadRequest(ex.Message); }
+        catch (Exception ex) { return BadRequest(ErrorSeguro(ex)); }
     }
 
     public async Task<IActionResult> OnPostAgregarLineaJsonAsync(Guid pedidoId, Guid productoId, int cantidad, string? notas = null, string? modificacionesJson = null)
@@ -79,7 +79,19 @@ public class TablesideModel : PageModel
             await _pedidosServicio.AgregarDetalleAsync(pedidoId, productoId, cantidad, prod.Precio, notas, modificacionesJson);
             return new JsonResult(new { ok = true });
         }
-        catch (Exception ex) { return BadRequest(ex.Message); }
+        catch (Exception ex) { return BadRequest(ErrorSeguro(ex)); }
+    }
+
+    private static object ErrorSeguro(Exception ex)
+    {
+        var mensaje = ex switch
+        {
+            ArgumentException => ex.Message,
+            InvalidOperationException => ex.Message,
+            _ => "Ocurrió un error interno al procesar la solicitud."
+        };
+
+        return new { error = mensaje };
     }
 
     private async Task CargarDatosAsync()

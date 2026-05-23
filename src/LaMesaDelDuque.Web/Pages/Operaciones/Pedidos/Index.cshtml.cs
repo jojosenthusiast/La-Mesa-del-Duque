@@ -272,7 +272,7 @@ public class IndexModel : PageModel
             var pedido = await _pedidosServicio.CrearPedidoAsync(tipoServicio, mesaId, detalles);
             return new JsonResult(new { pedidoId = pedido.Id });
         }
-        catch (Exception ex) { return BadRequest(ex.Message); }
+        catch (Exception ex) { return BadRequest(ErrorSeguro(ex)); }
     }
 
     public async Task<IActionResult> OnPostAgregarLineaJsonAsync(Guid pedidoId, Guid productoId, int cantidad, string? notas = null, string? modificacionesJson = null)
@@ -285,7 +285,7 @@ public class IndexModel : PageModel
             await _pedidosServicio.AgregarDetalleAsync(pedidoId, productoId, cantidad, prod.Precio, notas, modificacionesJson);
             return new JsonResult(new { ok = true });
         }
-        catch (Exception ex) { return BadRequest(ex.Message); }
+        catch (Exception ex) { return BadRequest(ErrorSeguro(ex)); }
     }
 
     public async Task<IActionResult> OnPostEliminarLineaJsonAsync(Guid pedidoId, Guid detalleId)
@@ -295,7 +295,7 @@ public class IndexModel : PageModel
             await _pedidosServicio.EliminarDetalleAsync(pedidoId, detalleId);
             return new JsonResult(new { ok = true });
         }
-        catch (Exception ex) { return BadRequest(ex.Message); }
+        catch (Exception ex) { return BadRequest(ErrorSeguro(ex)); }
     }
 
     public async Task<IActionResult> OnPostActualizarCantidadJsonAsync(Guid pedidoId, Guid detalleId, int cantidad)
@@ -305,7 +305,7 @@ public class IndexModel : PageModel
             await _pedidosServicio.ActualizarCantidadDetalleAsync(pedidoId, detalleId, cantidad);
             return new JsonResult(new { ok = true });
         }
-        catch (Exception ex) { return BadRequest(ex.Message); }
+        catch (Exception ex) { return BadRequest(ErrorSeguro(ex)); }
     }
 
     public async Task<IActionResult> OnPostPagarEfectivoJsonAsync(Guid pedidoId, decimal efectivoRecibido)
@@ -323,7 +323,7 @@ public class IndexModel : PageModel
             var cambio = efectivoRecibido - pedido.Total;
             return new JsonResult(new { ok = true, mensaje = cambio > 0 ? $"Pedido pagado. Cambio: ${cambio:F2}" : "Pedido pagado correctamente." });
         }
-        catch (Exception ex) { return BadRequest(ex.Message); }
+        catch (Exception ex) { return BadRequest(ErrorSeguro(ex)); }
     }
 
     // ── Cuentas y pago dividido (JSON) ────────────────────────
@@ -336,7 +336,7 @@ public class IndexModel : PageModel
             await _hubContext.Clients.Group($"pedido-{pedidoId}").SendAsync("EstadoCambiado", pedidoId, "EnCobro");
             return new JsonResult(new { ok = true });
         }
-        catch (Exception ex) { return BadRequest(ex.Message); }
+        catch (Exception ex) { return BadRequest(ErrorSeguro(ex)); }
     }
 
     public async Task<IActionResult> OnPostCrearCuentasJsonAsync(Guid pedidoId, int cantidad)
@@ -347,7 +347,7 @@ public class IndexModel : PageModel
             await _hubContext.Clients.Group($"pedido-{pedidoId}").SendAsync("CuentasCreadas", pedidoId, cuentas);
             return new JsonResult(cuentas);
         }
-        catch (Exception ex) { return BadRequest(ex.Message); }
+        catch (Exception ex) { return BadRequest(ErrorSeguro(ex)); }
     }
 
     public async Task<IActionResult> OnPostCrearCuentasConItemsJsonAsync([FromBody] CrearCuentasConItemsRequest request)
@@ -369,7 +369,7 @@ public class IndexModel : PageModel
             await _hubContext.Clients.Group($"pedido-{request.PedidoId}").SendAsync("CuentasCreadas", request.PedidoId, cuentas);
             return new JsonResult(cuentas);
         }
-        catch (Exception ex) { return BadRequest(ex.Message); }
+        catch (Exception ex) { return BadRequest(ErrorSeguro(ex)); }
     }
 
     public async Task<IActionResult> OnPostObtenerCuentasJsonAsync(Guid pedidoId)
@@ -379,7 +379,7 @@ public class IndexModel : PageModel
             var cuentas = await _pedidosServicio.ObtenerCuentasAsync(pedidoId);
             return new JsonResult(cuentas);
         }
-        catch (Exception ex) { return BadRequest(ex.Message); }
+        catch (Exception ex) { return BadRequest(ErrorSeguro(ex)); }
     }
 
     public async Task<IActionResult> OnPostPagarCuentaJsonAsync(Guid cuentaId, string metodoPago, decimal propinaMonto)
@@ -391,7 +391,7 @@ public class IndexModel : PageModel
             var cuenta = await _pedidosServicio.PagarCuentaAsync(cuentaId, metodo, propinaMonto);
             return new JsonResult(cuenta);
         }
-        catch (Exception ex) { return BadRequest(ex.Message); }
+        catch (Exception ex) { return BadRequest(ErrorSeguro(ex)); }
     }
 
     // ── Ticket PDF / HTML ────────────────────────────────────
@@ -402,7 +402,7 @@ public class IndexModel : PageModel
             var html = await _ticketServicio.GenerarHtmlTicketAsync(pedidoId);
             return new JsonResult(new { ok = true, html });
         }
-        catch (Exception ex) { return BadRequest(ex.Message); }
+        catch (Exception ex) { return BadRequest(ErrorSeguro(ex)); }
     }
 
     // ── Alérgenos por producto (JSON) ─────────────────────────
@@ -413,7 +413,7 @@ public class IndexModel : PageModel
             var alergenos = await _alergenoServicio.ObtenerPorProductoAsync(productoId);
             return new JsonResult(alergenos);
         }
-        catch (Exception ex) { return BadRequest(ex.Message); }
+        catch (Exception ex) { return BadRequest(ErrorSeguro(ex)); }
     }
 
     // ── Ingredientes y modificaciones (JSON) ─────────────────
@@ -429,7 +429,7 @@ public class IndexModel : PageModel
                 receta.Instrucciones
             });
         }
-        catch (Exception ex) { return BadRequest(ex.Message); }
+        catch (Exception ex) { return BadRequest(ErrorSeguro(ex)); }
     }
 
     public async Task<IActionResult> OnPostObtenerIngredientesJsonAsync(Guid productoId)
@@ -444,7 +444,7 @@ public class IndexModel : PageModel
                 receta.Instrucciones
             });
         }
-        catch (Exception ex) { return BadRequest(ex.Message); }
+        catch (Exception ex) { return BadRequest(ErrorSeguro(ex)); }
     }
 
     // ── Helpers ───────────────────────────────────────────────
@@ -488,5 +488,17 @@ public class IndexModel : PageModel
     private void SetUiContext()
     {
         if (ViewData is not null) ViewData["ActiveTab"] = "Pedidos";
+    }
+
+    private static object ErrorSeguro(Exception ex)
+    {
+        var mensaje = ex switch
+        {
+            ArgumentException => ex.Message,
+            InvalidOperationException => ex.Message,
+            _ => "Ocurrió un error interno al procesar la solicitud."
+        };
+
+        return new { error = mensaje };
     }
 }
