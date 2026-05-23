@@ -301,6 +301,9 @@ internal class PedidosServicio : IPedidosServicio
                     ?? throw new ArgumentException($"No se encontró la cuenta con ID {cuentaId}.", nameof(cuentaId));
 
                 var usuarioId = ObtenerUsuarioIdActual();
+                if (usuarioId == Guid.Empty)
+                    throw new InvalidOperationException("No se pudo identificar el usuario actual para registrar el pago.");
+
                 cuenta.Pagar(metodoPago, propinaMonto, usuarioId);
 
                 var pago = new Pago(cuentaId, cuenta.Total, metodoPago, propinaMonto, usuarioId);

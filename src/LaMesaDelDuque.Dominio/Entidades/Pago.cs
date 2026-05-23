@@ -19,6 +19,9 @@ public class Pago
     {
         if (monto <= 0) throw new ReglaDominioException("El monto del pago debe ser mayor que cero.");
         if (propinaMonto < 0) throw new ReglaDominioException("La propina no puede ser negativa.");
+        if (usuarioId == Guid.Empty)
+            throw new ArgumentException("El usuario del pago es obligatorio para auditoria.", nameof(usuarioId));
+
         Id = Guid.NewGuid();
         CuentaId = cuentaId;
         Monto = monto;
