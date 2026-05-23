@@ -99,9 +99,28 @@ internal class PedidosServicio : IPedidosServicio
             ?? throw new ArgumentException($"No se encontró el pedido con ID {pedidoId}.", nameof(pedidoId));
 
         pedido.MarcarComoPagado();
-        await LiberarMesaSiCorrespondeAsync(pedido, cancelacion);
+        await DescontarStockAsync(pedido, cancelacion);
+        await LiberarMesaSiCorrespondeAsync(pedido, cancelacion); // TODO: mover a flujo de despacho
         await _uot.GuardarCambiosAsync(cancelacion);
         await _notificadorPedidos.NotificarEstadoCambiadoAsync(pedido.Id, pedido.Estado, cancelacion);
+    }
+
+    private async Task DescontarStockAsync(Pedido pedido, CancellationToken ct)
+    {
+        foreach (var detalle in pedido.Detalles)
+        {
+            var receta = await _uot.RecetasProductos.ObtenerPorProductoIdAsync(detalle.Producto.Id, ct);
+            if (receta is null) continue;
+
+            foreach (var ri in receta.Ingredientes)
+            {
+                var ingrediente = await _uot.Ingredientes.ObtenerPorIdAsync(ri.IngredienteId, ct);
+                if (ingrediente is null) continue;
+
+                var consumo = ri.CantidadRequerida * detalle.Cantidad;
+                ingrediente.DescontarStock(consumo);
+            }
+        }
     }
 
     public async Task<PedidoDto> EliminarDetalleAsync(Guid pedidoId, Guid detalleId, CancellationToken cancelacion = default)

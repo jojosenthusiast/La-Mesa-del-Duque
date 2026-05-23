@@ -459,22 +459,31 @@ public class IndexModel : PageModel
 
     private async Task CargarDatosAsync()
     {
-        var productos = await _catalogoProductosServicio.ListarProductosAsync();
-        Vm.ProductosDisponibles = productos.Where(p => p.Activo).OrderBy(p => p.CategoriaNombre).ThenBy(p => p.Nombre).ToList();
+        try
+        {
+            var productos = await _catalogoProductosServicio.ListarProductosAsync();
+            Vm.ProductosDisponibles = productos.Where(p => p.Activo).OrderBy(p => p.CategoriaNombre).ThenBy(p => p.Nombre).ToList();
 
-        var mesas = await _mesasServicio.ListarMesasAsync();
-        // Solo mesas activas y disponibles para nuevos pedidos ComerAqui
-        Vm.MesasDisponibles = mesas.Where(m => m.Activa).OrderBy(m => m.Numero).ToList();
+            var mesas = await _mesasServicio.ListarMesasAsync();
+            Vm.MesasDisponibles = mesas.Where(m => m.Activa).OrderBy(m => m.Numero).ToList();
 
-        Vm.PedidosActivos = await _pedidosServicio.ListarPedidosActivosAsync();
-        Vm.PedidoActual = PedidoActualId.HasValue
-            ? Vm.PedidosActivos.FirstOrDefault(p => p.Id == PedidoActualId.Value)
-            : Vm.PedidosActivos.OrderByDescending(p => p.Total).FirstOrDefault();
+            Vm.PedidosActivos = await _pedidosServicio.ListarPedidosActivosAsync();
+            Vm.PedidoActual = PedidoActualId.HasValue
+                ? Vm.PedidosActivos.FirstOrDefault(p => p.Id == PedidoActualId.Value)
+                : Vm.PedidosActivos.OrderByDescending(p => p.Total).FirstOrDefault();
 
-        Vm.CrearPedido.TipoServicio = Vm.CrearPedido.TipoServicio is "ParaLlevar" or "ComerAqui" ? Vm.CrearPedido.TipoServicio : "ComerAqui";
+            Vm.CrearPedido.TipoServicio = Vm.CrearPedido.TipoServicio is "ParaLlevar" or "ComerAqui" ? Vm.CrearPedido.TipoServicio : "ComerAqui";
 
-        if (Vm.CrearPedido.Lineas.Count == 0)
-            Vm.CrearPedido.Lineas.Add(new LineaPedidoFormVm());
+            if (Vm.CrearPedido.Lineas.Count == 0)
+                Vm.CrearPedido.Lineas.Add(new LineaPedidoFormVm());
+        }
+        catch (Exception ex)
+        {
+            // Si la BD no tiene las columnas nuevas (OcupadaDesde, etc), no crashear
+            Vm.ProductosDisponibles = [];
+            Vm.MesasDisponibles = [];
+            Vm.PedidosActivos = [];
+        }
     }
 
     private void SetUiContext()

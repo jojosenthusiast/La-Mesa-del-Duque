@@ -70,4 +70,11 @@ public class Ingrediente
         ProveedorDefault = proveedor;
         UpdatedAt = DateTime.UtcNow;
     }
+
+    public void DescontarStock(decimal cantidad)
+    {
+        if (cantidad < 0) throw new ReglaDominioException("La cantidad a descontar no puede ser negativa.");
+        StockActual = Math.Max(0, StockActual - cantidad);
+        UpdatedAt = DateTime.UtcNow;
+    }
 }
