@@ -21,6 +21,7 @@ public static class InyeccionAplicacion
         servicios.AddScoped<IShiftHandoffServicio, ShiftHandoffServicio>();
         servicios.AddScoped<ILoyaltyServicio, LoyaltyServicio>();
         servicios.AddScoped<IInventarioServicio, InventarioServicio>();
+        servicios.AddScoped<IMargenServicio, MargenServicio>();
 
         return servicios;
     }
