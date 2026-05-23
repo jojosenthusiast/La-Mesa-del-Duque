@@ -1529,21 +1529,71 @@ h1, h2, h3, h4, h5, h6 {
 /* Notes — amber sticky-note style */
 .lmd-kds-card__notas-block {
     margin: 0.25rem 1rem;
-    background: rgba(255,193,7,0.15);
-    border-left: 3px solid #ffc107;
+    background: rgba(255,193,7,0.2);
+    border-left: 4px solid #ffc107;
     border-radius: 0 0.3rem 0.3rem 0;
-    padding: 0.3rem 0.5rem;
-    font-size: 0.825rem;
+    padding: 0.6rem 0.75rem;
+    font-size: 1.1rem;
+    font-weight: 500;
     color: #ffe082;
-    line-height: 1.4;
+    line-height: 1.5;
 }
 
 .lmd-kds-notas-label {
     font-weight: 800;
-    font-size: 0.7rem;
+    font-size: 0.8rem;
     letter-spacing: 0.08em;
-    margin-right: 0.35rem;
-    opacity: 0.7;
+    margin-right: 0.5rem;
+    opacity: 0.8;
+    background: #ffc107;
+    color: #0F1B2D;
+    padding: 0.15rem 0.4rem;
+    border-radius: 3px;
+}
+
+/* KDS Modifications — legibles a distancia */
+.lmd-kds-mods-list {
+    margin: 0.25rem 1rem;
+    padding: 0; list-style: none;
+    font-size: 1rem;
+    font-weight: 500;
+    line-height: 1.5;
+}
+
+.lmd-kds-mod {
+    padding: 0.2rem 0;
+    font-size: 1rem;
+}
+
+.lmd-kds-mod--quitar {
+    color: #ff6b6b;
+    font-weight: 700;
+}
+
+.lmd-kds-mod--extra {
+    color: #4ecdc4;
+    font-weight: 700;
+}
+
+/* KDS Allergy Banner — más visible */
+.lmd-kds-alergeno-banner {
+    background: #c0392b;
+    color: #fff;
+    font-size: 1rem;
+    font-weight: 800;
+    text-align: center;
+    padding: 0.5rem 0.75rem;
+    letter-spacing: 0.05em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+}
+
+/* KDS card taller para mejor legibilidad */
+.lmd-kds-card {
+    min-height: 120px;
+    margin: 0.5rem 0.6rem;
 }
 
 .lmd-kds-card__footer {

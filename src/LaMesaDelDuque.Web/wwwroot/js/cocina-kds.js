@@ -117,7 +117,7 @@
         if (curso === 'Entrada') {
             const fireBtn = document.createElement('button');
             fireBtn.className = 'lmd-kds-fire-btn';
-            fireBtn.textContent = '🔥 Disparar entradas';
+            fireBtn.textContent = 'Disparar entradas';
             fireBtn.addEventListener('click', () => dispararCurso(colId, 'Entrada'));
             header.appendChild(fireBtn);
         }
@@ -167,7 +167,7 @@
         const colorClass = calcularColor(orden);
         const mesaTexto = orden.mesaNumero
             ? `Mesa ${orden.mesaNumero}`
-            : (orden.tipoServicio === 'ParaLlevar' ? '🛍 Para llevar' : 'Sin mesa');
+            : (orden.tipoServicio === 'ParaLlevar' ? '<svg class="lmd-kds-icon" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><use href="https://cdn.jsdelivr.net/npm/lucide-static@latest/icons/package.svg#icon"/></svg> Para llevar' : 'Sin mesa');
 
         const tieneModificaciones = orden.ingredientesQuitados || orden.ingredientesExtra;
         const tieneNotas = !!orden.notas;
@@ -181,7 +181,7 @@
         card.dataset.tiempoPreparacionMin = orden.tiempoPreparacionMin || 15;
 
         card.innerHTML = `
-            ${tieneAlergenos ? `<div class="lmd-kds-alergeno-banner">⚠ ALÉRGENO: ${orden.alergenos.toUpperCase()}</div>` : ''}
+            ${tieneAlergenos ? `<div class="lmd-kds-alergeno-banner"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><use href="https://cdn.jsdelivr.net/npm/lucide-static@latest/icons/alert-triangle.svg#icon"/></svg> ALÉRGENO: ${orden.alergenos.toUpperCase()}</div>` : ''}
             <header class="lmd-kds-card__header">
                 <span class="lmd-kds-card__mesa">${mesaTexto}</span>
                 <span class="lmd-kds-card__timer" data-hora-recibido="${orden.horaRecibido}">${formatearTiempo(orden.minutosTranscurridos || 0)}</span>
@@ -193,7 +193,7 @@
             ${tieneModificaciones ? `<div class="lmd-kds-card__modificaciones">${renderModificaciones(orden)}</div>` : ''}
             ${tieneNotas ? `<div class="lmd-kds-card__notas-block"><span class="lmd-kds-notas-label">NOTA</span> ${orden.notas}</div>` : ''}
             <footer class="lmd-kds-card__footer">
-                <button class="lmd-kds-btn-listo" data-orden-id="${orden.id}">✓ LISTO</button>
+                <button class="lmd-kds-btn-listo" data-orden-id="${orden.id}"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5"><use href="https://cdn.jsdelivr.net/npm/lucide-static@latest/icons/check.svg#icon"/></svg> LISTO</button>
                 ${orden.productoId ? `<button class="lmd-kds-btn-86" data-producto-id="${orden.productoId}" title="86 — Agotado">86</button>` : ''}
             </footer>
         `;
