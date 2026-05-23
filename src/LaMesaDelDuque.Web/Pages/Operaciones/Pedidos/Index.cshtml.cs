@@ -18,6 +18,7 @@ public class IndexModel : PageModel
     private readonly ICatalogoProductosServicio _catalogoProductosServicio;
     private readonly IMesasServicio _mesasServicio;
     private readonly IRecetasProductosServicio _recetasServicio;
+    private readonly ITicketServicio _ticketServicio;
     private readonly IHubContext<PedidosHub> _hubContext;
 
     public IndexModel(
@@ -25,12 +26,14 @@ public class IndexModel : PageModel
         ICatalogoProductosServicio catalogoProductosServicio,
         IMesasServicio mesasServicio,
         IRecetasProductosServicio recetasServicio,
+        ITicketServicio ticketServicio,
         IHubContext<PedidosHub> hubContext)
     {
         _pedidosServicio = pedidosServicio;
         _catalogoProductosServicio = catalogoProductosServicio;
         _mesasServicio = mesasServicio;
         _recetasServicio = recetasServicio;
+        _ticketServicio = ticketServicio;
         _hubContext = hubContext;
     }
 
@@ -384,6 +387,17 @@ public class IndexModel : PageModel
                 return BadRequest("Método de pago inválido.");
             var cuenta = await _pedidosServicio.PagarCuentaAsync(cuentaId, metodo, propinaMonto);
             return new JsonResult(cuenta);
+        }
+        catch (Exception ex) { return BadRequest(ex.Message); }
+    }
+
+    // ── Ticket PDF / HTML ────────────────────────────────────
+    public async Task<IActionResult> OnPostTicketHtmlJsonAsync(Guid pedidoId)
+    {
+        try
+        {
+            var html = await _ticketServicio.GenerarHtmlTicketAsync(pedidoId);
+            return new JsonResult(new { ok = true, html });
         }
         catch (Exception ex) { return BadRequest(ex.Message); }
     }
