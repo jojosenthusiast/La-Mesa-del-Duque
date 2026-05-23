@@ -7,8 +7,8 @@ namespace LaMesaDelDuque.Aplicacion.Servicios;
 public interface ICierreServicio
 {
     Task<CierreDiaDto?> ObtenerCierreHoyAsync(CancellationToken ct = default);
-    Task<CierreDiaDto> AbrirCierreAsync(CancellationToken ct = default);
-    Task<CierreDiaDto> CerrarDiaAsync(CierreCajaRequest req, CancellationToken ct = default);
+    Task<CierreDiaDto> AbrirCierreAsync(Guid usuarioId, CancellationToken ct = default);
+    Task<CierreDiaDto> CerrarDiaAsync(CierreCajaRequest req, Guid usuarioId, CancellationToken ct = default);
     Task<List<CierreDiaDto>> HistorialAsync(CancellationToken ct = default);
 }
 
@@ -27,25 +27,30 @@ public class CierreServicio : ICierreServicio
         return cierre is null ? null : Map(cierre);
     }
 
-    public async Task<CierreDiaDto> AbrirCierreAsync(CancellationToken ct = default)
+    public async Task<CierreDiaDto> AbrirCierreAsync(Guid usuarioId, CancellationToken ct = default)
     {
         var hoy = DateOnly.FromDateTime(DateTime.UtcNow);
         var existente = await _uot.CierresDia.ObtenerAbiertoAsync(hoy, ct);
         if (existente is not null) return Map(existente);
 
-        var cierre = new CierreDia(hoy, 0, 0, 0, 0, 0, 0, null!);
+        var usuario = await _uot.Usuarios.ObtenerPorIdAsync(usuarioId, ct)
+            ?? throw new ReglaDominioException("Usuario no encontrado para abrir el cierre.");
+
+        var cierre = new CierreDia(hoy, 0, 0, 0, 0, 0, 0, usuario);
         await _uot.CierresDia.AgregarAsync(cierre, ct);
         await _uot.GuardarCambiosAsync(ct);
         return Map(cierre);
     }
 
-    public async Task<CierreDiaDto> CerrarDiaAsync(CierreCajaRequest req, CancellationToken ct = default)
+    public async Task<CierreDiaDto> CerrarDiaAsync(CierreCajaRequest req, Guid usuarioId, CancellationToken ct = default)
     {
         var hoy = DateOnly.FromDateTime(DateTime.UtcNow);
         var cierre = await _uot.CierresDia.ObtenerAbiertoAsync(hoy, ct)
             ?? throw new ReglaDominioException("No hay cierre de día abierto.");
 
-        // Calcular totales reales
+        var usuario = await _uot.Usuarios.ObtenerPorIdAsync(usuarioId, ct)
+            ?? throw new ReglaDominioException("Usuario no encontrado para cerrar el día.");
+
         var mermas = await _merma.ObtenerMermasDelDiaAsync(ct);
         var totalMerma = mermas.Sum(m => m.Costo);
         var pedidos = await _pedidos.ListarPedidosActivosAsync();
@@ -54,9 +59,8 @@ public class CierreServicio : ICierreServicio
             pedidos.Where(p => p.Estado is "Pagado" or "EnCobro").Sum(p => p.Total),
             req.EfectivoReal, req.TarjetaReal, pedidos.Count(),
             pedidos.Count(p => p.Estado == "Cancelado"),
-            totalMerma, null!);
+            totalMerma, usuario);
 
-        // Replace the open one
         await _uot.CierresDia.AgregarAsync(cerrado, ct);
         await _uot.GuardarCambiosAsync(ct);
         return Map(cerrado);

@@ -84,6 +84,7 @@ public class IndexModel : PageModel
     private async Task CargarDatosAsync()
     {
         Vm.Usuarios = await _usuariosServicio.ListarUsuariosAsync();
+        Vm.Roles = await _usuariosServicio.ListarRolesAsync();
     }
 
     private void SetUiContext()

@@ -48,8 +48,14 @@
                 <span class="text-danger" asp-validation-for="Vm.Form.Password"></span>
             </div>
             <div class="col-md-2">
-                <label class="form-label" asp-for="Vm.Form.RolId">RolId</label>
-                <input class="form-control form-control-sm" asp-for="Vm.Form.RolId" placeholder="GUID de rol" />
+                <label class="form-label" asp-for="Vm.Form.RolId">Rol</label>
+                <select class="form-select form-select-sm" asp-for="Vm.Form.RolId">
+                    <option value="">— Seleccionar —</option>
+                    @foreach (var rol in Model.Vm.Roles)
+                    {
+                        <option value="@rol.Id">@rol.Nombre</option>
+                    }
+                </select>
                 <span class="text-danger" asp-validation-for="Vm.Form.RolId"></span>
             </div>
         </div>

@@ -41,6 +41,12 @@ internal class UsuariosServicio : IUsuariosServicio
         return usuarios.Select(MapToDto).ToList();
     }
 
+    public async Task<List<RolDto>> ListarRolesAsync(CancellationToken cancelacion = default)
+    {
+        var roles = await _uot.Roles.ObtenerTodosAsync(cancelacion);
+        return roles.Select(r => new RolDto { Id = r.Id, Nombre = r.Nombre }).ToList();
+    }
+
     public async Task DesactivarUsuarioAsync(Guid usuarioId, CancellationToken cancelacion = default)
     {
         var usuario = await _uot.Usuarios.ObtenerPorIdAsync(usuarioId, cancelacion)

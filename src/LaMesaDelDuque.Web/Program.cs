@@ -118,14 +118,28 @@ if (app.Environment.IsDevelopment())
         await db.SaveChangesAsync();
     }
 
-    // Repair stale admin hash — runs every startup, no-op when hash is already correct
-    var adminUser = await db.Set<Usuario>().FirstOrDefaultAsync(u => u.Username == "admin");
-    if (adminUser != null && !BCrypt.Net.BCrypt.Verify("Admin123!", adminUser.PasswordHash))
+    // Repair stale seed hashes — no-op when already correct
+    var seedCredentials = new Dictionary<string, string>
     {
-        adminUser.CambiarPasswordHash(BCrypt.Net.BCrypt.HashPassword("Admin123!", 12));
-        await db.SaveChangesAsync();
-        Console.WriteLine("[DEV] admin password hash repaired.");
+        ["admin"]   = "Admin123!",
+        ["maria"]   = "Mesero789!",
+        ["carlos"]  = "Encargado321!",
+        ["pedro"]   = "Cocina456!"
+    };
+    var seedUsernames = seedCredentials.Keys.ToList();
+    var seedUsers = await db.Set<Usuario>().Where(u => seedUsernames.Contains(u.Username)).ToListAsync();
+    bool anyRepaired = false;
+    foreach (var user in seedUsers)
+    {
+        var expected = seedCredentials[user.Username];
+        if (!BCrypt.Net.BCrypt.Verify(expected, user.PasswordHash))
+        {
+            user.CambiarPasswordHash(BCrypt.Net.BCrypt.HashPassword(expected, 12));
+            anyRepaired = true;
+            Console.WriteLine($"[DEV] {user.Username} password hash repaired.");
+        }
     }
+    if (anyRepaired) await db.SaveChangesAsync();
 }
 
 app.Run();

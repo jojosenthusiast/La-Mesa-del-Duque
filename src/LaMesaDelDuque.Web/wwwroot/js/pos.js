@@ -527,7 +527,7 @@
                         <select class="lmd-modificador-item-motivo" onchange="pos.setMotivo('${ing.id}', this.value)">
                             <option value="">Motivo...</option>
                             <option value="alergia" ${ing.motivo === 'alergia' ? 'selected' : ''}>🚫 Alergia</option>
-                            <option value="preferencia" ${ing.motivo === 'preferencia' ? 'selected' : ''}>👤 Preferencia</option>
+                            <option value="preferencia" ${ing.motivo === 'preferencia' ? 'selected' : ''}>Preferencia</option>
                             <option value="intercambio" ${ing.motivo === 'intercambio' ? 'selected' : ''}>🔄 Intercambio</option>
                         </select>
                     ` : ''}
@@ -607,7 +607,7 @@
                 <h2 class="lmd-pos-titulo">Nuevo pedido</h2>
                 <div class="lmd-pos-tipo-servicio">
                     <button class="lmd-pos-tipo-btn ${state.tipoServicio === 'ComerAqui' ? 'lmd-pos-tipo-btn--activo' : ''}"
-                            onclick="pos.cambiarTipo('ComerAqui')">🍽 Comer aquí</button>
+                            onclick="pos.cambiarTipo('ComerAqui')">Comer aquí</button>
                     <button class="lmd-pos-tipo-btn ${state.tipoServicio === 'ParaLlevar' ? 'lmd-pos-tipo-btn--activo' : ''}"
                             onclick="pos.cambiarTipo('ParaLlevar')"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><use href="https://cdn.jsdelivr.net/npm/lucide-static@latest/icons/package.svg#icon"/></svg> Para llevar</button>
                 </div>
