@@ -36,12 +36,9 @@ public class CierreDia
         int totalPedidos,
         int totalPedidosCancelados,
         decimal totalMermaValorizada,
-        Usuario usuario,
+        Usuario? usuario = null,
         string? resumenJson = null)
     {
-        if (usuario is null)
-            throw new ReglaDominioException("El usuario que realiza el cierre es obligatorio.");
-
         if (totalVentas < 0)
             throw new ReglaDominioException("El total de ventas no puede ser negativo.");
 
@@ -68,8 +65,8 @@ public class CierreDia
         TotalPedidos = totalPedidos;
         TotalPedidosCancelados = totalPedidosCancelados;
         TotalMermaValorizada = totalMermaValorizada;
-        Usuario = usuario;
-        UsuarioId = usuario.Id;
+        Usuario = usuario!;
+        UsuarioId = usuario?.Id ?? Guid.Empty;
         ResumenJson = resumenJson;
         EsCerrado = false;
         CreatedAt = DateTime.UtcNow;

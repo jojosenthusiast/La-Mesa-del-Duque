@@ -28,7 +28,17 @@
     </nav>
 
     <div class="lmd-inv-panel active" id="panel-ingredientes">
-        <table class="table table-striped"><thead><tr><th>Nombre</th><th>Stock</th><th>Min</th><th>UnidadMedida</th><th>Costo U.</th><th>Proveedor</th></tr></thead>
+        <form method="post" asp-page-handler="CrearIngrediente" class="p-3 border-bottom row g-2 align-items-end">
+            @Html.AntiForgeryToken()
+            <div class="col-md-3"><label class="form-label form-label-sm">Nombre</label><input name="Nombre" class="form-control form-control-sm" required /></div>
+            <div class="col-md-1"><label class="form-label form-label-sm">Stock</label><input name="StockActual" type="number" step="0.01" class="form-control form-control-sm" required /></div>
+            <div class="col-md-1"><label class="form-label form-label-sm">Mínimo</label><input name="StockMinimo" type="number" step="0.01" class="form-control form-control-sm" required /></div>
+            <div class="col-md-1"><label class="form-label form-label-sm">Unidad</label><input name="UnidadMedida" class="form-control form-control-sm" value="unidad" /></div>
+            <div class="col-md-1"><label class="form-label form-label-sm">Costo U.</label><input name="CostoUnitario" type="number" step="0.01" class="form-control form-control-sm" required /></div>
+            <div class="col-md-2"><label class="form-label form-label-sm">Proveedor</label><select name="ProveedorId" class="form-select form-select-sm"><option value="">—</option>@foreach(var p in Model.Proveedores){<option value="@p.Id">@p.Nombre</option>}</select></div>
+            <div class="col-md-1"><button type="submit" class="btn btn-sm lmd-action-success w-100">+ Crear</button></div>
+        </form>
+        <table class="table table-striped"><thead><tr><th>Nombre</th><th>Stock</th><th>Mín</th><th>Unidad</th><th>Costo U.</th><th>Proveedor</th></tr></thead>
         <tbody>
         @foreach(var i in Model.Ingredientes){
             var urg = i.StockActual <= i.StockMinimo ? "table-danger" : i.StockActual <= i.StockMinimo*1.5m ? "table-warning" : "";
@@ -38,9 +48,20 @@
     </div>
 
     <div class="lmd-inv-panel" id="panel-proveedores">
-        <table class="table table-striped"><thead><tr><th>Nombre</th><th>Contacto</th><th>Teléfono</th><th>Email</th></tr></thead>
+        <form method="post" asp-page-handler="CrearProveedor" class="p-3 border-bottom row g-2 align-items-end">
+            @Html.AntiForgeryToken()
+            <div class="col-md-3"><label class="form-label form-label-sm">Nombre</label><input name="Nombre" class="form-control form-control-sm" required /></div>
+            <div class="col-md-2"><label class="form-label form-label-sm">NIT</label><input name="Nit" class="form-control form-control-sm" required /></div>
+            <div class="col-md-2"><label class="form-label form-label-sm">Contacto</label><input name="Contacto" class="form-control form-control-sm" /></div>
+            <div class="col-md-2"><label class="form-label form-label-sm">Teléfono</label><input name="Telefono" class="form-control form-control-sm" /></div>
+            <div class="col-md-1"><button type="submit" class="btn btn-sm lmd-action-success w-100">+ Crear</button></div>
+        </form>
+        <table class="table table-striped"><thead><tr><th>Nombre</th><th>NIT</th><th>Contacto</th><th>Teléfono</th><th>Email</th><th>Ingredientes</th></tr></thead>
         <tbody>
-        @foreach(var p in Model.Proveedores){<tr><td>@p.Nombre</td><td>@p.Contacto</td><td>@p.Telefono</td><td>@p.Email</td></tr>}
+        @foreach(var p in Model.Proveedores){
+            var ings = Model.Ingredientes.Where(i => i.ProveedorId == p.Id).ToList();
+            <tr><td>@p.Nombre</td><td>@p.Nit</td><td>@p.Contacto</td><td>@p.Telefono</td><td>@p.Email</td><td>@(ings.Count == 0 ? "—" : string.Join(", ", ings.Select(i => i.Nombre)))</td></tr>
+        }
         </tbody></table>
     </div>
 

@@ -21,12 +21,10 @@ public class CierreDiaTests
     }
 
     [Fact]
-    public void CrearCierreDia_CuandoUsuarioEsNulo_DebeLanzarExcepcion()
+    public void CrearCierreDia_CuandoUsuarioEsNulo_DebeAceptar()
     {
-        var ex = Assert.Throws<ReglaDominioException>(() =>
-            new CierreDia(new DateOnly(2026, 5, 10), 0m, 0m, 0m, 0, 0, 0m, null!));
-
-        Assert.Contains("usuario", ex.Message, StringComparison.OrdinalIgnoreCase);
+        var cierre = new CierreDia(new DateOnly(2026, 5, 10), 0m, 0m, 0m, 0, 0, 0m, null);
+        Assert.Equal(Guid.Empty, cierre.UsuarioId);
     }
 
     [Fact]

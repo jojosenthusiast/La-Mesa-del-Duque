@@ -35,95 +35,26 @@ public class IndexModel : PageModel
         Mermas = await _merma.ObtenerMermasDelDiaAsync();
     }
 
-    public async Task<IActionResult> OnPostCrearIngredienteAsync()
+    public async Task<IActionResult> OnPostCrearIngredienteAsync(string Nombre, decimal StockActual, decimal StockMinimo, string UnidadMedida, decimal CostoUnitario, Guid? ProveedorId)
     {
         try
         {
-            await _inv.CrearIngredienteAsync(new GuardarIngredienteRequest
-            {
-                Nombre = IngForm.Nombre, UnidadMedida = IngForm.UnidadMedida,
-                StockActual = IngForm.StockActual, StockMinimo = IngForm.StockMinimo,
-                CostoUnitario = IngForm.CostoUnitario, ProveedorId = IngForm.ProveedorId
-            });
-            ToastSuccess = $"Ingrediente \"{IngForm.Nombre}\" creado.";
+            await _inv.CrearIngredienteAsync(new GuardarIngredienteRequest { Nombre = Nombre, UnidadMedida = UnidadMedida, StockActual = StockActual, StockMinimo = StockMinimo, CostoUnitario = CostoUnitario, ProveedorId = ProveedorId });
+            ToastSuccess = $"Ingrediente creado.";
         }
         catch (Exception ex) { ToastError = ex.Message; }
-        return RedirectToPage(new { tab = "ingredientes" });
+        return RedirectToPage();
     }
 
-    public async Task<IActionResult> OnPostActualizarIngredienteAsync()
+    public async Task<IActionResult> OnPostCrearProveedorAsync(string Nombre, string Nit, string? Contacto, string? Telefono)
     {
         try
         {
-            await _inv.ActualizarIngredienteAsync(IngForm.Id!.Value, new GuardarIngredienteRequest
-            {
-                Nombre = IngForm.Nombre, UnidadMedida = IngForm.UnidadMedida,
-                StockActual = IngForm.StockActual, StockMinimo = IngForm.StockMinimo,
-                CostoUnitario = IngForm.CostoUnitario, ProveedorId = IngForm.ProveedorId
-            });
-            ToastSuccess = $"Ingrediente \"{IngForm.Nombre}\" actualizado.";
+            await _inv.CrearProveedorAsync(new GuardarProveedorRequest { Nombre = Nombre, Nit = Nit, Contacto = Contacto, Telefono = Telefono });
+            ToastSuccess = $"Proveedor creado.";
         }
         catch (Exception ex) { ToastError = ex.Message; }
-        return RedirectToPage(new { tab = "ingredientes" });
-    }
-
-    public async Task<IActionResult> OnPostAjustarStockAsync()
-    {
-        try { await _inv.AjustarStockAsync(StockForm.IngredienteId, StockForm.NuevoStock); ToastSuccess = "Stock ajustado."; }
-        catch (Exception ex) { ToastError = ex.Message; }
-        return RedirectToPage(new { tab = "ingredientes" });
-    }
-
-    public async Task<IActionResult> OnPostToggleIngredienteAsync(Guid id)
-    {
-        try { await _inv.ToggleIngredienteActivoAsync(id); }
-        catch (Exception ex) { ToastError = ex.Message; }
-        return RedirectToPage(new { tab = "ingredientes" });
-    }
-
-    public async Task<IActionResult> OnPostCrearProveedorAsync()
-    {
-        try
-        {
-            await _inv.CrearProveedorAsync(new GuardarProveedorRequest
-            {
-                Nombre = PrvForm.Nombre, Nit = PrvForm.Nit,
-                Contacto = PrvForm.Contacto, Telefono = PrvForm.Telefono,
-                Email = PrvForm.Email, Direccion = PrvForm.Direccion
-            });
-            ToastSuccess = $"Proveedor \"{PrvForm.Nombre}\" creado.";
-        }
-        catch (Exception ex) { ToastError = ex.Message; }
-        return RedirectToPage(new { tab = "proveedores" });
-    }
-
-    public async Task<IActionResult> OnPostActualizarProveedorAsync()
-    {
-        try
-        {
-            await _inv.ActualizarProveedorAsync(PrvForm.Id!.Value, new GuardarProveedorRequest
-            {
-                Nombre = PrvForm.Nombre, Nit = PrvForm.Nit,
-                Contacto = PrvForm.Contacto, Telefono = PrvForm.Telefono,
-                Email = PrvForm.Email, Direccion = PrvForm.Direccion
-            });
-            ToastSuccess = $"Proveedor \"{PrvForm.Nombre}\" actualizado.";
-        }
-        catch (Exception ex) { ToastError = ex.Message; }
-        return RedirectToPage(new { tab = "proveedores" });
-    }
-
-    public async Task<IActionResult> OnPostToggleProveedorAsync(Guid id)
-    {
-        try { await _inv.ToggleProveedorActivoAsync(id); }
-        catch (Exception ex) { ToastError = ex.Message; }
-        return RedirectToPage(new { tab = "proveedores" });
-    }
-
-    public async Task<JsonResult> OnGetDetallePrv(Guid id)
-    {
-        try { return new JsonResult(await _inv.ObtenerProveedorAsync(id)); }
-        catch { return new JsonResult(null); }
+        return RedirectToPage();
     }
 
     public async Task<IActionResult> OnPostRegistrarMermaAsync()
