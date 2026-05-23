@@ -39,7 +39,8 @@ public class UsuariosServicioTests : IDisposable
             new RecetaProductoRepositorio(_contexto),
             new OrdenCocinaRepositorio(_contexto),
             new CuentaRepositorio(_contexto),
-            new PagoRepositorio(_contexto));
+            new PagoRepositorio(_contexto),
+            new ZonaSalonRepositorio(_contexto));
 
         _servicio = new UsuariosServicio(_uot);
     }

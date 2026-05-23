@@ -1,67 +1,49 @@
+using System;
+using System.IO;
 using LaMesaDelDuque.Dominio.Repositorios;
 using LaMesaDelDuque.Infraestructura.Persistencia;
 using LaMesaDelDuque.Infraestructura.Repositorios;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 
 namespace LaMesaDelDuque.Infraestructura;
 
 public static class InyeccionInfraestructura
 {
     public static IServiceCollection AgregarPersistencia(
-        this IServiceCollection servicios, IConfiguration configuracion, IHostEnvironment ambiente)
-    {
-        var connectionString = configuracion.GetConnectionString("DefaultConnection");
-
-        if (string.IsNullOrWhiteSpace(connectionString))
-        {
-            if (ambiente.IsProduction())
-            {
-                throw new InvalidOperationException("La cadena de conexión DefaultConnection no está configurada.");
-            }
-
-            servicios.AddDbContext<LaMesaDelDuqueDbContext>(opciones =>
-                opciones.UseSqlite("Data Source=la-mesa-del-duque-dev.db"));
-        }
-        else
-        {
-            connectionString = ConexionHelper.Normalizar(connectionString);
-            servicios.AddDbContext<LaMesaDelDuqueDbContext>(opciones =>
-                opciones.UseNpgsql(connectionString));
-        }
-
-        return AgregarRepositorios(servicios);
-    }
-
-    public static IServiceCollection AgregarPersistencia(
         this IServiceCollection servicios, IConfiguration configuracion, bool esDesarrollo = false)
     {
+        // Solo usar appsettings.json. Ignorar variable de entorno porque
+        // persiste en sesiones de PowerShell y causa conexiones rotas a Supabase.
         var connectionString = configuracion.GetConnectionString("DefaultConnection");
 
-        if (esDesarrollo && string.IsNullOrWhiteSpace(connectionString))
+        Console.WriteLine($"[DBG] esDesarrollo={esDesarrollo} cs='{connectionString}' isEmpty={string.IsNullOrWhiteSpace(connectionString)}");
+
+        servicios.AddDbContext<LaMesaDelDuqueDbContext>(opciones =>
         {
-            servicios.AddDbContext<LaMesaDelDuqueDbContext>(opciones =>
-                opciones.UseSqlite("Data Source=la-mesa-del-duque-dev.db"));
-        }
-        else
-        {
-            if (string.IsNullOrWhiteSpace(connectionString))
+            if (esDesarrollo && string.IsNullOrWhiteSpace(connectionString))
             {
-                throw new InvalidOperationException("La cadena de conexión DefaultConnection no está configurada.");
+                Console.WriteLine("[DBG] USING SQLITE (desarrollo)");
+                var dbPath = Path.Combine(
+                    AppContext.BaseDirectory, "..", "..", "..", "lmd-dev.db");
+                opciones.UseSqlite($"Data Source={dbPath}");
+                return;
             }
 
-            connectionString = ConexionHelper.Normalizar(connectionString);
-            servicios.AddDbContext<LaMesaDelDuqueDbContext>(opciones =>
-                opciones.UseNpgsql(connectionString));
-        }
+            if (!string.IsNullOrWhiteSpace(connectionString))
+            {
+                Console.WriteLine("[DBG] USING Npgsql");
+                connectionString = ConexionHelper.Normalizar(connectionString);
+                opciones.UseNpgsql(connectionString);
+                return;
+            }
 
-        return AgregarRepositorios(servicios);
-    }
-
-    private static IServiceCollection AgregarRepositorios(IServiceCollection servicios)
-    {
+            Console.WriteLine("[DBG] USING SQLITE (fallback)");
+            var dbPath2 = Path.Combine(
+                AppContext.BaseDirectory, "..", "..", "..", "lmd-dev.db");
+            opciones.UseSqlite($"Data Source={dbPath2}");
+        });
 
         // Repositorios
         servicios.AddScoped<CategoriaProductoRepositorio>();
@@ -76,12 +58,7 @@ public static class InyeccionInfraestructura
         servicios.AddScoped<OrdenCocinaRepositorio>();
         servicios.AddScoped<CuentaRepositorio>();
         servicios.AddScoped<PagoRepositorio>();
-        servicios.AddScoped<AlergenoRepositorio>();
-        servicios.AddScoped<IAlergenoRepositorio, AlergenoRepositorio>();
-        servicios.AddScoped<ProveedorRepositorio>();
-        servicios.AddScoped<IProveedorRepositorio, ProveedorRepositorio>();
-        servicios.AddScoped<MermaRepositorio>();
-        servicios.AddScoped<CierreDiaRepositorio>();
+        servicios.AddScoped<ZonaSalonRepositorio>();
 
         // Unidad de Trabajo
         servicios.AddScoped<IUnidadDeTrabajo, UnidadDeTrabajo>();

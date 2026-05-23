@@ -136,4 +136,127 @@ public class MesaTests
 
         Assert.Contains("capacidad", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
+
+    [Fact]
+    public void ActualizarPosicion_CuandoDatosSonValidos_DebeActualizarCampos()
+    {
+        var mesa = new Mesa(1, 4);
+        var zonaId = Guid.NewGuid();
+
+        mesa.ActualizarPosicion(50, 75, zonaId, FormaMesa.Redonda, 45);
+
+        Assert.Equal(50, mesa.PosicionX);
+        Assert.Equal(75, mesa.PosicionY);
+        Assert.Equal(zonaId, mesa.ZonaId);
+        Assert.Equal(FormaMesa.Redonda, mesa.Forma);
+        Assert.Equal(45, mesa.Rotacion);
+    }
+
+    [Fact]
+    public void ActualizarPosicion_SinRotacion_DebeUsarCeroPorDefecto()
+    {
+        var mesa = new Mesa(2, 4);
+        var zonaId = Guid.NewGuid();
+
+        mesa.ActualizarPosicion(10, 20, zonaId, FormaMesa.Cuadrada);
+
+        Assert.Equal(0, mesa.Rotacion);
+    }
+
+    [Fact]
+    public void ActualizarPosicion_CuandoPosicionXEsNegativa_DebeLanzarExcepcion()
+    {
+        var mesa = new Mesa(3, 4);
+
+        var ex = Assert.Throws<ReglaDominioException>(() =>
+            mesa.ActualizarPosicion(-1, 20, Guid.NewGuid(), FormaMesa.Redonda));
+
+        Assert.Contains("X", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void ActualizarPosicion_CuandoPosicionYEsNegativa_DebeLanzarExcepcion()
+    {
+        var mesa = new Mesa(4, 4);
+
+        var ex = Assert.Throws<ReglaDominioException>(() =>
+            mesa.ActualizarPosicion(10, -1, Guid.NewGuid(), FormaMesa.Redonda));
+
+        Assert.Contains("Y", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void ActualizarPosicion_CuandoRotacionEsNegativa_DebeLanzarExcepcion()
+    {
+        var mesa = new Mesa(5, 4);
+
+        var ex = Assert.Throws<ReglaDominioException>(() =>
+            mesa.ActualizarPosicion(10, 20, Guid.NewGuid(), FormaMesa.Redonda, -1));
+
+        Assert.Contains("rotación", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void ActualizarPosicion_CuandoRotacionExcede359_DebeLanzarExcepcion()
+    {
+        var mesa = new Mesa(6, 4);
+
+        var ex = Assert.Throws<ReglaDominioException>(() =>
+            mesa.ActualizarPosicion(10, 20, Guid.NewGuid(), FormaMesa.Redonda, 360));
+
+        Assert.Contains("rotación", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void LimpiarPosicion_DebeDejarCamposNulos()
+    {
+        var mesa = new Mesa(7, 4);
+        mesa.ActualizarPosicion(50, 75, Guid.NewGuid(), FormaMesa.Bar, 90);
+
+        mesa.LimpiarPosicion();
+
+        Assert.Null(mesa.PosicionX);
+        Assert.Null(mesa.PosicionY);
+        Assert.Null(mesa.ZonaId);
+        Assert.Null(mesa.Forma);
+        Assert.Null(mesa.Rotacion);
+    }
+
+    [Fact]
+    public void Ocupar_DebeMarcarComoOcupadaYSetearOcupadaDesde()
+    {
+        var mesa = new Mesa(8, 4);
+        var antes = DateTime.UtcNow.AddSeconds(-1);
+
+        mesa.Ocupar();
+
+        Assert.Equal(EstadoMesa.Ocupada, mesa.Estado);
+        Assert.NotNull(mesa.OcupadaDesde);
+        Assert.True(mesa.OcupadaDesde >= antes);
+    }
+
+    [Fact]
+    public void Liberar_DebeMarcarComoDisponibleYLimpiarOcupadaDesde()
+    {
+        var mesa = new Mesa(9, 4);
+        mesa.Ocupar();
+
+        mesa.Liberar();
+
+        Assert.Equal(EstadoMesa.Disponible, mesa.Estado);
+        Assert.Null(mesa.OcupadaDesde);
+    }
+
+    [Fact]
+    public void MesaNueva_NoDebeTenerPosicion()
+    {
+        var mesa = new Mesa(10, 4);
+
+        Assert.Null(mesa.PosicionX);
+        Assert.Null(mesa.PosicionY);
+        Assert.Null(mesa.ZonaId);
+        Assert.Null(mesa.Forma);
+        Assert.Null(mesa.Rotacion);
+        Assert.Null(mesa.OcupadaDesde);
+    }
 }

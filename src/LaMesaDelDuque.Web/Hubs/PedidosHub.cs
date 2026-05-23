@@ -36,4 +36,15 @@ public class PedidosHub : Hub
     {
         await Clients.All.SendAsync("ProductoReactivado", productoId);
     }
+
+    // Sprint 3 — Slice 1: Mapa Visual de Mesas
+    public async Task UnirseASalon()
+    {
+        await Groups.AddToGroupAsync(Context.ConnectionId, "salon");
+    }
+
+    public async Task SalirDeSalon()
+    {
+        await Groups.RemoveFromGroupAsync(Context.ConnectionId, "salon");
+    }
 }

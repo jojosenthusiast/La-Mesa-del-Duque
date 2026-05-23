@@ -17,6 +17,7 @@ public interface IUnidadDeTrabajo
     IProveedorRepositorio? Proveedores { get; }
     IMermaRepositorio Mermas { get; }
     ICierreDiaRepositorio CierresDia { get; }
+    IZonaSalonRepositorio ZonasSalon { get; }
 
     Task<int> GuardarCambiosAsync(CancellationToken cancelacion = default);
 }
