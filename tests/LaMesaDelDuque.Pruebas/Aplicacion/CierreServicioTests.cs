@@ -105,7 +105,8 @@ public class CierreServicioTests : IDisposable
         var dto = await _servicio.CerrarDiaAsync(new CierreCajaRequest
         {
             EfectivoReal = 500m,
-            TarjetaReal = 200m
+            TarjetaReal = 200m,
+            Observacion = "Cierre con diferencia inicial"
         }, usuario.Id);
 
         Assert.True(dto.EsCerrado);
@@ -140,7 +141,7 @@ public class CierreServicioTests : IDisposable
     {
         var usuario = await CrearUsuarioAsync();
         await _servicio.AbrirCierreAsync(usuario.Id);
-        await _servicio.CerrarDiaAsync(new CierreCajaRequest { EfectivoReal = 100m, TarjetaReal = 50m }, usuario.Id);
+        await _servicio.CerrarDiaAsync(new CierreCajaRequest { EfectivoReal = 100m, TarjetaReal = 50m, Observacion = "Cierre test" }, usuario.Id);
 
         var count = _contexto.Set<CierreDia>().Count();
         Assert.Equal(1, count);
@@ -154,7 +155,7 @@ public class CierreServicioTests : IDisposable
         await _contexto.Set<CierreDia>().AddAsync(cierre);
         await _contexto.SaveChangesAsync();
 
-        cierre.Cerrar(1000m, 600m, 400m, 5, 0, 0m, efectivoReal: 550m, tarjetaReal: 400m);
+        cierre.Cerrar(1000m, 600m, 400m, 5, 0, 0m, efectivoReal: 550m, tarjetaReal: 400m, observacion: "Faltante de efectivo");
 
         Assert.True(cierre.EsCerrado);
         Assert.Equal(-50m, cierre.DiferenciaEfectivo);

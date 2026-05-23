@@ -21,6 +21,7 @@ public class CierreDia
     public decimal DiferenciaTarjeta { get; private set; }
     public bool EsCerrado { get; private set; }
     public DateTime? CerradoEn { get; private set; }
+    public string? Observacion { get; private set; }
     public DateTime CreatedAt { get; private set; }
 
     private CierreDia()
@@ -80,7 +81,8 @@ public class CierreDia
         int totalPedidosCancelados,
         decimal totalMermaValorizada,
         decimal efectivoReal,
-        decimal tarjetaReal)
+        decimal tarjetaReal,
+        string? observacion = null)
     {
         if (EsCerrado)
             throw new ReglaDominioException("El cierre de día ya fue cerrado.");
@@ -100,6 +102,12 @@ public class CierreDia
         TarjetaReal = tarjetaReal;
         DiferenciaEfectivo = efectivoReal - totalVentasEfectivo;
         DiferenciaTarjeta = tarjetaReal - totalVentasTarjeta;
+
+        var hayDescuadre = DiferenciaEfectivo != 0m || DiferenciaTarjeta != 0m;
+        if (hayDescuadre && string.IsNullOrWhiteSpace(observacion))
+            throw new ReglaDominioException("La observacion es obligatoria cuando existe descuadre de caja.");
+
+        Observacion = string.IsNullOrWhiteSpace(observacion) ? null : observacion.Trim();
         EsCerrado = true;
         CerradoEn = DateTime.UtcNow;
     }

@@ -61,6 +61,9 @@ internal class CierreDiaConfiguracion : IEntityTypeConfiguration<CierreDia>
         constructor.Property(c => c.CerradoEn)
             .HasColumnType("timestamp with time zone");
 
+        constructor.Property(c => c.Observacion)
+            .HasMaxLength(500);
+
         constructor.HasOne(c => c.Usuario)
             .WithMany()
             .HasForeignKey(c => c.UsuarioId)

@@ -67,7 +67,7 @@ public class CierreServicio : ICierreServicio
         var totalPedidos = cuentaIds.Count;
         var totalCancelados = await _uot.Pedidos.ContarCanceladosDelDiaAsync(hoy, ct);
 
-        cierre.Cerrar(totalVentas, totalEfectivo, totalTarjeta, totalPedidos, totalCancelados, totalMerma, req.EfectivoReal, req.TarjetaReal);
+        cierre.Cerrar(totalVentas, totalEfectivo, totalTarjeta, totalPedidos, totalCancelados, totalMerma, req.EfectivoReal, req.TarjetaReal, req.Observacion);
         await _uot.GuardarCambiosAsync(ct);
         return Map(cierre);
     }
@@ -93,7 +93,8 @@ public class CierreServicio : ICierreServicio
         DiferenciaEfectivo = c.DiferenciaEfectivo,
         DiferenciaTarjeta = c.DiferenciaTarjeta,
         EsCerrado = c.EsCerrado,
-        CerradoEn = c.CerradoEn
+        CerradoEn = c.CerradoEn,
+        Observacion = c.Observacion
     };
 }
 
@@ -113,10 +114,12 @@ public class CierreDiaDto
     public decimal DiferenciaTarjeta { get; set; }
     public bool EsCerrado { get; set; }
     public DateTime? CerradoEn { get; set; }
+    public string? Observacion { get; set; }
 }
 
 public class CierreCajaRequest
 {
     public decimal EfectivoReal { get; set; }
     public decimal TarjetaReal { get; set; }
+    public string? Observacion { get; set; }
 }

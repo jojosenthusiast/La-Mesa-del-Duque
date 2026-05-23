@@ -3,6 +3,7 @@ using System;
 using LaMesaDelDuque.Infraestructura.Persistencia;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace LaMesaDelDuque.Infraestructura.Migrations
 {
     [DbContext(typeof(LaMesaDelDuqueDbContext))]
-    partial class LaMesaDelDuqueDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260523130650_CierreObservacionDescuadre")]
+    partial class CierreObservacionDescuadre
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "8.0.11");
