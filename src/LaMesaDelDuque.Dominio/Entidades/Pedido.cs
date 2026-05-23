@@ -16,6 +16,8 @@ public class Pedido
     public IReadOnlyList<Cuenta> Cuentas => _cuentas.AsReadOnly();
     public decimal Total => _detalles.Sum(d => d.Subtotal);
     public bool EstaPagadoCompletamente => Cuentas.Count > 0 && Cuentas.All(c => c.Estado == EstadoCuenta.Pagada);
+    public Guid? ClienteId { get; private set; }
+    public Cliente? Cliente { get; private set; }
 
     private Pedido()
     {
@@ -197,5 +199,11 @@ public class Pedido
         }
 
         return Cuentas;
+    }
+
+    public void AsociarCliente(Cliente cliente)
+    {
+        ClienteId = cliente.Id;
+        Cliente = cliente;
     }
 }
