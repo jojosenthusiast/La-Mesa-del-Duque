@@ -172,6 +172,7 @@
                 '<span class="lmd-pos-producto-card__nombre">' + (p.nombre || '') + '</span>' +
                 '<span class="lmd-pos-producto-card__precio">' + formatMoney(p.precio || 0) + '</span>' +
                 (p.tiempoPreparacionMin ? '<span class="lmd-pos-producto-card__tiempo">' + p.tiempoPreparacionMin + ' min</span>' : '') +
+                '<button class="lmd-pos-producto-card__editar" onclick="event.stopPropagation();pos.abrirModificadores(\'' + p.id + '\')" title="Modificar ingredientes"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><use href="https://cdn.jsdelivr.net/npm/lucide-static@latest/icons/edit-3.svg#icon"/></svg></button>' +
             '</div>';
         }).join('');
     }
@@ -369,6 +370,83 @@
         mostrarPantalla('seleccion');
     }
 
+    // ── Modifier system (ingredients + allergens) ─────────
+    var modificadores = { productoId: null, productoNombre: '', ingredientes: [], alergias: [], alergenosProducto: [], extras: [], notaCustom: '', curso: 'PlatoFuerte' };
+
+    async function abrirModificadores(productoId) {
+        var prod = (window.__lmdProductosDisponibles || []).find(function(p) { return p.id === productoId; });
+        if (!prod) return;
+        modificadores.productoId = productoId;
+        modificadores.productoNombre = prod.nombre;
+        modificadores.ingredientes = [];
+        modificadores.alergias = [];
+        modificadores.extras = [];
+        modificadores.notaCustom = '';
+
+        try {
+            var res = await fetch('?handler=IngredientesProductoJson&productoId=' + productoId);
+            var data = await res.json();
+            modificadores.ingredientes = (data.ingredientes || []).map(function(ing) { return { id: ing.id, nombre: ing.nombre, cantidad: ing.cantidad, quitado: false, motivo: '' }; });
+        } catch(e) {}
+
+        try {
+            var ar = await fetch('?handler=AlergenosProductoJson&productoId=' + productoId);
+            var ad = await ar.json();
+            modificadores.alergenosProducto = ad || [];
+        } catch(e) { modificadores.alergenosProducto = []; }
+
+        renderModificadorModal();
+    }
+
+    function renderModificadorModal() {
+        var old = document.getElementById('lmd-modificador-overlay');
+        if (old) old.remove();
+
+        var over = document.createElement('div');
+        over.id = 'lmd-modificador-overlay';
+        over.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:4000;display:flex;align-items:flex-end;justify-content:center';
+        over.onclick = function(e) { if (e.target === over) cerrarModificadores(); };
+
+        var alergenosHtml = (modificadores.alergenosProducto && modificadores.alergenosProducto.length > 0)
+            ? modificadores.alergenosProducto.map(function(a) {
+                return '<button class="lmd-mod-alergia-btn' + (modificadores.alergias.indexOf(a.nombre.toLowerCase()) >= 0 ? ' activo' : '') + '" onclick="pos.toggleAlergia(\'' + a.nombre.toLowerCase() + '\')">' + a.nombre + '</button>';
+            }).join('')
+            : '<span style="font-size:0.75rem;opacity:0.5">Sin alérgenos registrados</span>';
+
+        var ingsHtml = modificadores.ingredientes.map(function(ing) {
+            return '<div style="display:flex;justify-content:space-between;align-items:center;padding:0.3rem 0;border-bottom:1px solid rgba(255,255,255,0.05)"><span>' + ing.nombre + ' (' + ing.cantidad + ')</span><button style="padding:0.3rem 0.6rem;border-radius:4px;border:none;cursor:pointer;font-size:0.75rem;' + (ing.quitado ? 'background:#c0392b;color:#fff' : 'background:#333;color:#aaa') + '" onclick="pos.toggleIngrediente(\'' + ing.id + '\')">' + (ing.quitado ? '<svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><use href=\'https://cdn.jsdelivr.net/npm/lucide-static@latest/icons/check.svg#icon\'/></svg> Quitado' : 'Quitar') + '</button></div>';
+        }).join('');
+
+        over.innerHTML = '<div style="background:#1a1a2e;width:100%;max-width:500px;max-height:80vh;overflow-y:auto;border-radius:12px 12px 0 0;padding:1rem;color:#fff;font-family:Montserrat,sans-serif">' +
+            '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem"><h3 style="margin:0;font-size:1.1rem">' + modificadores.productoNombre + '</h3><button onclick="pos.cerrarModificadores()" style="background:none;border:none;color:#aaa;font-size:1.3rem;cursor:pointer"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><use href=\'https://cdn.jsdelivr.net/npm/lucide-static@latest/icons/x.svg#icon\'/></svg></button></div>' +
+            '<div style="margin-bottom:0.75rem"><strong style="font-size:0.8rem;opacity:0.6">ALÉRGENOS</strong><div style="display:flex;flex-wrap:wrap;gap:0.3rem;margin-top:0.3rem">' + alergenosHtml + '</div></div>' +
+            '<div style="margin-bottom:0.75rem"><strong style="font-size:0.8rem;opacity:0.6">INGREDIENTES</strong><div style="margin-top:0.3rem">' + (ingsHtml || '<span style="font-size:0.75rem;opacity:0.5">Sin ingredientes</span>') + '</div></div>' +
+            '<button onclick="pos.confirmarModificadores()" style="width:100%;padding:0.8rem;background:#27ae60;color:#fff;border:none;border-radius:8px;font-size:1rem;font-weight:700;cursor:pointer;margin-top:0.5rem"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5"><use href=\'https://cdn.jsdelivr.net/npm/lucide-static@latest/icons/check.svg#icon\'/></svg> Confirmar</button>' +
+        '</div>';
+
+        document.body.appendChild(over);
+    }
+
+    function toggleIngrediente(id) {
+        var ing = modificadores.ingredientes.find(function(i) { return i.id === id; });
+        if (ing) { ing.quitado = !ing.quitado; renderModificadorModal(); }
+    }
+    function toggleAlergia(alergia) {
+        var idx = modificadores.alergias.indexOf(alergia);
+        if (idx >= 0) modificadores.alergias.splice(idx, 1);
+        else modificadores.alergias.push(alergia);
+        renderModificadorModal();
+    }
+    function cerrarModificadores() {
+        var over = document.getElementById('lmd-modificador-overlay');
+        if (over) over.remove();
+    }
+    function confirmarModificadores() {
+        cerrarModificadores();
+        lmdToast('Modificaciones guardadas', 'success');
+        renderProductos();
+    }
+
     // ── Helpers ─────────────────────────────────────────
     function formatMoney(n) {
         return new Intl.NumberFormat('es-SV', { style: 'currency', currency: 'USD' }).format(n);
@@ -389,7 +467,12 @@
         keypadConfirmar: keypadConfirmar,
         emitirDocumento: emitirDocumento,
         nuevaOrden: nuevaOrden,
-        volverAProductos: volverAProductos
+        volverAProductos: volverAProductos,
+        abrirModificadores: abrirModificadores,
+        toggleIngrediente: toggleIngrediente,
+        toggleAlergia: toggleAlergia,
+        cerrarModificadores: cerrarModificadores,
+        confirmarModificadores: confirmarModificadores
     };
 
     document.addEventListener('DOMContentLoaded', function () {
