@@ -17,8 +17,9 @@ public class PedidosPageTests
         var hub = new FakeHubContext<PedidosHub>();
         var recetas = new FakeRecetasProductosServicio();
         var ticket = new FakeTicketServicio();
+        var alergenos = new FakeAlergenoServicio();
 
-        var page = new IndexModel(pedidos, catalogo, mesas, recetas, ticket, hub);
+        var page = new IndexModel(pedidos, catalogo, mesas, recetas, ticket, alergenos, hub);
 
         await page.OnGetAsync();
 
@@ -131,4 +132,10 @@ public class FakeRecetasProductosServicio : IRecetasProductosServicio
 public class FakeTicketServicio : ITicketServicio
 {
     public Task<string> GenerarHtmlTicketAsync(Guid pedidoId, CancellationToken cancelacion = default) => Task.FromResult("<html>Ticket</html>");
+}
+
+public class FakeAlergenoServicio : IAlergenoServicio
+{
+    public Task<List<AlergenoDto>> ObtenerActivosAsync(CancellationToken cancelacion = default) => Task.FromResult(new List<AlergenoDto>());
+    public Task<List<AlergenoDto>> ObtenerPorProductoAsync(Guid productoId, CancellationToken cancelacion = default) => Task.FromResult(new List<AlergenoDto>());
 }

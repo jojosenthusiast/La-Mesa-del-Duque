@@ -58,6 +58,8 @@ public static class InyeccionInfraestructura
         servicios.AddScoped<OrdenCocinaRepositorio>();
         servicios.AddScoped<CuentaRepositorio>();
         servicios.AddScoped<PagoRepositorio>();
+        servicios.AddScoped<AlergenoRepositorio>();
+        servicios.AddScoped<IAlergenoRepositorio, AlergenoRepositorio>();
 
         // Unidad de Trabajo
         servicios.AddScoped<IUnidadDeTrabajo, UnidadDeTrabajo>();

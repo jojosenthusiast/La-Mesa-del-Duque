@@ -19,6 +19,7 @@ public class IndexModel : PageModel
     private readonly IMesasServicio _mesasServicio;
     private readonly IRecetasProductosServicio _recetasServicio;
     private readonly ITicketServicio _ticketServicio;
+    private readonly IAlergenoServicio _alergenoServicio;
     private readonly IHubContext<PedidosHub> _hubContext;
 
     public IndexModel(
@@ -27,6 +28,7 @@ public class IndexModel : PageModel
         IMesasServicio mesasServicio,
         IRecetasProductosServicio recetasServicio,
         ITicketServicio ticketServicio,
+        IAlergenoServicio alergenoServicio,
         IHubContext<PedidosHub> hubContext)
     {
         _pedidosServicio = pedidosServicio;
@@ -34,6 +36,7 @@ public class IndexModel : PageModel
         _mesasServicio = mesasServicio;
         _recetasServicio = recetasServicio;
         _ticketServicio = ticketServicio;
+        _alergenoServicio = alergenoServicio;
         _hubContext = hubContext;
     }
 
@@ -398,6 +401,17 @@ public class IndexModel : PageModel
         {
             var html = await _ticketServicio.GenerarHtmlTicketAsync(pedidoId);
             return new JsonResult(new { ok = true, html });
+        }
+        catch (Exception ex) { return BadRequest(ex.Message); }
+    }
+
+    // ── Alérgenos por producto (JSON) ─────────────────────────
+    public async Task<IActionResult> OnGetAlergenosProductoJsonAsync(Guid productoId)
+    {
+        try
+        {
+            var alergenos = await _alergenoServicio.ObtenerPorProductoAsync(productoId);
+            return new JsonResult(alergenos);
         }
         catch (Exception ex) { return BadRequest(ex.Message); }
     }

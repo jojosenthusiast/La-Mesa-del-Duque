@@ -551,15 +551,14 @@
                 ${cursoHtml}
 
                 <div class="lmd-modificador-alergias">
-                    <h4>⚠ Alergias rápidas</h4>
-                    <button class="lmd-modificador-alergia-btn ${modificadores.alergias.includes('mani') ? 'activo' : ''}"
-                            onclick="pos.toggleAlergia('mani')">🥜 Maní</button>
-                    <button class="lmd-modificador-alergia-btn ${modificadores.alergias.includes('lacteos') ? 'activo' : ''}"
-                            onclick="pos.toggleAlergia('lacteos')">🥛 Lácteos</button>
-                    <button class="lmd-modificador-alergia-btn ${modificadores.alergias.includes('gluten') ? 'activo' : ''}"
-                            onclick="pos.toggleAlergia('gluten')">🌾 Gluten</button>
-                    <button class="lmd-modificador-alergia-btn ${modificadores.alergias.includes('mariscos') ? 'activo' : ''}"
-                            onclick="pos.toggleAlergia('mariscos')">🦐 Mariscos</button>
+                    <h4>Alergenos del producto</h4>
+                    ${(modificadores.alergenosProducto && modificadores.alergenosProducto.length > 0)
+                        ? modificadores.alergenosProducto.map(a =>
+                            `<button class="lmd-modificador-alergia-btn ${modificadores.alergias.includes(a.nombre.toLowerCase()) ? 'activo' : ''}"
+                                onclick="pos.toggleAlergia('${a.nombre.toLowerCase()}')">${a.nombre}${a.justificacion ? ' <small>(' + a.justificacion + ')</small>' : ''}</button>`
+                        ).join('')
+                        : '<p class="lmd-modificador-vacio">Sin alérgenos registrados para este producto.</p>'
+                    }
                 </div>
 
                 <div class="lmd-modificador-ingredientes">
@@ -905,6 +904,13 @@
             modificadores.alergias = [];
             modificadores.extras = [];
             modificadores.notaCustom = '';
+
+            // Fetch product-specific allergens
+            try {
+                const ar = await fetch(`?handler=AlergenosProductoJson&productoId=${productoId}`);
+                const alergenosData = await ar.json();
+                modificadores.alergenosProducto = alergenosData || [];
+            } catch { modificadores.alergenosProducto = []; }
 
             // Create overlay
             const previo = document.getElementById('lmd-modificador-overlay');
