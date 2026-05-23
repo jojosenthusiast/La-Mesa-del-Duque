@@ -45,7 +45,7 @@ builder.Services.AgregarAplicacion();
 builder.Services.AddScoped<INotificadorPedidos, SignalRNotificadorPedidos>();
 
 // Persistencia con fail-fast si no hay connection string
-builder.Services.AgregarPersistencia(builder.Configuration, builder.Environment.IsDevelopment());
+builder.Services.AgregarPersistencia(builder.Configuration, builder.Environment);
 
 var app = builder.Build();
 

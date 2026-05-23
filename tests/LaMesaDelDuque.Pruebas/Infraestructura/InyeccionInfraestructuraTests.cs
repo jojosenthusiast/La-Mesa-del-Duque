@@ -17,7 +17,7 @@ public class InyeccionInfraestructuraTests
             .AddInMemoryCollection()
             .Build();
 
-        servicios.AgregarPersistencia(configuracion);
+        servicios.AgregarPersistencia(configuracion, esDesarrollo: true);
         var proveedor = servicios.BuildServiceProvider();
 
         var contexto = proveedor.GetService<LaMesaDelDuqueDbContext>();
@@ -36,7 +36,7 @@ public class InyeccionInfraestructuraTests
             })
             .Build();
 
-        servicios.AgregarPersistencia(configuracion);
+        servicios.AgregarPersistencia(configuracion, esDesarrollo: true);
         var proveedor = servicios.BuildServiceProvider();
 
         var contexto = proveedor.GetService<LaMesaDelDuqueDbContext>();
@@ -55,7 +55,7 @@ public class InyeccionInfraestructuraTests
             })
             .Build();
 
-        servicios.AgregarPersistencia(configuracion);
+        servicios.AgregarPersistencia(configuracion, esDesarrollo: true);
         var proveedor = servicios.BuildServiceProvider();
 
         var contexto = proveedor.GetService<LaMesaDelDuqueDbContext>();
