@@ -59,6 +59,7 @@ public static class InyeccionInfraestructura
         servicios.AddScoped<CuentaRepositorio>();
         servicios.AddScoped<PagoRepositorio>();
         servicios.AddScoped<ZonaSalonRepositorio>();
+        servicios.AddScoped<IMetricaRepositorio, MetricaRepositorio>();
 
         // Unidad de Trabajo
         servicios.AddScoped<IUnidadDeTrabajo, UnidadDeTrabajo>();

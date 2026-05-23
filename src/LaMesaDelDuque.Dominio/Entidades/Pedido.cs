@@ -9,6 +9,7 @@ public class Pedido
     private readonly List<Cuenta> _cuentas = [];
 
     public Guid Id { get; private set; }
+    public DateTime FechaCreacion { get; private set; } = DateTime.UtcNow;
     public TipoServicio TipoServicio { get; private set; }
     public Mesa? Mesa { get; private set; }
     public EstadoPedido Estado { get; private set; }

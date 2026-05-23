@@ -572,6 +572,7 @@ namespace LaMesaDelDuque.Infraestructura.Migrations
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "TEXT", nullable: false),
+                    FechaCreacion = table.Column<DateTime>(type: "TEXT", nullable: false),
                     TipoServicio = table.Column<string>(type: "TEXT", maxLength: 20, nullable: false),
                     MesaId = table.Column<Guid>(type: "TEXT", nullable: true),
                     Estado = table.Column<string>(type: "TEXT", maxLength: 30, nullable: false),

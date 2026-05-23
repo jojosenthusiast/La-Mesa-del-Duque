@@ -774,6 +774,9 @@ namespace LaMesaDelDuque.Infraestructura.Migrations
                         .HasMaxLength(30)
                         .HasColumnType("TEXT");
 
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("TEXT");
+
                     b.Property<Guid?>("MesaId")
                         .HasColumnType("TEXT");
 

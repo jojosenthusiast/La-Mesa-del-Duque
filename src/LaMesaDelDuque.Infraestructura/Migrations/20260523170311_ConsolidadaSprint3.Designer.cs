@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace LaMesaDelDuque.Infraestructura.Migrations
 {
     [DbContext(typeof(LaMesaDelDuqueDbContext))]
-    [Migration("20260523165005_ConsolidadaSprint3")]
+    [Migration("20260523170311_ConsolidadaSprint3")]
     partial class ConsolidadaSprint3
     {
         /// <inheritdoc />
@@ -775,6 +775,9 @@ namespace LaMesaDelDuque.Infraestructura.Migrations
                     b.Property<string>("Estado")
                         .IsRequired()
                         .HasMaxLength(30)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("FechaCreacion")
                         .HasColumnType("TEXT");
 
                     b.Property<Guid?>("MesaId")
