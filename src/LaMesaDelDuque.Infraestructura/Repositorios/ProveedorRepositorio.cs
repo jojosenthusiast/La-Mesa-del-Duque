@@ -5,10 +5,10 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LaMesaDelDuque.Infraestructura.Repositorios;
 
-internal class ProveedorLoyaltyRepositorio : IProveedorRepositorio
+internal class ProveedorRepositorio : IProveedorRepositorio
 {
     private readonly LaMesaDelDuqueDbContext _c;
-    public ProveedorLoyaltyRepositorio(LaMesaDelDuqueDbContext c) => _c = c;
+    public ProveedorRepositorio(LaMesaDelDuqueDbContext c) => _c = c;
 
     public async Task<List<Proveedor>> ObtenerTodosAsync(CancellationToken ct = default) =>
         await _c.Set<Proveedor>().AsNoTracking().ToListAsync(ct);

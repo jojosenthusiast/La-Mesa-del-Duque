@@ -21,7 +21,7 @@ internal class UnidadDeTrabajo : IUnidadDeTrabajo
         OrdenCocinaRepositorio ordenCocinaRepositorio,
         CuentaRepositorio cuentaRepositorio,
         PagoRepositorio pagoRepositorio,
-        ProveedorLoyaltyRepositorio? proveedorRepositorio = null)
+        ProveedorRepositorio? proveedorRepositorio = null)
     {
         _contexto = contexto;
         Categorias = categoriaRepositorio;

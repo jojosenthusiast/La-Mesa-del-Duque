@@ -38,8 +38,6 @@ public class LaMesaDelDuqueDbContext : DbContext
     // Nuevas entidades Sprint 3
     public DbSet<Alergeno> Alergenos => Set<Alergeno>();
     public DbSet<ProductoAlergeno> ProductosAlergenos => Set<ProductoAlergeno>();
-    public DbSet<Cliente> Clientes => Set<Cliente>();
-    public DbSet<Recompensa> Recompensas => Set<Recompensa>();
 
     protected override void OnModelCreating(ModelBuilder constructorDeModelos)
     {

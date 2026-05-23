@@ -19,7 +19,6 @@ public static class InyeccionAplicacion
         servicios.AddScoped<ITableTimerServicio, TableTimerServicio>();
         servicios.AddScoped<IUpsellServicio, UpsellServicio>();
         servicios.AddScoped<IShiftHandoffServicio, ShiftHandoffServicio>();
-        servicios.AddScoped<ILoyaltyServicio, LoyaltyServicio>();
         servicios.AddScoped<IInventarioServicio, InventarioServicio>();
         servicios.AddScoped<IMargenServicio, MargenServicio>();
 

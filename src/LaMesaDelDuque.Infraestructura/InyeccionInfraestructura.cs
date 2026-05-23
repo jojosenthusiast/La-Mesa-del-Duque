@@ -60,12 +60,8 @@ public static class InyeccionInfraestructura
         servicios.AddScoped<PagoRepositorio>();
         servicios.AddScoped<AlergenoRepositorio>();
         servicios.AddScoped<IAlergenoRepositorio, AlergenoRepositorio>();
-        servicios.AddScoped<ClienteLoyaltyRepositorio>();
-        servicios.AddScoped<IClienteRepositorio, ClienteLoyaltyRepositorio>();
-        servicios.AddScoped<RecompensaLoyaltyRepositorio>();
-        servicios.AddScoped<IRecompensaRepositorio, RecompensaLoyaltyRepositorio>();
-        servicios.AddScoped<ProveedorLoyaltyRepositorio>();
-        servicios.AddScoped<IProveedorRepositorio, ProveedorLoyaltyRepositorio>();
+        servicios.AddScoped<ProveedorRepositorio>();
+        servicios.AddScoped<IProveedorRepositorio, ProveedorRepositorio>();
 
         // Unidad de Trabajo
         servicios.AddScoped<IUnidadDeTrabajo, UnidadDeTrabajo>();
