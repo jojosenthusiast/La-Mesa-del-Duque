@@ -7,6 +7,8 @@
     function mostrarToast(mensaje, tipo = 'error') {
         if (window.lmdToast) {
             window.lmdToast(mensaje, tipo);
+        } else {
+            alert(tipo + ': ' + mensaje);
         }
     }
     const api = {
@@ -18,7 +20,7 @@
             lineas.forEach((l, i) => {
                 form.append(`Vm.CrearPedido.Lineas[${i}].ProductoId`, l.productoId);
                 form.append(`Vm.CrearPedido.Lineas[${i}].Cantidad`, l.cantidad);
-                form.append(`Vm.CrearPedido.Lineas[${i}].PrecioUnitario`, '0');
+                form.append(`Vm.CrearPedido.Lineas[${i}].PrecioUnitario`, (l.precioUnitario || 0).toString());
             });
 
             const res = await fetch('?handler=CrearJson', { method: 'POST', body: form, headers: { 'X-Requested-With': 'XMLHttpRequest' } });
