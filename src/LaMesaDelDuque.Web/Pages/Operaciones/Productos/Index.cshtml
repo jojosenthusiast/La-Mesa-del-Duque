@@ -141,7 +141,7 @@
                                 }
                                 else
                                 {
-                                    <span class="text-muted" style="font-size:1.25rem;">🍽️</span>
+                                    <span class="text-muted small">Sin imagen</span>
                                 }
                             </td>
                             <td>@producto.Nombre</td>
@@ -168,7 +168,7 @@
                                     <form method="post" asp-page-handler="EliminarFoto" class="d-inline lmd-confirm-destructive" data-confirm-message="¿Eliminar la foto de este producto?">
                                         @Html.AntiForgeryToken()
                                         <input type="hidden" name="id" value="@producto.Id" />
-                                        <button type="submit" class="btn btn-sm lmd-action-neutral">🗑 Foto</button>
+                                        <button type="submit" class="btn btn-sm lmd-action-neutral">Quitar foto</button>
                                     </form>
                                 }
                                 @if (producto.Activo)

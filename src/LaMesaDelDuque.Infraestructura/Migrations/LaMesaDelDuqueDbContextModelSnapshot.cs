@@ -118,11 +118,38 @@ namespace LaMesaDelDuque.Infraestructura.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasDefaultValueSql("NOW()");
 
+                    b.Property<DateTime?>("CerradoEn")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<decimal>("DiferenciaEfectivo")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue(0m);
+
+                    b.Property<decimal>("DiferenciaTarjeta")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue(0m);
+
+                    b.Property<decimal>("EfectivoReal")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue(0m);
+
+                    b.Property<bool>("EsCerrado")
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(false);
+
                     b.Property<DateOnly>("Fecha")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("ResumenJson")
                         .HasColumnType("text");
+
+                    b.Property<decimal>("TarjetaReal")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue(0m);
 
                     b.Property<decimal>("TotalMermaValorizada")
                         .HasPrecision(12, 2)
@@ -386,8 +413,17 @@ namespace LaMesaDelDuque.Infraestructura.Migrations
                     b.Property<Guid>("IngredienteId")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("Lote")
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Notas")
                         .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Tipo")
+                        .IsRequired()
+                        .HasMaxLength(30)
                         .HasColumnType("TEXT");
 
                     b.Property<Guid>("UsuarioId")
@@ -639,6 +675,11 @@ namespace LaMesaDelDuque.Infraestructura.Migrations
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("NOW()");
 
                     b.Property<string>("Estado")
                         .IsRequired()

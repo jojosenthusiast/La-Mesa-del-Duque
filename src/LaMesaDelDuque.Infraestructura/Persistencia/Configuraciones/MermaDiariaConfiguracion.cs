@@ -1,5 +1,4 @@
 using LaMesaDelDuque.Dominio.Entidades;
-using LaMesaDelDuque.Dominio.Enumeraciones;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -23,8 +22,7 @@ internal class MermaDiariaConfiguracion : IEntityTypeConfiguration<MermaDiaria>
         constructor.Property(m => m.Tipo)
             .HasConversion<string>()
             .HasMaxLength(30)
-            .IsRequired()
-            .HasDefaultValue(TipoMerma.Otro);
+            .IsRequired();
 
         constructor.Property(m => m.Lote)
             .HasMaxLength(50);

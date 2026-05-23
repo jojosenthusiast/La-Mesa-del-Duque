@@ -31,7 +31,14 @@ public class IndexModel : PageModel
             ToastError = "No se pudo identificar el usuario autenticado.";
             return RedirectToPage();
         }
-        await _cierre.AbrirCierreAsync(usuarioId);
+        try
+        {
+            await _cierre.AbrirCierreAsync(usuarioId);
+        }
+        catch (Exception ex)
+        {
+            ToastError = ex.Message;
+        }
         return RedirectToPage();
     }
 
@@ -43,7 +50,14 @@ public class IndexModel : PageModel
             ToastError = "No se pudo identificar el usuario autenticado.";
             return RedirectToPage();
         }
-        await _cierre.CerrarDiaAsync(req, usuarioId);
+        try
+        {
+            await _cierre.CerrarDiaAsync(req, usuarioId);
+        }
+        catch (Exception ex)
+        {
+            ToastError = ex.Message;
+        }
         return RedirectToPage();
     }
 
