@@ -70,6 +70,22 @@ public class Pedido
         Estado = EstadoPedido.Pagado;
     }
 
+    public void MarcarListo()
+    {
+        if (Estado != EstadoPedido.EnPreparacion && Estado != EstadoPedido.Pagado)
+            throw new ReglaDominioException("Solo un pedido en preparación o pagado puede ser marcado como listo.");
+
+        Estado = EstadoPedido.Listo;
+    }
+
+    public void MarcarDespachado()
+    {
+        if (Estado != EstadoPedido.Listo)
+            throw new ReglaDominioException("Solo un pedido listo puede ser despachado.");
+
+        Estado = EstadoPedido.Despachado;
+    }
+
     public void Cancelar()
     {
         if (Estado == EstadoPedido.Cancelado)

@@ -120,7 +120,7 @@ public class CuentaServicioTests : IDisposable
     }
 
     [Fact]
-    public async Task PagarCuentaAsync_UltimaCuentaPendiente_DebeMarcarPedidoPagadoYLiberarMesa()
+    public async Task PagarCuentaAsync_UltimaCuentaPendiente_DebeMarcarPedidoPagadoSinLiberarMesa()
     {
         var pedido = await CrearPedidoEnPreparacionAsync();
         var cuentas = await _servicio.CrearCuentasAsync(pedido.Id, 2);
@@ -133,7 +133,7 @@ public class CuentaServicioTests : IDisposable
         Assert.Equal("Pagada", pagada.Estado);
         Assert.Equal("Pagado", pedidoActualizado.Estado);
         Assert.NotNull(mesa);
-        Assert.Equal(EstadoMesa.Disponible, mesa!.Estado);
+        Assert.Equal(EstadoMesa.Ocupada, mesa!.Estado);
     }
 
     [Fact]

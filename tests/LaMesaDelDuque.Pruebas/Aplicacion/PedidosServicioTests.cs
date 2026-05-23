@@ -243,7 +243,7 @@ public class PedidosServicioTests : IDisposable
     }
 
     [Fact]
-    public async Task PagarPedido_UnicoPedidoEnMesa_DebeLiberarMesa()
+    public async Task PagarPedido_UnicoPedidoEnMesa_NoLiberaMesa()
     {
         var (mesa, producto) = await CrearMesaYProductoAsync(30);
 
@@ -256,7 +256,7 @@ public class PedidosServicioTests : IDisposable
 
         var mesaActualizada = await _uot.Mesas.ObtenerPorIdAsync(mesa.Id);
         Assert.NotNull(mesaActualizada);
-        Assert.Equal(EstadoMesa.Disponible, mesaActualizada!.Estado);
+        Assert.Equal(EstadoMesa.Ocupada, mesaActualizada!.Estado);
     }
 
     [Fact]

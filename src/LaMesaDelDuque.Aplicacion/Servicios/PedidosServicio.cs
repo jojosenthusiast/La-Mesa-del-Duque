@@ -101,7 +101,6 @@ internal class PedidosServicio : IPedidosServicio
         await ValidarStockSuficienteAsync(pedido, cancelacion);
         pedido.MarcarComoPagado();
         await DescontarStockAsync(pedido, cancelacion);
-        await LiberarMesaSiCorrespondeAsync(pedido, cancelacion); // TODO: mover a flujo de despacho
         await _uot.GuardarCambiosAsync(cancelacion);
         await _notificadorPedidos.NotificarEstadoCambiadoAsync(pedido.Id, pedido.Estado, cancelacion);
     }
@@ -311,7 +310,6 @@ internal class PedidosServicio : IPedidosServicio
                 if (pedido is not null && pedido.EstaPagadoCompletamente)
                 {
                     pedido.MarcarComoPagado();
-                    await LiberarMesaSiCorrespondeAsync(pedido, cancelacion);
                     await _notificadorPedidos.NotificarEstadoCambiadoAsync(pedido.Id, pedido.Estado, cancelacion);
                 }
 
