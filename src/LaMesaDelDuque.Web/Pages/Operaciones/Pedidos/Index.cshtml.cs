@@ -17,17 +17,20 @@ public class IndexModel : PageModel
     private readonly IPedidosServicio _pedidosServicio;
     private readonly ICatalogoProductosServicio _catalogoProductosServicio;
     private readonly IMesasServicio _mesasServicio;
+    private readonly IRecetasProductosServicio _recetasServicio;
     private readonly IHubContext<PedidosHub> _hubContext;
 
     public IndexModel(
         IPedidosServicio pedidosServicio,
         ICatalogoProductosServicio catalogoProductosServicio,
         IMesasServicio mesasServicio,
+        IRecetasProductosServicio recetasServicio,
         IHubContext<PedidosHub> hubContext)
     {
         _pedidosServicio = pedidosServicio;
         _catalogoProductosServicio = catalogoProductosServicio;
         _mesasServicio = mesasServicio;
+        _recetasServicio = recetasServicio;
         _hubContext = hubContext;
     }
 
@@ -379,10 +382,24 @@ public class IndexModel : PageModel
         {
             if (!Enum.TryParse<MetodoPago>(metodoPago, true, out var metodo))
                 return BadRequest("Método de pago inválido.");
-
             var cuenta = await _pedidosServicio.PagarCuentaAsync(cuentaId, metodo, propinaMonto);
-            await _hubContext.Clients.Group($"pedido-{cuenta.PedidoId}").SendAsync("CuentaPagada", cuenta.Id, cuenta.PedidoId);
             return new JsonResult(cuenta);
+        }
+        catch (Exception ex) { return BadRequest(ex.Message); }
+    }
+
+    // ── Ingredientes y modificaciones (JSON) ─────────────────
+    public async Task<IActionResult> OnPostObtenerIngredientesJsonAsync(Guid productoId)
+    {
+        try
+        {
+            var receta = await _recetasServicio.ObtenerPorProductoIdAsync(productoId);
+            if (receta is null) return new JsonResult(new { ingredientes = Array.Empty<object>(), instrucciones = "" });
+            return new JsonResult(new
+            {
+                ingredientes = receta.Ingredientes.Select(i => new { i.IngredienteId, i.IngredienteNombre, i.CantidadRequerida }),
+                receta.Instrucciones
+            });
         }
         catch (Exception ex) { return BadRequest(ex.Message); }
     }
