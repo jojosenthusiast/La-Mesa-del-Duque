@@ -314,7 +314,10 @@ public class IndexModel : PageModel
         {
             var pedidos = await _pedidosServicio.ListarPedidosActivosAsync();
             var pedido = pedidos.FirstOrDefault(p => p.Id == pedidoId)
-                ?? throw new ArgumentException("Pedido no encontrado.");
+                ?? throw new ArgumentException("Pedido no encontrado o no está activo.");
+
+            if (pedido.Estado is "Cancelado" or "Pagado" or "Despachado")
+                return BadRequest($"El pedido ya fue {pedido.Estado.ToLower()}.");
 
             if (efectivoRecibido < pedido.Total)
                 return BadRequest($"Faltan ${pedido.Total - efectivoRecibido:F2}");
@@ -322,6 +325,26 @@ public class IndexModel : PageModel
             await _pedidosServicio.PagarPedidoAsync(pedidoId);
             var cambio = efectivoRecibido - pedido.Total;
             return new JsonResult(new { ok = true, mensaje = cambio > 0 ? $"Pedido pagado. Cambio: ${cambio:F2}" : "Pedido pagado correctamente." });
+        }
+        catch (Exception ex) { return BadRequest(ErrorSeguro(ex)); }
+    }
+
+    public async Task<IActionResult> OnPostPagarJsonAsync(Guid pedidoId)
+    {
+        try
+        {
+            if (pedidoId == Guid.Empty)
+                return BadRequest("ID de pedido inválido.");
+
+            var pedidos = await _pedidosServicio.ListarPedidosActivosAsync();
+            var pedido = pedidos.FirstOrDefault(p => p.Id == pedidoId)
+                ?? throw new ArgumentException("Pedido no encontrado o no está activo.");
+
+            if (pedido.Estado is "Cancelado" or "Pagado" or "Despachado")
+                return BadRequest($"El pedido ya fue {pedido.Estado.ToLower()}.");
+
+            await _pedidosServicio.PagarPedidoAsync(pedidoId);
+            return new JsonResult(new { ok = true, mensaje = "Pedido pagado correctamente." });
         }
         catch (Exception ex) { return BadRequest(ErrorSeguro(ex)); }
     }
@@ -359,6 +382,13 @@ public class IndexModel : PageModel
 
             if (request.PedidoId == Guid.Empty)
                 return BadRequest("El ID del pedido es requerido.");
+
+            // Validar que el pedido existe y está en estado pagable
+            var pedidos = await _pedidosServicio.ListarPedidosActivosAsync();
+            var pedido = pedidos.FirstOrDefault(p => p.Id == request.PedidoId)
+                ?? throw new ArgumentException("Pedido no encontrado o no está activo.");
+            if (pedido.Estado is "Cancelado" or "Pagado" or "Despachado")
+                return BadRequest($"El pedido ya fue {pedido.Estado.ToLower()}.");
 
             var asignaciones = request.Asignaciones.ToDictionary(
                 a => a.CuentaNumero,
@@ -477,11 +507,12 @@ public class IndexModel : PageModel
             if (Vm.CrearPedido.Lineas.Count == 0)
                 Vm.CrearPedido.Lineas.Add(new LineaPedidoFormVm());
         }
-        catch
+        catch (Exception ex)
         {
             Vm.ProductosDisponibles = [];
             Vm.MesasDisponibles = [];
             Vm.PedidosActivos = [];
+            ToastError = $"Error al cargar datos: {ex.Message}";
         }
     }
 

@@ -1,3 +1,4 @@
+using LaMesaDelDuque.Dominio.Enumeraciones;
 using LaMesaDelDuque.Dominio.Excepciones;
 using LaMesaDelDuque.Dominio.Repositorios;
 
@@ -16,6 +17,10 @@ public sealed class DespachoServicio : IDespachoServicio
     {
         var pedido = await _uot.Pedidos.ObtenerConDetallesParaActualizarAsync(pedidoId, cancelacion)
             ?? throw new ReglaDominioException("Pedido no encontrado.");
+
+        // Si el pedido está Pagado (ej. Para Llevar sin órdenes de cocina), marcarlo Listo primero
+        if (pedido.Estado == EstadoPedido.Pagado)
+            pedido.MarcarListo();
 
         pedido.MarcarDespachado();
 

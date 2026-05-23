@@ -52,10 +52,55 @@ public class CierreServicio : ICierreServicio
         var cierre = await _uot.CierresDia.ObtenerAbiertoAsync(hoy, ct)
             ?? throw new ReglaDominioException("No hay cierre de día abierto.");
 
-        var mermas = await _merma.ObtenerMermasDelDiaAsync(ct);
-        var totalMerma = mermas.Sum(m => m.Costo);
+        // ── Totales reales del sistema ──────────────────────────
+        decimal totalVentasEfectivo = 0;
+        decimal totalVentasTarjeta = 0;
+        int totalPedidos = 0;
+        int totalCancelados = 0;
 
-        cierre.Cerrar(req.EfectivoReal + req.TarjetaReal, req.EfectivoReal, req.TarjetaReal, 0, 0, totalMerma, req.EfectivoReal, req.TarjetaReal, req.Observacion);
+        try
+        {
+            var pagosHoy = await _uot.Pagos.ObtenerDelDiaAsync(hoy, ct);
+            totalVentasEfectivo = pagosHoy
+                .Where(p => p.Metodo == MetodoPago.Efectivo)
+                .Sum(p => p.Monto);
+            totalVentasTarjeta = pagosHoy
+                .Where(p => p.Metodo == MetodoPago.Tarjeta)
+                .Sum(p => p.Monto);
+        }
+        catch
+        {
+            // Fallback: si no hay pagos o la tabla falla, usar lo que declara el usuario
+            totalVentasEfectivo = req.EfectivoReal;
+            totalVentasTarjeta = req.TarjetaReal;
+        }
+
+        try
+        {
+            totalPedidos = await _uot.Pedidos.ContarDelDiaAsync(hoy, ct);
+            totalCancelados = await _uot.Pedidos.ContarCanceladosDelDiaAsync(hoy, ct);
+        }
+        catch
+        {
+            // Fallback: si no se puede consultar pedidos, dejamos en 0
+        }
+
+        decimal totalMerma = 0;
+        try
+        {
+            var mermas = await _merma.ObtenerMermasDelDiaAsync(ct);
+            totalMerma = mermas.Sum(m => m.Costo);
+        }
+        catch
+        {
+            // Fallback: si falla la consulta de mermas, asumimos 0
+        }
+
+        var totalVentas = totalVentasEfectivo + totalVentasTarjeta;
+
+        cierre.Cerrar(totalVentas, totalVentasEfectivo, totalVentasTarjeta,
+            totalPedidos, totalCancelados, totalMerma,
+            req.EfectivoReal, req.TarjetaReal, req.Observacion);
         await _uot.GuardarCambiosAsync(ct);
         return Map(cierre);
     }

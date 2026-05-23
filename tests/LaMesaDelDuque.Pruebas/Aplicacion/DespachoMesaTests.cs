@@ -128,12 +128,34 @@ public sealed class DespachoMesaTests : IDisposable
 
         var pedido = new Pedido(TipoServicio.ComerAqui, mesa);
         pedido.AgregarDetalle(new DetallePedido(producto, 1, 3.50m, null, null));
-        pedido.MarcarEnPreparacion();
-        pedido.MarcarComoPagado();
+        // No marcar como pagado ni listo — queda en Pendiente, que no es despachable
 
         await _uot.Pedidos.AgregarAsync(pedido);
         await _uot.GuardarCambiosAsync();
 
         await Assert.ThrowsAsync<ReglaDominioException>(() => _despacho.DespacharPedidoAsync(pedido.Id));
+    }
+
+    [Fact]
+    public async Task DespacharPedido_Pagado_LiberaMesa()
+    {
+        var (mesa, producto) = await CrearMesaYProductoAsync(53);
+        mesa.Ocupar();
+
+        var pedido = new Pedido(TipoServicio.ComerAqui, mesa);
+        pedido.AgregarDetalle(new DetallePedido(producto, 1, 3.50m, null, null));
+        pedido.MarcarComoPagado();
+
+        await _uot.Pedidos.AgregarAsync(pedido);
+        await _uot.GuardarCambiosAsync();
+
+        await _despacho.DespacharPedidoAsync(pedido.Id);
+
+        var pedidoActualizado = await _uot.Pedidos.ObtenerConDetallesAsync(pedido.Id);
+        var mesaActualizada = await _uot.Mesas.ObtenerPorIdAsync(mesa.Id);
+
+        Assert.NotNull(pedidoActualizado);
+        Assert.Equal(EstadoPedido.Despachado, pedidoActualizado!.Estado);
+        Assert.Equal(EstadoMesa.Disponible, mesaActualizada!.Estado);
     }
 }

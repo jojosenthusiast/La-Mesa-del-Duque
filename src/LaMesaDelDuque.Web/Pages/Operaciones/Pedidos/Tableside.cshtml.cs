@@ -63,6 +63,9 @@ public class TablesideModel : PageModel
     {
         try
         {
+            if (pedidoId == Guid.Empty)
+                return BadRequest("ID de pedido inválido.");
+
             await _pedidosServicio.MarcarEnPreparacionAsync(pedidoId);
             return new JsonResult(new { ok = true, estado = "EnPreparacion" });
         }

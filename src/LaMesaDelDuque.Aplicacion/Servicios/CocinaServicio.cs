@@ -80,6 +80,26 @@ internal class CocinaServicio : ICocinaServicio
         await _uot.GuardarCambiosAsync(ct);
         await _notificador.NotificarItemListoAsync(orden.Estacion.ToString(), ordenId, ct);
 
+        // Si todas las órdenes del pedido están listas, marcar el pedido como Listo
+        var ordenesPedido = await _uot.OrdenesCocina.ListarPorPedidoAsync(orden.PedidoId, ct);
+        if (ordenesPedido.Count > 0 && ordenesPedido.All(o => o.Estado == EstadoLineaCocina.Listo))
+        {
+            var pedido = await _uot.Pedidos.ObtenerConDetallesParaActualizarAsync(orden.PedidoId, ct);
+            if (pedido is not null && pedido.Estado != EstadoPedido.Listo && pedido.Estado != EstadoPedido.Despachado)
+            {
+                try
+                {
+                    pedido.MarcarListo();
+                    await _uot.GuardarCambiosAsync(ct);
+                    await _notificador.NotificarEstadoCambiadoAsync(pedido.Id, pedido.Estado, ct);
+                }
+                catch
+                {
+                    // Si el pedido no está en estado que permita Listo, ignorar
+                }
+            }
+        }
+
         return MapToDto(orden);
     }
 

@@ -13,4 +13,5 @@ public interface IPedidoRepositorio
     Task<List<Pedido>> ObtenerPorMesaAsync(Guid mesaId, CancellationToken cancelacion = default);
     Task<Pedido?> ObtenerConCuentasParaActualizarAsync(Guid id, CancellationToken cancelacion = default);
     Task<int> ContarCanceladosDelDiaAsync(DateOnly fecha, CancellationToken cancelacion = default);
+    Task<int> ContarDelDiaAsync(DateOnly fecha, CancellationToken cancelacion = default);
 }

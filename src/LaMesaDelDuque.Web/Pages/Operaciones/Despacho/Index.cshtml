@@ -1,0 +1,80 @@
+@page
+@model LaMesaDelDuque.Web.Pages.Operaciones.Despacho.IndexModel
+@{
+    ViewData["Title"] = "Despacho";
+    ViewData["ActiveTab"] = "Despacho";
+}
+
+<section class="lmd-page-header rounded-top"><h1>Despacho</h1></section>
+
+<section class="bg-white p-0 rounded-bottom">
+    <div class="lmd-toast-zone px-3 pt-3">
+        @if (!string.IsNullOrWhiteSpace(Model.ToastSuccess))
+        {
+            <div class="alert alert-success alert-dismissible fade show py-2 mb-2" role="status">@Model.ToastSuccess<button type="button" class="btn-close" aria-label="Cerrar"></button></div>
+        }
+        @if (!string.IsNullOrWhiteSpace(Model.ToastError))
+        {
+            <div class="alert alert-danger alert-dismissible fade show py-2 mb-2" role="alert">@Model.ToastError<button type="button" class="btn-close" aria-label="Cerrar"></button></div>
+        }
+    </div>
+
+    @if (Model.PedidosListos.Count == 0)
+    {
+        <div class="text-center py-5 text-muted">
+            <i class="bi bi-check-circle" style="font-size:3rem"></i>
+            <p class="mt-3 fs-5">No hay pedidos listos para despachar.</p>
+            <p class="small">Los pedidos aparecerán aquí cuando la cocina los marque como listos.</p>
+        </div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table table-striped mb-0">
+                <thead>
+                    <tr>
+                        <th>Mesa</th>
+                        <th>Tipo</th>
+                        <th>Items</th>
+                        <th class="text-end">Total</th>
+                        <th class="text-end">Acción</th>
+                    </tr>
+                </thead>
+                <tbody>
+                @foreach (var pedido in Model.PedidosListos)
+                {
+                    <tr>
+                        <td>
+                            @if (pedido.MesaNumero.HasValue)
+                            {
+                                <span class="badge bg-primary fs-6">Mesa @pedido.MesaNumero</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-info fs-6">Para llevar</span>
+                            }
+                        </td>
+                        <td>@pedido.TipoServicio</td>
+                        <td>
+                            @foreach (var d in pedido.Detalles)
+                            {
+                                <div>@d.Cantidad× @d.ProductoNombre</div>
+                            }
+                        </td>
+                        <td class="text-end fw-bold">@pedido.Total.ToString("C")</td>
+                        <td class="text-end">
+                            <form method="post" asp-page-handler="Despachar">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="pedidoId" value="@pedido.Id" />
+                                <button type="submit" class="btn btn-sm lmd-action-success">
+                                    <i class="bi bi-check-lg"></i> Despachar
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    }
+</section>

@@ -49,6 +49,14 @@ internal class OrdenCocinaRepositorio : IOrdenCocinaRepositorio
         await _contexto.Set<OrdenCocina>().AddAsync(orden, cancelacion);
     }
 
+    public async Task<List<OrdenCocina>> ListarPorPedidoAsync(Guid pedidoId, CancellationToken cancelacion = default)
+    {
+        return await _contexto.Set<OrdenCocina>()
+            .AsNoTracking()
+            .Where(o => o.PedidoId == pedidoId)
+            .ToListAsync(cancelacion);
+    }
+
     public void Eliminar(OrdenCocina orden)
     {
         _contexto.Set<OrdenCocina>().Remove(orden);

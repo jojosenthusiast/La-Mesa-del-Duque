@@ -31,6 +31,10 @@ public class IndexModel : PageModel
         if (esAdmin || esEncargado || esMesero)
             modulos.Add(new("Mesas", "/Operaciones/Mesas/Index", "Gestión visual del salón y estados."));
 
+        // Despacho: Admin, Encargado, Mesero
+        if (esAdmin || esEncargado || esMesero)
+            modulos.Add(new("Despacho", "/Operaciones/Despacho/Index", "Pedidos listos para entregar y liberar mesas."));
+
         // Productos: Admin, Encargado
         if (esAdmin || esEncargado)
             modulos.Add(new("Productos", "/Operaciones/Productos/Index", "Catálogo y recetas del menú."));

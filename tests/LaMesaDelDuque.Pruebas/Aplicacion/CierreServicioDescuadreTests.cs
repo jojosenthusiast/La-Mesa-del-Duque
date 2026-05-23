@@ -6,6 +6,7 @@ using LaMesaDelDuque.Infraestructura.Persistencia;
 using LaMesaDelDuque.Infraestructura.Repositorios;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using System;
 
 namespace LaMesaDelDuque.Pruebas.Aplicacion;
 
@@ -66,19 +67,20 @@ public sealed class CierreServicioDescuadreTests : IDisposable
     }
 
     [Fact]
-    public async Task CerrarDia_ConDescuadreYSinObservacion_DebePermitir()
+    public async Task CerrarDia_ConDescuadreYSinObservacion_DebeLanzarExcepcion()
     {
         var usuario = await CrearUsuarioAsync();
         await _servicio.AbrirCierreAsync(usuario.Id);
 
-        var dto = await _servicio.CerrarDiaAsync(new CierreCajaRequest
-        {
-            EfectivoReal = 900m,
-            TarjetaReal = 0m,
-            Observacion = ""
-        }, usuario.Id);
+        var ex = await Assert.ThrowsAsync<ReglaDominioException>(() =>
+            _servicio.CerrarDiaAsync(new CierreCajaRequest
+            {
+                EfectivoReal = 900m,
+                TarjetaReal = 0m,
+                Observacion = ""
+            }, usuario.Id));
 
-        Assert.True(dto.EsCerrado);
+        Assert.Contains("observacion", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

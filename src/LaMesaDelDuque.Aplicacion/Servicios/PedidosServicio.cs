@@ -93,6 +93,16 @@ internal class PedidosServicio : IPedidosServicio
         await _notificadorPedidos.NotificarEstadoCambiadoAsync(pedido.Id, pedido.Estado, cancelacion);
     }
 
+    public async Task MarcarListoAsync(Guid pedidoId, CancellationToken cancelacion = default)
+    {
+        var pedido = await _uot.Pedidos.ObtenerConDetallesParaActualizarAsync(pedidoId, cancelacion)
+            ?? throw new ArgumentException($"No se encontró el pedido con ID {pedidoId}.", nameof(pedidoId));
+
+        pedido.MarcarListo();
+        await _uot.GuardarCambiosAsync(cancelacion);
+        await _notificadorPedidos.NotificarEstadoCambiadoAsync(pedido.Id, pedido.Estado, cancelacion);
+    }
+
     public async Task PagarPedidoAsync(Guid pedidoId, CancellationToken cancelacion = default)
     {
         var pedido = await _uot.Pedidos.ObtenerConDetallesParaActualizarAsync(pedidoId, cancelacion)
@@ -227,6 +237,15 @@ internal class PedidosServicio : IPedidosServicio
         var pedidos = await _uot.Pedidos.ObtenerTodosAsync(cancelacion);
         return pedidos
             .Where(p => p.Estado == EstadoPedido.Pendiente || p.Estado == EstadoPedido.EnPreparacion)
+            .Select(MapToDto)
+            .ToList();
+    }
+
+    public async Task<List<PedidoDto>> ListarListosParaDespachoAsync(CancellationToken cancelacion = default)
+    {
+        var pedidos = await _uot.Pedidos.ObtenerTodosAsync(cancelacion);
+        return pedidos
+            .Where(p => p.Estado == EstadoPedido.Listo || p.Estado == EstadoPedido.Pagado)
             .Select(MapToDto)
             .ToList();
     }

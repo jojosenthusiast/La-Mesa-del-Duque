@@ -97,4 +97,13 @@ internal class PedidoRepositorio : IPedidoRepositorio
                      && p.CreatedAt >= inicio && p.CreatedAt < fin)
             .CountAsync(cancelacion);
     }
+
+    public async Task<int> ContarDelDiaAsync(DateOnly fecha, CancellationToken cancelacion = default)
+    {
+        var inicio = fecha.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+        var fin = inicio.AddDays(1);
+        return await _contexto.Set<Pedido>()
+            .Where(p => p.CreatedAt >= inicio && p.CreatedAt < fin)
+            .CountAsync(cancelacion);
+    }
 }
