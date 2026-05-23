@@ -46,6 +46,14 @@ internal class CierreDiaConfiguracion : IEntityTypeConfiguration<CierreDia>
             .HasDefaultValueSql("NOW()")
             .IsRequired();
 
+        constructor.Property(c => c.EfectivoReal).HasPrecision(12, 2).IsRequired().HasDefaultValue(0m);
+
+        constructor.Property(c => c.TarjetaReal).HasPrecision(12, 2).IsRequired().HasDefaultValue(0m);
+
+        constructor.Property(c => c.DiferenciaEfectivo).HasPrecision(12, 2).IsRequired().HasDefaultValue(0m);
+
+        constructor.Property(c => c.DiferenciaTarjeta).HasPrecision(12, 2).IsRequired().HasDefaultValue(0m);
+
         constructor.Property(c => c.EsCerrado)
             .IsRequired()
             .HasDefaultValue(false);

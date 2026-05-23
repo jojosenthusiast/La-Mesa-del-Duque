@@ -48,7 +48,7 @@
     <div class="table-responsive">
         <table class="table table-striped table-sm">
             <thead>
-                <tr><th>Fecha</th><th>Estado</th><th>Ventas</th><th>Efectivo</th><th>Tarjeta</th><th>Pedidos</th><th>Cancel.</th><th>Merma</th><th>Cerrado</th></tr>
+                <tr><th>Fecha</th><th>Estado</th><th>Ventas</th><th>Ef. Sistema</th><th>Ef. Real</th><th>Dif. Ef.</th><th>Tarj. Sistema</th><th>Tarj. Real</th><th>Dif. Tarj.</th><th>Pedidos</th><th>Cancel.</th><th>Merma</th><th>Hora cierre</th></tr>
             </thead>
             <tbody>
             @if (!Model.Historial.Any())
@@ -62,7 +62,11 @@
                     <td><span class="badge @(c.EsCerrado ? "bg-secondary" : "bg-success")">@(c.EsCerrado ? "Cerrado" : "Abierto")</span></td>
                     <td>@c.TotalVentas.ToString("C")</td>
                     <td>@c.TotalEfectivo.ToString("C")</td>
+                    <td>@c.EfectivoReal.ToString("C")</td>
+                    <td class="@(c.DiferenciaEfectivo < 0 ? "text-danger" : c.DiferenciaEfectivo > 0 ? "text-success" : "")">@c.DiferenciaEfectivo.ToString("C")</td>
                     <td>@c.TotalTarjeta.ToString("C")</td>
+                    <td>@c.TarjetaReal.ToString("C")</td>
+                    <td class="@(c.DiferenciaTarjeta < 0 ? "text-danger" : c.DiferenciaTarjeta > 0 ? "text-success" : "")">@c.DiferenciaTarjeta.ToString("C")</td>
                     <td>@c.TotalPedidos</td>
                     <td>@c.Cancelados</td>
                     <td>@c.TotalMerma.ToString("C")</td>

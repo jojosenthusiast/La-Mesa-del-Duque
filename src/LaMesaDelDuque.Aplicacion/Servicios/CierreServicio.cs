@@ -65,9 +65,9 @@ public class CierreServicio : ICierreServicio
         // Aproximación pragmática: contar desde cuentas con pagos del día
         var cuentaIds = pagosHoy.Select(p => p.CuentaId).Distinct().ToList();
         var totalPedidos = cuentaIds.Count;
-        var totalCancelados = 0; // Sin fecha en Pedido no podemos filtrar cancelados por día aún
+        var totalCancelados = await _uot.Pedidos.ContarCanceladosDelDiaAsync(hoy, ct);
 
-        cierre.Cerrar(totalVentas, totalEfectivo, totalTarjeta, totalPedidos, totalCancelados, totalMerma);
+        cierre.Cerrar(totalVentas, totalEfectivo, totalTarjeta, totalPedidos, totalCancelados, totalMerma, req.EfectivoReal, req.TarjetaReal);
         await _uot.GuardarCambiosAsync(ct);
         return Map(cierre);
     }
@@ -88,6 +88,10 @@ public class CierreServicio : ICierreServicio
         TotalPedidos = c.TotalPedidos,
         Cancelados = c.TotalPedidosCancelados,
         TotalMerma = c.TotalMermaValorizada,
+        EfectivoReal = c.EfectivoReal,
+        TarjetaReal = c.TarjetaReal,
+        DiferenciaEfectivo = c.DiferenciaEfectivo,
+        DiferenciaTarjeta = c.DiferenciaTarjeta,
         EsCerrado = c.EsCerrado,
         CerradoEn = c.CerradoEn
     };
@@ -103,6 +107,10 @@ public class CierreDiaDto
     public int TotalPedidos { get; set; }
     public int Cancelados { get; set; }
     public decimal TotalMerma { get; set; }
+    public decimal EfectivoReal { get; set; }
+    public decimal TarjetaReal { get; set; }
+    public decimal DiferenciaEfectivo { get; set; }
+    public decimal DiferenciaTarjeta { get; set; }
     public bool EsCerrado { get; set; }
     public DateTime? CerradoEn { get; set; }
 }

@@ -12,6 +12,7 @@ public class Pedido
     public TipoServicio TipoServicio { get; private set; }
     public Mesa? Mesa { get; private set; }
     public EstadoPedido Estado { get; private set; }
+    public DateTime CreatedAt { get; private set; }
     public IReadOnlyList<DetallePedido> Detalles => _detalles.AsReadOnly();
     public IReadOnlyList<Cuenta> Cuentas => _cuentas.AsReadOnly();
     public decimal Total => _detalles.Sum(d => d.Subtotal);
@@ -30,6 +31,7 @@ public class Pedido
         TipoServicio = tipoServicio;
         Mesa = mesa;
         Estado = EstadoPedido.Pendiente;
+        CreatedAt = DateTime.UtcNow;
     }
 
     public void MarcarEnPreparacion()

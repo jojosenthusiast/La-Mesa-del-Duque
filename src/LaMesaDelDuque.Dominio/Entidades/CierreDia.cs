@@ -15,6 +15,10 @@ public class CierreDia
     public string? ResumenJson { get; private set; }
     public Guid UsuarioId { get; private set; }
     public Usuario Usuario { get; private set; }
+    public decimal EfectivoReal { get; private set; }
+    public decimal TarjetaReal { get; private set; }
+    public decimal DiferenciaEfectivo { get; private set; }
+    public decimal DiferenciaTarjeta { get; private set; }
     public bool EsCerrado { get; private set; }
     public DateTime? CerradoEn { get; private set; }
     public DateTime CreatedAt { get; private set; }
@@ -77,13 +81,16 @@ public class CierreDia
         decimal totalVentasTarjeta,
         int totalPedidos,
         int totalPedidosCancelados,
-        decimal totalMermaValorizada)
+        decimal totalMermaValorizada,
+        decimal efectivoReal,
+        decimal tarjetaReal)
     {
         if (EsCerrado)
             throw new ReglaDominioException("El cierre de día ya fue cerrado.");
 
         if (totalVentas < 0 || totalVentasEfectivo < 0 || totalVentasTarjeta < 0
-            || totalPedidos < 0 || totalPedidosCancelados < 0 || totalMermaValorizada < 0)
+            || totalPedidos < 0 || totalPedidosCancelados < 0 || totalMermaValorizada < 0
+            || efectivoReal < 0 || tarjetaReal < 0)
             throw new ReglaDominioException("Los totales no pueden ser negativos.");
 
         TotalVentas = totalVentas;
@@ -92,6 +99,10 @@ public class CierreDia
         TotalPedidos = totalPedidos;
         TotalPedidosCancelados = totalPedidosCancelados;
         TotalMermaValorizada = totalMermaValorizada;
+        EfectivoReal = efectivoReal;
+        TarjetaReal = tarjetaReal;
+        DiferenciaEfectivo = efectivoReal - totalVentasEfectivo;
+        DiferenciaTarjeta = tarjetaReal - totalVentasTarjeta;
         EsCerrado = true;
         CerradoEn = DateTime.UtcNow;
     }

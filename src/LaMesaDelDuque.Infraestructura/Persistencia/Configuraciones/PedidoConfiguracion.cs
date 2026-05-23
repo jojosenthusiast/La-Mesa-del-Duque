@@ -15,6 +15,11 @@ internal class PedidoConfiguracion : IEntityTypeConfiguration<Pedido>
             .HasMaxLength(20)
             .IsRequired();
 
+        constructor.Property(p => p.CreatedAt)
+            .HasColumnType("timestamp with time zone")
+            .HasDefaultValueSql("NOW()")
+            .IsRequired();
+
         constructor.Property(p => p.Estado)
             .HasConversion<string>()
             .HasMaxLength(30)
