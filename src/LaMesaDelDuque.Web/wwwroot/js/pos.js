@@ -66,9 +66,9 @@
                 '<div class="lmd-pos-seleccion__header">' + icon('utensils-crossed', '') + ' Comer aquí</div>' +
                 '<div class="lmd-pos-mesas-grid">' + (mesasHtml || '<div class="text-muted p-3">No hay mesas disponibles</div>') + '</div>' +
             '</div>' +
-            '<div class="lmd-pos-seleccion__mitad lmd-pos-seleccion__para-llevar" onclick="pos.seleccionarParaLlevar()">' +
+            '<div class="lmd-pos-seleccion__mitad lmd-pos-seleccion__para-llevar" onclick="pos.seleccionarParaLlevar()" style="cursor:pointer">' +
                 '<div class="lmd-pos-seleccion__header">' + icon('package', '') + ' Para llevar</div>' +
-                '<div class="lmd-pos-para-llevar-card">' +
+                '<div class="lmd-pos-para-llevar-card" style="height:100%;display:flex;align-items:center;justify-content:center;flex-direction:column">' +
                     icon('shopping-bag', '') +
                     '<div class="lmd-pos-para-llevar-card__titulo">Para llevar</div>' +
                     '<div class="lmd-pos-para-llevar-card__sub">Tocar para iniciar orden sin mesa</div>' +
