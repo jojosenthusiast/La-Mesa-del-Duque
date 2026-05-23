@@ -309,7 +309,7 @@
     }
 
     function mostrarKeypad(total) {
-        var digitos = '';
+        keypadValue = '0';
         var html = '<div class="lmd-pos-keypad" id="lmd-pos-keypad">' +
             '<div class="lmd-pos-keypad__panel">' +
                 '<div class="text-center mb-2"><strong>Total: ' + formatMoney(total) + '</strong></div>' +
@@ -339,7 +339,7 @@
         var recibido = parseFloat(keypadValue || '0');
         if (recibido < total) { lmdToast('Monto insuficiente', 'error'); return; }
         document.getElementById('lmd-pos-keypad').remove();
-        lmdToast('Cambio: ' + formatMoney(recibido - total), 'success');
+        state.pagoMonto = recibido;
         finalizarPago();
     }
 
@@ -351,13 +351,21 @@
             var form = new FormData();
             form.append('__RequestVerificationToken', csrf ? csrf.value : '');
             form.append('pedidoId', state.pedidoActual.id);
+            form.append('metodoPago', state.pagoMetodo || 'efectivo');
+            if (state.pagoMonto != null) form.append('monto', state.pagoMonto.toString());
+            if (state.pagoReferencia) form.append('referencia', state.pagoReferencia);
             try {
                 var res = await fetch('?handler=PagarJson', { method: 'POST', body: form, headers: { 'X-Requested-With': 'XMLHttpRequest' } });
-                if (!res.ok) { lmdToast('Error al procesar pago', 'error'); return; }
-            } catch(e) { lmdToast('Error de conexión', 'error'); return; }
+                var data = await res.json().catch(function() { return null; });
+                if (!res.ok) {
+                    state.puedeVolver = true;
+                    lmdToast(data && data.error ? data.error : 'Error al procesar pago', 'error');
+                    return;
+                }
+                lmdToast(data && data.mensaje ? data.mensaje : 'Pago procesado', 'success');
+            } catch(e) { state.puedeVolver = true; lmdToast('Error de conexión', 'error'); return; }
         }
 
-        lmdToast('Pago procesado', 'success');
         renderDocumentos();
         mostrarPantalla('documentos');
     }
@@ -409,7 +417,7 @@
         }
     }
 
-    function nuevaOrden() {
+    async function nuevaOrden() {
         state.tipoServicio = null;
         state.mesaId = null;
         state.mesaNumero = null;
@@ -419,6 +427,8 @@
         state.pagoMonto = null;
         state.pagoReferencia = null;
         state.puedeVolver = true;
+        keypadValue = '0';
+        await refrescarMesas();
         renderSeleccion();
         mostrarPantalla('seleccion');
     }
@@ -506,6 +516,33 @@
     }
 
     // ── Init ────────────────────────────────────────────
+    async function initSignalR() {
+        if (typeof signalR === 'undefined') return;
+        try {
+            connection = new signalR.HubConnectionBuilder()
+                .withUrl('/hubs/pedidos')
+                .withAutomaticReconnect()
+                .build();
+            connection.on('EstadoCambiado', function(pedidoId, nuevoEstado) {
+                if (nuevoEstado === 'Pagado' || nuevoEstado === 'Despachado') {
+                    refrescarMesas();
+                }
+            });
+            connection.on('PedidoCreado', function() { refrescarMesas(); });
+            await connection.start();
+        } catch(e) { /* SignalR no disponible — modo offline */ }
+    }
+
+    async function refrescarMesas() {
+        try {
+            var res = await fetch('?handler=MesasJson', { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+            if (res.ok) {
+                var data = await res.json();
+                if (data && data.mesas) window.__lmdMesasDisponibles = data.mesas;
+            }
+        } catch(e) {}
+    }
+
     window.pos = {
         seleccionarMesa: seleccionarMesa,
         seleccionarParaLlevar: seleccionarParaLlevar,
@@ -530,5 +567,6 @@
 
     document.addEventListener('DOMContentLoaded', function () {
         renderSeleccion();
+        initSignalR();
     });
 })();

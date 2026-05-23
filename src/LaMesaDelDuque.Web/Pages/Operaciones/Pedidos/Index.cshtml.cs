@@ -329,22 +329,29 @@ public class IndexModel : PageModel
         catch (Exception ex) { return BadRequest(ErrorSeguro(ex)); }
     }
 
-    public async Task<IActionResult> OnPostPagarJsonAsync(Guid pedidoId)
+    public async Task<IActionResult> OnPostPagarJsonAsync(Guid pedidoId, string? metodoPago = null, decimal? monto = null, string? referencia = null)
     {
         try
         {
             if (pedidoId == Guid.Empty)
-                return BadRequest("ID de pedido inválido.");
+                return BadRequest(ErrorSeguro(new ArgumentException("ID de pedido inválido.")));
 
             var pedidos = await _pedidosServicio.ListarPedidosActivosAsync();
             var pedido = pedidos.FirstOrDefault(p => p.Id == pedidoId)
                 ?? throw new ArgumentException("Pedido no encontrado o no está activo.");
 
             if (pedido.Estado is "Cancelado" or "Pagado" or "Despachado")
-                return BadRequest($"El pedido ya fue {pedido.Estado.ToLower()}.");
+                return BadRequest(ErrorSeguro(new InvalidOperationException($"El pedido ya fue {pedido.Estado.ToLower()}.")));
+
+            // Validar monto para efectivo
+            var metodo = metodoPago?.ToLower() ?? "efectivo";
+            if (metodo == "efectivo" && monto.HasValue && monto.Value < pedido.Total)
+                return BadRequest(ErrorSeguro(new ArgumentException($"Faltan ${pedido.Total - monto.Value:F2}")));
 
             await _pedidosServicio.PagarPedidoAsync(pedidoId);
-            return new JsonResult(new { ok = true, mensaje = "Pedido pagado correctamente." });
+
+            var cambio = monto.HasValue && metodo == "efectivo" ? monto.Value - pedido.Total : 0;
+            return new JsonResult(new { ok = true, mensaje = cambio > 0 ? $"Pedido pagado. Cambio: ${cambio:F2}" : "Pedido pagado correctamente." });
         }
         catch (Exception ex) { return BadRequest(ErrorSeguro(ex)); }
     }
@@ -431,6 +438,18 @@ public class IndexModel : PageModel
         {
             var html = await _ticketServicio.GenerarHtmlTicketAsync(pedidoId);
             return new JsonResult(new { ok = true, html });
+        }
+        catch (Exception ex) { return BadRequest(ErrorSeguro(ex)); }
+    }
+
+    // ── Mesas (JSON para refresco SPA) ─────────────────────
+    public async Task<IActionResult> OnGetMesasJsonAsync()
+    {
+        try
+        {
+            var mesas = await _mesasServicio.ListarMesasAsync();
+            var data = mesas.Where(m => m.Activa).Select(m => new { m.Id, m.Numero, m.Capacidad, m.Estado, Zona = m.Capacidad <= 2 ? "Pequeña" : m.Capacidad <= 4 ? "Mediana" : "Grande" });
+            return new JsonResult(new { mesas = data });
         }
         catch (Exception ex) { return BadRequest(ErrorSeguro(ex)); }
     }
