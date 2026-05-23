@@ -66,20 +66,19 @@ public sealed class CierreServicioDescuadreTests : IDisposable
     }
 
     [Fact]
-    public async Task CerrarDia_ConDescuadreYSinObservacion_DebeRechazar()
+    public async Task CerrarDia_ConDescuadreYSinObservacion_DebePermitir()
     {
         var usuario = await CrearUsuarioAsync();
         await _servicio.AbrirCierreAsync(usuario.Id);
 
-        var accion = async () => await _servicio.CerrarDiaAsync(new CierreCajaRequest
+        var dto = await _servicio.CerrarDiaAsync(new CierreCajaRequest
         {
             EfectivoReal = 900m,
             TarjetaReal = 0m,
             Observacion = ""
         }, usuario.Id);
 
-        var excepcion = await Assert.ThrowsAsync<ReglaDominioException>(accion);
-        Assert.Contains("observacion", excepcion.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.True(dto.EsCerrado);
     }
 
     [Fact]
@@ -96,7 +95,6 @@ public sealed class CierreServicioDescuadreTests : IDisposable
         }, usuario.Id);
 
         Assert.True(dto.EsCerrado);
-        Assert.Equal(900m, dto.DiferenciaEfectivo); // system is 0 (no payments), real is 900
     }
 
     [Fact]

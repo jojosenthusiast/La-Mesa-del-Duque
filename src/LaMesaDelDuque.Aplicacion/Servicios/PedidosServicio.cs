@@ -103,6 +103,13 @@ internal class PedidosServicio : IPedidosServicio
         await DescontarStockAsync(pedido, cancelacion);
         await _uot.GuardarCambiosAsync(cancelacion);
         await _notificadorPedidos.NotificarEstadoCambiadoAsync(pedido.Id, pedido.Estado, cancelacion);
+
+        // Enviar directo a cocina al pagar
+        if (_cocinaServicio is not null && pedido.Detalles.Count > 0)
+        {
+            try { await _cocinaServicio.GenerarOrdenesAsync(pedido.Id, cancelacion); }
+            catch { /* cocina no debería bloquear el pago */ }
+        }
     }
 
     private async Task ValidarStockSuficienteAsync(Pedido pedido, CancellationToken ct)

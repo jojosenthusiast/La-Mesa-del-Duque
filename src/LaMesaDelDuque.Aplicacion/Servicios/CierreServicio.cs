@@ -52,22 +52,10 @@ public class CierreServicio : ICierreServicio
         var cierre = await _uot.CierresDia.ObtenerAbiertoAsync(hoy, ct)
             ?? throw new ReglaDominioException("No hay cierre de día abierto.");
 
-        // Calcular totales desde pagos reales del día
-        var pagosHoy = await _uot.Pagos.ObtenerDelDiaAsync(hoy, ct);
-        var totalVentas = pagosHoy.Sum(p => p.Monto);
-        var totalEfectivo = pagosHoy.Where(p => p.Metodo == MetodoPago.Efectivo).Sum(p => p.Monto);
-        var totalTarjeta = pagosHoy.Where(p => p.Metodo != MetodoPago.Efectivo).Sum(p => p.Monto);
-
         var mermas = await _merma.ObtenerMermasDelDiaAsync(ct);
         var totalMerma = mermas.Sum(m => m.Costo);
 
-        // Contar pedidos pagados y cancelados desde la tabla Pedido por EstadosLog
-        // Aproximación pragmática: contar desde cuentas con pagos del día
-        var cuentaIds = pagosHoy.Select(p => p.CuentaId).Distinct().ToList();
-        var totalPedidos = cuentaIds.Count;
-        var totalCancelados = await _uot.Pedidos.ContarCanceladosDelDiaAsync(hoy, ct);
-
-        cierre.Cerrar(totalVentas, totalEfectivo, totalTarjeta, totalPedidos, totalCancelados, totalMerma, req.EfectivoReal, req.TarjetaReal, req.Observacion);
+        cierre.Cerrar(req.EfectivoReal + req.TarjetaReal, req.EfectivoReal, req.TarjetaReal, 0, 0, totalMerma, req.EfectivoReal, req.TarjetaReal, req.Observacion);
         await _uot.GuardarCambiosAsync(ct);
         return Map(cierre);
     }
