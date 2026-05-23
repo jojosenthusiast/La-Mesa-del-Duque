@@ -436,16 +436,16 @@
                         <label style="display:block;font-weight:700;font-size:0.8125rem;margin-bottom:0.5rem;color:#0F1B2D;">Alérgenos</label>
                         <div style="display:flex;flex-wrap:wrap;gap:0.5rem;">
                             <label style="display:flex;align-items:center;gap:0.35rem;font-size:0.875rem;cursor:pointer;padding:0.35rem 0.6rem;border:1px solid rgba(15,27,45,0.12);border-radius:0.5rem;">
-                                <input type="checkbox" value="maní" data-alergeno /> 🥜 Maní
+                                <input type="checkbox" value="maní" data-alergeno /> <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><use href="https://cdn.jsdelivr.net/npm/lucide-static@latest/icons/alert-triangle.svg#icon"/></svg> Maní
                             </label>
-                            <label style="display:flex;align-items:center;gap:0.35rem;font-size:0.875rem;cursor:pointer;padding:0.35rem 0.6rem;border:1px solid rgba(15,27,45,0.12);border-radius:0.5rem;">
-                                <input type="checkbox" value="lácteos" data-alergeno /> 🥛 Lácteos
+                            <label style="display:flex;align-items:center;gap:4px;padding:2px 0">
+                                <input type="checkbox" value="lácteos" data-alergeno /> <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><use href="https://cdn.jsdelivr.net/npm/lucide-static@latest/icons/alert-triangle.svg#icon"/></svg> Lácteos
                             </label>
-                            <label style="display:flex;align-items:center;gap:0.35rem;font-size:0.875rem;cursor:pointer;padding:0.35rem 0.6rem;border:1px solid rgba(15,27,45,0.12);border-radius:0.5rem;">
-                                <input type="checkbox" value="gluten" data-alergeno /> 🌾 Gluten
+                            <label style="display:flex;align-items:center;gap:4px;padding:2px 0">
+                                <input type="checkbox" value="gluten" data-alergeno /> <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><use href="https://cdn.jsdelivr.net/npm/lucide-static@latest/icons/alert-triangle.svg#icon"/></svg> Gluten
                             </label>
-                            <label style="display:flex;align-items:center;gap:0.35rem;font-size:0.875rem;cursor:pointer;padding:0.35rem 0.6rem;border:1px solid rgba(15,27,45,0.12);border-radius:0.5rem;">
-                                <input type="checkbox" value="mariscos" data-alergeno /> 🦐 Mariscos
+                            <label style="display:flex;align-items:center;gap:4px;padding:2px 0">
+                                <input type="checkbox" value="mariscos" data-alergeno /> <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><use href="https://cdn.jsdelivr.net/npm/lucide-static@latest/icons/alert-triangle.svg#icon"/></svg> Mariscos
                             </label>
                         </div>
                     </div>
@@ -507,9 +507,9 @@
         const cursoHtml = `
             <div class="lmd-modificador-curso">
                 <span>Curso:</span>
-                <button class="${modificadores.curso === 'Entrada' ? 'activo' : ''}" onclick="pos.setCurso('Entrada')">🥗 Entrada</button>
-                <button class="${modificadores.curso === 'PlatoFuerte' ? 'activo' : ''}" onclick="pos.setCurso('PlatoFuerte')">🍖 Plato fuerte</button>
-                <button class="${modificadores.curso === 'Postre' ? 'activo' : ''}" onclick="pos.setCurso('Postre')">🍰 Postre</button>
+                <button class="${modificadores.curso === 'Entrada' ? 'activo' : ''}" onclick="pos.setCurso('Entrada')"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><use href="https://cdn.jsdelivr.net/npm/lucide-static@latest/icons/salad.svg#icon"/></svg> Entrada</button>
+                <button class="${modificadores.curso === 'PlatoFuerte' ? 'activo' : ''}" onclick="pos.setCurso('PlatoFuerte')"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><use href="https://cdn.jsdelivr.net/npm/lucide-static@latest/icons/utensils.svg#icon"/></svg> Plato fuerte</button>
+                <button class="${modificadores.curso === 'Postre' ? 'activo' : ''}" onclick="pos.setCurso('Postre')"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><use href="https://cdn.jsdelivr.net/npm/lucide-static@latest/icons/dessert.svg#icon"/></svg> Postre</button>
             </div>
         `;
 
@@ -521,7 +521,7 @@
                 <div class="lmd-modificador-item-controles">
                     <button class="lmd-modificador-item-quitar ${ing.quitado ? 'activo' : ''}"
                             onclick="pos.toggleQuitar('${ing.id}')">
-                        ${ing.quitado ? '✓ Quitado' : 'Quitar'}
+                         ${ing.quitado ? '<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><use href="https://cdn.jsdelivr.net/npm/lucide-static@latest/icons/check.svg#icon"/></svg> Quitado' : 'Quitar'}
                     </button>
                     ${ing.quitado ? `
                         <select class="lmd-modificador-item-motivo" onchange="pos.setMotivo('${ing.id}', this.value)">
@@ -537,7 +537,7 @@
 
         const extrasHtml = modificadores.extras.map((extra, idx) => `
             <span class="lmd-modificador-extra-tag">${extra}
-                <button onclick="pos.quitarExtra(${idx})">✕</button>
+                <button onclick="pos.quitarExtra(${idx})"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><use href="https://cdn.jsdelivr.net/npm/lucide-static@latest/icons/x.svg#icon"/></svg></button>
             </span>
         `).join('');
 
@@ -545,7 +545,7 @@
             <div class="lmd-modificador-modal">
                 <div class="lmd-modificador-header">
                     <h3>${modificadores.productoNombre}</h3>
-                    <button class="lmd-modificador-cerrar" onclick="pos.cerrarModificadores()">✕</button>
+                    <button class="lmd-modificador-cerrar" onclick="pos.cerrarModificadores()"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><use href="https://cdn.jsdelivr.net/npm/lucide-static@latest/icons/x.svg#icon"/></svg></button>
                 </div>
 
                 ${cursoHtml}
@@ -574,7 +574,7 @@
                         <button class="lmd-modificador-extra-btn" onclick="pos.agregarExtra('Aguacate')">Aguacate</button>
                     </div>
                     <div class="lmd-modificador-extra-lista">${extrasHtml}</div>
-                    <button class="lmd-modificador-nota-btn" onclick="pos.agregarNotaPersonalizada()">📝 Nota personalizada...</button>
+                    <button class="lmd-modificador-nota-btn" onclick="pos.agregarNotaPersonalizada()"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><use href="https://cdn.jsdelivr.net/npm/lucide-static@latest/icons/file-text.svg#icon"/></svg> Nota personalizada...</button>
                     ${modificadores.notaCustom ? `<p class="lmd-modificador-nota-texto">${modificadores.notaCustom}</p>` : ''}
                 </div>
 
@@ -609,7 +609,7 @@
                     <button class="lmd-pos-tipo-btn ${state.tipoServicio === 'ComerAqui' ? 'lmd-pos-tipo-btn--activo' : ''}"
                             onclick="pos.cambiarTipo('ComerAqui')">🍽 Comer aquí</button>
                     <button class="lmd-pos-tipo-btn ${state.tipoServicio === 'ParaLlevar' ? 'lmd-pos-tipo-btn--activo' : ''}"
-                            onclick="pos.cambiarTipo('ParaLlevar')">🛍 Para llevar</button>
+                            onclick="pos.cambiarTipo('ParaLlevar')"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><use href="https://cdn.jsdelivr.net/npm/lucide-static@latest/icons/package.svg#icon"/></svg> Para llevar</button>
                 </div>
                 ${state.tipoServicio === 'ComerAqui' ? `
                 <div class="lmd-pos-mesas-grid">
@@ -655,7 +655,7 @@
                     </button>
                     <button class="lmd-pos-producto-card__editar" onclick="event.stopPropagation(); pos.abrirModificadores('${p.id}')"
                             title="Modificar ingredientes">
-                        ✏️ Modificar
+                        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><use href="https://cdn.jsdelivr.net/npm/lucide-static@latest/icons/edit-3.svg#icon"/></svg> Modificar
                     </button>
                 </div>`).join('')
         ).join('');
@@ -672,7 +672,7 @@
                     <span class="lmd-pos-linea__cantidad">${l.cantidad}</span>
                     <button class="lmd-pos-linea__qty" onclick="pos.cambiarCantidad('${l.id}', ${l.cantidad + 1})">+</button>
                     <span class="lmd-pos-linea__subtotal">${formatMoney(l.subtotal)}</span>
-                    <button class="lmd-pos-linea__eliminar" onclick="pos.eliminarLinea('${l.id}')" title="Quitar">✕</button>
+                    <button class="lmd-pos-linea__eliminar" onclick="pos.eliminarLinea('${l.id}')" title="Quitar"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><use href="https://cdn.jsdelivr.net/npm/lucide-static@latest/icons/x.svg#icon"/></svg></button>
                 </div>
             </div>`).join('');
 
