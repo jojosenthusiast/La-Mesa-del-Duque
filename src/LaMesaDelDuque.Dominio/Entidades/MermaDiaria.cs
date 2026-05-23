@@ -1,3 +1,4 @@
+using LaMesaDelDuque.Dominio.Enumeraciones;
 using LaMesaDelDuque.Dominio.Excepciones;
 
 namespace LaMesaDelDuque.Dominio.Entidades;
@@ -16,6 +17,8 @@ public class MermaDiaria
     public Guid UsuarioId { get; private set; }
     public Usuario Usuario { get; private set; }
     public string? Notas { get; private set; }
+    public TipoMerma Tipo { get; private set; }
+    public string? Lote { get; private set; }
     public DateTime CreatedAt { get; private set; }
 
     private MermaDiaria()
@@ -30,8 +33,10 @@ public class MermaDiaria
         Ingrediente ingrediente,
         decimal cantidadDescartada,
         Usuario usuario,
+        TipoMerma tipo = TipoMerma.Otro,
         decimal costoEstimado = 0,
-        string? notas = null)
+        string? notas = null,
+        string? lote = null)
     {
         if (cierreDia is null)
             throw new ReglaDominioException("El cierre de día es obligatorio para la merma.");
@@ -61,6 +66,8 @@ public class MermaDiaria
         Usuario = usuario;
         UsuarioId = usuario.Id;
         Notas = string.IsNullOrWhiteSpace(notas) ? null : notas.Trim();
+        Tipo = tipo;
+        Lote = string.IsNullOrWhiteSpace(lote) ? null : lote.Trim();
         CreatedAt = DateTime.UtcNow;
     }
 }
