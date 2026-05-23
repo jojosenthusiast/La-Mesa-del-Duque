@@ -24,6 +24,14 @@ internal class RecetaProductoRepositorio : IRecetaProductoRepositorio
             .FirstOrDefaultAsync(x => x.ProductoId == productoId, cancelacion);
     }
 
+    public async Task<List<RecetaProducto>> ObtenerPorIngredienteAsync(Guid ingredienteId, CancellationToken cancelacion = default) =>
+        await _contexto.Set<RecetaProducto>()
+            .Include(r => r.Producto)
+            .Include(r => r.Ingredientes)
+                .ThenInclude(ri => ri.Ingrediente)
+            .Where(r => r.Ingredientes.Any(ri => ri.IngredienteId == ingredienteId))
+            .ToListAsync(cancelacion);
+
     public async Task AgregarAsync(RecetaProducto receta, CancellationToken cancelacion = default)
     {
         await _contexto.Set<RecetaProducto>().AddAsync(receta, cancelacion);

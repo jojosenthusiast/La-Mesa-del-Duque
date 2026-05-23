@@ -5,6 +5,10 @@
 }
 @Html.AntiForgeryToken()
 
+@section Styles {
+    <link rel="stylesheet" href="~/css/pos-ux.css" asp-append-version="true" />
+}
+
 <section class="lmd-page-header rounded-top">
     <div>
         <h1>Pedidos</h1>
@@ -18,7 +22,7 @@
 
 <script>
     window.__lmdMesasDisponibles = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
-        Model.Vm.MesasDisponibles.Where(m => m.Estado == "Disponible").Select(m => new { m.Id, m.Numero, m.Capacidad }),
+        Model.Vm.MesasDisponibles.Where(m => m.Estado == "Disponible").Select(m => new { m.Id, m.Numero, m.Capacidad, Zona = m.Capacidad <= 2 ? "Pequeña" : m.Capacidad <= 4 ? "Mediana" : "Grande" }),
         new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase }));
 
     window.__lmdProductosDisponibles = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(

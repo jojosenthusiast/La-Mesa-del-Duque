@@ -477,9 +477,8 @@ public class IndexModel : PageModel
             if (Vm.CrearPedido.Lineas.Count == 0)
                 Vm.CrearPedido.Lineas.Add(new LineaPedidoFormVm());
         }
-        catch (Exception ex)
+        catch
         {
-            // Si la BD no tiene las columnas nuevas (OcupadaDesde, etc), no crashear
             Vm.ProductosDisponibles = [];
             Vm.MesasDisponibles = [];
             Vm.PedidosActivos = [];

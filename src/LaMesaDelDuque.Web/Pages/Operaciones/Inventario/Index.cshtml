@@ -28,11 +28,11 @@
     </nav>
 
     <div class="lmd-inv-panel active" id="panel-ingredientes">
-        <table class="table table-striped"><thead><tr><th>Nombre</th><th>Stock</th><th>Min</th><th>Unidad</th><th>Costo U.</th><th>Proveedor</th></tr></thead>
+        <table class="table table-striped"><thead><tr><th>Nombre</th><th>Stock</th><th>Min</th><th>UnidadMedida</th><th>Costo U.</th><th>Proveedor</th></tr></thead>
         <tbody>
         @foreach(var i in Model.Ingredientes){
             var urg = i.StockActual <= i.StockMinimo ? "table-danger" : i.StockActual <= i.StockMinimo*1.5m ? "table-warning" : "";
-            <tr class="@urg"><td>@i.Nombre</td><td>@i.StockActual</td><td>@i.StockMinimo</td><td>@i.Unidad</td><td>@i.CostoUnitario.ToString("C")</td><td>@i.Proveedor</td></tr>
+            <tr class="@urg"><td>@i.Nombre</td><td>@i.StockActual</td><td>@i.StockMinimo</td><td>@i.UnidadMedida</td><td>@i.CostoUnitario.ToString("C")</td><td>@i.Proveedor</td></tr>
         }
         </tbody></table>
     </div>
@@ -57,7 +57,7 @@
                             <option value="">— Seleccionar —</option>
                             @foreach (var ing in Model.Ingredientes)
                             {
-                                <option value="@ing.Id">@ing.Nombre (@ing.Unidad)</option>
+                                <option value="@ing.Id">@ing.Nombre (@ing.UnidadMedida)</option>
                             }
                         </select>
                         <span class="text-danger small" asp-validation-for="MermaForm.IngredienteId"></span>
