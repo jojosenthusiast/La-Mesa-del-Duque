@@ -7,4 +7,10 @@ public class MesaDto
     public int Capacidad { get; set; }
     public string Estado { get; set; } = string.Empty;
     public bool Activa { get; set; }
+    public int? PosicionX { get; set; }
+    public int? PosicionY { get; set; }
+    public Guid? ZonaId { get; set; }
+    public string? Forma { get; set; }
+    public int? Rotacion { get; set; }
+    public DateTime? OcupadaDesde { get; set; }
 }

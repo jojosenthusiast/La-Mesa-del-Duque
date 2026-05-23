@@ -26,5 +26,8 @@ internal class MesaConfiguracion : IEntityTypeConfiguration<Mesa>
 
         constructor.Property(m => m.Activa)
             .IsRequired();
+
+        constructor.Property(m => m.OcupadaDesde)
+            .IsRequired(false);
     }
 }

@@ -16,6 +16,7 @@ public static class InyeccionAplicacion
         servicios.AddScoped<IAlertaStockServicio, AlertaStockServicio>();
         servicios.AddScoped<ITicketServicio, TicketServicio>();
         servicios.AddScoped<IAlergenoServicio, AlergenoServicio>();
+        servicios.AddScoped<ITableTimerServicio, TableTimerServicio>();
 
         return servicios;
     }

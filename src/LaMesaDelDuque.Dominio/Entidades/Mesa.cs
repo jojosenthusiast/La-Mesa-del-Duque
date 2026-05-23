@@ -10,6 +10,7 @@ public class Mesa
     public int Capacidad { get; private set; }
     public EstadoMesa Estado { get; private set; }
     public bool Activa { get; private set; }
+    public DateTime? OcupadaDesde { get; private set; }
 
     private Mesa()
     {
@@ -32,7 +33,23 @@ public class Mesa
 
     public void CambiarEstado(EstadoMesa nuevoEstado)
     {
+        if (nuevoEstado == EstadoMesa.Ocupada)
+            OcupadaDesde = DateTime.UtcNow;
+        else if (Estado == EstadoMesa.Ocupada && nuevoEstado != EstadoMesa.Ocupada)
+            OcupadaDesde = null;
         Estado = nuevoEstado;
+    }
+
+    public void Ocupar()
+    {
+        Estado = EstadoMesa.Ocupada;
+        OcupadaDesde = DateTime.UtcNow;
+    }
+
+    public void Liberar()
+    {
+        Estado = EstadoMesa.Disponible;
+        OcupadaDesde = null;
     }
 
     public void Desactivar()

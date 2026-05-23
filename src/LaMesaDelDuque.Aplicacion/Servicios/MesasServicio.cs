@@ -91,7 +91,8 @@ internal class MesasServicio : IMesasServicio
             Numero = mesa.Numero,
             Capacidad = mesa.Capacidad,
             Estado = mesa.Estado.ToString(),
-            Activa = mesa.Activa
+            Activa = mesa.Activa,
+            OcupadaDesde = mesa.OcupadaDesde
         };
     }
 }
