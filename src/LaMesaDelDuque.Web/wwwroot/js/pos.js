@@ -197,9 +197,30 @@
         renderProductos();
     }
 
-    function confirmarListo() {
+    async function confirmarListo() {
         if (state.lineas.length === 0) { lmdToast('Agregue productos primero.', 'error'); return; }
         state.puedeVolver = false;
+
+        // Crear pedido en servidor → va directo a cocina
+        var csrf = document.querySelector('input[name="__RequestVerificationToken"]');
+        var form = new FormData();
+        form.append('__RequestVerificationToken', csrf ? csrf.value : '');
+        form.append('Vm.CrearPedido.TipoServicio', state.tipoServicio || 'ComerAqui');
+        if (state.mesaId) form.append('Vm.CrearPedido.MesaId', state.mesaId);
+        state.lineas.forEach(function(l, i) {
+            form.append('Vm.CrearPedido.Lineas[' + i + '].ProductoId', l.productoId);
+            form.append('Vm.CrearPedido.Lineas[' + i + '].Cantidad', l.cantidad || 1);
+        });
+
+        try {
+            var res = await fetch('?handler=CrearJson', { method: 'POST', body: form, headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+            var data = await res.json();
+            if (data.pedidoId) {
+                state.pedidoActual = { id: data.pedidoId };
+                lmdToast('Pedido creado — enviado a cocina', 'success');
+            }
+        } catch(e) { lmdToast('Error al crear pedido', 'error'); return; }
+
         renderDocumentos();
         mostrarPantalla('documentos');
     }
@@ -213,8 +234,28 @@
         renderProductos();
     }
 
-    function irAPago() {
+    async function irAPago() {
         if (state.lineas.length === 0) { lmdToast('Agregue productos primero.', 'error'); return; }
+
+        // Si no hay pedido creado, crearlo primero
+        if (!state.pedidoActual) {
+            var csrf = document.querySelector('input[name="__RequestVerificationToken"]');
+            var form = new FormData();
+            form.append('__RequestVerificationToken', csrf ? csrf.value : '');
+            form.append('Vm.CrearPedido.TipoServicio', state.tipoServicio || 'ComerAqui');
+            if (state.mesaId) form.append('Vm.CrearPedido.MesaId', state.mesaId);
+            state.lineas.forEach(function(l, i) {
+                form.append('Vm.CrearPedido.Lineas[' + i + '].ProductoId', l.productoId);
+                form.append('Vm.CrearPedido.Lineas[' + i + '].Cantidad', l.cantidad || 1);
+            });
+
+            try {
+                var res = await fetch('?handler=CrearJson', { method: 'POST', body: form, headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+                var data = await res.json();
+                if (data.pedidoId) state.pedidoActual = { id: data.pedidoId };
+            } catch(e) { lmdToast('Error al crear pedido', 'error'); return; }
+        }
+
         state.puedeVolver = true;
         renderPago();
         mostrarPantalla('pago');
@@ -302,8 +343,20 @@
         finalizarPago();
     }
 
-    function finalizarPago() {
+    async function finalizarPago() {
         state.puedeVolver = false;
+
+        if (state.pedidoActual && state.pedidoActual.id) {
+            var csrf = document.querySelector('input[name="__RequestVerificationToken"]');
+            var form = new FormData();
+            form.append('__RequestVerificationToken', csrf ? csrf.value : '');
+            form.append('pedidoId', state.pedidoActual.id);
+            try {
+                var res = await fetch('?handler=PagarJson', { method: 'POST', body: form, headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+                if (!res.ok) { lmdToast('Error al procesar pago', 'error'); return; }
+            } catch(e) { lmdToast('Error de conexión', 'error'); return; }
+        }
+
         lmdToast('Pago procesado', 'success');
         renderDocumentos();
         mostrarPantalla('documentos');
