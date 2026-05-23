@@ -403,6 +403,21 @@ public class IndexModel : PageModel
     }
 
     // ── Ingredientes y modificaciones (JSON) ─────────────────
+    public async Task<IActionResult> OnGetIngredientesProductoJsonAsync(Guid productoId)
+    {
+        try
+        {
+            var receta = await _recetasServicio.ObtenerPorProductoIdAsync(productoId);
+            if (receta is null) return new JsonResult(new { ingredientes = Array.Empty<object>(), instrucciones = "" });
+            return new JsonResult(new
+            {
+                ingredientes = receta.Ingredientes.Select(i => new { id = i.IngredienteId, nombre = i.IngredienteNombre, cantidad = i.CantidadRequerida }),
+                receta.Instrucciones
+            });
+        }
+        catch (Exception ex) { return BadRequest(ex.Message); }
+    }
+
     public async Task<IActionResult> OnPostObtenerIngredientesJsonAsync(Guid productoId)
     {
         try
