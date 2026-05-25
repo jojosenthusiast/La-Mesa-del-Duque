@@ -31,6 +31,10 @@ public class IndexModel : PageModel
         if (esAdmin || esEncargado || esMesero)
             modulos.Add(new("Mesas", "/Operaciones/Mesas/Index", "Gestión visual del salón y estados."));
 
+        // Mapa Salón: Admin, Encargado, Mesero
+        if (esAdmin || esEncargado || esMesero)
+            modulos.Add(new("Mapa Salón", "/Operaciones/Salon/Mapa", "Mapa visual interactivo con drag & drop."));
+
         // Despacho: Admin, Encargado, Mesero
         if (esAdmin || esEncargado || esMesero)
             modulos.Add(new("Despacho", "/Operaciones/Despacho/Index", "Pedidos listos para entregar y liberar mesas."));
@@ -42,6 +46,10 @@ public class IndexModel : PageModel
         // Inventario: Admin, Encargado
         if (esAdmin || esEncargado)
             modulos.Add(new("Inventario", "/Operaciones/Inventario/Index", "Ingredientes, proveedores y mermas."));
+
+        // Dashboard: Admin, Encargado
+        if (esAdmin || esEncargado)
+            modulos.Add(new("Dashboard", "/Admin/Dashboard/Dashboard", "KPIs y métricas operativas en tiempo real."));
 
         // Cierre: Admin, Encargado
         if (esAdmin || esEncargado)
