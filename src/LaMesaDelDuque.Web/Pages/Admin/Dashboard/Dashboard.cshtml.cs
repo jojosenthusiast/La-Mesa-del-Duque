@@ -1,3 +1,4 @@
+using System;
 using LaMesaDelDuque.Aplicacion.Servicios;
 using LaMesaDelDuque.Dominio.Modelos;
 using Microsoft.AspNetCore.Authorization;
@@ -19,6 +20,8 @@ public class DashboardModel : PageModel
     public MetricasOperativasDto Metricas { get; set; } = new();
     public List<VentaPorHoraDto> VentasPorHora { get; set; } = new();
 
+    [TempData] public string? ToastError { get; set; }
+
     public async Task OnGetAsync()
     {
         SetUiContext();
@@ -27,20 +30,32 @@ public class DashboardModel : PageModel
 
     public async Task<IActionResult> OnGetMetricasJsonAsync()
     {
-        var metricas = await _metricaServicio.ObtenerMetricasOperativasAsync();
-        return new JsonResult(metricas);
+        try
+        {
+            var metricas = await _metricaServicio.ObtenerMetricasOperativasAsync();
+            return new JsonResult(metricas);
+        }
+        catch (Exception ex) { return BadRequest(new { error = ex.Message }); }
     }
 
     public async Task<IActionResult> OnGetVentasPorHoraJsonAsync()
     {
-        var ventas = await _metricaServicio.ObtenerVentasPorHoraAsync();
-        return new JsonResult(ventas);
+        try
+        {
+            var ventas = await _metricaServicio.ObtenerVentasPorHoraAsync();
+            return new JsonResult(ventas);
+        }
+        catch (Exception ex) { return BadRequest(new { error = ex.Message }); }
     }
 
     private async Task CargarDatosAsync()
     {
-        Metricas = await _metricaServicio.ObtenerMetricasOperativasAsync();
-        VentasPorHora = await _metricaServicio.ObtenerVentasPorHoraAsync();
+        try
+        {
+            Metricas = await _metricaServicio.ObtenerMetricasOperativasAsync();
+            VentasPorHora = await _metricaServicio.ObtenerVentasPorHoraAsync();
+        }
+        catch (Exception ex) { ToastError = $"Error al cargar dashboard: {ex.Message}"; }
     }
 
     private void SetUiContext()
