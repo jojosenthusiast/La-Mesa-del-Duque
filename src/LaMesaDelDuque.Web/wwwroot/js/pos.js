@@ -281,10 +281,13 @@
                 '<span class="lmd-pos-pago-btn__sub">' + (m.sub || '') + '</span></button>';
         }).join('');
 
-        var html = '<div class="lmd-pos-pago">' +
-            btnsHtml +
-        '</div>' +
-        '<div class="text-center mt-2"><button class="btn btn-sm btn-outline-secondary" onclick="pos.volverAProductos()">' + icon('arrow-left', '') + ' Volver</button></div>';
+        var html = '<div class="lmd-pos-pago-wrapper">' +
+            '<div class="lmd-pos-pago">' + btnsHtml + '</div>' +
+            '<div class="lmd-pos-action-bar">' +
+                '<button class="lmd-pos-action-bar-btn" onclick="pos.volverAProductos()">' + icon('arrow-left', '') + ' Volver</button>' +
+                '<span style="font-family:\'Cinzel\',serif;font-size:1.1rem;font-weight:800;color:#c9a24e;font-variant-numeric:tabular-nums;">' + formatMoney(total) + '</span>' +
+            '</div>' +
+        '</div>';
 
         document.getElementById('lmd-pos-screen-pago').innerHTML = html;
     }
@@ -312,16 +315,16 @@
         keypadValue = '0';
         var html = '<div class="lmd-pos-keypad" id="lmd-pos-keypad">' +
             '<div class="lmd-pos-keypad__panel">' +
-                '<div class="text-center mb-2"><strong>Total: ' + formatMoney(total) + '</strong></div>' +
+                '<div style="text-align:center;margin-bottom:0.5rem;font-size:0.85rem;color:rgba(247,244,236,0.5);font-weight:600;">Total: ' + formatMoney(total) + '</div>' +
                 '<div class="lmd-pos-keypad__display" id="lmd-pos-keypad-display">$0.00</div>' +
                 '<div class="lmd-pos-keypad__grid">' +
                     [1,2,3,4,5,6,7,8,9,'.',0,'⌫'].map(function(k) {
                         return '<button class="lmd-pos-keypad__btn" onclick="pos.keypadInput(\'' + k + '\')">' + k + '</button>';
                     }).join('') +
                 '</div>' +
-                '<div class="d-flex gap-2 mt-2">' +
-                    '<button class="lmd-pos-keypad__btn lmd-pos-keypad__btn--back flex-fill" onclick="document.getElementById(\'lmd-pos-keypad\').remove()">Volver</button>' +
-                    '<button class="lmd-pos-keypad__btn lmd-pos-keypad__btn--confirm flex-fill" onclick="pos.keypadConfirmar(' + total.toFixed(2) + ')">Confirmar</button>' +
+                '<div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin-top:0.5rem;">' +
+                    '<button class="lmd-pos-keypad__btn lmd-pos-keypad__btn--back" onclick="document.getElementById(\'lmd-pos-keypad\').remove()">Volver</button>' +
+                    '<button class="lmd-pos-keypad__btn lmd-pos-keypad__btn--confirm" onclick="pos.keypadConfirmar(' + total.toFixed(2) + ')">Confirmar</button>' +
                 '</div>' +
             '</div></div>';
         document.body.insertAdjacentHTML('beforeend', html);
@@ -394,9 +397,16 @@
                 (d.sub ? '<small>' + d.sub + '</small>' : '') + '</button>';
         }).join('');
 
-        var html = '<div class="text-center mb-2"><strong>Total pagado: ' + formatMoney(total) + '</strong> · ' + (state.pagoMetodo || '') + '</div>' +
+        var html = '<div class="lmd-pos-doc-wrapper">' +
+            '<div class="lmd-pos-doc-header">' +
+                '<span class="lmd-pos-doc-header__total">' + formatMoney(total) + '</span>' +
+                (state.pagoMetodo ? '<span class="lmd-pos-doc-header__metodo">' + state.pagoMetodo + '</span>' : '') +
+            '</div>' +
             '<div class="lmd-pos-documentos">' + btnsHtml + '</div>' +
-            '<div class="text-center mt-2"><button class="btn btn-sm btn-outline-secondary" onclick="pos.nuevaOrden()">' + icon('plus-circle', '') + ' Nueva orden</button></div>';
+            '<div class="lmd-pos-action-bar">' +
+                '<button class="lmd-pos-action-bar-btn lmd-pos-action-bar-btn--primary" onclick="pos.nuevaOrden()">' + icon('plus-circle', '') + ' Nueva orden</button>' +
+            '</div>' +
+        '</div>';
 
         document.getElementById('lmd-pos-screen-documentos').innerHTML = html;
     }

@@ -62,6 +62,7 @@ public static class InyeccionInfraestructura
         servicios.AddScoped<MermaRepositorio>();
         servicios.AddScoped<CierreDiaRepositorio>();
         servicios.AddScoped<AlergenoRepositorio>();
+        servicios.AddScoped<IAlergenoRepositorio, AlergenoRepositorio>();
         servicios.AddScoped<ZonaSalonRepositorio>();
         servicios.AddScoped<IMetricaRepositorio, MetricaRepositorio>();
 
