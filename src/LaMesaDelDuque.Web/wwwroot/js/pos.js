@@ -935,7 +935,7 @@
             var r1 = await fetch('?handler=IngredientesProductoJson&productoId=' + productoId);
             var d1 = await r1.json();
             _mod.ingredientes = (d1.ingredientes || []).map(function (ing) {
-                return { id: ing.id, nombre: ing.nombre, cantidad: ing.cantidad, quitado: false };
+                return { id: ing.id, nombre: ing.nombre, cantidad: ing.cantidad, estado: 'normal', reemplazoId: null, reemplazoNombre: '' };
             });
         } catch (e) {}
 
@@ -959,11 +959,23 @@
 
         var ingsHtml = _mod.ingredientes.length > 0
             ? _mod.ingredientes.map(function (ing) {
-                return '<div class="lmd-mod-ing-row">' +
-                    '<span>' + ing.nombre + ' <small>(' + ing.cantidad + ')</small></span>' +
-                    '<button class="lmd-mod-ing-btn' + (ing.quitado ? ' quitado' : '') + '" onclick="pos.toggleIngrediente(\'' + ing.id + '\')">' +
-                        (ing.quitado ? icon('rotate-ccw') + ' Restaurar' : icon('minus-circle') + ' Quitar') +
-                    '</button>' +
+                var est = ing.estado || 'normal';
+                var otros = _mod.ingredientes.filter(function (o) { return o.id !== ing.id; });
+                var reemplazoSel = est === 'quitado' && otros.length > 0
+                    ? '<select class="lmd-mod-ing-reemplazo" onchange="pos.cambiarReemplazo(\'' + ing.id + '\', this.value)">' +
+                          '<option value="">— Sin reemplazo</option>' +
+                          otros.map(function (o) {
+                              return '<option value="' + o.id + '"' + (ing.reemplazoId === o.id ? ' selected' : '') + '>' + o.nombre + '</option>';
+                          }).join('') +
+                      '</select>'
+                    : '';
+                return '<div class="lmd-mod-ing-row lmd-mod-ing-row--' + est + '">' +
+                    '<span class="lmd-mod-ing-nombre">' + ing.nombre + ' <small>(' + ing.cantidad + ')</small></span>' +
+                    '<div class="lmd-mod-ing-acciones">' +
+                        '<button class="lmd-mod-ing-btn lmd-mod-ing-btn--extra' + (est === 'extra' ? ' activo' : '') + '" onclick="pos.toggleEstadoIngrediente(\'' + ing.id + '\', \'extra\')" title="Extra">' + icon('plus-circle') + '</button>' +
+                        '<button class="lmd-mod-ing-btn lmd-mod-ing-btn--quitar' + (est === 'quitado' ? ' activo' : '') + '" onclick="pos.toggleEstadoIngrediente(\'' + ing.id + '\', \'quitado\')" title="Quitar">' + icon('minus-circle') + '</button>' +
+                    '</div>' +
+                    reemplazoSel +
                 '</div>';
               }).join('')
             : '<span class="lmd-mod-empty">Sin ingredientes registrados</span>';
@@ -988,8 +1000,24 @@
         abrirOverlay('modificador', html, { bottom: true });
     }
 
-    function toggleIngrediente(id) {
+    function toggleEstadoIngrediente(id, estado) {
         var ing = _mod.ingredientes.find(function (i) { return i.id === id; });
+        if (!ing) return;
+        ing.estado = ing.estado === estado ? 'normal' : estado;
+        if (ing.estado !== 'quitado') { ing.reemplazoId = null; ing.reemplazoNombre = ''; }
+        renderModificadorModal();
+    }
+
+    function cambiarReemplazo(ingId, reemplazoId) {
+        var ing = _mod.ingredientes.find(function (i) { return i.id === ingId; });
+        if (!ing) return;
+        if (!reemplazoId) { ing.reemplazoId = null; ing.reemplazoNombre = ''; }
+        else {
+            var r = _mod.ingredientes.find(function (i) { return i.id === reemplazoId; });
+            ing.reemplazoId = reemplazoId;
+            ing.reemplazoNombre = r ? r.nombre : '';
+        }
+    });
         if (ing) { ing.quitado = !ing.quitado; renderModificadorModal(); }
     }
 
@@ -1005,11 +1033,19 @@
     function confirmarModificadores() {
         cerrarModificadores();
 
-        var mods = _mod.ingredientes
-            .filter(function (ing) { return ing.quitado; })
-            .map(function (ing) {
-                return { ingredienteId: ing.id, ingredienteNombre: ing.nombre, accion: 'quitar', motivo: 'preferencia', ingredienteReemplazo: null };
-            });
+        var mods = [];
+        _mod.ingredientes.forEach(function (ing) {
+            var est = ing.estado || 'normal';
+            if (est === 'quitado') {
+                if (ing.reemplazoId) {
+                    mods.push({ ingredienteId: ing.id, ingredienteNombre: ing.nombre, accion: 'intercambiar', motivo: 'preferencia', ingredienteReemplazoId: ing.reemplazoId, ingredienteReemplazoNombre: ing.reemplazoNombre });
+                } else {
+                    mods.push({ ingredienteId: ing.id, ingredienteNombre: ing.nombre, accion: 'quitar', motivo: 'preferencia', ingredienteReemplazoId: null, ingredienteReemplazoNombre: null });
+                }
+            } else if (est === 'extra') {
+                mods.push({ ingredienteId: ing.id, ingredienteNombre: ing.nombre, accion: 'extra', motivo: 'preferencia', ingredienteReemplazoId: null, ingredienteReemplazoNombre: null });
+            }
+        });
 
         var notasArr = [];
         if (_mod.alergias.length > 0) notasArr.push('Alergias: ' + _mod.alergias.join(', '));
@@ -1166,10 +1202,11 @@
         seleccionarBillete, keypadInput, keypadConfirmar,
         volverAMetodos, simularTarjeta, simularQR, confirmarOtro,
         abrirSplit, volverAPago, splitIgualitario, splitPorPersona, splitMixto,
+        toggleEstadoIngrediente, cambiarReemplazo,
         ajustarSplitN, iniciarSplitIgualitario, cobrarSiguientePersona,
         pagarPersonaSplit, seleccionarBilleteSplit, confirmarEfectivoSplit,
         emitirDocumento, nuevaOrden,
-        abrirModificadores, toggleIngrediente, toggleAlergia,
+        abrirModificadores, toggleAlergia,
         cerrarModificadores, confirmarModificadores,
         cambiarServicio, cambiarAMesa, cambiarAParaLlevar, cerrarCambiarServicio,
         simularRechazo, reintentarPago

@@ -1284,6 +1284,25 @@ html:has(#lmd-pos-contenido) .lmd-main-surface {
 }
 .lmd-mod-ing-btn.quitado { background: rgba(192,57,43,0.2); border-color: rgba(192,57,43,0.4); color: #e74c3c; }
 .lmd-mod-ing-btn:hover { background: #26456e; }
+
+.lmd-mod-ing-row { flex-wrap: wrap; gap: 0.35rem; }
+.lmd-mod-ing-nombre { flex: 1; min-width: 0; }
+.lmd-mod-ing-acciones { display: flex; gap: 0.3rem; flex-shrink: 0; }
+.lmd-mod-ing-row--quitado { background: rgba(192,57,43,0.08); border: 1px solid rgba(192,57,43,0.2); }
+.lmd-mod-ing-row--extra { background: rgba(46,125,50,0.08); border: 1px solid rgba(46,125,50,0.2); }
+.lmd-mod-ing-btn--quitar.activo { background: rgba(192,57,43,0.2); border-color: rgba(192,57,43,0.4); color: #e74c3c; }
+.lmd-mod-ing-btn--extra.activo { background: rgba(46,125,50,0.2); border-color: rgba(46,125,50,0.4); color: #66bb6a; }
+.lmd-mod-ing-reemplazo {
+    width: 100%;
+    background: #0d1f30;
+    border: 1px solid rgba(201,162,78,0.2);
+    border-radius: 0.35rem;
+    color: rgba(247,244,236,0.75);
+    font-size: 0.78rem;
+    padding: 0.25rem 0.5rem;
+    cursor: pointer;
+}
+.lmd-mod-ing-reemplazo:focus { outline: none; border-color: rgba(201,162,78,0.5); }
 .lmd-mod-confirmar {
     width: 100%;
     padding: 0.85rem;
