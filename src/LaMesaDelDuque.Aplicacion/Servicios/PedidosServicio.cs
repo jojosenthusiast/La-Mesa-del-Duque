@@ -136,8 +136,15 @@ internal class PedidosServicio : IPedidosServicio
             var receta = await _uot.RecetasProductos.ObtenerPorProductoIdAsync(detalle.Producto.Id, ct);
             if (receta is null) continue;
 
+            var ingredientesQuitados = detalle.ObtenerModificaciones()
+                .Where(m => m.Accion == "quitar")
+                .Select(m => m.IngredienteId)
+                .ToHashSet();
+
             foreach (var ri in receta.Ingredientes)
             {
+                if (ingredientesQuitados.Contains(ri.IngredienteId)) continue;
+
                 var ingrediente = await _uot.Ingredientes.ObtenerPorIdAsync(ri.IngredienteId, ct);
                 if (ingrediente is null) continue;
 
@@ -158,8 +165,15 @@ internal class PedidosServicio : IPedidosServicio
             var receta = await _uot.RecetasProductos.ObtenerPorProductoIdAsync(detalle.Producto.Id, ct);
             if (receta is null) continue;
 
+            var ingredientesQuitados = detalle.ObtenerModificaciones()
+                .Where(m => m.Accion == "quitar")
+                .Select(m => m.IngredienteId)
+                .ToHashSet();
+
             foreach (var ri in receta.Ingredientes)
             {
+                if (ingredientesQuitados.Contains(ri.IngredienteId)) continue;
+
                 var ingrediente = await _uot.Ingredientes.ObtenerPorIdAsync(ri.IngredienteId, ct);
                 if (ingrediente is null) continue;
 

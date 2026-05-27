@@ -194,10 +194,13 @@
                         '<span class="lmd-pos-cart-item__precio">' + fmt((l.precioUnitario || 0) * (l.cantidad || 0)) + '</span>' +
                     '</div>' +
                     '<div class="lmd-pos-cart-item__controles">' +
-                        '<button class="lmd-pos-cart-item__qty-btn" onclick="pos.decrementarItem(' + i + ')">' + icon('minus') + '</button>' +
-                        '<span class="lmd-pos-cart-item__qty">' + l.cantidad + '</span>' +
-                        '<button class="lmd-pos-cart-item__qty-btn" onclick="pos.incrementarItem(' + i + ')">' + icon('plus') + '</button>' +
-                        '<button class="lmd-pos-cart-item__remove" onclick="pos.eliminarDelCarrito(' + i + ')">' + icon('x') + '</button>' +
+                        (state.pagado
+                            ? '<span class="lmd-pos-cart-item__qty lmd-pos-cart-item__qty--locked">x' + l.cantidad + '</span>'
+                            : '<button class="lmd-pos-cart-item__qty-btn" onclick="pos.decrementarItem(' + i + ')">' + icon('minus') + '</button>' +
+                              '<span class="lmd-pos-cart-item__qty">' + l.cantidad + '</span>' +
+                              '<button class="lmd-pos-cart-item__qty-btn" onclick="pos.incrementarItem(' + i + ')">' + icon('plus') + '</button>' +
+                              '<button class="lmd-pos-cart-item__remove" onclick="pos.eliminarDelCarrito(' + i + ')">' + icon('x') + '</button>'
+                        ) +
                     '</div>' +
                 '</div>';
               }).join('');
@@ -212,6 +215,7 @@
                 '<div class="lmd-pos-cart__header">' +
                     icon('shopping-bag') +
                     '<span>' + (state.tipoServicio === 'ComerAqui' ? 'Mesa ' + state.mesaNumero : 'Para llevar') + '</span>' +
+                    (!state.pagado ? '<button class="lmd-pos-cart-change-servicio" onclick="pos.cambiarServicio()" title="Cambiar tipo de servicio">' + icon('refresh-cw') + '</button>' : '') +
                     (state.pagado ? '<span class="lmd-pos-pagado-badge">' + icon('check-circle') + ' Pagado</span>' : '') +
                 '</div>' +
                 '<div class="lmd-pos-cart__items" id="lmd-pos-cart-items">' + cartItemsHtml + '</div>' +
@@ -236,7 +240,7 @@
             var agotado = p.agotado === true;
             var ico = p.categoriaNombre === 'Bebidas' ? 'wine' : p.categoriaNombre === 'Postres' ? 'cake-slice' : 'utensils';
             return '<div class="lmd-pos-producto-card' + (agotado ? ' lmd-pos-producto-card--agotado' : '') + '">' +
-                '<div class="lmd-pos-producto-card__body" onclick="' + (agotado ? '' : 'pos.agregarAlCarrito(\'' + p.id + '\',\'' + (p.nombre || '').replace(/'/g, "\\'") + '\',' + (p.precio || 0) + ')') + '">' +
+                '<div class="lmd-pos-producto-card__body" onclick="' + (agotado || state.pagado ? '' : 'pos.agregarAlCarrito(\'' + p.id + '\',\'' + (p.nombre || '').replace(/'/g, "\\'") + '\',' + (p.precio || 0) + ')') + '">' +
                     '<div class="lmd-pos-producto-card__ico">' + icon(ico) + '</div>' +
                     '<span class="lmd-pos-producto-card__nombre">' + (p.nombre || '') + '</span>' +
                     '<span class="lmd-pos-producto-card__precio">' + fmt(p.precio || 0) + '</span>' +
@@ -257,6 +261,7 @@
     }
 
     function agregarAlCarrito(prodId, nombre, precio) {
+        if (state.pagado) return;
         var existente = state.lineas.find(function (l) { return l.productoId === prodId; });
         if (existente) { existente.cantidad += 1; }
         else { state.lineas.push({ productoId: prodId, productoNombre: nombre, cantidad: 1, precioUnitario: precio }); }
@@ -265,16 +270,19 @@
     }
 
     function incrementarItem(idx) {
+        if (state.pagado) return;
         if (state.lineas[idx]) { state.lineas[idx].cantidad += 1; renderProductos(); }
     }
 
     function decrementarItem(idx) {
+        if (state.pagado) return;
         if (!state.lineas[idx]) return;
         if (state.lineas[idx].cantidad > 1) { state.lineas[idx].cantidad -= 1; renderProductos(); }
         else { eliminarDelCarrito(idx); }
     }
 
     function eliminarDelCarrito(idx) {
+        if (state.pagado) return;
         state.lineas.splice(idx, 1);
         renderProductos();
     }
@@ -320,6 +328,8 @@
         state.lineas.forEach(function (l, i) {
             form.append('Vm.CrearPedido.Lineas[' + i + '].ProductoId', l.productoId);
             form.append('Vm.CrearPedido.Lineas[' + i + '].Cantidad', l.cantidad || 1);
+            if (l.notas) form.append('Vm.CrearPedido.Lineas[' + i + '].Notas', l.notas);
+            if (l.modificacionesJson) form.append('Vm.CrearPedido.Lineas[' + i + '].ModificacionesJson', l.modificacionesJson);
         });
 
         try {
@@ -508,6 +518,7 @@
         cerrarOverlay('tarjeta');
         cerrarOverlay('qr');
         cerrarOverlay('otro');
+        cerrarOverlay('errorpago');
         abrirOverlayPago();
     }
 
@@ -531,6 +542,7 @@
                 '</div>' +
                 '<div class="lmd-pos-tarjeta-actions">' +
                     '<button class="lmd-pos-ov-btn" onclick="pos.volverAMetodos()">' + icon('arrow-left') + ' Volver</button>' +
+                    '<button class="lmd-pos-ov-btn lmd-pos-ov-btn--danger" onclick="pos.simularRechazo(\'tarjeta\')">' + icon('x-circle') + ' Simular rechazo</button>' +
                     '<button class="lmd-pos-ov-btn lmd-pos-ov-btn--primary" onclick="pos.simularTarjeta(' + total.toFixed(2) + ')">' + icon('check-circle') + ' Confirmar pago</button>' +
                 '</div>' +
             '</div>';
@@ -565,6 +577,7 @@
                 '<p class="lmd-pos-qr-instruccion">Escanea con Wompi, BAC Credomatic o Niu</p>' +
                 '<div class="lmd-pos-qr-actions">' +
                     '<button class="lmd-pos-ov-btn" onclick="pos.volverAMetodos()">' + icon('arrow-left') + ' Volver</button>' +
+                    '<button class="lmd-pos-ov-btn lmd-pos-ov-btn--danger" onclick="pos.simularRechazo(\'qr\')">' + icon('x-circle') + ' Simular rechazo</button>' +
                     '<button class="lmd-pos-ov-btn lmd-pos-ov-btn--primary" onclick="pos.simularQR(\'' + ref + '\',' + total.toFixed(2) + ')">' + icon('check-circle') + ' Confirmar recepción</button>' +
                 '</div>' +
             '</div>';
@@ -1016,6 +1029,107 @@
     }
 
     // ═══════════════════════════════════════════════════
+    // CAMBIAR TIPO DE SERVICIO
+    // ═══════════════════════════════════════════════════
+    function cambiarServicio() {
+        if (state.pagado) return;
+        if (state.pedidoActual) {
+            lmdToast('El pedido ya fue registrado. Cancela la orden para cambiar el servicio.', 'error');
+            return;
+        }
+        abrirOverlayCambiarServicio();
+    }
+
+    function abrirOverlayCambiarServicio() {
+        var mesas = window.__lmdMesasDisponibles || [];
+        var mesasHtml = mesas.filter(function (m) { return m.estado === 'Disponible'; }).map(function (m) {
+            var seleccionada = state.mesaId === m.id;
+            return '<button class="lmd-pos-mesa-card lmd-pos-mesa-card--disponible' + (seleccionada ? ' lmd-pos-mesa-card--seleccionada' : '') + '" onclick="pos.cambiarAMesa(\'' + m.id + '\',' + m.numero + ')">' +
+                '<span class="lmd-pos-mesa-card__numero">' + m.numero + '</span>' +
+                '<span class="lmd-pos-mesa-card__capacidad">' + m.capacidad + ' pax</span>' +
+            '</button>';
+        }).join('');
+
+        var esComerAqui = state.tipoServicio === 'ComerAqui';
+        var html =
+            '<div class="lmd-pos-ov-header">' +
+                '<span class="lmd-pos-ov-title">' + icon('refresh-cw') + ' Cambiar servicio</span>' +
+                '<button class="lmd-pos-ov-close" onclick="pos.cerrarCambiarServicio()">' + icon('x') + '</button>' +
+            '</div>' +
+            '<div class="lmd-pos-cambiar-servicio-body">' +
+                '<button class="lmd-pos-cambiar-servicio-opcion' + (!esComerAqui ? ' lmd-pos-cambiar-servicio-opcion--activa' : '') + '" onclick="pos.cambiarAParaLlevar()">' +
+                    icon('package') + '<span>Para llevar</span>' +
+                '</button>' +
+                '<div class="lmd-pos-cambiar-servicio-sep">— o selecciona una mesa —</div>' +
+                '<div class="lmd-pos-mesas-grid lmd-pos-mesas-grid--mini">' +
+                    (mesasHtml || '<span class="lmd-pos-empty">Sin mesas disponibles</span>') +
+                '</div>' +
+            '</div>';
+
+        abrirOverlay('cambiarservicio', html, { closeOnBackdrop: true });
+    }
+
+    function cambiarAMesa(mesaId, numero) {
+        var mesas = window.__lmdMesasDisponibles || [];
+        var m = mesas.find(function (x) { return x.id === mesaId; });
+        if (m && m.estado !== 'Disponible') { lmdToast('Mesa ocupada — selecciona otra', 'error'); return; }
+        state.tipoServicio = 'ComerAqui';
+        state.mesaId = mesaId;
+        state.mesaNumero = numero;
+        cerrarOverlay('cambiarservicio');
+        renderProductos();
+        lmdToast('Cambiado a Mesa ' + numero, 'success');
+    }
+
+    function cambiarAParaLlevar() {
+        state.tipoServicio = 'ParaLlevar';
+        state.mesaId = null;
+        state.mesaNumero = null;
+        cerrarOverlay('cambiarservicio');
+        renderProductos();
+        lmdToast('Cambiado a Para llevar', 'success');
+    }
+
+    function cerrarCambiarServicio() { cerrarOverlay('cambiarservicio'); }
+
+    // ═══════════════════════════════════════════════════
+    // PAGO RECHAZADO — recuperación de error
+    // ═══════════════════════════════════════════════════
+    function simularRechazo(metodo) {
+        cerrarOverlay(metodo === 'qr' ? 'qr' : 'tarjeta');
+        var mensajes = {
+            tarjeta: 'Tarjeta rechazada por el emisor',
+            qr: 'Transferencia no recibida — tiempo agotado'
+        };
+        abrirOverlayErrorPago(metodo, mensajes[metodo] || 'Pago rechazado');
+    }
+
+    function abrirOverlayErrorPago(metodo, mensaje) {
+        var html =
+            '<div class="lmd-pos-ov-header">' +
+                '<span class="lmd-pos-ov-title lmd-pos-ov-title--error">' + icon('alert-circle') + ' Pago rechazado</span>' +
+            '</div>' +
+            '<div class="lmd-pos-error-pago-body">' +
+                '<div class="lmd-pos-error-pago-icon">' + icon('x-circle') + '</div>' +
+                '<p class="lmd-pos-error-pago-mensaje">' + mensaje + '</p>' +
+                '<div class="lmd-pos-error-pago-actions">' +
+                    '<button class="lmd-pos-ov-btn lmd-pos-ov-btn--primary" onclick="pos.reintentarPago(\'' + metodo + '\')">' + icon('refresh-cw') + ' Reintentar</button>' +
+                    '<button class="lmd-pos-ov-btn" onclick="pos.volverAMetodos()">' + icon('credit-card') + ' Otro método</button>' +
+                '</div>' +
+            '</div>';
+
+        abrirOverlay('errorpago', html, { closeOnBackdrop: false });
+    }
+
+    function reintentarPago(metodo) {
+        cerrarOverlay('errorpago');
+        var total = totalLineas(state.lineas);
+        if (metodo === 'tarjeta') abrirOverlayTarjeta(total);
+        else if (metodo === 'qr') abrirOverlayQR(total);
+        else abrirOverlayPago();
+    }
+
+    // ═══════════════════════════════════════════════════
     // SignalR + Init
     // ═══════════════════════════════════════════════════
     async function initSignalR() {
@@ -1056,11 +1170,25 @@
         pagarPersonaSplit, seleccionarBilleteSplit, confirmarEfectivoSplit,
         emitirDocumento, nuevaOrden,
         abrirModificadores, toggleIngrediente, toggleAlergia,
-        cerrarModificadores, confirmarModificadores
+        cerrarModificadores, confirmarModificadores,
+        cambiarServicio, cambiarAMesa, cambiarAParaLlevar, cerrarCambiarServicio,
+        simularRechazo, reintentarPago
     };
 
     document.addEventListener('DOMContentLoaded', function () {
         renderSeleccion();
         initSignalR();
+
+        window.addEventListener('offline', function () {
+            var banner = document.getElementById('lmd-offline-banner');
+            if (banner) { banner.style.display = ''; banner.classList.add('visible'); }
+        });
+        window.addEventListener('online', function () {
+            var banner = document.getElementById('lmd-offline-banner');
+            if (banner) {
+                banner.classList.remove('visible');
+                setTimeout(function () { if (!banner.classList.contains('visible')) banner.style.display = 'none'; }, 500);
+            }
+        });
     });
 })();

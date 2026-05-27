@@ -1488,3 +1488,116 @@ html:has(#lmd-pos-contenido) .lmd-main-surface {
     background: rgba(0,0,0,0.5);
 }
 .lmd-pos-producto-card__editar svg { width: 13px; height: 13px; }
+
+/* ═══════════════════════════════════════════════════════
+   CAMBIAR TIPO DE SERVICIO overlay
+   ═══════════════════════════════════════════════════════ */
+.lmd-pos-cart-change-servicio {
+    margin-left: auto;
+    background: none;
+    border: 1px solid rgba(201, 162, 78, 0.2);
+    border-radius: 0.4rem;
+    color: rgba(201, 162, 78, 0.55);
+    cursor: pointer;
+    padding: 0.25rem 0.4rem;
+    display: flex;
+    align-items: center;
+    transition: color 0.1s, border-color 0.1s, background 0.1s;
+    flex-shrink: 0;
+}
+.lmd-pos-cart-change-servicio:hover {
+    color: #c9a24e;
+    border-color: #c9a24e;
+    background: rgba(201, 162, 78, 0.08);
+}
+.lmd-pos-cart-change-servicio svg { width: 14px; height: 14px; }
+
+.lmd-pos-cambiar-servicio-body {
+    padding: 1.25rem 1rem;
+}
+.lmd-pos-cambiar-servicio-opcion {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.875rem 1.25rem;
+    background: #112233;
+    border: 2px solid rgba(201, 162, 78, 0.15);
+    border-radius: 0.75rem;
+    color: rgba(247, 244, 236, 0.75);
+    font-size: 0.95rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.12s, border-color 0.12s;
+    margin-bottom: 0.75rem;
+}
+.lmd-pos-cambiar-servicio-opcion:hover { background: #1a3354; border-color: rgba(201, 162, 78, 0.35); color: #f7f4ec; }
+.lmd-pos-cambiar-servicio-opcion--activa {
+    background: rgba(201, 162, 78, 0.12);
+    border-color: rgba(201, 162, 78, 0.5);
+    color: #c9a24e;
+}
+.lmd-pos-cambiar-servicio-sep {
+    text-align: center;
+    font-size: 0.72rem;
+    color: rgba(247, 244, 236, 0.28);
+    margin: 0.25rem 0 0.875rem;
+    letter-spacing: 0.06em;
+}
+.lmd-pos-mesas-grid--mini {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+    gap: 0.4rem;
+    max-height: 210px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(201, 162, 78, 0.2) transparent;
+}
+.lmd-pos-mesas-grid--mini .lmd-pos-mesa-card { min-height: 58px; padding: 0.45rem 0.35rem; }
+.lmd-pos-mesas-grid--mini .lmd-pos-mesa-card__numero { font-size: 1.35rem; }
+.lmd-pos-mesa-card--seleccionada {
+    border-color: #c9a24e !important;
+    background: rgba(201, 162, 78, 0.12) !important;
+    box-shadow: 0 0 0 1px rgba(201, 162, 78, 0.35);
+}
+
+/* ═══════════════════════════════════════════════════════
+   PAGO RECHAZADO overlay
+   ═══════════════════════════════════════════════════════ */
+.lmd-pos-ov-title--error { color: #e74c3c; }
+
+.lmd-pos-error-pago-body {
+    padding: 2rem 1.25rem 1.5rem;
+    text-align: center;
+}
+.lmd-pos-error-pago-icon { margin-bottom: 1rem; }
+.lmd-pos-error-pago-icon svg { width: 56px; height: 56px; stroke: #e74c3c; }
+.lmd-pos-error-pago-mensaje {
+    font-size: 1rem;
+    color: rgba(247, 244, 236, 0.82);
+    margin-bottom: 1.75rem;
+    font-weight: 500;
+    line-height: 1.5;
+}
+.lmd-pos-error-pago-actions {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+.lmd-pos-ov-btn--danger {
+    background: rgba(192, 57, 43, 0.12);
+    border-color: rgba(231, 76, 60, 0.35);
+    color: #e74c3c;
+}
+.lmd-pos-ov-btn--danger:hover { background: rgba(192, 57, 43, 0.22); border-color: #e74c3c; }
+
+/* Locked cart item quantity (post-payment) */
+.lmd-pos-cart-item__qty--locked {
+    min-width: 2.2rem;
+    text-align: center;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: rgba(247, 244, 236, 0.38);
+    font-style: italic;
+}
