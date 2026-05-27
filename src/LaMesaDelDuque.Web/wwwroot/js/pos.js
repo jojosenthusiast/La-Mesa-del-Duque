@@ -441,7 +441,7 @@
                     '<div class="lmd-pos-cambio" id="lmd-pos-cambio"></div>' +
                     '<div class="lmd-pos-keypad__grid">' +
                         [1,2,3,4,5,6,7,8,9,'.',0,'⌫'].map(function (k) {
-                            return '<button class="lmd-pos-keypad__btn" onclick="pos.keypadInput(\'' + k + '\',' + total.toFixed(2) + ')">' + k + '</button>';
+                            return '<button class="lmd-pos-keypad__btn" onclick="pos.keypadInput(\'' + k + '\',' + total.toFixed(2) + ')">' + (k === '⌫' ? icon('delete') : k) + '</button>';
                         }).join('') +
                     '</div>' +
                     '<div class="lmd-pos-keypad__actions">' +
@@ -741,7 +741,7 @@
             '<div class="lmd-pos-split-progress">' +
                 personas.map(function (p, i) {
                     return '<div class="lmd-pos-split-progress__item' + (p.pagado ? ' pagado' : '') + (i === idx ? ' activo' : '') + '">' +
-                        '<span>' + p.nombre + '</span><span>' + (p.pagado ? '✓' : fmt(p.monto)) + '</span>' +
+                        '<span>' + p.nombre + '</span><span>' + (p.pagado ? icon('check') : fmt(p.monto)) + '</span>' +
                     '</div>';
                 }).join('') +
             '</div>';
@@ -782,7 +782,7 @@
                     '<div class="lmd-pos-cambio" id="lmd-pos-cambio"></div>' +
                     '<div class="lmd-pos-keypad__grid">' +
                         [1,2,3,4,5,6,7,8,9,'.',0,'⌫'].map(function (k) {
-                            return '<button class="lmd-pos-keypad__btn" onclick="pos.keypadInput(\'' + k + '\',' + total.toFixed(2) + ')">' + k + '</button>';
+                            return '<button class="lmd-pos-keypad__btn" onclick="pos.keypadInput(\'' + k + '\',' + total.toFixed(2) + ')">' + (k === '⌫' ? icon('delete') : k) + '</button>';
                         }).join('') +
                     '</div>' +
                     '<div class="lmd-pos-keypad__actions">' +

@@ -300,9 +300,9 @@
                 // Opcional: feedback visual
                 const btn = document.getElementById('tableside-btn-enviar');
                 if (btn) {
-                    const original = btn.textContent;
-                    btn.textContent = '✓ Enviado';
-                    setTimeout(() => btn.textContent = original, 2000);
+                    const original = btn.innerHTML;
+                    btn.innerHTML = '<svg class="lmd-icon" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="https://cdn.jsdelivr.net/npm/lucide-static@latest/icons/check.svg#icon"/></svg> Enviado';
+                    setTimeout(() => btn.innerHTML = original, 2000);
                 }
             } catch (e) {
                 mostrarToast('Error: ' + e.message, 'error');
