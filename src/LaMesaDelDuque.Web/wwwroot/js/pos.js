@@ -689,6 +689,8 @@
     }
 
     var _splitN = 2;
+    var _splitTipo = 'persona'; // 'persona' | 'mixto'
+    var _splitItems = [];      // [{ nombre, cantidad, precio, persona }] persona: -1=sin asignar/compartido
     function ajustarSplitN(delta) {
         _splitN = Math.max(2, Math.min(10, _splitN + delta));
         var el = document.getElementById('split-n');
@@ -719,11 +721,129 @@
     }
 
     function splitPorPersona() {
-        lmdToast('Dividir por persona: próximamente', 'info');
+        _splitN = 2; _splitTipo = 'persona';
+        cerrarOverlay('split');
+        _renderSplitNPicker();
     }
 
     function splitMixto() {
-        lmdToast('División mixta: próximamente', 'info');
+        _splitN = 2; _splitTipo = 'mixto';
+        cerrarOverlay('split');
+        _renderSplitNPicker();
+    }
+
+    function _renderSplitNPicker() {
+        var total = totalLineas(state.lineas);
+        var esMixto = _splitTipo === 'mixto';
+        var titulo = esMixto ? 'División mixta' : 'Por persona';
+        var icono = esMixto ? 'git-merge' : 'users';
+        var html =
+            '<div class="lmd-pos-ov-header">' +
+                '<button class="lmd-pos-ov-back" onclick="pos.volverAPago()">' + icon('arrow-left') + '</button>' +
+                '<span class="lmd-pos-ov-title">' + icon(icono) + ' ' + titulo + '</span>' +
+                '<div class="lmd-pos-ov-total">' + fmt(total) + '</div>' +
+            '</div>' +
+            '<div class="lmd-pos-split-igualitario">' +
+                '<p>' + (esMixto ? 'Asigná ítems por persona o como compartidos' : 'Asigná cada ítem a una persona') + '</p>' +
+                '<div class="lmd-pos-split-counter">' +
+                    '<button class="lmd-pos-split-counter__btn" onclick="pos.ajustarSplitN(-1)">' + icon('minus') + '</button>' +
+                    '<span class="lmd-pos-split-counter__val" id="split-n">' + _splitN + '</span>' +
+                    '<button class="lmd-pos-split-counter__btn" onclick="pos.ajustarSplitN(1)">' + icon('plus') + '</button>' +
+                '</div>' +
+                '<div class="lmd-pos-split-actions">' +
+                    '<button class="lmd-pos-ov-btn lmd-pos-ov-btn--primary" onclick="pos.iniciarAsignacionSplit()">' + icon('arrow-right') + ' Asignar ítems</button>' +
+                '</div>' +
+            '</div>';
+        abrirOverlay('splitdetalle', html, { closeOnBackdrop: false });
+    }
+
+    function iniciarAsignacionSplit() {
+        var esMixto = _splitTipo === 'mixto';
+        _splitItems = state.lineas.map(function (l) {
+            return { nombre: l.productoNombre || l.nombre || '?', cantidad: l.cantidad || 1, precio: (l.precioUnitario || 0) * (l.cantidad || 1), persona: esMixto ? -1 : -1 };
+        });
+        _renderSplitAsignacion();
+    }
+
+    function _renderSplitAsignacion() {
+        var n = _splitN;
+        var esMixto = _splitTipo === 'mixto';
+        var headers = '';
+        for (var hi = 0; hi < n; hi++) headers += '<th>P' + (hi + 1) + '</th>';
+        if (esMixto) headers += '<th>' + icon('share-2') + '</th>';
+
+        var rows = _splitItems.map(function (item, idx) {
+            var celdas = '';
+            for (var ci = 0; ci < n; ci++) {
+                var activo = item.persona === ci;
+                celdas += '<td><button class="lmd-pos-split-asig-btn' + (activo ? ' activo' : '') + '" onclick="pos.asignarItemSplit(' + idx + ',' + ci + ')">' + (activo ? icon('check') : '') + '</button></td>';
+            }
+            if (esMixto) {
+                var comp = item.persona === -1;
+                celdas += '<td><button class="lmd-pos-split-asig-btn lmd-pos-split-asig-btn--comp' + (comp ? ' activo' : '') + '" onclick="pos.asignarItemSplit(' + idx + ',-1)">' + (comp ? icon('check') : '') + '</button></td>';
+            }
+            var pendiente = !esMixto && item.persona < 0;
+            return '<tr' + (pendiente ? ' class="lmd-pos-split-asig-row--pendiente"' : '') + '>' +
+                '<td class="lmd-pos-split-asig-nombre">' + (item.cantidad > 1 ? item.cantidad + 'x ' : '') + item.nombre + '<span class="lmd-pos-split-asig-precio">' + fmt(item.precio) + '</span></td>' +
+                celdas + '</tr>';
+        }).join('');
+
+        var totales = Array.from({ length: n }, function () { return 0; });
+        var totalCompartido = 0;
+        _splitItems.forEach(function (item) {
+            if (item.persona >= 0) totales[item.persona] += item.precio;
+            else totalCompartido += item.precio;
+        });
+        var porcadaUno = esMixto ? totalCompartido / n : 0;
+
+        var totalRow = '<td></td>';
+        for (var ti = 0; ti < n; ti++) {
+            totalRow += '<td class="lmd-pos-split-asig-total">' + fmt(Math.round((totales[ti] + porcadaUno) * 100) / 100) + '</td>';
+        }
+        if (esMixto) totalRow += '<td class="lmd-pos-split-asig-total">' + fmt(totalCompartido) + '</td>';
+
+        var sinAsignar = esMixto ? 0 : _splitItems.filter(function (i) { return i.persona < 0; }).length;
+        var html =
+            '<div class="lmd-pos-ov-header">' +
+                '<button class="lmd-pos-ov-back" onclick="pos._renderSplitNPicker()">' + icon('arrow-left') + '</button>' +
+                '<span class="lmd-pos-ov-title">' + icon('git-branch') + ' Asignar ítems</span>' +
+            '</div>' +
+            '<div class="lmd-pos-split-asig-body">' +
+                (sinAsignar > 0 ? '<div class="lmd-pos-split-asig-alerta">' + icon('alert-circle') + ' ' + sinAsignar + ' ítem(s) sin asignar</div>' : '') +
+                '<div class="lmd-pos-split-asig-scroll">' +
+                    '<table class="lmd-pos-split-asig-tabla">' +
+                        '<thead><tr><th>Ítem</th>' + headers + '</tr></thead>' +
+                        '<tbody>' + rows + '</tbody>' +
+                        '<tfoot><tr>' + totalRow + '</tr></tfoot>' +
+                    '</table>' +
+                '</div>' +
+                '<button class="lmd-pos-ov-btn lmd-pos-ov-btn--primary"' + (sinAsignar > 0 ? ' disabled' : '') + ' onclick="pos.confirmarAsignacionSplit()">' + icon('check-circle') + ' Confirmar y cobrar</button>' +
+            '</div>';
+        cerrarOverlay('splitdetalle');
+        abrirOverlay('splitdetalle', html, { closeOnBackdrop: false, wide: true });
+    }
+
+    function asignarItemSplit(idx, persona) {
+        if (_splitItems[idx]) { _splitItems[idx].persona = persona; _renderSplitAsignacion(); }
+    }
+
+    function confirmarAsignacionSplit() {
+        var n = _splitN;
+        var esMixto = _splitTipo === 'mixto';
+        var totales = Array.from({ length: n }, function () { return 0; });
+        var totalCompartido = 0;
+        _splitItems.forEach(function (item) {
+            if (item.persona >= 0) totales[item.persona] += item.precio;
+            else totalCompartido += item.precio;
+        });
+        var porcadaUno = esMixto ? totalCompartido / n : 0;
+        state.split.activo = true;
+        state.split.personas = totales.map(function (t, i) {
+            return { id: i, nombre: 'Persona ' + (i + 1), monto: Math.round((t + porcadaUno) * 100) / 100, metodoPago: null, pagado: false };
+        });
+        state.split.personaActual = 0;
+        cerrarOverlay('splitdetalle');
+        cobrarSiguientePersona();
     }
 
     function cobrarSiguientePersona() {
@@ -1203,6 +1323,7 @@
         volverAMetodos, simularTarjeta, simularQR, confirmarOtro,
         abrirSplit, volverAPago, splitIgualitario, splitPorPersona, splitMixto,
         toggleEstadoIngrediente, cambiarReemplazo,
+        iniciarAsignacionSplit, asignarItemSplit, confirmarAsignacionSplit, _renderSplitNPicker, _renderSplitAsignacion,
         ajustarSplitN, iniciarSplitIgualitario, cobrarSiguientePersona,
         pagarPersonaSplit, seleccionarBilleteSplit, confirmarEfectivoSplit,
         emitirDocumento, nuevaOrden,

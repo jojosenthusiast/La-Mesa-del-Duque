@@ -1620,3 +1620,23 @@ html:has(#lmd-pos-contenido) .lmd-main-surface {
     color: rgba(247, 244, 236, 0.38);
     font-style: italic;
 }
+
+/* ═══════════════════════════════════════════════════════
+   SPLIT POR PERSONA / MIXTO — tabla de asignación
+   ═══════════════════════════════════════════════════════ */
+.lmd-pos-split-asig-body { padding: 0 1rem 1rem; display: flex; flex-direction: column; gap: 0.75rem; overflow: hidden; }
+.lmd-pos-split-asig-alerta { display: flex; align-items: center; gap: 0.4rem; background: rgba(230,126,34,0.12); border: 1px solid rgba(230,126,34,0.3); border-radius: 0.4rem; padding: 0.4rem 0.75rem; font-size: 0.8rem; color: #e67e22; }
+.lmd-pos-split-asig-scroll { overflow: auto; max-height: 300px; }
+.lmd-pos-split-asig-tabla { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+.lmd-pos-split-asig-tabla thead th { padding: 0.3rem 0.4rem; color: rgba(247,244,236,0.45); text-align: center; font-size: 0.72rem; font-weight: 600; border-bottom: 1px solid rgba(201,162,78,0.15); white-space: nowrap; }
+.lmd-pos-split-asig-tabla thead th:first-child { text-align: left; }
+.lmd-pos-split-asig-tabla tbody td { padding: 0.3rem 0.4rem; border-bottom: 1px solid rgba(255,255,255,0.04); text-align: center; vertical-align: middle; }
+.lmd-pos-split-asig-nombre { text-align: left !important; color: rgba(247,244,236,0.85); max-width: 130px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lmd-pos-split-asig-precio { display: block; font-size: 0.7rem; color: rgba(247,244,236,0.38); }
+.lmd-pos-split-asig-row--pendiente .lmd-pos-split-asig-nombre { color: rgba(230,126,34,0.85); }
+.lmd-pos-split-asig-btn { width: 26px; height: 26px; border-radius: 50%; border: 1px solid rgba(201,162,78,0.18); background: #1a2e44; color: transparent; cursor: pointer; transition: all 0.1s; display: flex; align-items: center; justify-content: center; margin: 0 auto; }
+.lmd-pos-split-asig-btn.activo { background: rgba(201,162,78,0.2); border-color: rgba(201,162,78,0.55); color: #c9a24e; }
+.lmd-pos-split-asig-btn--comp.activo { background: rgba(46,125,50,0.2); border-color: rgba(46,125,50,0.4); color: #66bb6a; }
+.lmd-pos-split-asig-btn svg { width: 12px; height: 12px; }
+.lmd-pos-split-asig-tabla tfoot td { padding: 0.4rem 0.4rem; border-top: 1px solid rgba(201,162,78,0.18); }
+.lmd-pos-split-asig-total { font-weight: 700; font-size: 0.78rem; color: #c9a24e; white-space: nowrap; }
