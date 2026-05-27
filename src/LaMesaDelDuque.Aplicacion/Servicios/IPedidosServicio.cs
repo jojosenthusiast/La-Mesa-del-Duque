@@ -13,6 +13,8 @@ public interface IPedidosServicio
     Task MarcarListoAsync(Guid pedidoId, CancellationToken cancelacion = default);
     Task PagarPedidoAsync(Guid pedidoId, CancellationToken cancelacion = default);
     Task CancelarPedidoAsync(Guid pedidoId, CancellationToken cancelacion = default);
+
+    Task AnularPagoAsync(Guid pedidoId, CancellationToken cancelacion = default);
     Task EliminarPedidoPendienteAsync(Guid pedidoId, Guid usuarioId, string? ipAddress = null, CancellationToken cancelacion = default);
     Task<PedidoDto?> ObtenerPedidoAsync(Guid pedidoId, CancellationToken cancelacion = default);
     Task<List<PedidoDto>> ListarPedidosActivosAsync(CancellationToken cancelacion = default);

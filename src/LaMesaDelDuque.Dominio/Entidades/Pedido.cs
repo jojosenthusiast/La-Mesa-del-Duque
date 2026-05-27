@@ -98,6 +98,14 @@ public class Pedido
         Estado = EstadoPedido.Cancelado;
     }
 
+    public void AnularPago()
+    {
+        if (Estado != EstadoPedido.Pagado)
+            throw new ReglaDominioException("Solo se puede anular el pago de un pedido en estado Pagado.");
+
+        Estado = EstadoPedido.AnuladoPago;
+    }
+
     public void AgregarDetalle(DetallePedido detalle)
     {
         if (detalle is null)

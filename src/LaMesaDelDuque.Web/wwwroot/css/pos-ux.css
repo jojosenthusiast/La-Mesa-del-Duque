@@ -1640,3 +1640,15 @@ html:has(#lmd-pos-contenido) .lmd-main-surface {
 .lmd-pos-split-asig-btn svg { width: 12px; height: 12px; }
 .lmd-pos-split-asig-tabla tfoot td { padding: 0.4rem 0.4rem; border-top: 1px solid rgba(201,162,78,0.18); }
 .lmd-pos-split-asig-total { font-weight: 700; font-size: 0.78rem; color: #c9a24e; white-space: nowrap; }
+
+/* Botón anular pago */
+.lmd-pos-cart-btn--anular {
+    background: rgba(192,57,43,0.12);
+    border-color: rgba(192,57,43,0.3);
+    color: rgba(231,76,60,0.8);
+}
+.lmd-pos-cart-btn--anular:hover {
+    background: rgba(192,57,43,0.22);
+    border-color: rgba(192,57,43,0.5);
+    color: #e74c3c;
+}

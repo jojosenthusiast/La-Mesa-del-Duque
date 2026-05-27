@@ -8,5 +8,6 @@ public enum EstadoPedido
     Pagado,
     Listo,
     Despachado,
-    Cancelado
+    Cancelado,
+    AnuladoPago
 }

@@ -368,6 +368,18 @@ public class IndexModel : PageModel
         catch (Exception ex) { return BadRequest(ErrorSeguro(ex)); }
     }
 
+    public async Task<IActionResult> OnPostAnularPagoJsonAsync(Guid pedidoId)
+    {
+        try
+        {
+            if (pedidoId == Guid.Empty)
+                return BadRequest(ErrorSeguro(new ArgumentException("ID de pedido inválido.")));
+            await _pedidosServicio.AnularPagoAsync(pedidoId);
+            return new JsonResult(new { ok = true, mensaje = "Pago anulado." });
+        }
+        catch (Exception ex) { return BadRequest(ErrorSeguro(ex)); }
+    }
+
     // ── Cuentas y pago dividido (JSON) ────────────────────────
 
     public async Task<IActionResult> OnPostMarcarEnCobroJsonAsync(Guid pedidoId)

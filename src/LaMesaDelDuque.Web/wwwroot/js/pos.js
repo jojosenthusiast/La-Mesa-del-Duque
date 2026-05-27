@@ -224,6 +224,7 @@
                     '<button class="lmd-pos-cart-btn lmd-pos-cart-btn--listo" onclick="pos.confirmarListo()"' + (!hayItems ? ' disabled' : '') + '>' + listoLabel + '</button>' +
                     '<button class="lmd-pos-cart-btn lmd-pos-cart-btn--cancelar" onclick="pos.cancelarOrden()">' + icon('x-circle') + ' Cancelar</button>' +
                     '<button class="lmd-pos-cart-btn lmd-pos-cart-btn--pagar' + (state.pagado ? ' lmd-pos-cart-btn--pagado' : '') + '" onclick="pos.irAPago()"' + (!hayItems || state.pagado ? ' disabled' : '') + '>' + pagarLabel + '</button>' +
+                    (state.pagado ? '<button class="lmd-pos-cart-btn lmd-pos-cart-btn--anular" onclick="pos.confirmarAnulacion()">' + icon('rotate-ccw') + ' Anular pago</button>' : '') +
                 '</div>' +
             '</div>' +
         '</div>';
@@ -303,6 +304,23 @@
         }
 
         nuevaOrden();
+    }
+
+    async function confirmarAnulacion() {
+        if (!state.pagado || !state.pedidoActual) return;
+        var ok = await window.lmdConfirm('¿Anular el pago de esta orden? El stock no se revertirá.');
+        if (!ok) return;
+
+        var csrf = document.querySelector('input[name="__RequestVerificationToken"]');
+        var form = new FormData();
+        form.append('__RequestVerificationToken', csrf ? csrf.value : '');
+        form.append('pedidoId', state.pedidoActual.id);
+        try {
+            var res = await fetch('?handler=AnularPagoJson', { method: 'POST', body: form, headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+            if (!res.ok) { var d = await res.json().catch(function() { return {}; }); lmdToast(d.error || 'Error al anular', 'error'); return; }
+            lmdToast('Pago anulado', 'success');
+            nuevaOrden();
+        } catch (e) { lmdToast('Error de conexión', 'error'); }
     }
 
     // ═══════════════════════════════════════════════════
@@ -1324,6 +1342,7 @@
         abrirSplit, volverAPago, splitIgualitario, splitPorPersona, splitMixto,
         toggleEstadoIngrediente, cambiarReemplazo,
         iniciarAsignacionSplit, asignarItemSplit, confirmarAsignacionSplit, _renderSplitNPicker, _renderSplitAsignacion,
+        confirmarAnulacion,
         ajustarSplitN, iniciarSplitIgualitario, cobrarSiguientePersona,
         pagarPersonaSplit, seleccionarBilleteSplit, confirmarEfectivoSplit,
         emitirDocumento, nuevaOrden,

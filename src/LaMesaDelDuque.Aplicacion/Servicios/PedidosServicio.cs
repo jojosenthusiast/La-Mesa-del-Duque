@@ -257,6 +257,18 @@ internal class PedidosServicio : IPedidosServicio
         await NotificarMetricasInvalidadasSiExisteAsync(cancelacion);
     }
 
+    public async Task AnularPagoAsync(Guid pedidoId, CancellationToken cancelacion = default)
+    {
+        var pedido = await _uot.Pedidos.ObtenerConDetallesParaActualizarAsync(pedidoId, cancelacion)
+            ?? throw new ArgumentException($"No se encontró el pedido con ID {pedidoId}.", nameof(pedidoId));
+
+        pedido.AnularPago();
+        await LiberarMesaSiCorrespondeAsync(pedido, cancelacion);
+        await _uot.GuardarCambiosAsync(cancelacion);
+        await _notificadorPedidos.NotificarPedidoCanceladoAsync(pedido.Id, cancelacion);
+        await NotificarMetricasInvalidadasSiExisteAsync(cancelacion);
+    }
+
     public async Task EliminarPedidoPendienteAsync(Guid pedidoId, Guid usuarioId, string? ipAddress = null, CancellationToken cancelacion = default)
     {
         var pedido = await _uot.Pedidos.ObtenerConDetallesParaActualizarAsync(pedidoId, cancelacion)
