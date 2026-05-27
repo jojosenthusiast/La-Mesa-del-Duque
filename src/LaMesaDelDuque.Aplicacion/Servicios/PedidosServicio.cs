@@ -136,19 +136,12 @@ internal class PedidosServicio : IPedidosServicio
             var receta = await _uot.RecetasProductos.ObtenerPorProductoIdAsync(detalle.Producto.Id, ct);
             if (receta is null) continue;
 
-            var ingredientesQuitados = detalle.ObtenerModificaciones()
-                .Where(m => m.Accion == "quitar")
-                .Select(m => m.IngredienteId)
-                .ToHashSet();
+            var consumos = CalcularConsumosDetalle(detalle, receta);
 
-            foreach (var ri in receta.Ingredientes)
+            foreach (var (ingId, consumo) in consumos)
             {
-                if (ingredientesQuitados.Contains(ri.IngredienteId)) continue;
-
-                var ingrediente = await _uot.Ingredientes.ObtenerPorIdAsync(ri.IngredienteId, ct);
+                var ingrediente = await _uot.Ingredientes.ObtenerPorIdAsync(ingId, ct);
                 if (ingrediente is null) continue;
-
-                var consumo = ri.CantidadRequerida * detalle.Cantidad;
                 if (ingrediente.StockActual < consumo)
                     faltantes.Add($"{ingrediente.Nombre} (necesario: {consumo} {ingrediente.UnidadMedida}, disponible: {ingrediente.StockActual})");
             }
@@ -165,22 +158,60 @@ internal class PedidosServicio : IPedidosServicio
             var receta = await _uot.RecetasProductos.ObtenerPorProductoIdAsync(detalle.Producto.Id, ct);
             if (receta is null) continue;
 
-            var ingredientesQuitados = detalle.ObtenerModificaciones()
-                .Where(m => m.Accion == "quitar")
-                .Select(m => m.IngredienteId)
-                .ToHashSet();
+            var consumos = CalcularConsumosDetalle(detalle, receta);
 
-            foreach (var ri in receta.Ingredientes)
+            foreach (var (ingId, consumo) in consumos)
             {
-                if (ingredientesQuitados.Contains(ri.IngredienteId)) continue;
-
-                var ingrediente = await _uot.Ingredientes.ObtenerPorIdAsync(ri.IngredienteId, ct);
+                var ingrediente = await _uot.Ingredientes.ObtenerPorIdAsync(ingId, ct);
                 if (ingrediente is null) continue;
-
-                var consumo = ri.CantidadRequerida * detalle.Cantidad;
                 ingrediente.DescontarStock(consumo);
             }
         }
+    }
+
+    private static Dictionary<Guid, decimal> CalcularConsumosDetalle(DetallePedido detalle, RecetaProducto receta)
+    {
+        var mods = detalle.ObtenerModificaciones();
+
+        var quitados = mods
+            .Where(m => m.Accion == "quitar")
+            .Select(m => m.IngredienteId)
+            .ToHashSet();
+
+        var intercambios = mods
+            .Where(m => m.Accion == "intercambiar" && m.IngredienteReemplazoId.HasValue)
+            .ToDictionary(m => m.IngredienteId, m => m.IngredienteReemplazoId!.Value);
+
+        var extras = mods
+            .Where(m => m.Accion == "extra")
+            .Select(m => m.IngredienteId)
+            .ToHashSet();
+
+        var consumos = new Dictionary<Guid, decimal>();
+
+        foreach (var ri in receta.Ingredientes)
+        {
+            if (quitados.Contains(ri.IngredienteId)) continue;
+
+            var targetId = intercambios.TryGetValue(ri.IngredienteId, out var reemplazo)
+                ? reemplazo
+                : ri.IngredienteId;
+
+            var cantidad = ri.CantidadRequerida * detalle.Cantidad;
+            if (extras.Contains(ri.IngredienteId))
+                cantidad += ri.CantidadRequerida * detalle.Cantidad;
+
+            consumos[targetId] = consumos.TryGetValue(targetId, out var prev) ? prev + cantidad : cantidad;
+        }
+
+        foreach (var m in mods.Where(m => m.Accion == "extra"))
+        {
+            if (receta.Ingredientes.Any(ri => ri.IngredienteId == m.IngredienteId)) continue;
+            var cantidad = detalle.Cantidad;
+            consumos[m.IngredienteId] = consumos.TryGetValue(m.IngredienteId, out var prev) ? prev + cantidad : cantidad;
+        }
+
+        return consumos;
     }
 
     public async Task<PedidoDto> EliminarDetalleAsync(Guid pedidoId, Guid detalleId, CancellationToken cancelacion = default)

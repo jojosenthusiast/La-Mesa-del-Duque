@@ -8,5 +8,6 @@ public class ModificacionIngrediente
     public string IngredienteNombre { get; set; } = string.Empty;
     public string Accion { get; set; } = string.Empty; // "quitar", "extra", "intercambiar"
     public string Motivo { get; set; } = string.Empty; // "alergia", "preferencia", "intercambio"
-    public string? IngredienteReemplazo { get; set; }
+    public Guid? IngredienteReemplazoId { get; set; }
+    public string? IngredienteReemplazoNombre { get; set; }
 }

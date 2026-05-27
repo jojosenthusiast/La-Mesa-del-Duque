@@ -144,13 +144,16 @@ internal class CocinaServicio : ICocinaServicio
                 }
 
                 if (m.Motivo == "alergia" && !string.IsNullOrWhiteSpace(m.IngredienteNombre))
-                {
                     alergenosList.Add(m.IngredienteNombre);
-                }
 
-                if (m.Accion == "quitar" || m.Accion == "intercambiar")
+                if (m.Accion == "quitar")
                 {
                     quitadosList.Add(m.IngredienteNombre);
+                }
+                else if (m.Accion == "intercambiar")
+                {
+                    var reemplazo = m.IngredienteReemplazoNombre ?? "otro";
+                    quitadosList.Add($"{m.IngredienteNombre} → {reemplazo}");
                 }
                 else if (m.Accion == "extra")
                 {
