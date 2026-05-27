@@ -19,6 +19,7 @@ html:has(#lmd-pos-contenido) .lmd-shell-container {
 html:has(#lmd-pos-contenido) .lmd-main-surface {
     display: flex;
     flex-direction: column;
+    height: calc(100dvh - var(--lmd-nav-alto, 72px));
     overflow: hidden;
     min-height: 0;
 }
