@@ -40,6 +40,7 @@
     const SHELL = document.getElementById('lmd-pos-contenido');
     let connection = null;
     let keypadValue = '0';
+    let _creandoPedido = false;
 
     // ── Screen machine ──────────────────────────────────
     function mostrarPantalla(nombre) {
@@ -202,7 +203,7 @@
               }).join('');
 
         var pagarLabel = state.pagado ? icon('check-circle') + ' Pagado' : icon('credit-card') + ' Pagar';
-        var listoLabel = state.pagado ? icon('receipt') + ' Finalizar' : icon('send') + ' Enviar';
+        var listoLabel = state.pagado ? icon('receipt') + ' Finalizar' : icon('send') + ' Listo';
 
         var html = '<div class="lmd-pos-productos">' +
             '<div class="lmd-pos-categorias" id="lmd-pos-categorias">' + catHtml + '</div>' +
@@ -299,6 +300,8 @@
         }
 
         // Enviar a cocina (crear pedido)
+        if (_creandoPedido) return;
+        _creandoPedido = true;
         var csrf = document.querySelector('input[name="__RequestVerificationToken"]');
         var form = new FormData();
         form.append('__RequestVerificationToken', csrf ? csrf.value : '');
@@ -313,10 +316,13 @@
             var res = await fetch('?handler=CrearJson', { method: 'POST', body: form, headers: { 'X-Requested-With': 'XMLHttpRequest' } });
             var data = await res.json();
             if (data.pedidoId) {
-                state.pedidoActual = { id: data.pedidoId };
                 lmdToast('Pedido enviado a cocina', 'success');
+                _creandoPedido = false;
+                nuevaOrden();
+                return;
             }
         } catch (e) { lmdToast('Error al enviar pedido', 'error'); }
+        _creandoPedido = false;
     }
 
     // ═══════════════════════════════════════════════════
@@ -325,9 +331,10 @@
     async function irAPago() {
         if (state.lineas.length === 0) { lmdToast('Agrega productos primero', 'error'); return; }
         if (state.pagado) return;
+        if (_creandoPedido) return;
 
-        // Crear pedido si no existe
         if (!state.pedidoActual) {
+            _creandoPedido = true;
             var csrf = document.querySelector('input[name="__RequestVerificationToken"]');
             var form = new FormData();
             form.append('__RequestVerificationToken', csrf ? csrf.value : '');
@@ -341,8 +348,9 @@
                 var res = await fetch('?handler=CrearJson', { method: 'POST', body: form, headers: { 'X-Requested-With': 'XMLHttpRequest' } });
                 var data = await res.json();
                 if (data.pedidoId) state.pedidoActual = { id: data.pedidoId };
-                else { lmdToast('No se pudo crear el pedido', 'error'); return; }
-            } catch (e) { lmdToast('Error al crear pedido', 'error'); return; }
+                else { lmdToast('No se pudo crear el pedido', 'error'); _creandoPedido = false; return; }
+            } catch (e) { lmdToast('Error al crear pedido', 'error'); _creandoPedido = false; return; }
+            _creandoPedido = false;
         }
 
         abrirOverlayPago();
@@ -403,15 +411,6 @@
     // ── Efectivo: keypad + shortcuts + cambio ──────────
     function abrirOverlayEfectivo(total) {
         keypadValue = '0';
-        var billetes = [1, 5, 10, 20, 50, 100];
-        var shortcutsHtml = billetes.map(function (b) {
-            return '<button class="lmd-pos-bill-btn" onclick="pos.seleccionarBillete(' + b + ',' + total.toFixed(2) + ')">' +
-                (b === 1 ? 'Exacto' : '$' + b) +
-            '</button>';
-        }).join('');
-        // prepend Exacto replacement: exact change is the total itself
-        // (el botón "1" arriba lo remplazamos por "Exacto" lógicamente)
-
         var html =
             '<div class="lmd-pos-ov-header">' +
                 '<button class="lmd-pos-ov-back" onclick="pos.volverAMetodos()">' + icon('arrow-left') + '</button>' +
@@ -639,6 +638,7 @@
     }
 
     function splitIgualitario() {
+        _splitN = 2;
         cerrarOverlay('split');
         var total = totalLineas(state.lineas);
         var html =
@@ -705,10 +705,9 @@
         var personas = state.split.personas;
         var idx = personas.findIndex(function (p) { return !p.pagado; });
         if (idx < 0) {
-            // Todas pagadas
             state.split.activo = false;
             var total = totalLineas(state.lineas);
-            finalizarPago('split', total, 'SPLIT-' + n);
+            finalizarPago('split', total, 'SPLIT-' + state.split.personas.length);
             return;
         }
         state.split.personaActual = idx;
