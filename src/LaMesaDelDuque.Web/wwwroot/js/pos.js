@@ -190,7 +190,7 @@
             : state.lineas.map(function (l, i) {
                 return '<div class="lmd-pos-cart-item">' +
                     '<div class="lmd-pos-cart-item__info">' +
-                        '<span class="lmd-pos-cart-item__nombre">' + (l.productoNombre || l.nombre || '') + '</span>' +
+                        '<span class="lmd-pos-cart-item__nombre">' + (l.productoNombre || l.nombre || '') + (l.tieneModificaciones ? '<span class="lmd-pos-mod-dot" title="Tiene modificaciones"></span>' : '') + '</span>' +
                         '<span class="lmd-pos-cart-item__precio">' + fmt((l.precioUnitario || 0) * (l.cantidad || 0)) + '</span>' +
                     '</div>' +
                     '<div class="lmd-pos-cart-item__controles">' +
@@ -280,11 +280,21 @@
     }
 
     async function cancelarOrden() {
-        if (state.lineas.length === 0) return;
+        if (state.lineas.length === 0 && !state.pedidoActual) return;
         var ok = await window.lmdConfirm('¿Cancelar esta orden?');
         if (!ok) return;
-        _resetPedido();
-        renderProductos();
+
+        if (state.pedidoActual && state.pedidoActual.id) {
+            var csrf = document.querySelector('input[name="__RequestVerificationToken"]');
+            var form = new FormData();
+            form.append('__RequestVerificationToken', csrf ? csrf.value : '');
+            form.append('pedidoId', state.pedidoActual.id);
+            try {
+                await fetch('?handler=CancelarJson', { method: 'POST', body: form, headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+            } catch (e) { /* continúa aunque falle el server */ }
+        }
+
+        nuevaOrden();
     }
 
     // ═══════════════════════════════════════════════════
@@ -343,6 +353,8 @@
             state.lineas.forEach(function (l, i) {
                 form.append('Vm.CrearPedido.Lineas[' + i + '].ProductoId', l.productoId);
                 form.append('Vm.CrearPedido.Lineas[' + i + '].Cantidad', l.cantidad || 1);
+                if (l.notas) form.append('Vm.CrearPedido.Lineas[' + i + '].Notas', l.notas);
+                if (l.modificacionesJson) form.append('Vm.CrearPedido.Lineas[' + i + '].ModificacionesJson', l.modificacionesJson);
             });
             try {
                 var res = await fetch('?handler=CrearJson', { method: 'POST', body: form, headers: { 'X-Requested-With': 'XMLHttpRequest' } });
@@ -979,7 +991,28 @@
 
     function confirmarModificadores() {
         cerrarModificadores();
-        lmdToast('Modificaciones aplicadas', 'success');
+
+        var mods = _mod.ingredientes
+            .filter(function (ing) { return ing.quitado; })
+            .map(function (ing) {
+                return { ingredienteId: ing.id, ingredienteNombre: ing.nombre, accion: 'quitar', motivo: 'preferencia', ingredienteReemplazo: null };
+            });
+
+        var notasArr = [];
+        if (_mod.alergias.length > 0) notasArr.push('Alergias: ' + _mod.alergias.join(', '));
+        if (_mod.notaCustom && _mod.notaCustom.trim()) notasArr.push(_mod.notaCustom.trim());
+        var notas = notasArr.length > 0 ? notasArr.join(' | ') : null;
+
+        var linea = state.lineas.find(function (l) { return l.productoId === _mod.productoId; });
+        if (linea) {
+            linea.modificacionesJson = mods.length > 0 ? JSON.stringify(mods) : null;
+            linea.notas = notas;
+            linea.tieneModificaciones = mods.length > 0 || !!notas;
+            renderProductos();
+        }
+
+        var total = mods.length + (notas ? 1 : 0);
+        lmdToast(total > 0 ? 'Modificaciones aplicadas (' + total + ')' : 'Sin cambios', total > 0 ? 'success' : 'info');
     }
 
     // ═══════════════════════════════════════════════════
