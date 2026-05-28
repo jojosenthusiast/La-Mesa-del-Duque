@@ -228,7 +228,7 @@
                 '<div class="lmd-pos-cart__acciones">' +
                     '<button class="lmd-pos-cart-btn lmd-pos-cart-btn--listo" onclick="pos.confirmarListo()"' + (!hayItems ? ' disabled' : '') + '>' + listoLabel + '</button>' +
                     '<button class="lmd-pos-cart-btn lmd-pos-cart-btn--cancelar" onclick="pos.cancelarOrden()">' + icon('x-circle') + ' Cancelar</button>' +
-                    '<button class="lmd-pos-cart-btn lmd-pos-cart-btn--pagar' + (state.pagado ? ' lmd-pos-cart-btn--pagado' : '') + '" onclick="pos.irAPago()"' + (!hayItems || state.pagado ? ' disabled' : '') + '>' + pagarLabel + '</button>' +
+                    '<button class="lmd-pos-cart-btn lmd-pos-cart-btn--pagar' + (state.pagado ? ' lmd-pos-cart-btn--pagado' : '') + '" onclick="pos.irAPago()"' + ((!hayItems && !state.pedidoActual) || state.pagado ? ' disabled' : '') + '>' + pagarLabel + '</button>' +
                     (state.pagado ? '<button class="lmd-pos-cart-btn lmd-pos-cart-btn--anular" onclick="pos.confirmarAnulacion()">' + icon('rotate-ccw') + ' Anular pago</button>' : '') +
                 '</div>' +
             '</div>' +
@@ -356,6 +356,7 @@
                 var resMas = await fetch('?handler=EnviarMasJson', { method: 'POST', body: formMas, headers: { 'X-Requested-With': 'XMLHttpRequest' } });
                 if (resMas.ok) {
                     lmdToast('Items enviados a cocina', 'success');
+                    state.pedidoActual.total = (state.pedidoActual.total || 0) + totalLineas(state.lineas);
                     state.lineas = [];
                     renderProductos();
                 } else {
@@ -387,7 +388,7 @@
                     _creandoPedido = false;
                     nuevaOrden();
                 } else {
-                    state.pedidoActual = { id: data.pedidoId };
+                    state.pedidoActual = { id: data.pedidoId, total: totalLineas(state.lineas) };
                     state.lineas = [];
                     _creandoPedido = false;
                     renderProductos();
@@ -452,7 +453,9 @@
     ];
 
     function abrirOverlayPago() {
-        var total = totalLineas(state.lineas);
+        var total = (state.pedidoActual && state.pedidoActual.total)
+            ? state.pedidoActual.total + totalLineas(state.lineas)
+            : totalLineas(state.lineas);
         var btnsHtml = METODOS_PAGO.map(function (m) {
             return '<button class="lmd-pos-pm-btn ' + (m.cls || '') + '" onclick="pos.procesarPago(\'' + m.codigo + '\',' + total.toFixed(2) + ')">' +
                 '<span class="lmd-pos-pm-btn__icon">' + icon(m.icon) + '</span>' +
@@ -689,7 +692,9 @@
     // ═══════════════════════════════════════════════════
     function abrirSplit() {
         cerrarOverlay('pago');
-        var total = totalLineas(state.lineas);
+        var total = (state.pedidoActual && state.pedidoActual.total)
+            ? state.pedidoActual.total + totalLineas(state.lineas)
+            : totalLineas(state.lineas);
         var html =
             '<div class="lmd-pos-ov-header">' +
                 '<button class="lmd-pos-ov-back" onclick="pos.volverAPago()">' + icon('arrow-left') + '</button>' +
@@ -1056,7 +1061,9 @@
     ];
 
     function abrirOverlayDocumentos() {
-        var total = totalLineas(state.lineas);
+        var total = (state.pedidoActual && state.pedidoActual.total)
+            ? state.pedidoActual.total
+            : totalLineas(state.lineas);
         var btnsHtml = DOCUMENTOS.map(function (d) {
             return '<button class="lmd-pos-pm-btn" onclick="pos.emitirDocumento(\'' + d.codigo + '\')">' +
                 '<span class="lmd-pos-pm-btn__icon">' + icon(d.icon) + '</span>' +
@@ -1201,8 +1208,6 @@
             ing.reemplazoId = reemplazoId;
             ing.reemplazoNombre = r ? r.nombre : '';
         }
-    });
-        if (ing) { ing.quitado = !ing.quitado; renderModificadorModal(); }
     }
 
     function toggleAlergia(alergia) {
