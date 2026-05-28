@@ -18,12 +18,17 @@ internal class CocinaServicio : ICocinaServicio
         _notificador = notificador;
     }
 
-    public async Task GenerarOrdenesAsync(Guid pedidoId, CancellationToken ct = default)
+    public async Task GenerarOrdenesAsync(Guid pedidoId, IEnumerable<Guid>? soloDetalles = null, CancellationToken ct = default)
     {
         var pedido = await _uot.Pedidos.ObtenerConDetallesAsync(pedidoId, ct)
             ?? throw new ArgumentException($"No se encontró el pedido con ID {pedidoId}.", nameof(pedidoId));
 
-        foreach (var detalle in pedido.Detalles)
+        var filtro = soloDetalles?.ToHashSet();
+        var detallesAFirar = filtro is not null
+            ? pedido.Detalles.Where(d => filtro.Contains(d.Id)).ToList()
+            : pedido.Detalles.ToList();
+
+        foreach (var detalle in detallesAFirar)
         {
             var estacion = detalle.Producto.Categoria?.EstacionCocina ?? EstacionCocina.Expo;
 
@@ -144,9 +149,10 @@ internal class CocinaServicio : ICocinaServicio
                 }
 
                 if (m.Motivo == "alergia" && !string.IsNullOrWhiteSpace(m.IngredienteNombre))
+                {
                     alergenosList.Add(m.IngredienteNombre);
-
-                if (m.Accion == "quitar")
+                }
+                else if (m.Accion == "quitar")
                 {
                     quitadosList.Add(m.IngredienteNombre);
                 }

@@ -206,7 +206,11 @@
               }).join('');
 
         var pagarLabel = state.pagado ? icon('check-circle') + ' Pagado' : icon('credit-card') + ' Pagar';
-        var listoLabel = state.pagado ? icon('receipt') + ' Finalizar' : icon('send') + ' Listo';
+        var listoLabel = state.pagado
+            ? icon('receipt') + ' Finalizar'
+            : state.pedidoActual
+                ? icon('plus-circle') + ' Enviar más'
+                : icon('send') + ' Enviar a cocina';
 
         var html = '<div class="lmd-pos-productos">' +
             '<div class="lmd-pos-categorias" id="lmd-pos-categorias">' + catHtml + '</div>' +
@@ -215,6 +219,7 @@
                 '<div class="lmd-pos-cart__header">' +
                     icon('shopping-bag') +
                     '<span>' + (state.tipoServicio === 'ComerAqui' ? 'Mesa ' + state.mesaNumero : 'Para llevar') + '</span>' +
+                    (state.pedidoActual && !state.pagado ? '<span class="lmd-pos-tab-activo-badge">' + icon('clock') + ' Tab activo</span>' : '') +
                     (!state.pagado ? '<button class="lmd-pos-cart-change-servicio" onclick="pos.cambiarServicio()" title="Cambiar tipo de servicio">' + icon('refresh-cw') + '</button>' : '') +
                     (state.pagado ? '<span class="lmd-pos-pagado-badge">' + icon('check-circle') + ' Pagado</span>' : '') +
                 '</div>' +
@@ -329,16 +334,40 @@
     async function confirmarListo() {
         if (state.lineas.length === 0) { lmdToast('Agrega productos primero', 'error'); return; }
 
-        // Si ya está pagado solo mostramos docs (pedido ya fue creado en el flujo de pago)
-        if (state.pagado) {
-            abrirOverlayDocumentos();
+        if (state.pagado) { abrirOverlayDocumentos(); return; }
+
+        if (_creandoPedido) return;
+        _creandoPedido = true;
+
+        var csrf = document.querySelector('input[name="__RequestVerificationToken"]');
+
+        // Tab abierto: agregar items nuevos al pedido existente
+        if (state.pedidoActual) {
+            var formMas = new FormData();
+            formMas.append('__RequestVerificationToken', csrf ? csrf.value : '');
+            formMas.append('pedidoId', state.pedidoActual.id);
+            state.lineas.forEach(function (l, i) {
+                formMas.append('Vm.CrearPedido.Lineas[' + i + '].ProductoId', l.productoId);
+                formMas.append('Vm.CrearPedido.Lineas[' + i + '].Cantidad', l.cantidad || 1);
+                if (l.notas) formMas.append('Vm.CrearPedido.Lineas[' + i + '].Notas', l.notas);
+                if (l.modificacionesJson) formMas.append('Vm.CrearPedido.Lineas[' + i + '].ModificacionesJson', l.modificacionesJson);
+            });
+            try {
+                var resMas = await fetch('?handler=EnviarMasJson', { method: 'POST', body: formMas, headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+                if (resMas.ok) {
+                    lmdToast('Items enviados a cocina', 'success');
+                    state.lineas = [];
+                    renderProductos();
+                } else {
+                    var errMas = await resMas.json().catch(function () { return null; });
+                    lmdToast(errMas && errMas.error ? errMas.error : 'Error al enviar items', 'error');
+                }
+            } catch (e) { lmdToast('Error al enviar items', 'error'); }
+            _creandoPedido = false;
             return;
         }
 
-        // Enviar a cocina (crear pedido)
-        if (_creandoPedido) return;
-        _creandoPedido = true;
-        var csrf = document.querySelector('input[name="__RequestVerificationToken"]');
+        // Sin tab: crear pedido nuevo
         var form = new FormData();
         form.append('__RequestVerificationToken', csrf ? csrf.value : '');
         form.append('Vm.CrearPedido.TipoServicio', state.tipoServicio || 'ComerAqui');
@@ -349,27 +378,44 @@
             if (l.notas) form.append('Vm.CrearPedido.Lineas[' + i + '].Notas', l.notas);
             if (l.modificacionesJson) form.append('Vm.CrearPedido.Lineas[' + i + '].ModificacionesJson', l.modificacionesJson);
         });
-
         try {
             var res = await fetch('?handler=CrearJson', { method: 'POST', body: form, headers: { 'X-Requested-With': 'XMLHttpRequest' } });
             var data = await res.json();
             if (data.pedidoId) {
                 lmdToast('Pedido enviado a cocina', 'success');
-                _creandoPedido = false;
-                nuevaOrden();
+                if (state.tipoServicio === 'ParaLlevar') {
+                    _creandoPedido = false;
+                    nuevaOrden();
+                } else {
+                    state.pedidoActual = { id: data.pedidoId };
+                    state.lineas = [];
+                    _creandoPedido = false;
+                    renderProductos();
+                }
                 return;
             }
         } catch (e) { lmdToast('Error al enviar pedido', 'error'); }
         _creandoPedido = false;
+
     }
 
     // ═══════════════════════════════════════════════════
     // PAGO — overlay de 6 métodos
     // ═══════════════════════════════════════════════════
     async function irAPago() {
-        if (state.lineas.length === 0) { lmdToast('Agrega productos primero', 'error'); return; }
         if (state.pagado) return;
         if (_creandoPedido) return;
+
+        // Tab abierto con items pendientes: enviarlos a cocina primero, luego cobrar
+        if (state.pedidoActual && state.lineas.length > 0) {
+            await confirmarListo();
+            if (state.lineas.length > 0) return; // envio fallo
+        }
+
+        if (!state.pedidoActual && state.lineas.length === 0) {
+            lmdToast('Agrega productos primero', 'error');
+            return;
+        }
 
         if (!state.pedidoActual) {
             _creandoPedido = true;
@@ -1185,8 +1231,12 @@
             }
         });
 
+        // Alergias como ModificacionIngrediente de primera clase (motivo:'alergia')
+        _mod.alergias.forEach(function (alergia) {
+            mods.push({ ingredienteId: '00000000-0000-0000-0000-000000000000', ingredienteNombre: alergia, accion: 'alergia', motivo: 'alergia', ingredienteReemplazoId: null, ingredienteReemplazoNombre: null });
+        });
+
         var notasArr = [];
-        if (_mod.alergias.length > 0) notasArr.push('Alergias: ' + _mod.alergias.join(', '));
         if (_mod.notaCustom && _mod.notaCustom.trim()) notasArr.push(_mod.notaCustom.trim());
         var notas = notasArr.length > 0 ? notasArr.join(' | ') : null;
 

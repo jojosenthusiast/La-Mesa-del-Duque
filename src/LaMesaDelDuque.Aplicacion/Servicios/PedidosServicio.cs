@@ -65,7 +65,7 @@ internal class PedidosServicio : IPedidosServicio
         await NotificarMetricasInvalidadasSiExisteAsync(cancelacion);
 
         if (_cocinaServicio is not null)
-            await _cocinaServicio.GenerarOrdenesAsync(pedido.Id, cancelacion);
+            await _cocinaServicio.GenerarOrdenesAsync(pedido.Id, null, cancelacion);
 
         return MapToDto(pedido);
     }
@@ -83,7 +83,31 @@ internal class PedidosServicio : IPedidosServicio
 
         await _uot.GuardarCambiosAsync(cancelacion);
 
+        if (_cocinaServicio is not null)
+            await _cocinaServicio.GenerarOrdenesAsync(pedidoId, new[] { detalle.Id }, cancelacion);
+
         return MapToDto(pedido);
+    }
+
+    public async Task AgregarItemsAsync(Guid pedidoId, List<DetalleCreacionDto> items, CancellationToken cancelacion = default)
+    {
+        var pedido = await _uot.Pedidos.ObtenerConDetallesParaActualizarAsync(pedidoId, cancelacion)
+            ?? throw new ArgumentException($"No se encontró el pedido con ID {pedidoId}.", nameof(pedidoId));
+
+        var nuevosDetalles = new List<DetallePedido>();
+        foreach (var item in items)
+        {
+            var producto = await _uot.Productos.ObtenerConTrackingAsync(item.ProductoId, cancelacion)
+                ?? throw new ArgumentException($"No se encontró el producto con ID {item.ProductoId}.", nameof(items));
+            var detalle = new DetallePedido(producto, item.Cantidad, item.PrecioUnitario, item.Notas, item.ModificacionesJson);
+            pedido.AgregarDetalle(detalle);
+            nuevosDetalles.Add(detalle);
+        }
+
+        await _uot.GuardarCambiosAsync(cancelacion);
+
+        if (_cocinaServicio is not null && nuevosDetalles.Count > 0)
+            await _cocinaServicio.GenerarOrdenesAsync(pedidoId, nuevosDetalles.Select(d => d.Id), cancelacion);
     }
 
     public async Task MarcarEnPreparacionAsync(Guid pedidoId, CancellationToken cancelacion = default)
@@ -117,14 +141,6 @@ internal class PedidosServicio : IPedidosServicio
         await DescontarStockAsync(pedido, cancelacion);
         await _uot.GuardarCambiosAsync(cancelacion);
         await _notificadorPedidos.NotificarEstadoCambiadoAsync(pedido.Id, pedido.Estado, cancelacion);
-
-        // Enviar directo a cocina al pagar
-        if (_cocinaServicio is not null && pedido.Detalles.Count > 0)
-        {
-            try { await _cocinaServicio.GenerarOrdenesAsync(pedido.Id, cancelacion); }
-            catch { /* cocina no debería bloquear el pago */ }
-        }
-
         await NotificarMetricasInvalidadasSiExisteAsync(cancelacion);
     }
 

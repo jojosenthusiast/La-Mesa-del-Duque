@@ -95,7 +95,7 @@ public class KDSPageTests
         public List<Guid> Recuperado { get; } = new();
         public List<Guid> Generados { get; } = new();
 
-        public Task GenerarOrdenesAsync(Guid pedidoId, CancellationToken ct = default)
+        public Task GenerarOrdenesAsync(Guid pedidoId, IEnumerable<Guid>? soloDetalles = null, CancellationToken ct = default)
         {
             Generados.Add(pedidoId);
             return Task.CompletedTask;

@@ -1399,6 +1399,20 @@ html:has(#lmd-pos-contenido) .lmd-main-surface {
 .lmd-pos-cart-item__remove svg { width: 14px; height: 14px; }
 
 /* Pagado badge */
+.lmd-pos-tab-activo-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.2rem 0.6rem;
+    background: rgba(201,162,78,0.12);
+    border: 1px solid rgba(201,162,78,0.3);
+    border-radius: 2rem;
+    color: #c9a24e;
+    font-size: 0.7rem;
+    font-weight: 700;
+    margin-left: auto;
+}
+.lmd-pos-tab-activo-badge svg { width: 12px; height: 12px; }
 .lmd-pos-pagado-badge {
     display: inline-flex;
     align-items: center;

@@ -275,6 +275,31 @@ public class IndexModel : PageModel
         catch (Exception ex) { return BadRequest(ErrorSeguro(ex)); }
     }
 
+    public async Task<IActionResult> OnPostEnviarMasJsonAsync()
+    {
+        if (!Guid.TryParse(Request.Form["pedidoId"].FirstOrDefault(), out var pedidoId))
+            return BadRequest(new { error = "pedidoId inválido." });
+
+        if (Vm.CrearPedido.Lineas.Count == 0 || Vm.CrearPedido.Lineas[0].ProductoId == Guid.Empty)
+            return BadRequest(new { error = "Debe incluir al menos un ítem." });
+
+        var prods = (await _catalogoProductosServicio.ListarProductosAsync()).Where(p => p.Activo).ToDictionary(p => p.Id);
+        var items = new List<DetalleCreacionDto>();
+
+        foreach (var l in Vm.CrearPedido.Lineas)
+        {
+            if (!prods.TryGetValue(l.ProductoId, out var prod)) return BadRequest(new { error = "Producto inválido." });
+            items.Add(new DetalleCreacionDto { ProductoId = l.ProductoId, Cantidad = l.Cantidad, PrecioUnitario = prod.Precio, Notas = l.Notas, ModificacionesJson = l.ModificacionesJson });
+        }
+
+        try
+        {
+            await _pedidosServicio.AgregarItemsAsync(pedidoId, items);
+            return new JsonResult(new { ok = true });
+        }
+        catch (Exception ex) { return BadRequest(ErrorSeguro(ex)); }
+    }
+
     public async Task<IActionResult> OnPostAgregarLineaJsonAsync(Guid pedidoId, Guid productoId, int cantidad, string? notas = null, string? modificacionesJson = null)
     {
         try
