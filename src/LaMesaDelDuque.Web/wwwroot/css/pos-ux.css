@@ -156,10 +156,33 @@ html:has(#lmd-pos-contenido) .lmd-main-surface {
 }
 
 .lmd-pos-mesa-card--ocupada {
-    border-color: rgba(192, 57, 43, 0.35);
-    background: rgba(192, 57, 43, 0.07);
-    cursor: not-allowed;
-    opacity: 0.55;
+    border-color: rgba(218, 165, 32, 0.4);
+    background: rgba(218, 165, 32, 0.07);
+    cursor: pointer;
+}
+
+.lmd-pos-mesa-card--ocupada:hover {
+    border-color: rgba(218, 165, 32, 0.75);
+    background: rgba(218, 165, 32, 0.13);
+}
+
+.lmd-pos-mesa-card--en-cobro {
+    border-color: rgba(201, 162, 78, 0.65);
+    background: rgba(201, 162, 78, 0.1);
+    cursor: pointer;
+    position: relative;
+    animation: lmd-cobro-pulse 2.2s ease-in-out infinite;
+}
+
+.lmd-pos-mesa-card--en-cobro:hover {
+    border-color: #c9a24e;
+    background: rgba(201, 162, 78, 0.18);
+    box-shadow: 0 0 0 1px rgba(201, 162, 78, 0.45), 0 4px 18px rgba(201, 162, 78, 0.18);
+}
+
+@keyframes lmd-cobro-pulse {
+    0%, 100% { border-color: rgba(201, 162, 78, 0.4); }
+    50%       { border-color: rgba(201, 162, 78, 0.9); }
 }
 
 .lmd-pos-mesa-card__numero {
@@ -172,8 +195,29 @@ html:has(#lmd-pos-contenido) .lmd-main-surface {
 }
 
 .lmd-pos-mesa-card--ocupada .lmd-pos-mesa-card__numero {
-    color: #e74c3c;
+    color: #daa520;
 }
+
+.lmd-pos-mesa-card--en-cobro .lmd-pos-mesa-card__numero {
+    color: #c9a24e;
+}
+
+.lmd-pos-mesa-card__cobrar-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
+    padding: 0.18rem 0.45rem;
+    background: #c9a24e;
+    color: #0f1b2d;
+    border-radius: 0.375rem;
+    font-size: 0.6rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-top: 0.15rem;
+}
+
+.lmd-pos-mesa-card__cobrar-badge svg { width: 9px; height: 9px; }
 
 .lmd-pos-mesa-card__capacidad {
     font-size: 0.68rem;

@@ -101,14 +101,23 @@
             grupos[cap].forEach(function (m) {
                 var disponible = m.estado === 'Disponible';
                 var hayTab = !disponible && m.pedidoActualId;
-                var cls = disponible ? 'lmd-pos-mesa-card--disponible' : 'lmd-pos-mesa-card--ocupada';
-                var fechaAttr = (hayTab && m.pedidoFechaCreacion) ? ' data-pedido-fecha="' + m.pedidoFechaCreacion + '"' : '';
-                var minTab = (hayTab && m.pedidoFechaCreacion) ? Math.floor((Date.now() - new Date(m.pedidoFechaCreacion).getTime()) / 60000) : 0;
-                var tiempoLabel = minTab > 0 ? minTab + ' min' : 'Tab';
+                var enCobro = hayTab && m.pedidoEstado === 'EnCobro';
+                var cls = disponible ? 'lmd-pos-mesa-card--disponible'
+                    : enCobro ? 'lmd-pos-mesa-card--en-cobro'
+                    : 'lmd-pos-mesa-card--ocupada';
+                var badgeHtml = '';
+                if (enCobro) {
+                    badgeHtml = '<span class="lmd-pos-mesa-card__cobrar-badge">' + icon('receipt') + ' Cobrar</span>';
+                } else if (hayTab) {
+                    var fechaAttr = m.pedidoFechaCreacion ? ' data-pedido-fecha="' + m.pedidoFechaCreacion + '"' : '';
+                    var minTab = m.pedidoFechaCreacion ? Math.floor((Date.now() - new Date(m.pedidoFechaCreacion).getTime()) / 60000) : 0;
+                    var tiempoLabel = minTab > 0 ? minTab + ' min' : 'Tab';
+                    badgeHtml = '<span class="lmd-pos-mesa-card__tab-badge"' + fechaAttr + '>' + icon('clock') + ' <span class="lmd-tab-tiempo">' + tiempoLabel + '</span></span>';
+                }
                 mesasHtml += '<div class="lmd-pos-mesa-card ' + cls + '" onclick="pos.seleccionarMesa(\'' + m.id + '\',' + m.numero + ')">' +
                     '<span class="lmd-pos-mesa-card__numero">' + m.numero + '</span>' +
                     '<span class="lmd-pos-mesa-card__capacidad">' + m.capacidad + ' pax</span>' +
-                    (hayTab ? '<span class="lmd-pos-mesa-card__tab-badge"' + fechaAttr + '>' + icon('clock') + ' <span class="lmd-tab-tiempo">' + tiempoLabel + '</span></span>' : '') +
+                    badgeHtml +
                     (m.zona ? '<span class="lmd-pos-mesa-card__zona">' + m.zona + '</span>' : '') +
                 '</div>';
             });
@@ -139,8 +148,13 @@
         var mesas = window.__lmdMesasDisponibles || [];
         var m = mesas.find(function (x) { return x.id === mesaId; });
         if (m && m.estado !== 'Disponible') {
-            if (m.pedidoActualId) { retomarTab(mesaId, numero, m.pedidoActualId, m.pedidoTotal || 0); }
-            else { lmdToast('Mesa ocupada — selecciona otra', 'error'); }
+            if (m.pedidoActualId) {
+                if (m.pedidoEstado === 'EnCobro') {
+                    cobrarMesaDirecto(mesaId, numero, m.pedidoActualId, m.pedidoTotal || 0);
+                } else {
+                    retomarTab(mesaId, numero, m.pedidoActualId, m.pedidoTotal || 0);
+                }
+            } else { lmdToast('Mesa ocupada — selecciona otra', 'error'); }
             return;
         }
         state.tipoServicio = 'ComerAqui';
@@ -167,6 +181,24 @@
         renderProductos();
         mostrarPantalla('productos');
         lmdToast('Tab retomado — Mesa ' + mesaNumero, 'success');
+    }
+
+    function cobrarMesaDirecto(mesaId, mesaNumero, pedidoId, tabTotal) {
+        state.tipoServicio = 'ComerAqui';
+        state.mesaId = mesaId;
+        state.mesaNumero = mesaNumero;
+        state.lineas = [];
+        state.pedidoActual = { id: pedidoId, total: tabTotal, detalles: [] };
+        state.pagado = false;
+        state.pagoMetodo = null;
+        state.pagoMonto = null;
+        state.pagoReferencia = null;
+        state.propinaMonto = 0;
+        state.split = { activo: false, personas: [], personaActual: 0 };
+        keypadValue = '0';
+        renderProductos();
+        mostrarPantalla('productos');
+        abrirOverlayPago();
     }
 
     function seleccionarParaLlevar() {
@@ -1586,7 +1618,8 @@
         });
     }
 
-    document.addEventListener('DOMContentLoaded', function () {
+    document.addEventListener('DOMContentLoaded', async function () {
+        await refrescarMesas();
         renderSeleccion();
         initSignalR();
         setInterval(actualizarTiemposEnMesa, 30000);

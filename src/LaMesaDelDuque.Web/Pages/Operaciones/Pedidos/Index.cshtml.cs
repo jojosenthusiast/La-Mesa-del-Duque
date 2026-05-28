@@ -523,6 +523,7 @@ public class IndexModel : PageModel
                     Zona = m.Capacidad <= 2 ? "Pequeña" : m.Capacidad <= 4 ? "Mediana" : "Grande",
                     PedidoActualId = tab?.Id,
                     PedidoTotal = tab?.Total,
+                    PedidoEstado = tab?.Estado,
                     PedidoFechaCreacion = tab?.FechaCreacion
                 };
             });
