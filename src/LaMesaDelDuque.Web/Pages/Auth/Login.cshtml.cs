@@ -70,7 +70,15 @@ public class LoginModel : PageModel
 
         await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal);
 
-        return RedirectToPage("/Index");
+        var destino = usuario.RolNombre switch
+        {
+            "Administrador" or "Encargado" => "/Admin/Dashboard/Dashboard",
+            "Cajero"                        => "/Operaciones/Pedidos/Index",
+            "Mesero"                        => "/Operaciones/Pedidos/Index",
+            "Cocinero"                      => "/Cocina/KDS",
+            _                               => "/Index"
+        };
+        return RedirectToPage(destino);
     }
 
     private static void RegistrarIntentoFallido(string llaveIntento)

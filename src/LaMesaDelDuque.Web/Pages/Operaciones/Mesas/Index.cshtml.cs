@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 
 namespace LaMesaDelDuque.Web.Pages.Operaciones.Mesas;
 
-[Authorize(Roles = "Administrador,Encargado,Mesero")]
+[Authorize(Roles = "Administrador,Encargado")]
 public class IndexModel : PageModel
 {
     private static readonly string[] EstadosOrdenados = ["Disponible", "Ocupada", "Reservada", "Mantenimiento", "Inactiva"];

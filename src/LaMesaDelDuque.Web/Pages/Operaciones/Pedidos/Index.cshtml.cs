@@ -11,7 +11,7 @@ using Microsoft.AspNetCore.SignalR;
 
 namespace LaMesaDelDuque.Web.Pages.Operaciones.Pedidos;
 
-[Authorize(Roles = "Administrador,Encargado,Mesero")]
+[Authorize(Roles = "Administrador,Encargado,Cajero")]
 public class IndexModel : PageModel
 {
     private readonly IPedidosServicio _pedidosServicio;

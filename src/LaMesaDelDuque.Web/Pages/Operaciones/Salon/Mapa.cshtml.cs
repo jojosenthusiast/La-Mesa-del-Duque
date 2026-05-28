@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 
 namespace LaMesaDelDuque.Web.Pages.Operaciones.Salon;
 
-[Authorize(Roles = "Administrador,Encargado,Mesero")]
+[Authorize(Roles = "Administrador,Encargado")]
 public class MapaModel : PageModel
 {
     private readonly IMesasServicio _mesasServicio;

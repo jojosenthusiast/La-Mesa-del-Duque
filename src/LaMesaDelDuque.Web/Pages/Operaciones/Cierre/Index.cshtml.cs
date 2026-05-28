@@ -6,7 +6,7 @@ using System.Security.Claims;
 
 namespace LaMesaDelDuque.Web.Pages.Operaciones.Cierre;
 
-[Authorize(Roles = "Administrador,Encargado")]
+[Authorize(Roles = "Administrador,Encargado,Cajero")]
 public class IndexModel : PageModel
 {
     private readonly ICierreServicio _cierre;

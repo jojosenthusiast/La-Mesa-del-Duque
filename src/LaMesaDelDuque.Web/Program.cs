@@ -85,18 +85,21 @@ if (app.Environment.IsDevelopment())
         var meseroRol = new Rol("Mesero", "Captura de pedidos y consulta de salón");
         var encargadoRol = new Rol("Encargado", "Gestión de catálogo, mesas y reportes");
         var cocineroRol = new Rol("Cocinero", "Visualización de pedidos en preparación");
-        db.Set<Rol>().AddRange(adminRol, meseroRol, encargadoRol, cocineroRol);
+        var cajeroRol = new Rol("Cajero", "Cobro en caja, despacho y cierre de turno");
+        db.Set<Rol>().AddRange(adminRol, meseroRol, encargadoRol, cocineroRol, cajeroRol);
         await db.SaveChangesAsync();
 
         var adminHash = BCrypt.Net.BCrypt.HashPassword("Admin123!", 12);
         var meseroHash = BCrypt.Net.BCrypt.HashPassword("Mesero789!", 12);
         var encargadoHash = BCrypt.Net.BCrypt.HashPassword("Encargado321!", 12);
         var cocineroHash = BCrypt.Net.BCrypt.HashPassword("Cocina456!", 12);
+        var cajeroHash = BCrypt.Net.BCrypt.HashPassword("Cajero567!", 12);
         db.Set<Usuario>().AddRange(
             new Usuario("admin", "admin@mesadelduque.com", adminHash, "Administrador", adminRol),
             new Usuario("maria", "maria@mesadelduque.com", meseroHash, "María Mesera", meseroRol),
             new Usuario("carlos", "carlos@mesadelduque.com", encargadoHash, "Carlos Encargado", encargadoRol),
-            new Usuario("pedro", "pedro@mesadelduque.com", cocineroHash, "Pedro Cocinero", cocineroRol)
+            new Usuario("pedro", "pedro@mesadelduque.com", cocineroHash, "Pedro Cocinero", cocineroRol),
+            new Usuario("sofia", "sofia@mesadelduque.com", cajeroHash, "Sofía Cajera", cajeroRol)
         );
         await db.SaveChangesAsync();
 
@@ -266,7 +269,8 @@ if (app.Environment.IsDevelopment())
         ["admin"]   = "Admin123!",
         ["maria"]   = "Mesero789!",
         ["carlos"]  = "Encargado321!",
-        ["pedro"]   = "Cocina456!"
+        ["pedro"]   = "Cocina456!",
+        ["sofia"]   = "Cajero567!"
     };
     var seedUsernames = seedCredentials.Keys.ToList();
     var seedUsers = await db.Set<Usuario>().Where(u => seedUsernames.Contains(u.Username)).ToListAsync();

@@ -9,7 +9,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 
 namespace LaMesaDelDuque.Web.Pages.Operaciones.Pedidos;
 
-[Authorize(Roles = "Mesero,Encargado,Administrador")]
+[Authorize(Roles = "Mesero,Cajero,Encargado,Administrador")]
 public class TablesideModel : PageModel
 {
     private readonly IPedidosServicio _pedidosServicio;

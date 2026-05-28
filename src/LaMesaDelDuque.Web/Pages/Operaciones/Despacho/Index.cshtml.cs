@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 
 namespace LaMesaDelDuque.Web.Pages.Operaciones.Despacho;
 
-[Authorize(Roles = "Administrador,Encargado,Mesero")]
+[Authorize(Roles = "Administrador,Encargado,Cajero")]
 public class IndexModel : PageModel
 {
     private readonly IPedidosServicio _pedidos;
