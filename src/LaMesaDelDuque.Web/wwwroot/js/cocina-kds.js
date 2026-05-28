@@ -647,7 +647,7 @@
         iniciarSignalR();
 
         // Timer updater cada 10s
-        setInterval(actualizarTimers, 10000);
+        setInterval(actualizarTimers, 1000);
 
         // Clock
         const clock = document.getElementById('lmd-kds-reloj');

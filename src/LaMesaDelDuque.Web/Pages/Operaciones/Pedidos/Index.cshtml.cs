@@ -522,7 +522,8 @@ public class IndexModel : PageModel
                     m.Id, m.Numero, m.Capacidad, m.Estado,
                     Zona = m.Capacidad <= 2 ? "Pequeña" : m.Capacidad <= 4 ? "Mediana" : "Grande",
                     PedidoActualId = tab?.Id,
-                    PedidoTotal = tab?.Total
+                    PedidoTotal = tab?.Total,
+                    PedidoFechaCreacion = tab?.FechaCreacion
                 };
             });
             return new JsonResult(new { mesas = data });

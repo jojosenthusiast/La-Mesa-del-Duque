@@ -102,10 +102,13 @@
                 var disponible = m.estado === 'Disponible';
                 var hayTab = !disponible && m.pedidoActualId;
                 var cls = disponible ? 'lmd-pos-mesa-card--disponible' : 'lmd-pos-mesa-card--ocupada';
+                var fechaAttr = (hayTab && m.pedidoFechaCreacion) ? ' data-pedido-fecha="' + m.pedidoFechaCreacion + '"' : '';
+                var minTab = (hayTab && m.pedidoFechaCreacion) ? Math.floor((Date.now() - new Date(m.pedidoFechaCreacion).getTime()) / 60000) : 0;
+                var tiempoLabel = minTab > 0 ? minTab + ' min' : 'Tab';
                 mesasHtml += '<div class="lmd-pos-mesa-card ' + cls + '" onclick="pos.seleccionarMesa(\'' + m.id + '\',' + m.numero + ')">' +
                     '<span class="lmd-pos-mesa-card__numero">' + m.numero + '</span>' +
                     '<span class="lmd-pos-mesa-card__capacidad">' + m.capacidad + ' pax</span>' +
-                    (hayTab ? '<span class="lmd-pos-mesa-card__tab-badge">' + icon('clock') + ' Tab</span>' : '') +
+                    (hayTab ? '<span class="lmd-pos-mesa-card__tab-badge"' + fechaAttr + '>' + icon('clock') + ' <span class="lmd-tab-tiempo">' + tiempoLabel + '</span></span>' : '') +
                     (m.zona ? '<span class="lmd-pos-mesa-card__zona">' + m.zona + '</span>' : '') +
                 '</div>';
             });
@@ -182,6 +185,7 @@
         state.pagoMetodo = null;
         state.pagoMonto = null;
         state.pagoReferencia = null;
+        state.propinaMonto = 0;
         state.split = { activo: false, personas: [], personaActual: 0 };
         keypadValue = '0';
     }
@@ -319,7 +323,7 @@
 
     async function cancelarOrden() {
         if (state.lineas.length === 0 && !state.pedidoActual) return;
-        var ok = await window.lmdConfirm('¿Cancelar esta orden?');
+        var ok = await window.lmdConfirm('¿Cancelar esta orden? El stock regresará a inventario.');
         if (!ok) return;
 
         if (state.pedidoActual && state.pedidoActual.id) {
@@ -337,7 +341,7 @@
 
     async function confirmarAnulacion() {
         if (!state.pagado || !state.pedidoActual) return;
-        var ok = await window.lmdConfirm('¿Anular el pago de esta orden? El stock no se revertirá.');
+        var ok = await window.lmdConfirm('¿Anular el pago de esta orden? El stock regresará a inventario.');
         if (!ok) return;
 
         var csrf = document.querySelector('input[name="__RequestVerificationToken"]');
@@ -603,6 +607,32 @@
         var recibido = parseFloat(keypadValue || '0');
         if (recibido < total) { lmdToast('Monto insuficiente', 'error'); return; }
         cerrarOverlay('efectivo');
+        abrirOverlayPropina(total, recibido);
+    }
+
+    function abrirOverlayPropina(total, recibido) {
+        var cambio = recibido - total;
+        var html =
+            '<div class="lmd-pos-ov-header">' +
+                '<button class="lmd-pos-ov-back" onclick="pos.volverAMetodos()">' + icon('arrow-left') + '</button>' +
+                '<span class="lmd-pos-ov-title">' + icon('heart') + ' Propina</span>' +
+                '<div class="lmd-pos-ov-total">Cambio: ' + fmt(cambio) + '</div>' +
+            '</div>' +
+            '<div class="lmd-pos-propina-body">' +
+                '<p class="lmd-pos-propina-hint">¿El cliente desea agregar propina?</p>' +
+                '<div class="lmd-pos-bill-shortcuts">' +
+                    [1, 2, 5, 10].map(function (v) {
+                        return '<button class="lmd-pos-bill-btn" onclick="pos.confirmarPropina(' + total.toFixed(2) + ',' + recibido.toFixed(2) + ',' + v + ')">+' + fmt(v) + '</button>';
+                    }).join('') +
+                    '<button class="lmd-pos-bill-btn lmd-pos-bill-btn--exacto" onclick="pos.confirmarPropina(' + total.toFixed(2) + ',' + recibido.toFixed(2) + ',0)">Sin propina</button>' +
+                '</div>' +
+            '</div>';
+        abrirOverlay('propina', html, { closeOnBackdrop: false });
+    }
+
+    function confirmarPropina(total, recibido, propina) {
+        state.propinaMonto = propina || 0;
+        cerrarOverlay('propina');
         finalizarPago('efectivo', recibido, null);
     }
 
@@ -949,6 +979,10 @@
             else totalCompartido += item.precio;
         });
         var porcadaUno = esMixto ? totalCompartido / n : 0;
+        if (!esMixto) {
+            var personasSinItems = totales.filter(function (t) { return t === 0; }).length;
+            if (personasSinItems > 0) { lmdToast('Cada persona debe tener al menos un item asignado', 'error'); return; }
+        }
         state.split.activo = true;
         state.split.personas = totales.map(function (t, i) {
             return { id: i, nombre: 'Persona ' + (i + 1), monto: Math.round((t + porcadaUno) * 100) / 100, metodoPago: null, pagado: false, cuentaId: null };
@@ -1122,6 +1156,7 @@
             form.append('metodoPago', metodo || 'efectivo');
             if (monto != null) form.append('monto', monto.toString());
             if (referencia) form.append('referencia', referencia);
+            if (state.propinaMonto) form.append('propinaMonto', state.propinaMonto.toString());
             try {
                 var res = await fetch('?handler=PagarJson', { method: 'POST', body: form, headers: { 'X-Requested-With': 'XMLHttpRequest' } });
                 var data = await res.json().catch(function () { return null; });
@@ -1157,6 +1192,7 @@
         var total = (state.pedidoActual && state.pedidoActual.total)
             ? state.pedidoActual.total
             : totalLineas(state.lineas);
+        var propina = state.propinaMonto || 0;
         var btnsHtml = DOCUMENTOS.map(function (d) {
             return '<button class="lmd-pos-pm-btn" onclick="pos.emitirDocumento(\'' + d.codigo + '\')">' +
                 '<span class="lmd-pos-pm-btn__icon">' + icon(d.icon) + '</span>' +
@@ -1165,10 +1201,13 @@
             '</button>';
         }).join('');
 
+        var resumenPago = propina > 0
+            ? fmt(total) + ' + ' + fmt(propina) + ' propina = ' + fmt(total + propina)
+            : fmt(total);
         var html =
             '<div class="lmd-pos-ov-header">' +
                 '<span class="lmd-pos-ov-title">' + icon('receipt') + ' Comprobante</span>' +
-                '<div class="lmd-pos-ov-total">' + fmt(total) + ' · ' + (state.pagoMetodo || '').toUpperCase() + '</div>' +
+                '<div class="lmd-pos-ov-total">' + resumenPago + ' · ' + (state.pagoMetodo || '').toUpperCase() + '</div>' +
             '</div>' +
             '<div class="lmd-pos-pm-grid">' + btnsHtml + '</div>';
 
@@ -1491,6 +1530,17 @@
                 if (nuevoEstado === 'Pagado' || nuevoEstado === 'Despachado') refrescarMesas();
             });
             connection.on('PedidoCreado', function () { refrescarMesas(); });
+            connection.on('ItemRecuperado', function (orden) {
+                if (orden && state.pedidoActual && orden.pedidoId === state.pedidoActual.id) {
+                    lmdToast('Cocina recuperó un item — orden aún en preparación', 'warn');
+                }
+            });
+            connection.on('ProductoAgotado', function (productoId) {
+                var prods = window.__lmdProductosDisponibles || [];
+                var marcado = false;
+                prods.forEach(function (p) { if (p.id === productoId) { p.agotado = true; marcado = true; } });
+                if (marcado) { renderProductos(); lmdToast('Un producto fue marcado como agotado', 'warn'); }
+            });
             await connection.start();
         } catch (e) {}
     }
@@ -1520,15 +1570,26 @@
         ajustarSplitN, iniciarSplitIgualitario, cobrarSiguientePersona,
         pagarPersonaSplit, seleccionarBilleteSplit, confirmarEfectivoSplit,
         emitirDocumento, nuevaOrden,
+        confirmarPropina,
         abrirModificadores, toggleAlergia, _setNotaCustom,
         cerrarModificadores, confirmarModificadores,
         cambiarServicio, cambiarAMesa, cambiarAParaLlevar, cerrarCambiarServicio,
         simularRechazo, reintentarPago
     };
 
+    function actualizarTiemposEnMesa() {
+        document.querySelectorAll('[data-pedido-fecha]').forEach(function (badge) {
+            var span = badge.querySelector('.lmd-tab-tiempo');
+            if (!span) return;
+            var min = Math.floor((Date.now() - new Date(badge.dataset.pedidoFecha).getTime()) / 60000);
+            span.textContent = min > 0 ? min + ' min' : 'Tab';
+        });
+    }
+
     document.addEventListener('DOMContentLoaded', function () {
         renderSeleccion();
         initSignalR();
+        setInterval(actualizarTiemposEnMesa, 30000);
 
         window.addEventListener('offline', function () {
             var banner = document.getElementById('lmd-offline-banner');

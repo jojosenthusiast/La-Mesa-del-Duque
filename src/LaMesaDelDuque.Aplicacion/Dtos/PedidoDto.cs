@@ -8,5 +8,6 @@ public class PedidoDto
     public int? MesaNumero { get; set; }
     public string Estado { get; set; } = string.Empty;
     public decimal Total { get; set; }
+    public DateTime FechaCreacion { get; set; }
     public List<DetallePedidoDto> Detalles { get; set; } = [];
 }

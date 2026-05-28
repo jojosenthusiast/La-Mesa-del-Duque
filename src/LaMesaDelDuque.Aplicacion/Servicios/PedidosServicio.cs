@@ -515,6 +515,7 @@ internal class PedidosServicio : IPedidosServicio
             MesaNumero = pedido.Mesa?.Numero,
             Estado = pedido.Estado.ToString(),
             Total = pedido.Total,
+            FechaCreacion = pedido.CreatedAt,
             Detalles = pedido.Detalles.Select(d => new DetallePedidoDto
             {
                 Id = d.Id,
