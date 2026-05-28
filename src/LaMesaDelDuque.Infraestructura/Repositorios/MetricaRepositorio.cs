@@ -20,7 +20,7 @@ internal class MetricaRepositorio : IMetricaRepositorio
     {
         var pedidosHoyQuery = _contexto.Set<Pedido>()
             .AsNoTracking()
-            .Where(p => p.FechaCreacion >= inicioTurno && p.Estado != EstadoPedido.Cancelado);
+            .Where(p => p.FechaCreacion >= inicioTurno && p.Estado != EstadoPedido.Cancelado && p.Estado != EstadoPedido.AnuladoPago);
 
         var detallesHoy = await pedidosHoyQuery
             .SelectMany(p => p.Detalles)
@@ -37,7 +37,7 @@ internal class MetricaRepositorio : IMetricaRepositorio
             .CountAsync(ct);
 
         var mesasActivas = await pedidosHoyQuery
-            .Where(p => p.Mesa != null && p.Estado != EstadoPedido.Pagado)
+            .Where(p => p.Mesa != null && p.Estado != EstadoPedido.Pagado && p.Estado != EstadoPedido.AnuladoPago)
             .Select(p => p.Mesa!.Id)
             .Distinct()
             .CountAsync(ct);
@@ -69,7 +69,7 @@ internal class MetricaRepositorio : IMetricaRepositorio
         var pedidosHoy = await _contexto.Set<Pedido>()
             .AsNoTracking()
             .Include(p => p.Detalles)
-            .Where(p => p.FechaCreacion >= inicioTurno && p.Estado != EstadoPedido.Cancelado)
+            .Where(p => p.FechaCreacion >= inicioTurno && p.Estado != EstadoPedido.Cancelado && p.Estado != EstadoPedido.AnuladoPago)
             .ToListAsync(ct);
 
         var ventasPorHora = pedidosHoy

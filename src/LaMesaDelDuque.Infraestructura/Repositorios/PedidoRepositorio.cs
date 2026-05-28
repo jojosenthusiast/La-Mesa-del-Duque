@@ -71,7 +71,7 @@ internal class PedidoRepositorio : IPedidoRepositorio
             .Include(p => p.Mesa)
             .Include(p => p.Detalles)
                 .ThenInclude(d => d.Producto)
-            .Where(p => p.Mesa != null && p.Mesa.Id == mesaId && p.Estado != EstadoPedido.Cancelado)
+            .Where(p => p.Mesa != null && p.Mesa.Id == mesaId && p.Estado != EstadoPedido.Cancelado && p.Estado != EstadoPedido.AnuladoPago)
             .ToListAsync(cancelacion);
     }
 
