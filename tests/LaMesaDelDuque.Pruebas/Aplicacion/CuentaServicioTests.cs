@@ -91,7 +91,6 @@ public class CuentaServicioTests : IDisposable
         {
             new() { ProductoId = producto.Id, Cantidad = 2, PrecioUnitario = 10.00m }
         });
-        await _servicio.MarcarEnPreparacionAsync(pedido.Id);
         return pedido;
     }
 
@@ -193,7 +192,6 @@ public class CuentaServicioTests : IDisposable
             new() { ProductoId = producto.Id, Cantidad = 1, PrecioUnitario = 25.00m },
             new() { ProductoId = producto2.Id, Cantidad = 1, PrecioUnitario = 8.00m }
         });
-        await _servicio.MarcarEnPreparacionAsync(pedido.Id);
 
         var asignaciones = new Dictionary<int, List<(Guid detalleId, int cantidad)>>
         {

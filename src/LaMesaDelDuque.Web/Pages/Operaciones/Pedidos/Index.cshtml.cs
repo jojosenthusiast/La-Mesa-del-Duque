@@ -270,7 +270,12 @@ public class IndexModel : PageModel
         try
         {
             var pedido = await _pedidosServicio.CrearPedidoAsync(tipoServicio, mesaId, detalles);
-            return new JsonResult(new { pedidoId = pedido.Id });
+            var detallesResponse = pedido.Detalles.Select(d => new
+            {
+                id = d.Id, productoId = d.ProductoId,
+                productoNombre = d.ProductoNombre, cantidad = d.Cantidad, precioUnitario = d.PrecioUnitario
+            });
+            return new JsonResult(new { pedidoId = pedido.Id, total = pedido.Total, detalles = detallesResponse });
         }
         catch (Exception ex) { return BadRequest(ErrorSeguro(ex)); }
     }
@@ -295,7 +300,13 @@ public class IndexModel : PageModel
         try
         {
             await _pedidosServicio.AgregarItemsAsync(pedidoId, items);
-            return new JsonResult(new { ok = true });
+            var pedido = await _pedidosServicio.ObtenerPedidoAsync(pedidoId);
+            var detallesResponse = pedido?.Detalles.Select(d => new
+            {
+                id = d.Id, productoId = d.ProductoId,
+                productoNombre = d.ProductoNombre, cantidad = d.Cantidad, precioUnitario = d.PrecioUnitario
+            });
+            return new JsonResult(new { ok = true, total = pedido?.Total ?? 0, detalles = detallesResponse });
         }
         catch (Exception ex) { return BadRequest(ErrorSeguro(ex)); }
     }
@@ -497,8 +508,44 @@ public class IndexModel : PageModel
         try
         {
             var mesas = await _mesasServicio.ListarMesasAsync();
-            var data = mesas.Where(m => m.Activa).Select(m => new { m.Id, m.Numero, m.Capacidad, m.Estado, Zona = m.Capacidad <= 2 ? "Pequeña" : m.Capacidad <= 4 ? "Mediana" : "Grande" });
+            var pedidos = await _pedidosServicio.ListarPedidosActivosAsync();
+            var tabPorMesa = pedidos
+                .Where(p => p.MesaId.HasValue)
+                .GroupBy(p => p.MesaId!.Value)
+                .ToDictionary(g => g.Key, g => g.OrderByDescending(p => p.Total).First());
+
+            var data = mesas.Where(m => m.Activa).Select(m =>
+            {
+                tabPorMesa.TryGetValue(m.Id, out var tab);
+                return new
+                {
+                    m.Id, m.Numero, m.Capacidad, m.Estado,
+                    Zona = m.Capacidad <= 2 ? "Pequeña" : m.Capacidad <= 4 ? "Mediana" : "Grande",
+                    PedidoActualId = tab?.Id,
+                    PedidoTotal = tab?.Total
+                };
+            });
             return new JsonResult(new { mesas = data });
+        }
+        catch (Exception ex) { return BadRequest(ErrorSeguro(ex)); }
+    }
+
+    public async Task<IActionResult> OnGetDetallesPedidoJsonAsync(Guid pedidoId)
+    {
+        try
+        {
+            var pedido = await _pedidosServicio.ObtenerPedidoAsync(pedidoId);
+            if (pedido is null) return NotFound(new { error = "Pedido no encontrado." });
+            var detalles = pedido.Detalles.Select(d => new
+            {
+                id = d.Id,
+                productoId = d.ProductoId,
+                productoNombre = d.ProductoNombre,
+                cantidad = d.Cantidad,
+                precioUnitario = d.PrecioUnitario,
+                subtotal = d.Subtotal
+            });
+            return new JsonResult(new { detalles, total = pedido.Total });
         }
         catch (Exception ex) { return BadRequest(ErrorSeguro(ex)); }
     }

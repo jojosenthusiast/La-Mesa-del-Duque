@@ -1666,3 +1666,26 @@ html:has(#lmd-pos-contenido) .lmd-main-surface {
     border-color: rgba(192,57,43,0.5);
     color: #e74c3c;
 }
+
+/* Tab badge en mesa card (retomar) */
+.lmd-pos-mesa-card__tab-badge {
+    display: inline-flex; align-items: center; gap: 0.2rem;
+    padding: 0.1rem 0.4rem;
+    background: rgba(201,162,78,0.15); border: 1px solid rgba(201,162,78,0.35);
+    border-radius: 2rem; color: #c9a24e; font-size: 0.62rem; font-weight: 700;
+    margin-top: 0.15rem;
+}
+.lmd-pos-mesa-card__tab-badge svg { width: 10px; height: 10px; }
+
+/* Nota libre en modal de modificadores */
+.lmd-mod-nota {
+    width: 100%; box-sizing: border-box;
+    padding: 0.5rem 0.75rem;
+    background: var(--lmd-surface-2, #1a1a1a);
+    border: 1px solid var(--lmd-border, rgba(255,255,255,0.1));
+    border-radius: 6px;
+    color: var(--lmd-text, #e0e0e0);
+    font-size: 0.85rem; font-family: inherit;
+    resize: none; outline: none;
+}
+.lmd-mod-nota:focus { border-color: rgba(201,162,78,0.5); }

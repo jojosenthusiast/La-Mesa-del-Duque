@@ -60,6 +60,9 @@ internal class PedidosServicio : IPedidosServicio
         }
 
         await _uot.Pedidos.AgregarAsync(pedido, cancelacion);
+        pedido.MarcarEnPreparacion();
+        await ValidarStockSuficienteAsync(pedido.Detalles, cancelacion);
+        await DescontarStockAsync(pedido.Detalles, cancelacion);
         await _uot.GuardarCambiosAsync(cancelacion);
         await _notificadorPedidos.NotificarPedidoCreadoAsync(pedido.Id, pedido.Estado, cancelacion);
         await NotificarMetricasInvalidadasSiExisteAsync(cancelacion);
@@ -81,6 +84,8 @@ internal class PedidosServicio : IPedidosServicio
         var detalle = new DetallePedido(producto, cantidad, precioUnitario, notas, modificacionesJson);
         pedido.AgregarDetalle(detalle);
 
+        await ValidarStockSuficienteAsync([detalle], cancelacion);
+        await DescontarStockAsync([detalle], cancelacion);
         await _uot.GuardarCambiosAsync(cancelacion);
 
         if (_cocinaServicio is not null)
@@ -104,6 +109,8 @@ internal class PedidosServicio : IPedidosServicio
             nuevosDetalles.Add(detalle);
         }
 
+        await ValidarStockSuficienteAsync(nuevosDetalles, cancelacion);
+        await DescontarStockAsync(nuevosDetalles, cancelacion);
         await _uot.GuardarCambiosAsync(cancelacion);
 
         if (_cocinaServicio is not null && nuevosDetalles.Count > 0)
@@ -136,18 +143,17 @@ internal class PedidosServicio : IPedidosServicio
         var pedido = await _uot.Pedidos.ObtenerConDetallesParaActualizarAsync(pedidoId, cancelacion)
             ?? throw new ArgumentException($"No se encontró el pedido con ID {pedidoId}.", nameof(pedidoId));
 
-        await ValidarStockSuficienteAsync(pedido, cancelacion);
         pedido.MarcarComoPagado();
-        await DescontarStockAsync(pedido, cancelacion);
+        await LiberarMesaSiCorrespondeAsync(pedido, cancelacion);
         await _uot.GuardarCambiosAsync(cancelacion);
         await _notificadorPedidos.NotificarEstadoCambiadoAsync(pedido.Id, pedido.Estado, cancelacion);
         await NotificarMetricasInvalidadasSiExisteAsync(cancelacion);
     }
 
-    private async Task ValidarStockSuficienteAsync(Pedido pedido, CancellationToken ct)
+    private async Task ValidarStockSuficienteAsync(IEnumerable<DetallePedido> detalles, CancellationToken ct)
     {
         var faltantes = new List<string>();
-        foreach (var detalle in pedido.Detalles)
+        foreach (var detalle in detalles)
         {
             var receta = await _uot.RecetasProductos.ObtenerPorProductoIdAsync(detalle.Producto.Id, ct);
             if (receta is null) continue;
@@ -167,9 +173,9 @@ internal class PedidosServicio : IPedidosServicio
             throw new InvalidOperationException($"Stock insuficiente para completar el pago: {string.Join("; ", faltantes)}");
     }
 
-    private async Task DescontarStockAsync(Pedido pedido, CancellationToken ct)
+    private async Task DescontarStockAsync(IEnumerable<DetallePedido> detalles, CancellationToken ct)
     {
-        foreach (var detalle in pedido.Detalles)
+        foreach (var detalle in detalles)
         {
             var receta = await _uot.RecetasProductos.ObtenerPorProductoIdAsync(detalle.Producto.Id, ct);
             if (receta is null) continue;
@@ -181,6 +187,22 @@ internal class PedidosServicio : IPedidosServicio
                 var ingrediente = await _uot.Ingredientes.ObtenerPorIdAsync(ingId, ct);
                 if (ingrediente is null) continue;
                 ingrediente.DescontarStock(consumo);
+            }
+        }
+    }
+
+    private async Task DevolverStockAsync(IEnumerable<DetallePedido> detalles, CancellationToken ct)
+    {
+        foreach (var detalle in detalles)
+        {
+            var receta = await _uot.RecetasProductos.ObtenerPorProductoIdAsync(detalle.Producto.Id, ct);
+            if (receta is null) continue;
+            var consumos = CalcularConsumosDetalle(detalle, receta);
+            foreach (var (ingId, consumo) in consumos)
+            {
+                var ingrediente = await _uot.Ingredientes.ObtenerPorIdAsync(ingId, ct);
+                if (ingrediente is null) continue;
+                ingrediente.DevolverStock(consumo);
             }
         }
     }
@@ -266,8 +288,11 @@ internal class PedidosServicio : IPedidosServicio
         var pedido = await _uot.Pedidos.ObtenerConDetallesParaActualizarAsync(pedidoId, cancelacion)
             ?? throw new ArgumentException($"No se encontró el pedido con ID {pedidoId}.", nameof(pedidoId));
 
+        var stockDescontado = pedido.Estado is EstadoPedido.EnPreparacion or EstadoPedido.Listo or EstadoPedido.EnCobro;
         pedido.Cancelar();
         await LiberarMesaSiCorrespondeAsync(pedido, cancelacion);
+        if (stockDescontado)
+            await DevolverStockAsync(pedido.Detalles, cancelacion);
         await _uot.GuardarCambiosAsync(cancelacion);
         await _notificadorPedidos.NotificarPedidoCanceladoAsync(pedido.Id, cancelacion);
         await NotificarMetricasInvalidadasSiExisteAsync(cancelacion);
@@ -280,6 +305,7 @@ internal class PedidosServicio : IPedidosServicio
 
         pedido.AnularPago();
         await LiberarMesaSiCorrespondeAsync(pedido, cancelacion);
+        await DevolverStockAsync(pedido.Detalles, cancelacion);
         await _uot.GuardarCambiosAsync(cancelacion);
         await _notificadorPedidos.NotificarPedidoCanceladoAsync(pedido.Id, cancelacion);
         await NotificarMetricasInvalidadasSiExisteAsync(cancelacion);
@@ -290,8 +316,8 @@ internal class PedidosServicio : IPedidosServicio
         var pedido = await _uot.Pedidos.ObtenerConDetallesParaActualizarAsync(pedidoId, cancelacion)
             ?? throw new ArgumentException($"No se encontró el pedido con ID {pedidoId}.", nameof(pedidoId));
 
-        if (pedido.Estado != EstadoPedido.Pendiente)
-            throw new ReglaDominioException("Solo se puede eliminar un pedido pendiente que no ha sido pagado.");
+        if (pedido.Estado == EstadoPedido.Pagado || pedido.Estado == EstadoPedido.Cancelado)
+            throw new ReglaDominioException("Solo se puede eliminar un pedido que no haya sido pagado ni cancelado.");
 
         var usuario = await _uot.Usuarios.ObtenerPorIdAsync(usuarioId, cancelacion)
             ?? throw new ArgumentException($"No se encontró el usuario con ID {usuarioId}.", nameof(usuarioId));

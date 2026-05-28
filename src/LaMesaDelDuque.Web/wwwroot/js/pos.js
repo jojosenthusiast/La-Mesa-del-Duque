@@ -100,10 +100,12 @@
             mesasHtml += '<div class="lmd-pos-mesa-zona-separator">' + cap + ' personas</div>';
             grupos[cap].forEach(function (m) {
                 var disponible = m.estado === 'Disponible';
+                var hayTab = !disponible && m.pedidoActualId;
                 var cls = disponible ? 'lmd-pos-mesa-card--disponible' : 'lmd-pos-mesa-card--ocupada';
                 mesasHtml += '<div class="lmd-pos-mesa-card ' + cls + '" onclick="pos.seleccionarMesa(\'' + m.id + '\',' + m.numero + ')">' +
                     '<span class="lmd-pos-mesa-card__numero">' + m.numero + '</span>' +
                     '<span class="lmd-pos-mesa-card__capacidad">' + m.capacidad + ' pax</span>' +
+                    (hayTab ? '<span class="lmd-pos-mesa-card__tab-badge">' + icon('clock') + ' Tab</span>' : '') +
                     (m.zona ? '<span class="lmd-pos-mesa-card__zona">' + m.zona + '</span>' : '') +
                 '</div>';
             });
@@ -133,13 +135,35 @@
     function seleccionarMesa(mesaId, numero) {
         var mesas = window.__lmdMesasDisponibles || [];
         var m = mesas.find(function (x) { return x.id === mesaId; });
-        if (m && m.estado !== 'Disponible') { lmdToast('Mesa ocupada — selecciona otra', 'error'); return; }
+        if (m && m.estado !== 'Disponible') {
+            if (m.pedidoActualId) { retomarTab(mesaId, numero, m.pedidoActualId, m.pedidoTotal || 0); }
+            else { lmdToast('Mesa ocupada — selecciona otra', 'error'); }
+            return;
+        }
         state.tipoServicio = 'ComerAqui';
         state.mesaId = mesaId;
         state.mesaNumero = numero;
         _resetPedido();
         renderProductos();
         mostrarPantalla('productos');
+    }
+
+    async function retomarTab(mesaId, mesaNumero, pedidoId, tabTotal) {
+        var ok = await window.lmdConfirm('Mesa ' + mesaNumero + ' tiene un tab activo (' + fmt(tabTotal) + '). ¿Retomar?');
+        if (!ok) return;
+        state.tipoServicio = 'ComerAqui';
+        state.mesaId = mesaId;
+        state.mesaNumero = mesaNumero;
+        state.lineas = [];
+        state.pedidoActual = { id: pedidoId, total: tabTotal, detalles: [] };
+        state.pagado = false;
+        state.pagoMetodo = null;
+        state.pagoMonto = null;
+        state.pagoReferencia = null;
+        state.split = { activo: false, personas: [], personaActual: 0 };
+        renderProductos();
+        mostrarPantalla('productos');
+        lmdToast('Tab retomado — Mesa ' + mesaNumero, 'success');
     }
 
     function seleccionarParaLlevar() {
@@ -355,8 +379,10 @@
             try {
                 var resMas = await fetch('?handler=EnviarMasJson', { method: 'POST', body: formMas, headers: { 'X-Requested-With': 'XMLHttpRequest' } });
                 if (resMas.ok) {
+                    var dataMas = await resMas.json().catch(function() { return {}; });
                     lmdToast('Items enviados a cocina', 'success');
-                    state.pedidoActual.total = (state.pedidoActual.total || 0) + totalLineas(state.lineas);
+                    state.pedidoActual.total = dataMas.total || ((state.pedidoActual.total || 0) + totalLineas(state.lineas));
+                    if (dataMas.detalles) state.pedidoActual.detalles = dataMas.detalles;
                     state.lineas = [];
                     renderProductos();
                 } else {
@@ -388,7 +414,7 @@
                     _creandoPedido = false;
                     nuevaOrden();
                 } else {
-                    state.pedidoActual = { id: data.pedidoId, total: totalLineas(state.lineas) };
+                    state.pedidoActual = { id: data.pedidoId, total: data.total || totalLineas(state.lineas), detalles: data.detalles || [] };
                     state.lineas = [];
                     _creandoPedido = false;
                     renderProductos();
@@ -690,8 +716,19 @@
     // ═══════════════════════════════════════════════════
     // SPLIT PAYMENT
     // ═══════════════════════════════════════════════════
-    function abrirSplit() {
+    async function abrirSplit() {
         cerrarOverlay('pago');
+        // Fetch current detalles with server IDs (needed for per-item split)
+        if (state.pedidoActual && state.pedidoActual.id) {
+            try {
+                var r = await fetch('?handler=DetallesPedidoJson&pedidoId=' + state.pedidoActual.id, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+                if (r.ok) {
+                    var rd = await r.json();
+                    state.pedidoActual.detalles = rd.detalles || [];
+                    if (rd.total) state.pedidoActual.total = rd.total;
+                }
+            } catch (e) {}
+        }
         var total = (state.pedidoActual && state.pedidoActual.total)
             ? state.pedidoActual.total + totalLineas(state.lineas)
             : totalLineas(state.lineas);
@@ -828,9 +865,15 @@
 
     function iniciarAsignacionSplit() {
         var esMixto = _splitTipo === 'mixto';
-        _splitItems = state.lineas.map(function (l) {
-            return { nombre: l.productoNombre || l.nombre || '?', cantidad: l.cantidad || 1, precio: (l.precioUnitario || 0) * (l.cantidad || 1), persona: esMixto ? -1 : -1 };
-        });
+        // Prefer server detalles (have real IDs) over client lineas
+        var serverDetalles = state.pedidoActual && state.pedidoActual.detalles && state.pedidoActual.detalles.length > 0;
+        _splitItems = serverDetalles
+            ? state.pedidoActual.detalles.map(function (d) {
+                return { nombre: d.productoNombre, cantidad: d.cantidad, precio: (d.precioUnitario || 0) * d.cantidad, persona: -1, detalleId: d.id };
+              })
+            : state.lineas.map(function (l) {
+                return { nombre: l.productoNombre || l.nombre || '?', cantidad: l.cantidad || 1, precio: (l.precioUnitario || 0) * (l.cantidad || 1), persona: -1, detalleId: null };
+              });
         _renderSplitAsignacion();
     }
 
@@ -896,7 +939,7 @@
         if (_splitItems[idx]) { _splitItems[idx].persona = persona; _renderSplitAsignacion(); }
     }
 
-    function confirmarAsignacionSplit() {
+    async function confirmarAsignacionSplit() {
         var n = _splitN;
         var esMixto = _splitTipo === 'mixto';
         var totales = Array.from({ length: n }, function () { return 0; });
@@ -908,9 +951,43 @@
         var porcadaUno = esMixto ? totalCompartido / n : 0;
         state.split.activo = true;
         state.split.personas = totales.map(function (t, i) {
-            return { id: i, nombre: 'Persona ' + (i + 1), monto: Math.round((t + porcadaUno) * 100) / 100, metodoPago: null, pagado: false };
+            return { id: i, nombre: 'Persona ' + (i + 1), monto: Math.round((t + porcadaUno) * 100) / 100, metodoPago: null, pagado: false, cuentaId: null };
         });
         state.split.personaActual = 0;
+
+        // Conectar con servidor si todos los ítems tienen detalleId (modo por persona)
+        var todosConId = !esMixto && _splitItems.every(function (si) { return si.detalleId && si.persona >= 0; });
+        if (todosConId && state.pedidoActual && state.pedidoActual.id) {
+            var asignaciones = Array.from({ length: n }, function (_, i) {
+                var items = _splitItems
+                    .filter(function (si) { return si.persona === i; })
+                    .map(function (si) { return { detalleId: si.detalleId, cantidad: si.cantidad }; });
+                return { cuentaNumero: i + 1, items: items };
+            }).filter(function (a) { return a.items.length > 0; });
+
+            if (asignaciones.length >= 2) {
+                var csrf = document.querySelector('input[name="__RequestVerificationToken"]');
+                try {
+                    var res = await fetch('?handler=CrearCuentasConItemsJson', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'RequestVerificationToken': csrf ? csrf.value : ''
+                        },
+                        body: JSON.stringify({ pedidoId: state.pedidoActual.id, asignaciones: asignaciones })
+                    });
+                    if (res.ok) {
+                        var cuentas = await res.json();
+                        (cuentas || []).forEach(function (c) {
+                            var p = state.split.personas[c.numero - 1];
+                            if (p) { p.cuentaId = c.id; p.monto = c.total || p.monto; }
+                        });
+                    }
+                } catch (e) {}
+            }
+        }
+
         cerrarOverlay('splitdetalle');
         cobrarSiguientePersona();
     }
@@ -952,16 +1029,22 @@
         abrirOverlay('splitdetalle', html, { closeOnBackdrop: false, wide: true });
     }
 
-    function pagarPersonaSplit(idx, metodo, monto) {
-        if (metodo === 'efectivo') {
-            // Abrir keypad para esta persona
-            abrirOverlayEfectivoSplit(idx, monto);
-        } else {
-            state.split.personas[idx].metodoPago = metodo;
-            state.split.personas[idx].pagado = true;
-            lmdToast(state.split.personas[idx].nombre + ' — pagado con ' + metodo, 'success');
-            cobrarSiguientePersona();
+    async function pagarPersonaSplit(idx, metodo, monto) {
+        if (metodo === 'efectivo') { abrirOverlayEfectivoSplit(idx, monto); return; }
+        var persona = state.split.personas[idx];
+        if (persona.cuentaId) {
+            var csrf = document.querySelector('input[name="__RequestVerificationToken"]');
+            var form = new FormData();
+            form.append('__RequestVerificationToken', csrf ? csrf.value : '');
+            form.append('cuentaId', persona.cuentaId);
+            form.append('metodoPago', metodo);
+            form.append('propinaMonto', '0');
+            try { await fetch('?handler=PagarCuentaJson', { method: 'POST', body: form, headers: { 'X-Requested-With': 'XMLHttpRequest' } }); } catch (e) {}
         }
+        persona.metodoPago = metodo;
+        persona.pagado = true;
+        lmdToast(persona.nombre + ' — pagado con ' + metodo, 'success');
+        cobrarSiguientePersona();
     }
 
     function abrirOverlayEfectivoSplit(idx, total) {
@@ -1002,14 +1085,24 @@
         _actualizarKeypad(total);
     }
 
-    function confirmarEfectivoSplit(idx, total) {
+    async function confirmarEfectivoSplit(idx, total) {
         var recibido = parseFloat(keypadValue || '0');
         if (recibido < total) { lmdToast('Monto insuficiente', 'error'); return; }
         var cambio = recibido - total;
         if (cambio > 0) lmdToast('Cambio: ' + fmt(cambio), 'info');
-        state.split.personas[idx].metodoPago = 'efectivo';
-        state.split.personas[idx].monto = recibido;
-        state.split.personas[idx].pagado = true;
+        var persona = state.split.personas[idx];
+        if (persona.cuentaId) {
+            var csrf = document.querySelector('input[name="__RequestVerificationToken"]');
+            var form = new FormData();
+            form.append('__RequestVerificationToken', csrf ? csrf.value : '');
+            form.append('cuentaId', persona.cuentaId);
+            form.append('metodoPago', 'Efectivo');
+            form.append('propinaMonto', '0');
+            try { await fetch('?handler=PagarCuentaJson', { method: 'POST', body: form, headers: { 'X-Requested-With': 'XMLHttpRequest' } }); } catch (e) {}
+        }
+        persona.metodoPago = 'efectivo';
+        persona.monto = recibido;
+        persona.pagado = true;
         cobrarSiguientePersona();
     }
 
@@ -1082,12 +1175,32 @@
         abrirOverlay('documentos', html, { wide: true, closeOnBackdrop: false });
     }
 
-    function emitirDocumento(codigo) {
+    async function emitirDocumento(codigo) {
         cerrarOverlay('documentos');
-        if (codigo === 'sin-doc') {
-            nuevaOrden();
-            return;
+        if (codigo === 'sin-doc') { nuevaOrden(); return; }
+
+        if (state.pedidoActual && state.pedidoActual.id && (codigo === 'ticket' || codigo === 'fcf' || codigo === 'ccf')) {
+            var csrf = document.querySelector('input[name="__RequestVerificationToken"]');
+            var form = new FormData();
+            form.append('__RequestVerificationToken', csrf ? csrf.value : '');
+            form.append('pedidoId', state.pedidoActual.id);
+            try {
+                var res = await fetch('?handler=TicketHtmlJson', { method: 'POST', body: form, headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+                if (res.ok) {
+                    var d = await res.json();
+                    if (d && d.html) {
+                        var win = window.open('', '_blank', 'width=420,height=600,scrollbars=yes');
+                        if (win) {
+                            win.document.write(d.html);
+                            win.document.close();
+                            win.focus();
+                            setTimeout(function () { win.print(); }, 400);
+                        }
+                    }
+                }
+            } catch (e) {}
         }
+
         var labels = { ticket: 'Ticket generado', fcf: 'Factura C.F. emitida', ccf: 'CCF emitido', 'nota-credito': 'Nota de crédito registrada', email: 'Factura enviada por correo' };
         lmdToast(labels[codigo] || 'Documento generado', 'success');
         nuevaOrden();
@@ -1185,6 +1298,10 @@
                     '<div class="lmd-mod-section__title">' + icon('list') + ' Ingredientes</div>' +
                     '<div class="lmd-mod-ings">' + ingsHtml + '</div>' +
                 '</div>' +
+                '<div class="lmd-mod-section">' +
+                    '<div class="lmd-mod-section__title">' + icon('message-square') + ' Nota para cocina</div>' +
+                    '<textarea class="lmd-mod-nota" rows="2" placeholder="Ej: sin sal, bien cocido..." oninput="pos._setNotaCustom(this.value)">' + (_mod.notaCustom || '') + '</textarea>' +
+                '</div>' +
                 '<button class="lmd-mod-confirmar" onclick="pos.confirmarModificadores()">' + icon('check-circle') + ' Confirmar cambios</button>' +
             '</div>';
 
@@ -1216,6 +1333,8 @@
         else _mod.alergias.push(alergia);
         renderModificadorModal();
     }
+
+    function _setNotaCustom(val) { _mod.notaCustom = val; }
 
     function cerrarModificadores() { cerrarOverlay('modificador'); }
 
@@ -1401,7 +1520,7 @@
         ajustarSplitN, iniciarSplitIgualitario, cobrarSiguientePersona,
         pagarPersonaSplit, seleccionarBilleteSplit, confirmarEfectivoSplit,
         emitirDocumento, nuevaOrden,
-        abrirModificadores, toggleAlergia,
+        abrirModificadores, toggleAlergia, _setNotaCustom,
         cerrarModificadores, confirmarModificadores,
         cambiarServicio, cambiarAMesa, cambiarAParaLlevar, cerrarCambiarServicio,
         simularRechazo, reintentarPago

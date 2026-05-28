@@ -86,7 +86,7 @@ public class PedidosServicioDashboardTests : IDisposable
     }
 
     [Fact]
-    public async Task MarcarEnPreparacionAsync_EmiteNotificacionDashboard()
+    public async Task EstadoEnPreparacion_AutoTransicion_EmiteNotificacionDashboard()
     {
         var (mesa, producto) = await CrearMesaYProductoAsync();
         var detalles = new List<DetalleCreacionDto>
@@ -94,10 +94,7 @@ public class PedidosServicioDashboardTests : IDisposable
             new() { ProductoId = producto.Id, Cantidad = 1, PrecioUnitario = 3.50m }
         };
 
-        var pedido = await _servicio.CrearPedidoAsync(TipoServicio.ComerAqui, mesa.Id, detalles);
-        _notificadorDashboardSpy.Reset();
-
-        await _servicio.MarcarEnPreparacionAsync(pedido.Id);
+        await _servicio.CrearPedidoAsync(TipoServicio.ComerAqui, mesa.Id, detalles);
 
         Assert.Equal(1, _notificadorDashboardSpy.MetricasInvalidadasCount);
     }
@@ -112,7 +109,6 @@ public class PedidosServicioDashboardTests : IDisposable
         };
 
         var pedido = await _servicio.CrearPedidoAsync(TipoServicio.ComerAqui, mesa.Id, detalles);
-        await _servicio.MarcarEnPreparacionAsync(pedido.Id);
         await _servicio.MarcarEnCobroAsync(pedido.Id);
         _notificadorDashboardSpy.Reset();
 
@@ -148,7 +144,6 @@ public class PedidosServicioDashboardTests : IDisposable
         };
 
         var pedido = await _servicio.CrearPedidoAsync(TipoServicio.ComerAqui, mesa.Id, detalles);
-        await _servicio.MarcarEnPreparacionAsync(pedido.Id);
         _notificadorDashboardSpy.Reset();
 
         await _servicio.MarcarEnCobroAsync(pedido.Id);
@@ -166,7 +161,6 @@ public class PedidosServicioDashboardTests : IDisposable
         };
 
         var pedido = await _servicio.CrearPedidoAsync(TipoServicio.ComerAqui, mesa.Id, detalles);
-        await _servicio.MarcarEnPreparacionAsync(pedido.Id);
         _notificadorDashboardSpy.Reset();
 
         await _servicio.CrearCuentasAsync(pedido.Id, 2);
@@ -186,7 +180,6 @@ public class PedidosServicioDashboardTests : IDisposable
         var servicioSinDashboard = new PedidosServicio(_uot, _notificadorPedidosSpy, null, null, null);
 
         var pedido = await servicioSinDashboard.CrearPedidoAsync(TipoServicio.ComerAqui, mesa.Id, detalles);
-        await servicioSinDashboard.MarcarEnPreparacionAsync(pedido.Id);
         await servicioSinDashboard.MarcarEnCobroAsync(pedido.Id);
         await servicioSinDashboard.PagarPedidoAsync(pedido.Id);
 

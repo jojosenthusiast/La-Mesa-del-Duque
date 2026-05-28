@@ -83,7 +83,7 @@ public class PedidosServicioTests : IDisposable
     }
 
     [Fact]
-    public async Task CrearPedido_ParaLlevar_SinMesa_DebeCrearPedidoPendiente()
+    public async Task CrearPedido_ParaLlevar_SinMesa_DebeCrearPedidoEnPreparacion()
     {
         var (_, producto) = await CrearMesaYProductoAsync();
 
@@ -92,7 +92,7 @@ public class PedidosServicioTests : IDisposable
             new() { ProductoId = producto.Id, Cantidad = 2, PrecioUnitario = 3.50m }
         });
 
-        Assert.Equal("Pendiente", pedido.Estado);
+        Assert.Equal("EnPreparacion", pedido.Estado);
         Assert.Equal("ParaLlevar", pedido.TipoServicio);
         Assert.Null(pedido.MesaId);
         Assert.Null(pedido.MesaNumero);
@@ -138,8 +138,6 @@ public class PedidosServicioTests : IDisposable
         {
             new() { ProductoId = producto.Id, Cantidad = 2, PrecioUnitario = 3.00m }
         });
-
-        await _servicio.MarcarEnPreparacionAsync(pedido.Id);
 
         var actualizado = await _servicio.ActualizarCantidadDetalleAsync(pedido.Id, pedido.Detalles[0].Id, 4);
 
@@ -235,8 +233,6 @@ public class PedidosServicioTests : IDisposable
             new() { ProductoId = producto2.Id, Cantidad = 1, PrecioUnitario = 3.50m }
         });
 
-        await _servicio.MarcarEnPreparacionAsync(enPreparacion.Id);
-
         var activos = await _servicio.ListarPedidosActivosAsync();
 
         Assert.Contains(activos, x => x.Id == pendiente.Id);
@@ -244,7 +240,7 @@ public class PedidosServicioTests : IDisposable
     }
 
     [Fact]
-    public async Task PagarPedido_UnicoPedidoEnMesa_NoLiberaMesa()
+    public async Task PagarPedido_UnicoPedidoEnMesa_DebeLiberarMesa()
     {
         var (mesa, producto) = await CrearMesaYProductoAsync(30);
 
@@ -257,7 +253,7 @@ public class PedidosServicioTests : IDisposable
 
         var mesaActualizada = await _uot.Mesas.ObtenerPorIdAsync(mesa.Id);
         Assert.NotNull(mesaActualizada);
-        Assert.Equal(EstadoMesa.Ocupada, mesaActualizada!.Estado);
+        Assert.Equal(EstadoMesa.Disponible, mesaActualizada!.Estado);
     }
 
     [Fact]
@@ -289,11 +285,11 @@ public class PedidosServicioTests : IDisposable
 
         var notificacion = Assert.Single(_notificadorSpy.PedidosCreados);
         Assert.Equal(pedido.Id, notificacion.PedidoId);
-        Assert.Equal(EstadoPedido.Pendiente, notificacion.Estado);
+        Assert.Equal(EstadoPedido.EnPreparacion, notificacion.Estado);
     }
 
     [Fact]
-    public async Task MarcarEnPreparacion_DebeEmitirNotificacionDeCambioEstado()
+    public async Task MarcarEnCobro_DebeEmitirNotificacionDeCambioEstado()
     {
         var (_, producto) = await CrearMesaYProductoAsync(41);
 
@@ -304,11 +300,11 @@ public class PedidosServicioTests : IDisposable
 
         _notificadorSpy.EstadosCambiados.Clear();
 
-        await _servicio.MarcarEnPreparacionAsync(pedido.Id);
+        await _servicio.MarcarEnCobroAsync(pedido.Id);
 
         var notificacion = Assert.Single(_notificadorSpy.EstadosCambiados);
         Assert.Equal(pedido.Id, notificacion.PedidoId);
-        Assert.Equal(EstadoPedido.EnPreparacion, notificacion.Estado);
+        Assert.Equal(EstadoPedido.EnCobro, notificacion.Estado);
     }
 
     [Fact]

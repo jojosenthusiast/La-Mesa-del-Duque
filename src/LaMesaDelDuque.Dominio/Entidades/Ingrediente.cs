@@ -111,4 +111,11 @@ public class Ingrediente
         StockActual = Math.Max(0, StockActual - cantidad);
         UpdatedAt = DateTime.UtcNow;
     }
+
+    public void DevolverStock(decimal cantidad)
+    {
+        if (cantidad <= 0) throw new ReglaDominioException("La cantidad a devolver debe ser mayor a cero.");
+        StockActual += cantidad;
+        UpdatedAt = DateTime.UtcNow;
+    }
 }
