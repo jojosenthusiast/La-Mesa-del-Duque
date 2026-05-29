@@ -30,10 +30,11 @@ internal class CuentaConfiguracion : IEntityTypeConfiguration<Cuenta>
             .IsRequired();
 
         constructor.Property(c => c.FechaPago)
+            .HasColumnType("timestamp with time zone")
             .IsRequired(false);
 
         constructor.Property(c => c.Version)
-            .HasColumnType("BLOB");
+            .HasColumnType("bytea");
 
         constructor.HasOne<Pedido>()
             .WithMany(p => p.Cuentas)

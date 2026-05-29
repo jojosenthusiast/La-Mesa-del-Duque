@@ -26,6 +26,7 @@ internal class PagoConfiguracion : IEntityTypeConfiguration<Pago>
             .IsRequired();
 
         constructor.Property(p => p.FechaPago)
+            .HasColumnType("timestamp with time zone")
             .IsRequired();
 
         constructor.HasOne<Cuenta>()

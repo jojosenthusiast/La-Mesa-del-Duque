@@ -11,6 +11,7 @@ internal class PedidoConfiguracion : IEntityTypeConfiguration<Pedido>
         constructor.HasKey(p => p.Id);
 
         constructor.Property(p => p.FechaCreacion)
+            .HasColumnType("timestamp with time zone")
             .IsRequired();
 
         constructor.Property(p => p.TipoServicio)
@@ -47,7 +48,9 @@ internal class PedidoConfiguracion : IEntityTypeConfiguration<Pedido>
             .HasForeignKey("PedidoId")
             .OnDelete(DeleteBehavior.Cascade);
 
-        constructor.Navigation(p => p.Detalles)
-            .AutoInclude();
+        // AutoInclude eliminado: causaba que EF marcara DetallePedido nuevo como Modified
+        // (en lugar de Added) al hacer fixup de FKs durante DetectChanges, resultando en
+        // DbUpdateConcurrencyException al intentar hacer UPDATE de una fila inexistente.
+        // Los callers que necesitan Detalles deben usar Include() explícito.
     }
 }

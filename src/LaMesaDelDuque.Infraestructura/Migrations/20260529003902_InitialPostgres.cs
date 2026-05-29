@@ -1,12 +1,13 @@
 ﻿using System;
 using Microsoft.EntityFrameworkCore.Migrations;
+using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
 namespace LaMesaDelDuque.Infraestructura.Migrations
 {
     /// <inheritdoc />
-    public partial class ConsolidadaSprint3 : Migration
+    public partial class InitialPostgres : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -15,10 +16,10 @@ namespace LaMesaDelDuque.Infraestructura.Migrations
                 name: "Alergenos",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    Nombre = table.Column<string>(type: "TEXT", nullable: false),
-                    Icono = table.Column<string>(type: "TEXT", nullable: true),
-                    Activo = table.Column<bool>(type: "INTEGER", nullable: false)
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    Nombre = table.Column<string>(type: "text", nullable: false),
+                    Icono = table.Column<string>(type: "text", nullable: true),
+                    Activo = table.Column<bool>(type: "boolean", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -29,12 +30,12 @@ namespace LaMesaDelDuque.Infraestructura.Migrations
                 name: "CategoriaProducto",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    Nombre = table.Column<string>(type: "TEXT", maxLength: 100, nullable: false),
-                    Descripcion = table.Column<string>(type: "TEXT", maxLength: 250, nullable: true),
-                    OrdenDisplay = table.Column<int>(type: "INTEGER", nullable: false, defaultValue: 0),
-                    Activo = table.Column<bool>(type: "INTEGER", nullable: false),
-                    EstacionCocina = table.Column<int>(type: "INTEGER", nullable: false),
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    Nombre = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    Descripcion = table.Column<string>(type: "character varying(250)", maxLength: 250, nullable: true),
+                    OrdenDisplay = table.Column<int>(type: "integer", nullable: false, defaultValue: 0),
+                    Activo = table.Column<bool>(type: "boolean", nullable: false),
+                    EstacionCocina = table.Column<int>(type: "integer", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false, defaultValueSql: "NOW()")
                 },
                 constraints: table =>
@@ -46,13 +47,13 @@ namespace LaMesaDelDuque.Infraestructura.Migrations
                 name: "Combos",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    Nombre = table.Column<string>(type: "TEXT", maxLength: 150, nullable: false),
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    Nombre = table.Column<string>(type: "character varying(150)", maxLength: 150, nullable: false),
                     Descripcion = table.Column<string>(type: "text", nullable: true),
-                    PrecioCombo = table.Column<decimal>(type: "TEXT", precision: 10, scale: 2, nullable: false),
-                    Activo = table.Column<bool>(type: "INTEGER", nullable: false, defaultValue: true),
-                    FechaInicio = table.Column<DateOnly>(type: "TEXT", nullable: false),
-                    FechaFin = table.Column<DateOnly>(type: "TEXT", nullable: true),
+                    PrecioCombo = table.Column<decimal>(type: "numeric(10,2)", precision: 10, scale: 2, nullable: false),
+                    Activo = table.Column<bool>(type: "boolean", nullable: false, defaultValue: true),
+                    FechaInicio = table.Column<DateOnly>(type: "date", nullable: false),
+                    FechaFin = table.Column<DateOnly>(type: "date", nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false, defaultValueSql: "NOW()")
                 },
                 constraints: table =>
@@ -65,25 +66,25 @@ namespace LaMesaDelDuque.Infraestructura.Migrations
                 name: "OrdenesCocina",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    PedidoId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    DetallePedidoId = table.Column<Guid>(type: "TEXT", nullable: true),
-                    ProductoNombre = table.Column<string>(type: "TEXT", maxLength: 150, nullable: false),
-                    Cantidad = table.Column<int>(type: "INTEGER", nullable: false),
-                    Notas = table.Column<string>(type: "TEXT", maxLength: 250, nullable: true),
-                    Alergenos = table.Column<string>(type: "TEXT", maxLength: 150, nullable: true),
-                    IngredientesQuitados = table.Column<string>(type: "TEXT", maxLength: 150, nullable: true),
-                    IngredientesExtra = table.Column<string>(type: "TEXT", maxLength: 150, nullable: true),
-                    CocineroId = table.Column<int>(type: "INTEGER", nullable: true),
-                    Estacion = table.Column<int>(type: "INTEGER", nullable: false),
-                    Estado = table.Column<int>(type: "INTEGER", nullable: false),
-                    HoraRecibido = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    HoraListo = table.Column<DateTime>(type: "TEXT", nullable: true),
-                    MesaNumero = table.Column<int>(type: "INTEGER", nullable: true),
-                    TipoServicio = table.Column<string>(type: "TEXT", maxLength: 50, nullable: true),
-                    Curso = table.Column<string>(type: "TEXT", maxLength: 20, nullable: true),
-                    ProductoId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    TiempoPreparacionMin = table.Column<int>(type: "INTEGER", nullable: false)
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    PedidoId = table.Column<Guid>(type: "uuid", nullable: false),
+                    DetallePedidoId = table.Column<Guid>(type: "uuid", nullable: true),
+                    ProductoNombre = table.Column<string>(type: "character varying(150)", maxLength: 150, nullable: false),
+                    Cantidad = table.Column<int>(type: "integer", nullable: false),
+                    Notas = table.Column<string>(type: "character varying(250)", maxLength: 250, nullable: true),
+                    Alergenos = table.Column<string>(type: "character varying(150)", maxLength: 150, nullable: true),
+                    IngredientesQuitados = table.Column<string>(type: "character varying(150)", maxLength: 150, nullable: true),
+                    IngredientesExtra = table.Column<string>(type: "character varying(150)", maxLength: 150, nullable: true),
+                    CocineroId = table.Column<int>(type: "integer", nullable: true),
+                    Estacion = table.Column<int>(type: "integer", nullable: false),
+                    Estado = table.Column<int>(type: "integer", nullable: false),
+                    HoraRecibido = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    HoraListo = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    MesaNumero = table.Column<int>(type: "integer", nullable: true),
+                    TipoServicio = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
+                    Curso = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: true),
+                    ProductoId = table.Column<Guid>(type: "uuid", nullable: false),
+                    TiempoPreparacionMin = table.Column<int>(type: "integer", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -94,10 +95,10 @@ namespace LaMesaDelDuque.Infraestructura.Migrations
                 name: "Permisos",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    Nombre = table.Column<string>(type: "TEXT", maxLength: 100, nullable: false),
-                    Modulo = table.Column<string>(type: "TEXT", maxLength: 50, nullable: false),
-                    Descripcion = table.Column<string>(type: "TEXT", maxLength: 250, nullable: true)
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    Nombre = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    Modulo = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
+                    Descripcion = table.Column<string>(type: "character varying(250)", maxLength: 250, nullable: true)
                 },
                 constraints: table =>
                 {
@@ -108,14 +109,14 @@ namespace LaMesaDelDuque.Infraestructura.Migrations
                 name: "Promociones",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    Nombre = table.Column<string>(type: "TEXT", maxLength: 150, nullable: false),
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    Nombre = table.Column<string>(type: "character varying(150)", maxLength: 150, nullable: false),
                     Descripcion = table.Column<string>(type: "text", nullable: true),
-                    TipoDescuento = table.Column<string>(type: "TEXT", maxLength: 20, nullable: false),
-                    ValorDescuento = table.Column<decimal>(type: "TEXT", precision: 10, scale: 2, nullable: false),
-                    FechaInicio = table.Column<DateOnly>(type: "TEXT", nullable: false),
-                    FechaFin = table.Column<DateOnly>(type: "TEXT", nullable: false),
-                    Activo = table.Column<bool>(type: "INTEGER", nullable: false, defaultValue: true),
+                    TipoDescuento = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
+                    ValorDescuento = table.Column<decimal>(type: "numeric(10,2)", precision: 10, scale: 2, nullable: false),
+                    FechaInicio = table.Column<DateOnly>(type: "date", nullable: false),
+                    FechaFin = table.Column<DateOnly>(type: "date", nullable: false),
+                    Activo = table.Column<bool>(type: "boolean", nullable: false, defaultValue: true),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false, defaultValueSql: "NOW()")
                 },
                 constraints: table =>
@@ -129,14 +130,14 @@ namespace LaMesaDelDuque.Infraestructura.Migrations
                 name: "Proveedor",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    Nombre = table.Column<string>(type: "TEXT", maxLength: 200, nullable: false),
-                    Nit = table.Column<string>(type: "TEXT", maxLength: 32, nullable: false),
-                    Contacto = table.Column<string>(type: "TEXT", maxLength: 150, nullable: true),
-                    Telefono = table.Column<string>(type: "TEXT", maxLength: 20, nullable: true),
-                    Email = table.Column<string>(type: "TEXT", maxLength: 150, nullable: true),
-                    Direccion = table.Column<string>(type: "TEXT", maxLength: 300, nullable: true),
-                    Activo = table.Column<bool>(type: "INTEGER", nullable: false),
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    Nombre = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
+                    Nit = table.Column<string>(type: "character varying(32)", maxLength: 32, nullable: false),
+                    Contacto = table.Column<string>(type: "character varying(150)", maxLength: 150, nullable: true),
+                    Telefono = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: true),
+                    Email = table.Column<string>(type: "character varying(150)", maxLength: 150, nullable: true),
+                    Direccion = table.Column<string>(type: "character varying(300)", maxLength: 300, nullable: true),
+                    Activo = table.Column<bool>(type: "boolean", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false, defaultValueSql: "NOW()")
                 },
                 constraints: table =>
@@ -148,14 +149,15 @@ namespace LaMesaDelDuque.Infraestructura.Migrations
                 name: "RestauranteConfigs",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "INTEGER", nullable: false),
-                    Nombre = table.Column<string>(type: "TEXT", maxLength: 150, nullable: false),
-                    Direccion = table.Column<string>(type: "TEXT", maxLength: 300, nullable: false),
-                    Telefono = table.Column<string>(type: "TEXT", maxLength: 20, nullable: true),
+                    Id = table.Column<int>(type: "integer", nullable: false),
+                    Nombre = table.Column<string>(type: "character varying(150)", maxLength: 150, nullable: false),
+                    Direccion = table.Column<string>(type: "character varying(300)", maxLength: 300, nullable: false),
+                    Telefono = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: true),
                     HorarioApertura = table.Column<TimeOnly>(type: "time without time zone", nullable: false),
                     HorarioCierre = table.Column<TimeOnly>(type: "time without time zone", nullable: false),
-                    CantidadMesas = table.Column<int>(type: "INTEGER", nullable: false),
+                    CantidadMesas = table.Column<int>(type: "integer", nullable: false),
                     DatosTicketJson = table.Column<string>(type: "text", nullable: true),
+                    PeriodoGraciaMinutos = table.Column<int>(type: "integer", nullable: false, defaultValue: 5),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false, defaultValueSql: "NOW()"),
                     UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false, defaultValueSql: "NOW()")
                 },
@@ -169,10 +171,10 @@ namespace LaMesaDelDuque.Infraestructura.Migrations
                 name: "Roles",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    Nombre = table.Column<string>(type: "TEXT", maxLength: 50, nullable: false),
-                    Descripcion = table.Column<string>(type: "TEXT", maxLength: 250, nullable: true),
-                    Activo = table.Column<bool>(type: "INTEGER", nullable: false),
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    Nombre = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
+                    Descripcion = table.Column<string>(type: "character varying(250)", maxLength: 250, nullable: true),
+                    Activo = table.Column<bool>(type: "boolean", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false, defaultValueSql: "NOW()")
                 },
                 constraints: table =>
@@ -184,10 +186,10 @@ namespace LaMesaDelDuque.Infraestructura.Migrations
                 name: "ZonasSalon",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    Nombre = table.Column<string>(type: "TEXT", maxLength: 100, nullable: false),
-                    Orden = table.Column<int>(type: "INTEGER", nullable: false, defaultValue: 0),
-                    Activa = table.Column<bool>(type: "INTEGER", nullable: false),
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    Nombre = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    Orden = table.Column<int>(type: "integer", nullable: false, defaultValue: 0),
+                    Activa = table.Column<bool>(type: "boolean", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false, defaultValueSql: "NOW()")
                 },
                 constraints: table =>
@@ -199,14 +201,14 @@ namespace LaMesaDelDuque.Infraestructura.Migrations
                 name: "Producto",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    Nombre = table.Column<string>(type: "TEXT", maxLength: 150, nullable: false),
-                    Precio = table.Column<decimal>(type: "TEXT", precision: 10, scale: 2, nullable: false),
-                    CategoriaId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    Activo = table.Column<bool>(type: "INTEGER", nullable: false),
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    Nombre = table.Column<string>(type: "character varying(150)", maxLength: 150, nullable: false),
+                    Precio = table.Column<decimal>(type: "numeric(10,2)", precision: 10, scale: 2, nullable: false),
+                    CategoriaId = table.Column<Guid>(type: "uuid", nullable: false),
+                    Activo = table.Column<bool>(type: "boolean", nullable: false),
                     Descripcion = table.Column<string>(type: "text", nullable: true),
-                    ImagenUrl = table.Column<string>(type: "TEXT", maxLength: 500, nullable: true),
-                    TiempoPreparacionMin = table.Column<int>(type: "INTEGER", nullable: false, defaultValue: 5),
+                    ImagenUrl = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
+                    TiempoPreparacionMin = table.Column<int>(type: "integer", nullable: false, defaultValue: 5),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false, defaultValueSql: "NOW()"),
                     UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false, defaultValueSql: "NOW()")
                 },
@@ -225,14 +227,14 @@ namespace LaMesaDelDuque.Infraestructura.Migrations
                 name: "Ingrediente",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    Nombre = table.Column<string>(type: "TEXT", maxLength: 150, nullable: false),
-                    UnidadMedida = table.Column<string>(type: "TEXT", maxLength: 20, nullable: false),
-                    StockActual = table.Column<decimal>(type: "TEXT", precision: 10, scale: 3, nullable: false),
-                    StockMinimo = table.Column<decimal>(type: "TEXT", precision: 10, scale: 3, nullable: false),
-                    CostoUnitario = table.Column<decimal>(type: "TEXT", precision: 10, scale: 2, nullable: false),
-                    ProveedorDefaultId = table.Column<Guid>(type: "TEXT", nullable: true),
-                    Activo = table.Column<bool>(type: "INTEGER", nullable: false),
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    Nombre = table.Column<string>(type: "character varying(150)", maxLength: 150, nullable: false),
+                    UnidadMedida = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
+                    StockActual = table.Column<decimal>(type: "numeric(10,3)", precision: 10, scale: 3, nullable: false),
+                    StockMinimo = table.Column<decimal>(type: "numeric(10,3)", precision: 10, scale: 3, nullable: false),
+                    CostoUnitario = table.Column<decimal>(type: "numeric(10,2)", precision: 10, scale: 2, nullable: false),
+                    ProveedorDefaultId = table.Column<Guid>(type: "uuid", nullable: true),
+                    Activo = table.Column<bool>(type: "boolean", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false, defaultValueSql: "NOW()"),
                     UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false, defaultValueSql: "NOW()")
                 },
@@ -251,8 +253,8 @@ namespace LaMesaDelDuque.Infraestructura.Migrations
                 name: "RolesPermisos",
                 columns: table => new
                 {
-                    RolId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    PermisoId = table.Column<Guid>(type: "TEXT", nullable: false)
+                    RolId = table.Column<Guid>(type: "uuid", nullable: false),
+                    PermisoId = table.Column<Guid>(type: "uuid", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -275,13 +277,13 @@ namespace LaMesaDelDuque.Infraestructura.Migrations
                 name: "Usuarios",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    Username = table.Column<string>(type: "TEXT", maxLength: 50, nullable: false),
-                    Email = table.Column<string>(type: "TEXT", maxLength: 150, nullable: true),
-                    PasswordHash = table.Column<string>(type: "TEXT", maxLength: 255, nullable: false),
-                    NombreCompleto = table.Column<string>(type: "TEXT", maxLength: 200, nullable: false),
-                    RolId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    Activo = table.Column<bool>(type: "INTEGER", nullable: false),
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    Username = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
+                    Email = table.Column<string>(type: "character varying(150)", maxLength: 150, nullable: true),
+                    PasswordHash = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: false),
+                    NombreCompleto = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
+                    RolId = table.Column<Guid>(type: "uuid", nullable: false),
+                    Activo = table.Column<bool>(type: "boolean", nullable: false),
                     UltimoAcceso = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false, defaultValueSql: "NOW()"),
                     UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false, defaultValueSql: "NOW()")
@@ -301,17 +303,18 @@ namespace LaMesaDelDuque.Infraestructura.Migrations
                 name: "Mesa",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    Numero = table.Column<int>(type: "INTEGER", nullable: false),
-                    Capacidad = table.Column<int>(type: "INTEGER", nullable: false),
-                    Estado = table.Column<string>(type: "TEXT", maxLength: 30, nullable: false),
-                    Activa = table.Column<bool>(type: "INTEGER", nullable: false),
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    Numero = table.Column<int>(type: "integer", nullable: false),
+                    Capacidad = table.Column<int>(type: "integer", nullable: false),
+                    Estado = table.Column<string>(type: "character varying(30)", maxLength: 30, nullable: false),
+                    Activa = table.Column<bool>(type: "boolean", nullable: false),
                     OcupadaDesde = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
-                    PosicionX = table.Column<int>(type: "INTEGER", nullable: true),
-                    PosicionY = table.Column<int>(type: "INTEGER", nullable: true),
-                    ZonaId = table.Column<Guid>(type: "TEXT", nullable: true),
-                    Forma = table.Column<string>(type: "TEXT", maxLength: 30, nullable: true),
-                    Rotacion = table.Column<int>(type: "INTEGER", nullable: true, defaultValue: 0)
+                    GraciaHasta = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    PosicionX = table.Column<int>(type: "integer", nullable: true),
+                    PosicionY = table.Column<int>(type: "integer", nullable: true),
+                    ZonaId = table.Column<Guid>(type: "uuid", nullable: true),
+                    Forma = table.Column<string>(type: "character varying(30)", maxLength: 30, nullable: true),
+                    Rotacion = table.Column<int>(type: "integer", nullable: true, defaultValue: 0)
                 },
                 constraints: table =>
                 {
@@ -328,9 +331,9 @@ namespace LaMesaDelDuque.Infraestructura.Migrations
                 name: "CombosProductos",
                 columns: table => new
                 {
-                    ComboId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    ProductoId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    Cantidad = table.Column<int>(type: "INTEGER", nullable: false, defaultValue: 1)
+                    ComboId = table.Column<Guid>(type: "uuid", nullable: false),
+                    ProductoId = table.Column<Guid>(type: "uuid", nullable: false),
+                    Cantidad = table.Column<int>(type: "integer", nullable: false, defaultValue: 1)
                 },
                 constraints: table =>
                 {
@@ -354,10 +357,10 @@ namespace LaMesaDelDuque.Infraestructura.Migrations
                 name: "ProductosAlergenos",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    ProductoId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    AlergenoId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    Justificacion = table.Column<string>(type: "TEXT", nullable: true)
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    ProductoId = table.Column<Guid>(type: "uuid", nullable: false),
+                    AlergenoId = table.Column<Guid>(type: "uuid", nullable: false),
+                    Justificacion = table.Column<string>(type: "text", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -380,8 +383,8 @@ namespace LaMesaDelDuque.Infraestructura.Migrations
                 name: "PromocionesProductos",
                 columns: table => new
                 {
-                    PromocionId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    ProductoId = table.Column<Guid>(type: "TEXT", nullable: false)
+                    PromocionId = table.Column<Guid>(type: "uuid", nullable: false),
+                    ProductoId = table.Column<Guid>(type: "uuid", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -404,8 +407,8 @@ namespace LaMesaDelDuque.Infraestructura.Migrations
                 name: "RecetasProductos",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    ProductoId = table.Column<Guid>(type: "TEXT", nullable: false),
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    ProductoId = table.Column<Guid>(type: "uuid", nullable: false),
                     Instrucciones = table.Column<string>(type: "text", nullable: false)
                 },
                 constraints: table =>
@@ -423,9 +426,9 @@ namespace LaMesaDelDuque.Infraestructura.Migrations
                 name: "ProductoIngrediente",
                 columns: table => new
                 {
-                    ProductoId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    IngredienteId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    CantidadRequerida = table.Column<decimal>(type: "TEXT", precision: 10, scale: 3, nullable: false)
+                    ProductoId = table.Column<Guid>(type: "uuid", nullable: false),
+                    IngredienteId = table.Column<Guid>(type: "uuid", nullable: false),
+                    CantidadRequerida = table.Column<decimal>(type: "numeric(10,3)", precision: 10, scale: 3, nullable: false)
                 },
                 constraints: table =>
                 {
@@ -448,15 +451,15 @@ namespace LaMesaDelDuque.Infraestructura.Migrations
                 name: "Auditorias",
                 columns: table => new
                 {
-                    Id = table.Column<long>(type: "INTEGER", nullable: false)
-                        .Annotation("Sqlite:Autoincrement", true),
-                    TablaAfectada = table.Column<string>(type: "TEXT", maxLength: 100, nullable: false),
-                    RegistroId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    Accion = table.Column<string>(type: "TEXT", maxLength: 10, nullable: false),
+                    Id = table.Column<long>(type: "bigint", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityAlwaysColumn),
+                    TablaAfectada = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    RegistroId = table.Column<Guid>(type: "uuid", nullable: false),
+                    Accion = table.Column<string>(type: "character varying(10)", maxLength: 10, nullable: false),
                     DatosAnteriores = table.Column<string>(type: "jsonb", nullable: true),
                     DatosNuevos = table.Column<string>(type: "jsonb", nullable: true),
-                    UsuarioId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    IpAddress = table.Column<string>(type: "TEXT", maxLength: 45, nullable: true),
+                    UsuarioId = table.Column<Guid>(type: "uuid", nullable: false),
+                    IpAddress = table.Column<string>(type: "character varying(45)", maxLength: 45, nullable: true),
                     Fecha = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
                 constraints: table =>
@@ -475,23 +478,23 @@ namespace LaMesaDelDuque.Infraestructura.Migrations
                 name: "CierresDia",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    Fecha = table.Column<DateOnly>(type: "TEXT", nullable: false),
-                    TotalVentas = table.Column<decimal>(type: "TEXT", precision: 12, scale: 2, nullable: false),
-                    TotalVentasEfectivo = table.Column<decimal>(type: "TEXT", precision: 12, scale: 2, nullable: false),
-                    TotalVentasTarjeta = table.Column<decimal>(type: "TEXT", precision: 12, scale: 2, nullable: false),
-                    TotalPedidos = table.Column<int>(type: "INTEGER", nullable: false),
-                    TotalPedidosCancelados = table.Column<int>(type: "INTEGER", nullable: false),
-                    TotalMermaValorizada = table.Column<decimal>(type: "TEXT", precision: 12, scale: 2, nullable: false),
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    Fecha = table.Column<DateOnly>(type: "date", nullable: false),
+                    TotalVentas = table.Column<decimal>(type: "numeric(12,2)", precision: 12, scale: 2, nullable: false),
+                    TotalVentasEfectivo = table.Column<decimal>(type: "numeric(12,2)", precision: 12, scale: 2, nullable: false),
+                    TotalVentasTarjeta = table.Column<decimal>(type: "numeric(12,2)", precision: 12, scale: 2, nullable: false),
+                    TotalPedidos = table.Column<int>(type: "integer", nullable: false),
+                    TotalPedidosCancelados = table.Column<int>(type: "integer", nullable: false),
+                    TotalMermaValorizada = table.Column<decimal>(type: "numeric(12,2)", precision: 12, scale: 2, nullable: false),
                     ResumenJson = table.Column<string>(type: "text", nullable: true),
-                    UsuarioId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    EfectivoReal = table.Column<decimal>(type: "TEXT", precision: 12, scale: 2, nullable: false, defaultValue: 0m),
-                    TarjetaReal = table.Column<decimal>(type: "TEXT", precision: 12, scale: 2, nullable: false, defaultValue: 0m),
-                    DiferenciaEfectivo = table.Column<decimal>(type: "TEXT", precision: 12, scale: 2, nullable: false, defaultValue: 0m),
-                    DiferenciaTarjeta = table.Column<decimal>(type: "TEXT", precision: 12, scale: 2, nullable: false, defaultValue: 0m),
-                    EsCerrado = table.Column<bool>(type: "INTEGER", nullable: false, defaultValue: false),
+                    UsuarioId = table.Column<Guid>(type: "uuid", nullable: false),
+                    EfectivoReal = table.Column<decimal>(type: "numeric(12,2)", precision: 12, scale: 2, nullable: false, defaultValue: 0m),
+                    TarjetaReal = table.Column<decimal>(type: "numeric(12,2)", precision: 12, scale: 2, nullable: false, defaultValue: 0m),
+                    DiferenciaEfectivo = table.Column<decimal>(type: "numeric(12,2)", precision: 12, scale: 2, nullable: false, defaultValue: 0m),
+                    DiferenciaTarjeta = table.Column<decimal>(type: "numeric(12,2)", precision: 12, scale: 2, nullable: false, defaultValue: 0m),
+                    EsCerrado = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
                     CerradoEn = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
-                    Observacion = table.Column<string>(type: "TEXT", maxLength: 500, nullable: true),
+                    Observacion = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false, defaultValueSql: "NOW()")
                 },
                 constraints: table =>
@@ -509,14 +512,14 @@ namespace LaMesaDelDuque.Infraestructura.Migrations
                 name: "OrdenesCompra",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    ProveedorId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    Estado = table.Column<string>(type: "TEXT", maxLength: 20, nullable: false, defaultValue: "solicitado"),
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    ProveedorId = table.Column<Guid>(type: "uuid", nullable: false),
+                    Estado = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false, defaultValue: "solicitado"),
                     FechaSolicitud = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     FechaRecepcion = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     Notas = table.Column<string>(type: "text", nullable: true),
                     ImpactoFallo = table.Column<string>(type: "text", nullable: true),
-                    UsuarioId = table.Column<Guid>(type: "TEXT", nullable: false),
+                    UsuarioId = table.Column<Guid>(type: "uuid", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false, defaultValueSql: "NOW()"),
                     UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false, defaultValueSql: "NOW()")
                 },
@@ -542,12 +545,12 @@ namespace LaMesaDelDuque.Infraestructura.Migrations
                 name: "ProductosPreciosHistorial",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    ProductoId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    PrecioAnterior = table.Column<decimal>(type: "TEXT", precision: 10, scale: 2, nullable: false),
-                    PrecioNuevo = table.Column<decimal>(type: "TEXT", precision: 10, scale: 2, nullable: false),
-                    Razon = table.Column<string>(type: "TEXT", maxLength: 500, nullable: false),
-                    UsuarioId = table.Column<Guid>(type: "TEXT", nullable: false),
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    ProductoId = table.Column<Guid>(type: "uuid", nullable: false),
+                    PrecioAnterior = table.Column<decimal>(type: "numeric(10,2)", precision: 10, scale: 2, nullable: false),
+                    PrecioNuevo = table.Column<decimal>(type: "numeric(10,2)", precision: 10, scale: 2, nullable: false),
+                    Razon = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: false),
+                    UsuarioId = table.Column<Guid>(type: "uuid", nullable: false),
                     FechaCambio = table.Column<DateTime>(type: "timestamp with time zone", nullable: false, defaultValueSql: "NOW()")
                 },
                 constraints: table =>
@@ -571,11 +574,11 @@ namespace LaMesaDelDuque.Infraestructura.Migrations
                 name: "Pedido",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    FechaCreacion = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    TipoServicio = table.Column<string>(type: "TEXT", maxLength: 20, nullable: false),
-                    MesaId = table.Column<Guid>(type: "TEXT", nullable: true),
-                    Estado = table.Column<string>(type: "TEXT", maxLength: 30, nullable: false),
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    FechaCreacion = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    TipoServicio = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
+                    MesaId = table.Column<Guid>(type: "uuid", nullable: true),
+                    Estado = table.Column<string>(type: "character varying(30)", maxLength: 30, nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false, defaultValueSql: "NOW()")
                 },
                 constraints: table =>
@@ -593,10 +596,10 @@ namespace LaMesaDelDuque.Infraestructura.Migrations
                 name: "RecetasIngredientes",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    IngredienteId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    CantidadRequerida = table.Column<decimal>(type: "TEXT", precision: 10, scale: 3, nullable: false),
-                    RecetaProductoId = table.Column<Guid>(type: "TEXT", nullable: false)
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    IngredienteId = table.Column<Guid>(type: "uuid", nullable: false),
+                    CantidadRequerida = table.Column<decimal>(type: "numeric(10,3)", precision: 10, scale: 3, nullable: false),
+                    RecetaProductoId = table.Column<Guid>(type: "uuid", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -619,15 +622,15 @@ namespace LaMesaDelDuque.Infraestructura.Migrations
                 name: "MermasDiarias",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    CierreDiaId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    IngredienteId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    CantidadDescartada = table.Column<decimal>(type: "TEXT", precision: 10, scale: 3, nullable: false),
-                    CostoEstimado = table.Column<decimal>(type: "TEXT", precision: 10, scale: 2, nullable: false, defaultValue: 0m),
-                    UsuarioId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    Notas = table.Column<string>(type: "TEXT", maxLength: 500, nullable: true),
-                    Tipo = table.Column<string>(type: "TEXT", maxLength: 30, nullable: false),
-                    Lote = table.Column<string>(type: "TEXT", maxLength: 50, nullable: true),
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    CierreDiaId = table.Column<Guid>(type: "uuid", nullable: false),
+                    IngredienteId = table.Column<Guid>(type: "uuid", nullable: false),
+                    CantidadDescartada = table.Column<decimal>(type: "numeric(10,3)", precision: 10, scale: 3, nullable: false),
+                    CostoEstimado = table.Column<decimal>(type: "numeric(10,2)", precision: 10, scale: 2, nullable: false, defaultValue: 0m),
+                    UsuarioId = table.Column<Guid>(type: "uuid", nullable: false),
+                    Notas = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
+                    Tipo = table.Column<string>(type: "character varying(30)", maxLength: 30, nullable: false),
+                    Lote = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false, defaultValueSql: "NOW()")
                 },
                 constraints: table =>
@@ -659,12 +662,12 @@ namespace LaMesaDelDuque.Infraestructura.Migrations
                 name: "OrdenesCompraDetalle",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    OrdenCompraId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    IngredienteId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    CantidadSolicitada = table.Column<decimal>(type: "TEXT", precision: 10, scale: 3, nullable: false),
-                    CantidadRecibida = table.Column<decimal>(type: "TEXT", precision: 10, scale: 3, nullable: true),
-                    PrecioUnitario = table.Column<decimal>(type: "TEXT", precision: 10, scale: 2, nullable: false)
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    OrdenCompraId = table.Column<Guid>(type: "uuid", nullable: false),
+                    IngredienteId = table.Column<Guid>(type: "uuid", nullable: false),
+                    CantidadSolicitada = table.Column<decimal>(type: "numeric(10,3)", precision: 10, scale: 3, nullable: false),
+                    CantidadRecibida = table.Column<decimal>(type: "numeric(10,3)", precision: 10, scale: 3, nullable: true),
+                    PrecioUnitario = table.Column<decimal>(type: "numeric(10,2)", precision: 10, scale: 2, nullable: false)
                 },
                 constraints: table =>
                 {
@@ -690,14 +693,14 @@ namespace LaMesaDelDuque.Infraestructura.Migrations
                 name: "Cuentas",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    PedidoId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    Numero = table.Column<int>(type: "INTEGER", nullable: false),
-                    PropinaMonto = table.Column<decimal>(type: "TEXT", precision: 18, scale: 2, nullable: false),
-                    MetodoPago = table.Column<string>(type: "TEXT", maxLength: 20, nullable: true),
-                    Estado = table.Column<string>(type: "TEXT", maxLength: 20, nullable: false),
-                    FechaPago = table.Column<DateTime>(type: "TEXT", nullable: true),
-                    Version = table.Column<byte[]>(type: "BLOB", nullable: false)
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    PedidoId = table.Column<Guid>(type: "uuid", nullable: false),
+                    Numero = table.Column<int>(type: "integer", nullable: false),
+                    PropinaMonto = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: false),
+                    MetodoPago = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: true),
+                    Estado = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
+                    FechaPago = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    Version = table.Column<byte[]>(type: "bytea", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -714,13 +717,13 @@ namespace LaMesaDelDuque.Infraestructura.Migrations
                 name: "DetallePedido",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    ProductoId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    Cantidad = table.Column<int>(type: "INTEGER", nullable: false),
-                    PrecioUnitario = table.Column<decimal>(type: "TEXT", precision: 10, scale: 2, nullable: false),
-                    Notas = table.Column<string>(type: "TEXT", maxLength: 250, nullable: true),
-                    ModificacionesJson = table.Column<string>(type: "TEXT", nullable: true),
-                    PedidoId = table.Column<Guid>(type: "TEXT", nullable: true)
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    ProductoId = table.Column<Guid>(type: "uuid", nullable: false),
+                    Cantidad = table.Column<int>(type: "integer", nullable: false),
+                    PrecioUnitario = table.Column<decimal>(type: "numeric(10,2)", precision: 10, scale: 2, nullable: false),
+                    Notas = table.Column<string>(type: "character varying(250)", maxLength: 250, nullable: true),
+                    ModificacionesJson = table.Column<string>(type: "text", nullable: true),
+                    PedidoId = table.Column<Guid>(type: "uuid", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -743,12 +746,12 @@ namespace LaMesaDelDuque.Infraestructura.Migrations
                 name: "PedidosEstadosLog",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    PedidoId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    EstadoAnterior = table.Column<string>(type: "TEXT", maxLength: 20, nullable: false),
-                    EstadoNuevo = table.Column<string>(type: "TEXT", maxLength: 20, nullable: false),
-                    UsuarioId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    Notas = table.Column<string>(type: "TEXT", maxLength: 500, nullable: true),
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    PedidoId = table.Column<Guid>(type: "uuid", nullable: false),
+                    EstadoAnterior = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
+                    EstadoNuevo = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
+                    UsuarioId = table.Column<Guid>(type: "uuid", nullable: false),
+                    Notas = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
                     FechaCambio = table.Column<DateTime>(type: "timestamp with time zone", nullable: false, defaultValueSql: "NOW()")
                 },
                 constraints: table =>
@@ -772,11 +775,11 @@ namespace LaMesaDelDuque.Infraestructura.Migrations
                 name: "CuentaDetalle",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    CuentaId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    DetallePedidoId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    CantidadAsignada = table.Column<int>(type: "INTEGER", nullable: false),
-                    PrecioUnitario = table.Column<decimal>(type: "TEXT", nullable: false)
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    CuentaId = table.Column<Guid>(type: "uuid", nullable: false),
+                    DetallePedidoId = table.Column<Guid>(type: "uuid", nullable: false),
+                    CantidadAsignada = table.Column<int>(type: "integer", nullable: false),
+                    PrecioUnitario = table.Column<decimal>(type: "numeric", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -793,13 +796,13 @@ namespace LaMesaDelDuque.Infraestructura.Migrations
                 name: "Pagos",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    CuentaId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    Monto = table.Column<decimal>(type: "TEXT", precision: 18, scale: 2, nullable: false),
-                    PropinaMonto = table.Column<decimal>(type: "TEXT", precision: 18, scale: 2, nullable: false),
-                    Metodo = table.Column<string>(type: "TEXT", maxLength: 20, nullable: false),
-                    FechaPago = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    UsuarioId = table.Column<Guid>(type: "TEXT", nullable: false)
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    CuentaId = table.Column<Guid>(type: "uuid", nullable: false),
+                    Monto = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: false),
+                    PropinaMonto = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: false),
+                    Metodo = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
+                    FechaPago = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    UsuarioId = table.Column<Guid>(type: "uuid", nullable: false)
                 },
                 constraints: table =>
                 {

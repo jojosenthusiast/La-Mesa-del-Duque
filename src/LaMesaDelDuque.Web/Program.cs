@@ -122,6 +122,15 @@ if (app.Environment.IsDevelopment())
             db.Set<Mesa>().Add(new Mesa(i, i <= 8 ? 4 : 8));
         await db.SaveChangesAsync();
 
+        db.Set<RestauranteConfig>().Add(new RestauranteConfig(
+            "La Mesa del Duque",
+            "Av. Principal #1, San Salvador",
+            new TimeOnly(11, 0),
+            new TimeOnly(23, 0),
+            cantidadMesas: 10,
+            periodoGraciaMinutos: 5));
+        await db.SaveChangesAsync();
+
         // ── Seed: Alérgenos ──────────────────────────────────
         if (!await db.Set<Alergeno>().AnyAsync())
         {
@@ -261,6 +270,18 @@ if (app.Environment.IsDevelopment())
             }
             await db.SaveChangesAsync();
         }
+    }
+
+    if (!await db.Set<RestauranteConfig>().AnyAsync())
+    {
+        db.Set<RestauranteConfig>().Add(new RestauranteConfig(
+            "La Mesa del Duque",
+            "Av. Principal #1, San Salvador",
+            new TimeOnly(11, 0),
+            new TimeOnly(23, 0),
+            cantidadMesas: 10,
+            periodoGraciaMinutos: 5));
+        await db.SaveChangesAsync();
     }
 
     // Repair stale seed hashes — no-op when already correct
