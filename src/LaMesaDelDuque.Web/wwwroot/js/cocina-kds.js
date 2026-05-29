@@ -186,7 +186,7 @@
         const alergenos = escapeHtml(String(orden.alergenos ?? '').toUpperCase());
         const mesaTexto = orden.mesaNumero
             ? `Mesa ${escapeHtml(orden.mesaNumero)}`
-            : (orden.tipoServicio === 'ParaLlevar' ? '<svg class="lmd-kds-icon" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><use href="https://cdn.jsdelivr.net/npm/lucide-static@latest/icons/package.svg#icon"/></svg> Para llevar' : 'Sin mesa');
+            : (orden.tipoServicio === 'ParaLlevar' ? '<svg class="lmd-kds-icon" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><use href="/lib/lucide-static/icons/package.svg#icon"/></svg> Para llevar' : 'Sin mesa');
 
         const tieneModificaciones = orden.ingredientesQuitados || orden.ingredientesExtra;
         const tieneNotas = !!orden.notas;
@@ -201,7 +201,7 @@
         card.dataset.horaRecibido = orden.horaRecibido || '';
 
         card.innerHTML = `
-            ${tieneAlergenos ? `<div class="lmd-kds-alergeno-banner"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><use href="https://cdn.jsdelivr.net/npm/lucide-static@latest/icons/alert-triangle.svg#icon"/></svg> ALÉRGENO: ${alergenos}</div>` : ''}
+            ${tieneAlergenos ? `<div class="lmd-kds-alergeno-banner"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><use href="/lib/lucide-static/icons/alert-triangle.svg#icon"/></svg> ALÉRGENO: ${alergenos}</div>` : ''}
             <header class="lmd-kds-card__header">
                 <span class="lmd-kds-card__mesa">${mesaTexto}</span>
                 <span class="lmd-kds-card__timer" data-hora-recibido="${horaRecibido}">${formatearTiempo(orden.minutosTranscurridos || 0)}</span>
@@ -213,7 +213,7 @@
             ${tieneModificaciones ? `<div class="lmd-kds-card__modificaciones">${renderModificaciones(orden)}</div>` : ''}
             ${tieneNotas ? `<div class="lmd-kds-card__notas-block"><span class="lmd-kds-notas-label">NOTA</span> ${notas}</div>` : ''}
             <footer class="lmd-kds-card__footer">
-                <button class="lmd-kds-btn-listo" data-orden-id="${ordenId}"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5"><use href="https://cdn.jsdelivr.net/npm/lucide-static@latest/icons/check.svg#icon"/></svg> LISTO</button>
+                <button class="lmd-kds-btn-listo" data-orden-id="${ordenId}"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5"><use href="/lib/lucide-static/icons/check.svg#icon"/></svg> LISTO</button>
                 ${orden.productoId ? `<button class="lmd-kds-btn-86" data-producto-id="${productoId}" title="86 — Agotado">86</button>` : ''}
             </footer>
         `;

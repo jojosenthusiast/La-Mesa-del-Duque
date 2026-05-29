@@ -5,9 +5,9 @@ namespace LaMesaDelDuque.Web.Seguridad;
 public sealed class SecurityHeadersMiddleware
 {
     private const string ContentSecurityPolicy = "default-src 'self'; " +
-        "script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; " +
-        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; " +
-        "font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net data:; " +
+        "script-src 'self' 'unsafe-inline'; " +
+        "style-src 'self' 'unsafe-inline'; " +
+        "font-src 'self' data:; " +
         "img-src 'self' data: https:; " +
         "connect-src 'self'; " +
         "base-uri 'self'; " +

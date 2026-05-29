@@ -11,7 +11,6 @@
     <title>KDS — La Mesa del Duque</title>
     <link rel="stylesheet" href="~/css/marca.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/kds.css" asp-append-version="true" />
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600&family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet" />
     <link rel="manifest" href="~/manifest.json" />
 </head>
 <body class="lmd-kds-shell">
@@ -65,7 +64,7 @@
             new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase }));
         window.__lmdKdsStationMap = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(KDSModel.StationToColumn));
     </script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.0/signalr.min.js"></script>
+    <script src="~/lib/microsoft/signalr/dist/browser/signalr.min.js"></script>
     <script src="~/js/cocina-kds.js" asp-append-version="true"></script>
     <script>
         if ('serviceWorker' in navigator) {
