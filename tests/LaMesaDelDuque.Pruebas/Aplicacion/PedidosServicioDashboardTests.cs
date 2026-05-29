@@ -49,7 +49,19 @@ public class PedidosServicioDashboardTests : IDisposable
             new TurnoCajaRepositorio(_contexto),
             new DescuentoRepositorio(_contexto),
             new MotivoDescuentoRepositorio(_contexto),
-            new DevolucionRepositorio(_contexto));
+            new DevolucionRepositorio(_contexto),
+            null,
+            new MermaRepositorio(_contexto),
+            new CierreDiaRepositorio(_contexto),
+            new ZonaSalonRepositorio(_contexto));
+
+        var rolCaja = new Rol("Cajero");
+        var usuarioCaja = new Usuario("cajero-dashboard", "cajero-dashboard@lmd.test", "hash-demo", "Cajero Dashboard", rolCaja);
+        _contexto.Set<Rol>().Add(rolCaja);
+        _contexto.Set<Usuario>().Add(usuarioCaja);
+        _contexto.Set<CierreDia>().Add(new CierreDia(DateOnly.FromDateTime(DateTime.UtcNow), 0, 0, 0, 0, 0, 0, usuarioCaja));
+        _contexto.Set<TurnoCaja>().Add(new TurnoCaja(usuarioCaja.Id, 100m));
+        _contexto.SaveChanges();
 
         _notificadorPedidosSpy = new NotificadorPedidosSpy();
         _notificadorDashboardSpy = new NotificadorDashboardSpy();

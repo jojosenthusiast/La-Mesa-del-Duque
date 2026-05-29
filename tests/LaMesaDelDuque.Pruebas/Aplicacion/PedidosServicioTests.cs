@@ -46,6 +46,14 @@ public class PedidosServicioTests : IDisposable
             new PagoRepositorio(_contexto),
             new ZonaSalonRepositorio(_contexto));
 
+        var rolCaja = new Rol("Cajero");
+        var usuarioCaja = new Usuario("cajero-operativo", "cajero-operativo@lmd.test", "hash-demo", "Cajero Operativo", rolCaja);
+        _contexto.Set<Rol>().Add(rolCaja);
+        _contexto.Set<Usuario>().Add(usuarioCaja);
+        _contexto.Set<CierreDia>().Add(new CierreDia(DateOnly.FromDateTime(DateTime.UtcNow), 0, 0, 0, 0, 0, 0, usuarioCaja));
+        _contexto.Set<TurnoCaja>().Add(new TurnoCaja(usuarioCaja.Id, 100m));
+        _contexto.SaveChanges();
+
         _notificadorSpy = new NotificadorPedidosSpy();
         _servicio = new PedidosServicio(_uot, _notificadorSpy, httpContextAccessor: TestHttpContextAccessor.ConUsuarioAutenticado());
     }

@@ -154,4 +154,19 @@ internal class PedidoRepositorio : IPedidoRepositorio
             .Where(p => p.CreatedAt >= inicio && p.CreatedAt < fin)
             .CountAsync(cancelacion);
     }
+
+    public async Task<int> ContarPagadosDelDiaAsync(DateOnly fecha, CancellationToken cancelacion = default)
+    {
+        var inicio = fecha.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+        var fin = inicio.AddDays(1);
+
+        return await _contexto.Set<Pedido>()
+            .Where(p => p.Estado != EstadoPedido.Cancelado
+                     && p.Estado != EstadoPedido.AnuladoPago
+                     && p.Cuentas.Any(c => _contexto.Set<Pago>()
+                         .Any(pago => pago.CuentaId == c.Id
+                                   && pago.FechaPago >= inicio
+                                   && pago.FechaPago < fin)))
+            .CountAsync(cancelacion);
+    }
 }

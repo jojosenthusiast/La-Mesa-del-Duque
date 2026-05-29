@@ -1,5 +1,6 @@
 using LaMesaDelDuque.Aplicacion.Servicios;
 using LaMesaDelDuque.Dominio.Entidades;
+using LaMesaDelDuque.Dominio.Enumeraciones;
 using LaMesaDelDuque.Dominio.Excepciones;
 using LaMesaDelDuque.Dominio.Repositorios;
 using LaMesaDelDuque.Infraestructura.Persistencia;
@@ -119,6 +120,54 @@ public class CierreServicioTests : IDisposable
         Assert.Equal(500m, dto.EfectivoReal);
         Assert.Equal(200m, dto.TarjetaReal);
         Assert.Equal(500m - dto.TotalEfectivo, dto.DiferenciaEfectivo);
+    }
+
+    [Fact]
+    public async Task ObtenerCierreHoyAsync_ConPagoRegistrado_DebeMostrarTotalesSistemaEnVivo()
+    {
+        var usuario = await CrearUsuarioAsync();
+        await _servicio.AbrirCierreAsync(usuario.Id);
+
+        var mesa = new Mesa(20, 4);
+        var categoria = new CategoriaProducto("Bebidas cierre");
+        var producto = new Producto("Agua mineral cierre", 2.50m, categoria);
+        var pedido = new Pedido(TipoServicio.ComerAqui, mesa);
+        pedido.AgregarDetalle(new DetallePedido(producto, 1, 2.50m));
+        pedido.MarcarEnPreparacion();
+        pedido.MarcarEnCobro();
+        var cuenta = pedido.CrearCuentas(1).Single();
+        cuenta.Pagar(MetodoPago.Efectivo, usuarioId: usuario.Id);
+        pedido.MarcarComoPagado();
+
+        await _contexto.Set<Mesa>().AddAsync(mesa);
+        await _contexto.Set<CategoriaProducto>().AddAsync(categoria);
+        await _contexto.Set<Producto>().AddAsync(producto);
+        await _contexto.Set<Pedido>().AddAsync(pedido);
+        await _contexto.Set<Pago>().AddAsync(new Pago(cuenta.Id, cuenta.Total, MetodoPago.Efectivo, usuarioId: usuario.Id));
+        await _contexto.SaveChangesAsync();
+
+        var dto = await _servicio.ObtenerCierreHoyAsync();
+
+        Assert.NotNull(dto);
+        Assert.False(dto!.EsCerrado);
+        Assert.Equal(2.50m, dto.TotalVentas);
+        Assert.Equal(2.50m, dto.TotalEfectivo);
+        Assert.Equal(0m, dto.TotalTarjeta);
+        Assert.Equal(1, dto.TotalPedidos);
+    }
+
+    [Fact]
+    public async Task CerrarDia_ConTurnoCajaActivo_DebeRechazarCierre()
+    {
+        var usuario = await CrearUsuarioAsync();
+        await _servicio.AbrirCierreAsync(usuario.Id);
+        await _contexto.Set<TurnoCaja>().AddAsync(new TurnoCaja(usuario.Id, 100m));
+        await _contexto.SaveChangesAsync();
+
+        var ex = await Assert.ThrowsAsync<ReglaDominioException>(() =>
+            _servicio.CerrarDiaAsync(new CierreCajaRequest { EfectivoReal = 0m, TarjetaReal = 0m }, usuario.Id));
+
+        Assert.Contains("turno de caja activo", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

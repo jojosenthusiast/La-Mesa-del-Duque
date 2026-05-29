@@ -28,6 +28,8 @@ internal class PedidosServicio : IPedidosServicio
 
     public async Task<PedidoDto> CrearPedidoAsync(TipoServicio tipoServicio, Guid? mesaId, List<DetalleCreacionDto> detalles, CancellationToken cancelacion = default)
     {
+        await AsegurarDiaOperativoAbiertoAsync(cancelacion);
+
         if (detalles is null || detalles.Count == 0)
             throw new ArgumentException("El pedido debe tener al menos un detalle.", nameof(detalles));
 
@@ -80,6 +82,8 @@ internal class PedidosServicio : IPedidosServicio
 
     public async Task<PedidoDto> AgregarDetalleAsync(Guid pedidoId, Guid productoId, int cantidad, decimal precioUnitario, string? notas = null, string? modificacionesJson = null, CancellationToken cancelacion = default)
     {
+        await AsegurarDiaOperativoAbiertoAsync(cancelacion);
+
         var pedido = await _uot.Pedidos.ObtenerConDetallesParaActualizarAsync(pedidoId, cancelacion)
             ?? throw new ArgumentException($"No se encontró el pedido con ID {pedidoId}.", nameof(pedidoId));
 
@@ -103,6 +107,8 @@ internal class PedidosServicio : IPedidosServicio
 
     public async Task AgregarItemsAsync(Guid pedidoId, List<DetalleCreacionDto> items, CancellationToken cancelacion = default)
     {
+        await AsegurarDiaOperativoAbiertoAsync(cancelacion);
+
         var pedido = await _uot.Pedidos.ObtenerConDetallesParaActualizarAsync(pedidoId, cancelacion)
             ?? throw new ArgumentException($"No se encontró el pedido con ID {pedidoId}.", nameof(pedidoId));
 
@@ -128,6 +134,8 @@ internal class PedidosServicio : IPedidosServicio
 
     public async Task MarcarEnPreparacionAsync(Guid pedidoId, CancellationToken cancelacion = default)
     {
+        await AsegurarDiaOperativoAbiertoAsync(cancelacion);
+
         var pedido = await _uot.Pedidos.ObtenerConDetallesParaActualizarAsync(pedidoId, cancelacion)
             ?? throw new ArgumentException($"No se encontró el pedido con ID {pedidoId}.", nameof(pedidoId));
 
@@ -149,6 +157,9 @@ internal class PedidosServicio : IPedidosServicio
 
     public async Task PagarPedidoAsync(Guid pedidoId, MetodoPago metodoPago = MetodoPago.Efectivo, string? referenciaPos = null, CancellationToken cancelacion = default)
     {
+        await AsegurarDiaOperativoAbiertoAsync(cancelacion);
+        await AsegurarTurnoCajaActivoAsync(cancelacion);
+
         var pedido = await _uot.Pedidos.ObtenerConDetallesParaActualizarAsync(pedidoId, cancelacion)
             ?? throw new ArgumentException($"No se encontró el pedido con ID {pedidoId}.", nameof(pedidoId));
 
@@ -400,6 +411,8 @@ internal class PedidosServicio : IPedidosServicio
 
     public async Task MarcarEnCobroAsync(Guid pedidoId, CancellationToken cancelacion = default)
     {
+        await AsegurarDiaOperativoAbiertoAsync(cancelacion);
+
         var pedido = await _uot.Pedidos.ObtenerConDetallesParaActualizarAsync(pedidoId, cancelacion)
             ?? throw new ArgumentException($"No se encontró el pedido con ID {pedidoId}.", nameof(pedidoId));
 
@@ -411,6 +424,8 @@ internal class PedidosServicio : IPedidosServicio
 
     public async Task<List<CuentaDto>> CrearCuentasAsync(Guid pedidoId, int cantidad, CancellationToken cancelacion = default)
     {
+        await AsegurarDiaOperativoAbiertoAsync(cancelacion);
+
         var pedido = await _uot.Pedidos.ObtenerConCuentasParaActualizarAsync(pedidoId, cancelacion)
             ?? throw new ArgumentException($"No se encontró el pedido con ID {pedidoId}.", nameof(pedidoId));
 
@@ -431,6 +446,8 @@ internal class PedidosServicio : IPedidosServicio
 
     public async Task<List<CuentaDto>> CrearCuentasConItemsAsync(Guid pedidoId, Dictionary<int, List<(Guid detalleId, int cantidad)>> asignaciones, CancellationToken cancelacion = default)
     {
+        await AsegurarDiaOperativoAbiertoAsync(cancelacion);
+
         if (asignaciones is null || asignaciones.Count < 2)
             throw new ArgumentException("Se requieren al menos 2 cuentas para dividir por items.", nameof(asignaciones));
 
@@ -470,6 +487,9 @@ internal class PedidosServicio : IPedidosServicio
 
     public async Task<CuentaDto> PagarCuentaAsync(Guid cuentaId, MetodoPago metodoPago, decimal propinaMonto = 0, string? referenciaPos = null, CancellationToken cancelacion = default)
     {
+        await AsegurarDiaOperativoAbiertoAsync(cancelacion);
+        await AsegurarTurnoCajaActivoAsync(cancelacion);
+
         for (int intento = 0; intento < 3; intento++)
         {
             try
@@ -510,6 +530,21 @@ internal class PedidosServicio : IPedidosServicio
     {
         var cuentas = await _uot.Cuentas.ObtenerPorPedidoAsync(pedidoId, cancelacion);
         return cuentas.Select(MapToCuentaDto).ToList();
+    }
+
+    private async Task AsegurarDiaOperativoAbiertoAsync(CancellationToken cancelacion)
+    {
+        var hoy = DateOnly.FromDateTime(DateTime.UtcNow);
+        var cierre = await _uot.CierresDia.ObtenerAbiertoAsync(hoy, cancelacion);
+        if (cierre is null)
+            throw new ReglaDominioException("No hay día operativo abierto. Abra el día en Cierre de Día antes de registrar pedidos o pagos.");
+    }
+
+    private async Task AsegurarTurnoCajaActivoAsync(CancellationToken cancelacion)
+    {
+        var turno = await _uot.TurnosCaja.ObtenerTurnoActivoAsync(cancelacion);
+        if (turno is null)
+            throw new ReglaDominioException("No hay turno de caja activo. Abra un turno de caja activo antes de registrar pagos.");
     }
 
     private Guid ObtenerUsuarioIdActual()

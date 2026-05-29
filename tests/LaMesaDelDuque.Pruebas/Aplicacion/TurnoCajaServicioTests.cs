@@ -1,5 +1,6 @@
 using LaMesaDelDuque.Aplicacion.Servicios;
 using LaMesaDelDuque.Dominio.Entidades;
+using LaMesaDelDuque.Dominio.Excepciones;
 using LaMesaDelDuque.Dominio.Repositorios;
 using LaMesaDelDuque.Infraestructura.Persistencia;
 using LaMesaDelDuque.Infraestructura.Repositorios;
@@ -60,9 +61,21 @@ public sealed class TurnoCajaServicioTests : IDisposable
     }
 
     [Fact]
+    public async Task AbrirTurnoAsync_SinDiaOperativoAbierto_DebeRechazar()
+    {
+        var cajero = await CrearCajeroAsync();
+
+        var ex = await Assert.ThrowsAsync<ReglaDominioException>(() =>
+            _servicio.AbrirTurnoAsync(cajero.Id, 100m));
+
+        Assert.Contains("día operativo", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public async Task CerrarTurnoAsync_DebePersistirEstadoCerradoYConteo()
     {
         var cajero = await CrearCajeroAsync();
+        await AbrirDiaOperativoAsync(cajero);
         var turno = await _servicio.AbrirTurnoAsync(cajero.Id, 100m);
 
         await _servicio.CerrarTurnoAsync(turno.Id, 0m, null);
@@ -81,6 +94,7 @@ public sealed class TurnoCajaServicioTests : IDisposable
     public async Task RegistrarMovimientoAsync_DebeAparecerEnReporteZ()
     {
         var cajero = await CrearCajeroAsync();
+        await AbrirDiaOperativoAsync(cajero);
         var turno = await _servicio.AbrirTurnoAsync(cajero.Id, 100m);
 
         await _servicio.RegistrarMovimientoAsync(turno.Id, "retiro_seguridad", 25m, "Retiro a caja fuerte", cajero.Id);
@@ -104,5 +118,12 @@ public sealed class TurnoCajaServicioTests : IDisposable
         await _contexto.SaveChangesAsync();
 
         return usuario;
+    }
+
+    private async Task AbrirDiaOperativoAsync(Usuario usuario)
+    {
+        var hoy = DateOnly.FromDateTime(DateTime.UtcNow);
+        _contexto.Set<CierreDia>().Add(new CierreDia(hoy, 0, 0, 0, 0, 0, 0, usuario));
+        await _contexto.SaveChangesAsync();
     }
 }

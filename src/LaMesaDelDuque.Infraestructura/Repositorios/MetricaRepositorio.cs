@@ -22,12 +22,13 @@ internal class MetricaRepositorio : IMetricaRepositorio
             .AsNoTracking()
             .Where(p => p.FechaCreacion >= inicioTurno && p.Estado != EstadoPedido.Cancelado && p.Estado != EstadoPedido.AnuladoPago);
 
-        var detallesHoy = await pedidosHoyQuery
-            .SelectMany(p => p.Detalles)
-            .Select(d => d.Cantidad * d.PrecioUnitario)
+        var pagosHoy = await _contexto.Set<Pago>()
+            .AsNoTracking()
+            .Where(p => p.FechaPago >= inicioTurno)
+            .Select(p => p.Monto)
             .ToListAsync(ct);
 
-        var ventasHoy = detallesHoy.Sum();
+        var ventasHoy = pagosHoy.Sum();
 
         var pedidosHoyCount = await pedidosHoyQuery
             .CountAsync(ct);
@@ -66,14 +67,13 @@ internal class MetricaRepositorio : IMetricaRepositorio
 
     public async Task<List<VentaPorHoraDto>> ObtenerVentasPorHoraAsync(DateTime inicioTurno, CancellationToken ct = default)
     {
-        var pedidosHoy = await _contexto.Set<Pedido>()
+        var pagosHoy = await _contexto.Set<Pago>()
             .AsNoTracking()
-            .Include(p => p.Detalles)
-            .Where(p => p.FechaCreacion >= inicioTurno && p.Estado != EstadoPedido.Cancelado && p.Estado != EstadoPedido.AnuladoPago)
+            .Where(p => p.FechaPago >= inicioTurno)
+            .Select(p => new { Hora = p.FechaPago.Hour, Total = p.Monto })
             .ToListAsync(ct);
 
-        var ventasPorHora = pedidosHoy
-            .Select(p => new { Hora = p.FechaCreacion.Hour, Total = p.Detalles.Sum(d => d.Cantidad * d.PrecioUnitario) })
+        var ventasPorHora = pagosHoy
             .GroupBy(x => x.Hora)
             .Select(g => new VentaPorHoraDto
             {

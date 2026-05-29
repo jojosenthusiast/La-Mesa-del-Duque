@@ -28,14 +28,14 @@ public class CierreServicio : ICierreServicio
     {
         var hoy = DateOnly.FromDateTime(DateTime.UtcNow);
         var cierre = await _uot.CierresDia.ObtenerAbiertoAsync(hoy, ct);
-        return cierre is null ? null : Map(cierre);
+        return cierre is null ? null : await MapConTotalesEnVivoSiAbiertoAsync(cierre, ct);
     }
 
     public async Task<CierreDiaDto> AbrirCierreAsync(Guid usuarioId, CancellationToken ct = default)
     {
         var hoy = DateOnly.FromDateTime(DateTime.UtcNow);
         var existente = await _uot.CierresDia.ObtenerAbiertoAsync(hoy, ct);
-        if (existente is not null) return Map(existente);
+        if (existente is not null) return await MapConTotalesEnVivoSiAbiertoAsync(existente, ct);
 
         var usuario = await _uot.Usuarios.ObtenerPorIdAsync(usuarioId, ct)
             ?? throw new ReglaDominioException("Usuario no encontrado para abrir el cierre.");
@@ -52,54 +52,14 @@ public class CierreServicio : ICierreServicio
         var cierre = await _uot.CierresDia.ObtenerAbiertoAsync(hoy, ct)
             ?? throw new ReglaDominioException("No hay cierre de día abierto.");
 
-        // ── Totales reales del sistema ──────────────────────────
-        decimal totalVentasEfectivo = 0;
-        decimal totalVentasTarjeta = 0;
-        int totalPedidos = 0;
-        int totalCancelados = 0;
+        var turnoActivo = await _uot.TurnosCaja.ObtenerTurnoActivoAsync(ct);
+        if (turnoActivo is not null)
+            throw new ReglaDominioException("Hay un turno de caja activo. Cierre el turno de caja antes de cerrar el día operativo.");
 
-        try
-        {
-            var pagosHoy = await _uot.Pagos.ObtenerDelDiaAsync(hoy, ct);
-            totalVentasEfectivo = pagosHoy
-                .Where(p => p.Metodo == MetodoPago.Efectivo)
-                .Sum(p => p.Monto);
-            totalVentasTarjeta = pagosHoy
-                .Where(p => p.Metodo == MetodoPago.Tarjeta)
-                .Sum(p => p.Monto);
-        }
-        catch
-        {
-            // Fallback: si no hay pagos o la tabla falla, usar lo que declara el usuario
-            totalVentasEfectivo = req.EfectivoReal;
-            totalVentasTarjeta = req.TarjetaReal;
-        }
+        var totales = await CalcularTotalesSistemaAsync(hoy, ct);
 
-        try
-        {
-            totalPedidos = await _uot.Pedidos.ContarDelDiaAsync(hoy, ct);
-            totalCancelados = await _uot.Pedidos.ContarCanceladosDelDiaAsync(hoy, ct);
-        }
-        catch
-        {
-            // Fallback: si no se puede consultar pedidos, dejamos en 0
-        }
-
-        decimal totalMerma = 0;
-        try
-        {
-            var mermas = await _merma.ObtenerMermasDelDiaAsync(ct);
-            totalMerma = mermas.Sum(m => m.Costo);
-        }
-        catch
-        {
-            // Fallback: si falla la consulta de mermas, asumimos 0
-        }
-
-        var totalVentas = totalVentasEfectivo + totalVentasTarjeta;
-
-        cierre.Cerrar(totalVentas, totalVentasEfectivo, totalVentasTarjeta,
-            totalPedidos, totalCancelados, totalMerma,
+        cierre.Cerrar(totales.TotalVentas, totales.TotalEfectivo, totales.TotalTarjeta,
+            totales.TotalPedidos, totales.TotalCancelados, totales.TotalMerma,
             req.EfectivoReal, req.TarjetaReal, req.Observacion);
         await _uot.GuardarCambiosAsync(ct);
         return Map(cierre);
@@ -108,27 +68,76 @@ public class CierreServicio : ICierreServicio
     public async Task<List<CierreDiaDto>> HistorialAsync(CancellationToken ct = default)
     {
         var cierres = await _uot.CierresDia.ObtenerTodosAsync(ct);
-        return cierres.Select(Map).ToList();
+        var resultado = new List<CierreDiaDto>(cierres.Count);
+
+        foreach (var cierre in cierres)
+        {
+            resultado.Add(await MapConTotalesEnVivoSiAbiertoAsync(cierre, ct));
+        }
+
+        return resultado;
     }
 
-    private static CierreDiaDto Map(CierreDia c) => new()
+    private async Task<CierreDiaDto> MapConTotalesEnVivoSiAbiertoAsync(CierreDia cierre, CancellationToken ct)
+    {
+        if (cierre.EsCerrado)
+            return Map(cierre);
+
+        var totales = await CalcularTotalesSistemaAsync(cierre.Fecha, ct);
+        return Map(cierre, totales);
+    }
+
+    private async Task<TotalesSistemaCierre> CalcularTotalesSistemaAsync(DateOnly fecha, CancellationToken ct)
+    {
+        var pagos = await _uot.Pagos.ObtenerDelDiaAsync(fecha, ct);
+        var totalEfectivo = pagos
+            .Where(p => p.Metodo == MetodoPago.Efectivo)
+            .Sum(p => p.Monto);
+        var totalNoEfectivo = pagos
+            .Where(p => p.Metodo != MetodoPago.Efectivo)
+            .Sum(p => p.Monto);
+        var totalVentas = totalEfectivo + totalNoEfectivo;
+
+        var totalPedidos = await _uot.Pedidos.ContarPagadosDelDiaAsync(fecha, ct);
+        var totalCancelados = await _uot.Pedidos.ContarCanceladosDelDiaAsync(fecha, ct);
+        var totalMerma = 0m;
+
+        if (fecha == DateOnly.FromDateTime(DateTime.UtcNow))
+        {
+            var mermas = await _merma.ObtenerMermasDelDiaAsync(ct);
+            totalMerma = mermas.Sum(m => m.Costo);
+        }
+
+        return new TotalesSistemaCierre(totalVentas, totalEfectivo, totalNoEfectivo, totalPedidos, totalCancelados, totalMerma);
+    }
+
+    private static CierreDiaDto Map(CierreDia c, TotalesSistemaCierre? totales = null) => new()
     {
         Id = c.Id,
         Fecha = c.Fecha,
-        TotalVentas = c.TotalVentas,
-        TotalEfectivo = c.TotalVentasEfectivo,
-        TotalTarjeta = c.TotalVentasTarjeta,
-        TotalPedidos = c.TotalPedidos,
-        Cancelados = c.TotalPedidosCancelados,
-        TotalMerma = c.TotalMermaValorizada,
+        TotalVentas = totales?.TotalVentas ?? c.TotalVentas,
+        TotalEfectivo = totales?.TotalEfectivo ?? c.TotalVentasEfectivo,
+        TotalTarjeta = totales?.TotalTarjeta ?? c.TotalVentasTarjeta,
+        TotalPedidos = totales?.TotalPedidos ?? c.TotalPedidos,
+        Cancelados = totales?.TotalCancelados ?? c.TotalPedidosCancelados,
+        TotalMerma = totales?.TotalMerma ?? c.TotalMermaValorizada,
         EfectivoReal = c.EfectivoReal,
         TarjetaReal = c.TarjetaReal,
         DiferenciaEfectivo = c.DiferenciaEfectivo,
         DiferenciaTarjeta = c.DiferenciaTarjeta,
         EsCerrado = c.EsCerrado,
         CerradoEn = c.CerradoEn,
-        Observacion = c.Observacion
+        Observacion = c.Observacion,
+        UsuarioNombre = c.Usuario?.NombreCompleto ?? (c.UsuarioId == Guid.Empty ? "-" : c.UsuarioId.ToString())
     };
+
+    private sealed record TotalesSistemaCierre(
+        decimal TotalVentas,
+        decimal TotalEfectivo,
+        decimal TotalTarjeta,
+        int TotalPedidos,
+        int TotalCancelados,
+        decimal TotalMerma);
 }
 
 public class CierreDiaDto
@@ -148,6 +157,7 @@ public class CierreDiaDto
     public bool EsCerrado { get; set; }
     public DateTime? CerradoEn { get; set; }
     public string? Observacion { get; set; }
+    public string UsuarioNombre { get; set; } = "-";
 }
 
 public class CierreCajaRequest

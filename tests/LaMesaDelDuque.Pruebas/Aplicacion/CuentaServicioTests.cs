@@ -20,6 +20,7 @@ public class CuentaServicioTests : IDisposable
     private readonly IPedidosServicio _servicio;
     private readonly IUnidadDeTrabajo _uot;
     private readonly NotificadorPedidosSpy _notificadorSpy;
+    private readonly Usuario _usuarioCaja;
 
     public CuentaServicioTests()
     {
@@ -50,7 +51,13 @@ public class CuentaServicioTests : IDisposable
 
         _notificadorSpy = new NotificadorPedidosSpy();
 
-        var usuarioId = Guid.NewGuid().ToString();
+        var rol = new Rol("Cajero");
+        _usuarioCaja = new Usuario("cajero-test", null, "hash-demo", "Cajero Test", rol);
+        _contexto.Set<Rol>().Add(rol);
+        _contexto.Set<Usuario>().Add(_usuarioCaja);
+        _contexto.SaveChanges();
+
+        var usuarioId = _usuarioCaja.Id.ToString();
         var claims = new ClaimsPrincipal(new ClaimsIdentity(new[]
         {
             new Claim(ClaimTypes.NameIdentifier, usuarioId)
@@ -84,14 +91,67 @@ public class CuentaServicioTests : IDisposable
         return (mesa, producto);
     }
 
-    private async Task<PedidoDto> CrearPedidoEnPreparacionAsync()
+    private async Task AbrirDiaOperativoAsync()
     {
-        var (mesa, producto) = await CrearMesaYProductoAsync(50);
+        var hoy = DateOnly.FromDateTime(DateTime.UtcNow);
+        if (await _contexto.Set<CierreDia>().AnyAsync(c => c.Fecha == hoy && !c.EsCerrado))
+            return;
+
+        await _contexto.Set<CierreDia>().AddAsync(new CierreDia(hoy, 0, 0, 0, 0, 0, 0, _usuarioCaja));
+        await _contexto.SaveChangesAsync();
+    }
+
+    private async Task AbrirTurnoCajaAsync()
+    {
+        if (await _contexto.Set<TurnoCaja>().AnyAsync(t => t.FechaCierre == null))
+            return;
+
+        await _contexto.Set<TurnoCaja>().AddAsync(new TurnoCaja(_usuarioCaja.Id, 100m));
+        await _contexto.SaveChangesAsync();
+    }
+
+    private async Task<PedidoDto> CrearPedidoEnPreparacionAsync(int numeroMesa = 50, bool abrirDia = true, bool abrirTurno = true)
+    {
+        if (abrirDia)
+            await AbrirDiaOperativoAsync();
+
+        if (abrirTurno)
+            await AbrirTurnoCajaAsync();
+
+        var (mesa, producto) = await CrearMesaYProductoAsync(numeroMesa);
         var pedido = await _servicio.CrearPedidoAsync(TipoServicio.ComerAqui, mesa.Id, new List<DetalleCreacionDto>
         {
             new() { ProductoId = producto.Id, Cantidad = 2, PrecioUnitario = 10.00m }
         });
         return pedido;
+    }
+
+    [Fact]
+    public async Task CrearPedidoAsync_SinCierreAbierto_DebeRechazarOperacion()
+    {
+        var (mesa, producto) = await CrearMesaYProductoAsync(70);
+
+        var ex = await Assert.ThrowsAsync<ReglaDominioException>(() => _servicio.CrearPedidoAsync(
+            TipoServicio.ComerAqui,
+            mesa.Id,
+            new List<DetalleCreacionDto>
+            {
+                new() { ProductoId = producto.Id, Cantidad = 1, PrecioUnitario = producto.Precio }
+            }));
+
+        Assert.Contains("día operativo", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task PagarCuentaAsync_SinTurnoCajaActivo_DebeRechazarPago()
+    {
+        var pedido = await CrearPedidoEnPreparacionAsync(numeroMesa: 71, abrirTurno: false);
+        var cuentas = await _servicio.CrearCuentasAsync(pedido.Id, 1);
+
+        var ex = await Assert.ThrowsAsync<ReglaDominioException>(() =>
+            _servicio.PagarCuentaAsync(cuentas[0].Id, MetodoPago.Efectivo));
+
+        Assert.Contains("turno de caja activo", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -153,6 +213,9 @@ public class CuentaServicioTests : IDisposable
     [Fact]
     public async Task PagarCuentaAsync_CuentaInexistente_DebeLanzarExcepcion()
     {
+        await AbrirDiaOperativoAsync();
+        await AbrirTurnoCajaAsync();
+
         await Assert.ThrowsAsync<ArgumentException>(() => _servicio.PagarCuentaAsync(Guid.NewGuid(), MetodoPago.Efectivo));
     }
 
@@ -181,6 +244,9 @@ public class CuentaServicioTests : IDisposable
     [Fact]
     public async Task CrearCuentasConItemsAsync_DosCuentasConItemsDistintos_DebeCrearCorrectamente()
     {
+        await AbrirDiaOperativoAsync();
+        await AbrirTurnoCajaAsync();
+
         var (mesa, producto) = await CrearMesaYProductoAsync(60);
         var producto2 = new Producto("Ensalada", 8.00m, new CategoriaProducto("Entradas 60"));
         await _uot.Categorias.AgregarAsync(producto2.Categoria);
