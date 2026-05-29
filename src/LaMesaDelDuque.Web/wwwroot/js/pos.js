@@ -710,20 +710,38 @@
                     '<span class="lmd-pos-tarjeta-chip">Amex</span>' +
                     '<span class="lmd-pos-tarjeta-chip">Débito</span>' +
                 '</div>' +
+                '<div class="lmd-pos-tarjeta-ref-group">' +
+                    '<label class="lmd-pos-tarjeta-ref-label" for="pos-tarjeta-ref">' + icon('hash') + ' N.° de autorización (voucher)</label>' +
+                    '<input id="pos-tarjeta-ref" class="lmd-pos-tarjeta-ref-input" type="text" placeholder="Ej. 123456 / AUTH-ABC" autocomplete="off" />' +
+                    '<p id="pos-tarjeta-ref-error" class="lmd-pos-tarjeta-ref-error" style="display:none">El número de autorización es obligatorio.</p>' +
+                '</div>' +
                 '<div class="lmd-pos-tarjeta-actions">' +
                     '<button class="lmd-pos-ov-btn" onclick="pos.volverAMetodos()">' + icon('arrow-left') + ' Volver</button>' +
-                    '<button class="lmd-pos-ov-btn lmd-pos-ov-btn--danger" onclick="pos.simularRechazo(\'tarjeta\')">' + icon('x-circle') + ' Simular rechazo</button>' +
-                    '<button class="lmd-pos-ov-btn lmd-pos-ov-btn--primary" onclick="pos.simularTarjeta(' + total.toFixed(2) + ')">' + icon('check-circle') + ' Confirmar pago</button>' +
+                    '<button class="lmd-pos-ov-btn lmd-pos-ov-btn--danger" onclick="pos.simularRechazo(\'tarjeta\')">' + icon('x-circle') + ' Rechazada</button>' +
+                    '<button class="lmd-pos-ov-btn lmd-pos-ov-btn--primary" onclick="pos.confirmarTarjeta(' + total.toFixed(2) + ')">' + icon('check-circle') + ' Confirmar pago</button>' +
                 '</div>' +
             '</div>';
 
         cerrarOverlay('pago');
         abrirOverlay('tarjeta', html, { closeOnBackdrop: false });
+        setTimeout(function () { var el = document.getElementById('pos-tarjeta-ref'); if (el) el.focus(); }, 100);
+    }
+
+    function confirmarTarjeta(total) {
+        var input = document.getElementById('pos-tarjeta-ref');
+        var ref = input ? input.value.trim() : '';
+        var errEl = document.getElementById('pos-tarjeta-ref-error');
+        if (!ref) {
+            if (errEl) errEl.style.display = '';
+            if (input) input.focus();
+            return;
+        }
+        cerrarOverlay('tarjeta');
+        finalizarPago('tarjeta', total, ref);
     }
 
     function simularTarjeta(total) {
         cerrarOverlay('tarjeta');
-        lmdToast('Tarjeta procesada correctamente', 'success');
         finalizarPago('tarjeta', total, 'TARJ-' + Date.now().toString(36).toUpperCase());
     }
 
@@ -1213,6 +1231,15 @@
                     return;
                 }
                 if (data && data.mensaje) lmdToast(data.mensaje, 'success');
+                if (data && data.ticketHtml) {
+                    await refrescarMesas();
+                    state.pagado = true;
+                    cerrarTodasOverlaysPago();
+                    renderProductos();
+                    mostrarPantalla('productos');
+                    mostrarTicketModal(data.ticketHtml);
+                    return;
+                }
             } catch (e) { lmdToast('Error de conexión', 'error'); return; }
         }
 
@@ -1222,6 +1249,23 @@
         renderProductos();
         mostrarPantalla('productos');
         lmdToast('Pago registrado. Presiona Finalizar para el comprobante.', 'success');
+    }
+
+    function mostrarTicketModal(html) {
+        var overlay = document.createElement('div');
+        overlay.className = 'lmd-ticket-modal-backdrop';
+        overlay.innerHTML =
+            '<div class="lmd-ticket-modal">' +
+                '<div class="lmd-ticket-modal-header">' +
+                    '<span>' + icon('receipt') + ' Ticket de compra</span>' +
+                    '<div class="lmd-ticket-modal-actions">' +
+                        '<button class="lmd-pos-ov-btn lmd-pos-ov-btn--primary" onclick="this.closest(\'.lmd-ticket-modal\').querySelector(\'iframe\').contentWindow.print()">' + icon('printer') + ' Imprimir</button>' +
+                        '<button class="lmd-pos-ov-btn" onclick="this.closest(\'.lmd-ticket-modal-backdrop\').remove(); pos.nuevaOrden();">' + icon('check') + ' Listo</button>' +
+                    '</div>' +
+                '</div>' +
+                '<iframe class="lmd-ticket-modal-frame" srcdoc="' + html.replace(/"/g, '&quot;') + '" sandbox="allow-same-origin allow-scripts"></iframe>' +
+            '</div>';
+        document.body.appendChild(overlay);
     }
 
     // ═══════════════════════════════════════════════════
@@ -1610,14 +1654,14 @@
         cancelarOrden, confirmarListo, irAPago,
         cerrarPago, procesarPago,
         seleccionarBillete, keypadInput, keypadConfirmar,
-        volverAMetodos, simularTarjeta, simularQR, confirmarOtro,
+        volverAMetodos, simularTarjeta, confirmarTarjeta, simularQR, confirmarOtro,
         abrirSplit, volverAPago, splitIgualitario, splitPorPersona, splitMixto,
         toggleEstadoIngrediente, cambiarReemplazo,
         iniciarAsignacionSplit, asignarItemSplit, confirmarAsignacionSplit, _renderSplitNPicker, _renderSplitAsignacion,
         confirmarAnulacion,
         ajustarSplitN, iniciarSplitIgualitario, cobrarSiguientePersona,
         pagarPersonaSplit, seleccionarBilleteSplit, confirmarEfectivoSplit,
-        emitirDocumento, nuevaOrden,
+        emitirDocumento, nuevaOrden, mostrarTicketModal,
         confirmarPropina,
         abrirModificadores, toggleAlergia, _setNotaCustom,
         cerrarModificadores, confirmarModificadores,

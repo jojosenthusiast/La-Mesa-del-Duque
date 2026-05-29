@@ -19,6 +19,7 @@ public class IndexModel : PageModel
         var esMesero = autenticado && User.IsInRole("Mesero");
         var esCocinero = autenticado && User.IsInRole("Cocinero");
         var esCajero = autenticado && User.IsInRole("Cajero");
+        var esGerente = autenticado && User.IsInRole("Gerente");
 
         // Pedidos: Admin, Encargado, Cajero
         if (esAdmin || esEncargado || esCajero)
@@ -48,11 +49,11 @@ public class IndexModel : PageModel
         if (esAdmin || esEncargado)
             modulos.Add(new("Inventario", "/Operaciones/Inventario/Index", "Ingredientes, proveedores y mermas."));
 
-        // Dashboard: Admin, Encargado
-        if (esAdmin || esEncargado)
+        // Dashboard: Admin, Encargado, Gerente
+        if (esAdmin || esEncargado || esGerente)
             modulos.Add(new("Dashboard", "/Admin/Dashboard/Dashboard", "KPIs y métricas operativas en tiempo real."));
 
-        // Cierre: Admin, Encargado, Cajero
+        // Cierre: Admin, Encargado, Cajero (Gerente solo lectura via Dashboard)
         if (esAdmin || esEncargado || esCajero)
             modulos.Add(new("Cierre", "/Operaciones/Cierre/Index", "Apertura y cierre de caja diario."));
 

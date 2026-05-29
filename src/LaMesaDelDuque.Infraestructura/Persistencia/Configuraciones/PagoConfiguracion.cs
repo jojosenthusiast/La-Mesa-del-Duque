@@ -37,6 +37,10 @@ internal class PagoConfiguracion : IEntityTypeConfiguration<Pago>
         constructor.Property(p => p.UsuarioId)
             .IsRequired();
 
+        constructor.Property(p => p.ReferenciaPos)
+            .HasMaxLength(100)
+            .IsRequired(false);
+
         constructor.HasIndex(p => p.CuentaId)
             .HasDatabaseName("IX_Pagos_CuentaId");
     }

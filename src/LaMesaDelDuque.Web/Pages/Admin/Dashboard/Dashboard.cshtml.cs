@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 
 namespace LaMesaDelDuque.Web.Pages.Admin.Dashboard;
 
-[Authorize(Roles = "Administrador,Encargado")]
+[Authorize(Roles = "Administrador,Encargado,Gerente")]
 public class DashboardModel : PageModel
 {
     private readonly IMetricaServicio _metricaServicio;

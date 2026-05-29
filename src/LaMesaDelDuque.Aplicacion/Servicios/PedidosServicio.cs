@@ -140,10 +140,24 @@ internal class PedidosServicio : IPedidosServicio
         await _notificadorPedidos.NotificarEstadoCambiadoAsync(pedido.Id, pedido.Estado, cancelacion);
     }
 
-    public async Task PagarPedidoAsync(Guid pedidoId, CancellationToken cancelacion = default)
+    public async Task PagarPedidoAsync(Guid pedidoId, MetodoPago metodoPago = MetodoPago.Efectivo, string? referenciaPos = null, CancellationToken cancelacion = default)
     {
         var pedido = await _uot.Pedidos.ObtenerConDetallesParaActualizarAsync(pedidoId, cancelacion)
             ?? throw new ArgumentException($"No se encontró el pedido con ID {pedidoId}.", nameof(pedidoId));
+
+        // Crear cuenta única si no existe ninguna (flujo de pago simple)
+        var cuentasExistentes = await _uot.Cuentas.ObtenerPorPedidoAsync(pedidoId, cancelacion);
+        if (!cuentasExistentes.Any())
+        {
+            var cuentaUnica = new Cuenta(pedidoId, 1);
+            cuentaUnica.EstablecerTotalBase(pedido.Total);
+            await _uot.Cuentas.AgregarAsync(cuentaUnica, cancelacion);
+            await _uot.GuardarCambiosAsync(cancelacion);
+
+            var usuarioId = ObtenerUsuarioIdActual();
+            var pago = new Pago(cuentaUnica.Id, pedido.Total, metodoPago, 0, usuarioId, referenciaPos);
+            await _uot.Pagos.AgregarAsync(pago, cancelacion);
+        }
 
         pedido.MarcarComoPagado();
         await LiberarMesaSiCorrespondeAsync(pedido, cancelacion);
@@ -429,7 +443,7 @@ internal class PedidosServicio : IPedidosServicio
         return cuentas.Select(MapToCuentaDto).ToList();
     }
 
-    public async Task<CuentaDto> PagarCuentaAsync(Guid cuentaId, MetodoPago metodoPago, decimal propinaMonto = 0, CancellationToken cancelacion = default)
+    public async Task<CuentaDto> PagarCuentaAsync(Guid cuentaId, MetodoPago metodoPago, decimal propinaMonto = 0, string? referenciaPos = null, CancellationToken cancelacion = default)
     {
         for (int intento = 0; intento < 3; intento++)
         {
@@ -444,7 +458,7 @@ internal class PedidosServicio : IPedidosServicio
 
                 cuenta.Pagar(metodoPago, propinaMonto, usuarioId);
 
-                var pago = new Pago(cuentaId, cuenta.Total, metodoPago, propinaMonto, usuarioId);
+                var pago = new Pago(cuentaId, cuenta.Total, metodoPago, propinaMonto, usuarioId, referenciaPos);
                 await _uot.Pagos.AgregarAsync(pago, cancelacion);
 
                 var pedido = await _uot.Pedidos.ObtenerConCuentasParaActualizarAsync(cuenta.PedidoId, cancelacion);

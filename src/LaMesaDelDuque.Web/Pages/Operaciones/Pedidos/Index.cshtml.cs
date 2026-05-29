@@ -379,15 +379,27 @@ public class IndexModel : PageModel
             if (pedido.Estado is "Cancelado" or "Pagado" or "Despachado")
                 return BadRequest(ErrorSeguro(new InvalidOperationException($"El pedido ya fue {pedido.Estado.ToLower()}.")));
 
-            // Validar monto para efectivo
-            var metodo = metodoPago?.ToLower() ?? "efectivo";
-            if (metodo == "efectivo" && monto.HasValue && monto.Value < pedido.Total)
+            var metodoStr = metodoPago?.ToLower() ?? "efectivo";
+            var metodoEnum = metodoStr switch
+            {
+                "tarjeta" => MetodoPago.Tarjeta,
+                "qr" or "transferencia" => MetodoPago.Transferencia,
+                _ => MetodoPago.Efectivo
+            };
+
+            if (metodoEnum == MetodoPago.Efectivo && monto.HasValue && monto.Value < pedido.Total)
                 return BadRequest(ErrorSeguro(new ArgumentException($"Faltan ${pedido.Total - monto.Value:F2}")));
 
-            await _pedidosServicio.PagarPedidoAsync(pedidoId);
+            await _pedidosServicio.PagarPedidoAsync(pedidoId, metodoEnum, referencia);
 
-            var cambio = monto.HasValue && metodo == "efectivo" ? monto.Value - pedido.Total : 0;
-            return new JsonResult(new { ok = true, mensaje = cambio > 0 ? $"Pedido pagado. Cambio: ${cambio:F2}" : "Pedido pagado correctamente." });
+            var cambio = monto.HasValue && metodoEnum == MetodoPago.Efectivo ? monto.Value - pedido.Total : 0;
+            var mensaje = cambio > 0 ? $"Pedido pagado. Cambio: ${cambio:F2}" : "Pedido pagado correctamente.";
+
+            string? ticketHtml = null;
+            try { ticketHtml = await _ticketServicio.GenerarHtmlTicketAsync(pedidoId); }
+            catch { /* no bloquear el pago si el ticket falla */ }
+
+            return new JsonResult(new { ok = true, mensaje, cambio, ticketHtml });
         }
         catch (Exception ex) { return BadRequest(ErrorSeguro(ex)); }
     }
