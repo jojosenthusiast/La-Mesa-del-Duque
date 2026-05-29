@@ -5,12 +5,17 @@ namespace LaMesaDelDuque.Pruebas.Aplicacion;
 
 internal static class TestHttpContextAccessor
 {
-    public static IHttpContextAccessor ConUsuarioAutenticado(Guid? usuarioId = null)
+    public static IHttpContextAccessor ConUsuarioAutenticado(Guid? usuarioId = null, params string[] roles)
     {
-        var claims = new ClaimsPrincipal(new ClaimsIdentity(new[]
+        var claimsList = new List<Claim>
         {
-            new Claim(ClaimTypes.NameIdentifier, (usuarioId ?? Guid.NewGuid()).ToString())
-        }, "TestAuth"));
+            new(ClaimTypes.NameIdentifier, (usuarioId ?? Guid.NewGuid()).ToString())
+        };
+
+        foreach (var role in roles)
+            claimsList.Add(new Claim(ClaimTypes.Role, role));
+
+        var claims = new ClaimsPrincipal(new ClaimsIdentity(claimsList, "TestAuth"));
 
         return new HttpContextAccessor
         {

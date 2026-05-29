@@ -12,6 +12,8 @@ public interface IPedidoRepositorio
     Task AgregarDetalleAsync(DetallePedido detalle, CancellationToken cancelacion = default);
     void Eliminar(Pedido pedido);
     Task<List<Pedido>> ObtenerPorMesaAsync(Guid mesaId, CancellationToken cancelacion = default);
+    Task<List<Pedido>> ObtenerActivosPorMeseroAsync(Guid meseroId, CancellationToken cancelacion = default);
+    Task<Pedido?> ObtenerActivoPorMesaParaActualizarAsync(Guid mesaId, CancellationToken cancelacion = default);
     Task<Pedido?> ObtenerConCuentasParaActualizarAsync(Guid id, CancellationToken cancelacion = default);
     Task<int> ContarCanceladosDelDiaAsync(DateOnly fecha, CancellationToken cancelacion = default);
     Task<int> ContarDelDiaAsync(DateOnly fecha, CancellationToken cancelacion = default);

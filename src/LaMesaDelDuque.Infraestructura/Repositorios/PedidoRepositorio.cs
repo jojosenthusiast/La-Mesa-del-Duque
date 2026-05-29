@@ -8,6 +8,15 @@ namespace LaMesaDelDuque.Infraestructura.Repositorios;
 
 internal class PedidoRepositorio : IPedidoRepositorio
 {
+    private static readonly EstadoPedido[] EstadosMesaActiva =
+    [
+        EstadoPedido.Pendiente,
+        EstadoPedido.EnPreparacion,
+        EstadoPedido.EnCobro,
+        EstadoPedido.Pagado,
+        EstadoPedido.Listo
+    ];
+
     private readonly LaMesaDelDuqueDbContext _contexto;
 
     public PedidoRepositorio(LaMesaDelDuqueDbContext contexto)
@@ -83,6 +92,35 @@ internal class PedidoRepositorio : IPedidoRepositorio
                 .ThenInclude(d => d.Producto)
             .Where(p => p.Mesa != null && p.Mesa.Id == mesaId && p.Estado != EstadoPedido.Cancelado && p.Estado != EstadoPedido.AnuladoPago)
             .ToListAsync(cancelacion);
+    }
+
+
+    public async Task<List<Pedido>> ObtenerActivosPorMeseroAsync(Guid meseroId, CancellationToken cancelacion = default)
+    {
+        return await _contexto.Set<Pedido>()
+            .AsNoTracking()
+            .Include(p => p.Mesa)
+            .Include(p => p.Detalles)
+                .ThenInclude(d => d.Producto)
+            .Where(p => p.MeseroAsignadoId == meseroId
+                     && p.Mesa != null
+                     && EstadosMesaActiva.Contains(p.Estado))
+            .OrderBy(p => p.Mesa!.Numero)
+            .ThenByDescending(p => p.CreatedAt)
+            .ToListAsync(cancelacion);
+    }
+
+    public async Task<Pedido?> ObtenerActivoPorMesaParaActualizarAsync(Guid mesaId, CancellationToken cancelacion = default)
+    {
+        return await _contexto.Set<Pedido>()
+            .Include(p => p.Mesa)
+            .Include(p => p.Detalles)
+                .ThenInclude(d => d.Producto)
+            .Where(p => p.Mesa != null
+                     && p.Mesa.Id == mesaId
+                     && EstadosMesaActiva.Contains(p.Estado))
+            .OrderByDescending(p => p.CreatedAt)
+            .FirstOrDefaultAsync(cancelacion);
     }
 
     public async Task<Pedido?> ObtenerConCuentasParaActualizarAsync(Guid id, CancellationToken cancelacion = default)

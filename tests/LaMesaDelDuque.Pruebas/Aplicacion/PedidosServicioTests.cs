@@ -60,7 +60,7 @@ public class PedidosServicioTests : IDisposable
     {
         var mesa = new Mesa(numeroMesa, 4);
         var categoria = new CategoriaProducto($"Bebidas {numeroMesa}");
-        var producto = new Producto($"Café {numeroMesa}", 3.50m, categoria);
+        var producto = new Producto($"CafÃ© {numeroMesa}", 3.50m, categoria);
 
         await _uot.Mesas.AgregarAsync(mesa);
         await _uot.Categorias.AgregarAsync(categoria);
@@ -70,6 +70,17 @@ public class PedidosServicioTests : IDisposable
         return (mesa, producto);
     }
 
+    private async Task<Usuario> CrearMeseroAsync(string username = "mesero")
+    {
+        var rol = new Rol("Mesero", "Atiende mesas");
+        var usuario = new Usuario(username, $"{username}@lmd.test", "hash-demo", "Mesero Demo", rol);
+
+        _contexto.Set<Rol>().Add(rol);
+        _contexto.Set<Usuario>().Add(usuario);
+        await _contexto.SaveChangesAsync();
+
+        return usuario;
+    }
     private async Task<Usuario> CrearUsuarioAuditoriaAsync()
     {
         var rol = new Rol("admin", "Administrador");
@@ -118,6 +129,28 @@ public class PedidosServicioTests : IDisposable
         Assert.Equal(EstadoMesa.Ocupada, mesaActualizada!.Estado);
     }
 
+    [Fact]
+    public async Task CrearPedido_ComerAqui_ComoMesero_DebeAsignarMeseroActual()
+    {
+        var mesero = await CrearMeseroAsync("mesero-asignado");
+        var (mesa, producto) = await CrearMesaYProductoAsync(19);
+        var servicioMesero = new PedidosServicio(
+            _uot,
+            _notificadorSpy,
+            httpContextAccessor: TestHttpContextAccessor.ConUsuarioAutenticado(mesero.Id, "Mesero"));
+
+        var pedido = await servicioMesero.CrearPedidoAsync(TipoServicio.ComerAqui, mesa.Id, new List<DetalleCreacionDto>
+        {
+            new() { ProductoId = producto.Id, Cantidad = 1, PrecioUnitario = 3.50m }
+        });
+
+        var persistido = await _contexto.Set<Pedido>()
+            .AsNoTracking()
+            .SingleAsync(p => p.Id == pedido.Id);
+
+        Assert.Equal(mesero.Id, pedido.MeseroAsignadoId);
+        Assert.Equal(mesero.Id, persistido.MeseroAsignadoId);
+    }
     [Fact]
     public async Task CrearPedido_ParaLlevar_ConMesa_DebeLanzarExcepcion()
     {

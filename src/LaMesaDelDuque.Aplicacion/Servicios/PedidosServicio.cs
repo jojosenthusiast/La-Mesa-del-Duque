@@ -47,6 +47,10 @@ internal class PedidosServicio : IPedidosServicio
 
         var pedido = new Pedido(tipoServicio, mesa);
 
+        var meseroActualId = ObtenerMeseroActualId();
+        if (mesa is not null && meseroActualId != Guid.Empty)
+            pedido.AsignarMesero(meseroActualId);
+
         if (mesa is not null)
             mesa.CambiarEstado(EstadoMesa.Ocupada);
 
@@ -521,6 +525,19 @@ internal class PedidosServicio : IPedidosServicio
         return Guid.Empty;
     }
 
+    private Guid ObtenerMeseroActualId()
+    {
+        var user = _httpContextAccessor?.HttpContext?.User;
+        if (user?.Identity?.IsAuthenticated != true || !user.IsInRole("Mesero"))
+            return Guid.Empty;
+
+        var userIdClaim = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (!string.IsNullOrWhiteSpace(userIdClaim) && Guid.TryParse(userIdClaim, out var usuarioId))
+            return usuarioId;
+
+        return Guid.Empty;
+    }
+
     private async Task NotificarMetricasInvalidadasSiExisteAsync(CancellationToken cancelacion)
     {
         if (_notificadorDashboard is not null)
@@ -558,6 +575,7 @@ internal class PedidosServicio : IPedidosServicio
             TipoServicio = pedido.TipoServicio.ToString(),
             MesaId = pedido.Mesa?.Id,
             MesaNumero = pedido.Mesa?.Numero,
+            MeseroAsignadoId = pedido.MeseroAsignadoId,
             Estado = pedido.Estado.ToString(),
             Total = pedido.Total,
             FechaCreacion = pedido.CreatedAt,

@@ -29,6 +29,9 @@ internal class PedidoConfiguracion : IEntityTypeConfiguration<Pedido>
             .HasMaxLength(30)
             .IsRequired();
 
+        constructor.Property(p => p.MeseroAsignadoId)
+            .IsRequired(false);
+
         // Total es calculado, no se persiste
         constructor.Ignore(p => p.Total);
 
@@ -40,6 +43,13 @@ internal class PedidoConfiguracion : IEntityTypeConfiguration<Pedido>
             .WithMany()
             .HasForeignKey("MesaId")
             .OnDelete(DeleteBehavior.Restrict);
+
+        constructor.HasOne<Usuario>()
+            .WithMany()
+            .HasForeignKey(p => p.MeseroAsignadoId)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        constructor.HasIndex(p => p.MeseroAsignadoId);
 
         // Detalles mapeados desde la propiedad pública Detalles
         // EF Core descubre automáticamente el backing field _detalles
