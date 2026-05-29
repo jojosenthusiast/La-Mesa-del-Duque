@@ -18,8 +18,7 @@ public static class InyeccionInfraestructura
         // persiste en sesiones de PowerShell y causa conexiones rotas a Supabase.
         var connectionString = configuracion.GetConnectionString("DefaultConnection");
 
-        Console.WriteLine($"[DBG] esDesarrollo={esDesarrollo} cs='{connectionString}' isEmpty={string.IsNullOrWhiteSpace(connectionString)}");
-
+        servicios.AddHttpContextAccessor();
         servicios.AddScoped<AuditoriaInterceptor>();
 
         servicios.AddDbContext<LaMesaDelDuqueDbContext>((sp, opciones) =>
@@ -28,7 +27,6 @@ public static class InyeccionInfraestructura
 
             if (esDesarrollo && string.IsNullOrWhiteSpace(connectionString))
             {
-                Console.WriteLine("[DBG] USING SQLITE (desarrollo)");
                 var dbPath = Path.Combine(
                     AppContext.BaseDirectory, "..", "..", "..", "lmd-dev.db");
                 opciones.UseSqlite($"Data Source={dbPath}");
@@ -37,13 +35,11 @@ public static class InyeccionInfraestructura
 
             if (!string.IsNullOrWhiteSpace(connectionString))
             {
-                Console.WriteLine("[DBG] USING Npgsql");
                 connectionString = ConexionHelper.Normalizar(connectionString);
                 opciones.UseNpgsql(connectionString);
                 return;
             }
 
-            Console.WriteLine("[DBG] USING SQLITE (fallback)");
             var dbPath2 = Path.Combine(
                 AppContext.BaseDirectory, "..", "..", "..", "lmd-dev.db");
             opciones.UseSqlite($"Data Source={dbPath2}");

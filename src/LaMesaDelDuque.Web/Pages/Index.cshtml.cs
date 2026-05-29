@@ -13,13 +13,20 @@ public class IndexModel : PageModel
     public void OnGet()
     {
         var modulos = new List<ModuleLinkVm>();
-        var autenticado = User?.Identity?.IsAuthenticated == true;
-        var esAdmin = autenticado && User!.IsInRole("Administrador");
-        var esEncargado = autenticado && User.IsInRole("Encargado");
-        var esMesero = autenticado && User.IsInRole("Mesero");
-        var esCocinero = autenticado && User.IsInRole("Cocinero");
-        var esCajero = autenticado && User.IsInRole("Cajero");
-        var esGerente = autenticado && User.IsInRole("Gerente");
+        var user = User;
+
+        if (user?.Identity?.IsAuthenticated != true)
+        {
+            ModuleLinks = modulos;
+            return;
+        }
+
+        var esAdmin = user.IsInRole("Administrador");
+        var esEncargado = user.IsInRole("Encargado");
+        var esMesero = user.IsInRole("Mesero");
+        var esCocinero = user.IsInRole("Cocinero");
+        var esCajero = user.IsInRole("Cajero");
+        var esGerente = user.IsInRole("Gerente");
 
         // Pedidos: Admin, Encargado, Cajero
         if (esAdmin || esEncargado || esCajero)

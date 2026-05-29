@@ -87,7 +87,15 @@ internal class UnidadDeTrabajo : IUnidadDeTrabajo
         OrdenesCocina = ordenCocinaRepositorio;
         Cuentas = cuentaRepositorio;
         Pagos = pagoRepositorio;
+        Proveedores = new ProveedorRepositorio(contexto);
+        Mermas = new MermaRepositorio(contexto);
+        CierresDia = new CierreDiaRepositorio(contexto);
         ZonasSalon = zonaSalonRepositorio;
+        Promociones = new PromocionRepositorio(contexto);
+        TurnosCaja = new TurnoCajaRepositorio(contexto);
+        Descuentos = new DescuentoRepositorio(contexto);
+        MotivosDescuento = new MotivoDescuentoRepositorio(contexto);
+        Devoluciones = new DevolucionRepositorio(contexto);
     }
 
     public ICategoriaProductoRepositorio Categorias { get; }

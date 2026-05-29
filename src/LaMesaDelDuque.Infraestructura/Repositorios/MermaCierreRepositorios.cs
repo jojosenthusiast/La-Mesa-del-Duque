@@ -23,6 +23,14 @@ internal class MermaRepositorio : IMermaRepositorio
             .AsNoTracking()
             .ToListAsync(ct);
     }
+
+    public async Task<List<MermaDiaria>> ObtenerPorRangoAsync(DateTime desde, DateTime hasta, CancellationToken ct = default) =>
+        await _c.Set<MermaDiaria>()
+            .Include(m => m.Ingrediente)
+            .Include(m => m.Usuario)
+            .Where(m => m.CreatedAt >= desde && m.CreatedAt <= hasta)
+            .AsNoTracking()
+            .ToListAsync(ct);
 }
 
 internal class CierreDiaRepositorio : ICierreDiaRepositorio

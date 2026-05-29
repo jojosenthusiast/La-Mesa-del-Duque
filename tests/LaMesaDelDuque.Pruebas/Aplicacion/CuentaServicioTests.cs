@@ -140,7 +140,7 @@ public class CuentaServicioTests : IDisposable
         var cuentas = await _servicio.CrearCuentasAsync(pedido.Id, 2);
         await _servicio.PagarCuentaAsync(cuentas[0].Id, MetodoPago.Efectivo);
 
-        var pagada = await _servicio.PagarCuentaAsync(cuentas[1].Id, MetodoPago.Tarjeta);
+        var pagada = await _servicio.PagarCuentaAsync(cuentas[1].Id, MetodoPago.Tarjeta, referenciaPos: "POS-TEST-001");
         var pedidoActualizado = await _servicio.ObtenerPedidoAsync(pedido.Id);
         var mesa = await _uot.Mesas.ObtenerPorIdAsync(pedidoActualizado!.MesaId!.Value);
 

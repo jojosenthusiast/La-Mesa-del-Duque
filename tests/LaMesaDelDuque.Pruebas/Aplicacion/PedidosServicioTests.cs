@@ -47,7 +47,7 @@ public class PedidosServicioTests : IDisposable
             new ZonaSalonRepositorio(_contexto));
 
         _notificadorSpy = new NotificadorPedidosSpy();
-        _servicio = new PedidosServicio(_uot, _notificadorSpy);
+        _servicio = new PedidosServicio(_uot, _notificadorSpy, httpContextAccessor: TestHttpContextAccessor.ConUsuarioAutenticado());
     }
 
     public void Dispose()

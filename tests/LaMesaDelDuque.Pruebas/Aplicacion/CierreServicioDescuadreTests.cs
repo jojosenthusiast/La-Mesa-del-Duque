@@ -42,6 +42,11 @@ public sealed class CierreServicioDescuadreTests : IDisposable
             new OrdenCocinaRepositorio(_contexto),
             new CuentaRepositorio(_contexto),
             new PagoRepositorio(_contexto),
+            new PromocionRepositorio(_contexto),
+            new TurnoCajaRepositorio(_contexto),
+            new DescuentoRepositorio(_contexto),
+            new MotivoDescuentoRepositorio(_contexto),
+            new DevolucionRepositorio(_contexto),
             null,
             new MermaRepositorio(_contexto),
             new CierreDiaRepositorio(_contexto));

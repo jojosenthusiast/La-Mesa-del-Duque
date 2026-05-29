@@ -6,6 +6,7 @@ public interface IMermaRepositorio
 {
     Task AgregarAsync(MermaDiaria merma, CancellationToken ct = default);
     Task<List<MermaDiaria>> ObtenerDelDiaAsync(DateOnly fecha, CancellationToken ct = default);
+    Task<List<MermaDiaria>> ObtenerPorRangoAsync(DateTime desde, DateTime hasta, CancellationToken ct = default);
 }
 
 public interface ICierreDiaRepositorio

@@ -357,11 +357,6 @@
         }
         return group;
     }
-        });
-        if (contador) {
-            contador.textContent = `${total} ${total === 1 ? 'orden' : 'ordenes'}`;
-        }
-    }
 
     function actualizarTimers() {
         document.querySelectorAll('.lmd-kds-card__timer').forEach(el => {

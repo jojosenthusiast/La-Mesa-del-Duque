@@ -44,11 +44,20 @@ public class PedidosServicioDashboardTests : IDisposable
             new RecetaProductoRepositorio(_contexto),
             new OrdenCocinaRepositorio(_contexto),
             new CuentaRepositorio(_contexto),
-            new PagoRepositorio(_contexto));
+            new PagoRepositorio(_contexto),
+            new PromocionRepositorio(_contexto),
+            new TurnoCajaRepositorio(_contexto),
+            new DescuentoRepositorio(_contexto),
+            new MotivoDescuentoRepositorio(_contexto),
+            new DevolucionRepositorio(_contexto));
 
         _notificadorPedidosSpy = new NotificadorPedidosSpy();
         _notificadorDashboardSpy = new NotificadorDashboardSpy();
-        _servicio = new PedidosServicio(_uot, _notificadorPedidosSpy, null, null, _notificadorDashboardSpy);
+        _servicio = new PedidosServicio(
+            _uot,
+            _notificadorPedidosSpy,
+            httpContextAccessor: TestHttpContextAccessor.ConUsuarioAutenticado(),
+            notificadorDashboard: _notificadorDashboardSpy);
     }
 
     public void Dispose()
@@ -177,7 +186,10 @@ public class PedidosServicioDashboardTests : IDisposable
             new() { ProductoId = producto.Id, Cantidad = 1, PrecioUnitario = 3.50m }
         };
 
-        var servicioSinDashboard = new PedidosServicio(_uot, _notificadorPedidosSpy, null, null, null);
+        var servicioSinDashboard = new PedidosServicio(
+            _uot,
+            _notificadorPedidosSpy,
+            httpContextAccessor: TestHttpContextAccessor.ConUsuarioAutenticado());
 
         var pedido = await servicioSinDashboard.CrearPedidoAsync(TipoServicio.ComerAqui, mesa.Id, detalles);
         await servicioSinDashboard.MarcarEnCobroAsync(pedido.Id);

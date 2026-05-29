@@ -42,7 +42,12 @@ public sealed class DespachoMesaTests : IDisposable
             new RecetaProductoRepositorio(_contexto),
             new OrdenCocinaRepositorio(_contexto),
             new CuentaRepositorio(_contexto),
-            new PagoRepositorio(_contexto));
+            new PagoRepositorio(_contexto),
+            new PromocionRepositorio(_contexto),
+            new TurnoCajaRepositorio(_contexto),
+            new DescuentoRepositorio(_contexto),
+            new MotivoDescuentoRepositorio(_contexto),
+            new DevolucionRepositorio(_contexto));
 
         _despacho = new DespachoServicio(_uot);
     }

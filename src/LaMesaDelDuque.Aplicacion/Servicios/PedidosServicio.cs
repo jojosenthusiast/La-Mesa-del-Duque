@@ -158,6 +158,7 @@ internal class PedidosServicio : IPedidosServicio
             await _uot.GuardarCambiosAsync(cancelacion);
 
             var usuarioId = ObtenerUsuarioIdActual();
+            cuentaUnica.Pagar(metodoPago, 0, usuarioId);
             var pago = new Pago(cuentaUnica.Id, pedido.Total, metodoPago, 0, usuarioId, referenciaPos);
             await _uot.Pagos.AgregarAsync(pago, cancelacion);
         }
