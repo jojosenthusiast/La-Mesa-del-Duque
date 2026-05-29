@@ -30,6 +30,12 @@ internal class PagoRepositorio : IPagoRepositorio
             .ToListAsync(cancelacion);
     }
 
+    public async Task<List<Pago>> ObtenerPorRangoFechaAsync(DateTime desde, DateTime hasta, CancellationToken cancelacion = default) =>
+        await _contexto.Set<Pago>()
+            .AsNoTracking()
+            .Where(p => p.FechaPago >= desde && p.FechaPago <= hasta)
+            .ToListAsync(cancelacion);
+
     public async Task AgregarAsync(Pago pago, CancellationToken cancelacion = default) =>
         await _contexto.Set<Pago>().AddAsync(pago, cancelacion);
 }

@@ -40,6 +40,10 @@ public class LaMesaDelDuqueDbContext : DbContext
     public DbSet<ProductoAlergeno> ProductosAlergenos => Set<ProductoAlergeno>();
     public DbSet<ZonaSalon> ZonasSalon => Set<ZonaSalon>();
 
+    // Nuevas entidades §2.1 — Turno de caja
+    public DbSet<TurnoCaja> TurnosCaja => Set<TurnoCaja>();
+    public DbSet<MovimientoCaja> MovimientosCaja => Set<MovimientoCaja>();
+
     protected override void OnModelCreating(ModelBuilder constructorDeModelos)
     {
         constructorDeModelos.ApplyConfigurationsFromAssembly(typeof(LaMesaDelDuqueDbContext).Assembly);

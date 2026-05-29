@@ -57,6 +57,10 @@ public class IndexModel : PageModel
         if (esAdmin || esEncargado || esCajero)
             modulos.Add(new("Cierre", "/Operaciones/Cierre/Index", "Apertura y cierre de caja diario."));
 
+        // Caja: Admin, Encargado, Cajero
+        if (esAdmin || esEncargado || esCajero)
+            modulos.Add(new("Caja", "/Operaciones/TurnoCaja/Index", "Apertura, cierre de turno y Reporte Z."));
+
         // Dashboard Gerencial: Admin, Gerente
         if (esAdmin || esGerente)
             modulos.Add(new("Dashboard Gerencial", "/Admin/Dashboard/Gerente", "Análisis de período, tendencias y comparativas."));
