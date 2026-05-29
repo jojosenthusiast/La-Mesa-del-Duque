@@ -23,6 +23,8 @@ internal class UnidadDeTrabajo : IUnidadDeTrabajo
         OrdenCocinaRepositorio ordenCocinaRepositorio,
         CuentaRepositorio cuentaRepositorio,
         PagoRepositorio pagoRepositorio,
+        PromocionRepositorio promocionRepositorio,
+        TurnoCajaRepositorio turnoCajaRepositorio,
         ProveedorRepositorio? proveedorRepositorio = null,
         MermaRepositorio? mermaRepositorio = null,
         CierreDiaRepositorio? cierreDiaRepositorio = null,
@@ -41,6 +43,8 @@ internal class UnidadDeTrabajo : IUnidadDeTrabajo
         OrdenesCocina = ordenCocinaRepositorio;
         Cuentas = cuentaRepositorio;
         Pagos = pagoRepositorio;
+        Promociones = promocionRepositorio;
+        TurnosCaja = turnoCajaRepositorio;
         Proveedores = proveedorRepositorio;
         Mermas = mermaRepositorio!;
         CierresDia = cierreDiaRepositorio!;
@@ -96,6 +100,8 @@ internal class UnidadDeTrabajo : IUnidadDeTrabajo
     public IMermaRepositorio Mermas { get; } = null!;
     public ICierreDiaRepositorio CierresDia { get; } = null!;
     public IZonaSalonRepositorio ZonasSalon { get; } = null!;
+    public IPromocionRepositorio Promociones { get; } = null!;
+    public ITurnoCajaRepositorio TurnosCaja { get; } = null!;
 
     public async Task<int> GuardarCambiosAsync(CancellationToken cancelacion = default)
     {

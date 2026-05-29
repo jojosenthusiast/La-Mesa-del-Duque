@@ -56,6 +56,7 @@ internal class PedidosServicio : IPedidosServicio
                 ?? throw new ArgumentException($"No se encontró el producto con ID {d.ProductoId}.", nameof(detalles));
 
             var detalle = new DetallePedido(producto, d.Cantidad, d.PrecioUnitario, d.Notas, d.ModificacionesJson);
+            await AplicarMejorPromocionAsync(detalle, d.ProductoId, d.PrecioUnitario, cancelacion);
             pedido.AgregarDetalle(detalle);
         }
 
@@ -82,6 +83,7 @@ internal class PedidosServicio : IPedidosServicio
             ?? throw new ArgumentException($"No se encontró el producto con ID {productoId}.", nameof(productoId));
 
         var detalle = new DetallePedido(producto, cantidad, precioUnitario, notas, modificacionesJson);
+        await AplicarMejorPromocionAsync(detalle, productoId, precioUnitario, cancelacion);
         pedido.AgregarDetalle(detalle);
         await _uot.Pedidos.AgregarDetalleAsync(detalle, cancelacion);
 
@@ -106,6 +108,7 @@ internal class PedidosServicio : IPedidosServicio
             var producto = await _uot.Productos.ObtenerConTrackingAsync(item.ProductoId, cancelacion)
                 ?? throw new ArgumentException($"No se encontró el producto con ID {item.ProductoId}.", nameof(items));
             var detalle = new DetallePedido(producto, item.Cantidad, item.PrecioUnitario, item.Notas, item.ModificacionesJson);
+            await AplicarMejorPromocionAsync(detalle, item.ProductoId, item.PrecioUnitario, cancelacion);
             pedido.AgregarDetalle(detalle);
             await _uot.Pedidos.AgregarDetalleAsync(detalle, cancelacion);
             nuevosDetalles.Add(detalle);
@@ -222,6 +225,25 @@ internal class PedidosServicio : IPedidosServicio
                 ingrediente.DevolverStock(consumo);
             }
         }
+    }
+
+    private async Task AplicarMejorPromocionAsync(DetallePedido detalle, Guid productoId, decimal precioUnitario, CancellationToken ct)
+    {
+        var hoy = DateOnly.FromDateTime(DateTime.UtcNow);
+        var promos = await _uot.Promociones.ObtenerActivasPorProductoAsync(productoId, hoy, ct);
+        if (promos.Count == 0) return;
+
+        var mejor = promos.OrderByDescending(pp =>
+            pp.Promocion.TipoDescuento == "porcentaje"
+                ? precioUnitario * pp.Promocion.ValorDescuento / 100
+                : pp.Promocion.ValorDescuento
+        ).First();
+
+        var descuento = mejor.Promocion.TipoDescuento == "porcentaje"
+            ? Math.Round(precioUnitario * mejor.Promocion.ValorDescuento / 100, 2)
+            : mejor.Promocion.ValorDescuento;
+
+        detalle.AplicarPromocion(Math.Min(descuento, precioUnitario), mejor.Promocion.Nombre);
     }
 
     private static Dictionary<Guid, decimal> CalcularConsumosDetalle(DetallePedido detalle, RecetaProducto receta)
@@ -549,6 +571,9 @@ internal class PedidosServicio : IPedidosServicio
                 ProductoNombre = d.Producto.Nombre,
                 Cantidad = d.Cantidad,
                 PrecioUnitario = d.PrecioUnitario,
+                PrecioOriginal = d.PrecioOriginal,
+                DescuentoAplicado = d.DescuentoAplicado,
+                PromocionNombre = d.PromocionNombre,
                 Subtotal = d.Subtotal,
                 Notas = d.Notas,
                 ModificacionesJson = d.ModificacionesJson

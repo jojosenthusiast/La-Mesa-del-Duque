@@ -320,11 +320,24 @@
         return filtered.map(function (p) {
             var agotado = p.agotado === true;
             var ico = p.categoriaNombre === 'Bebidas' ? 'wine' : p.categoriaNombre === 'Postres' ? 'cake-slice' : 'utensils';
-            return '<div class="lmd-pos-producto-card' + (agotado ? ' lmd-pos-producto-card--agotado' : '') + '">' +
+            var tienePromo = !!p.promoNombre;
+            var precioConDescuento = tienePromo
+                ? (p.promoTipo === 'porcentaje'
+                    ? p.precio - Math.round(p.precio * p.promoDescuento / 100 * 100) / 100
+                    : p.precio - p.promoDescuento)
+                : p.precio;
+            var precioHtml = tienePromo
+                ? '<span class="lmd-pos-producto-card__precio lmd-pos-producto-card__precio--promo">' +
+                      '<s class="lmd-pos-producto-card__precio-original">' + fmt(p.precio || 0) + '</s> ' +
+                      fmt(Math.max(0, precioConDescuento)) +
+                  '</span>'
+                : '<span class="lmd-pos-producto-card__precio">' + fmt(p.precio || 0) + '</span>';
+            return '<div class="lmd-pos-producto-card' + (agotado ? ' lmd-pos-producto-card--agotado' : '') + (tienePromo ? ' lmd-pos-producto-card--promo' : '') + '">' +
                 '<div class="lmd-pos-producto-card__body" onclick="' + (agotado || state.pagado ? '' : 'pos.agregarAlCarrito(\'' + p.id + '\',\'' + (p.nombre || '').replace(/'/g, "\\'") + '\',' + (p.precio || 0) + ')') + '">' +
                     '<div class="lmd-pos-producto-card__ico">' + icon(ico) + '</div>' +
                     '<span class="lmd-pos-producto-card__nombre">' + (p.nombre || '') + '</span>' +
-                    '<span class="lmd-pos-producto-card__precio">' + fmt(p.precio || 0) + '</span>' +
+                    precioHtml +
+                    (tienePromo ? '<span class="lmd-pos-producto-card__promo-badge">' + icon('tag') + ' ' + (p.promoNombre || 'PROMO') + '</span>' : '') +
                     (p.tiempoPreparacionMin ? '<span class="lmd-pos-producto-card__tiempo">' + p.tiempoPreparacionMin + ' min</span>' : '') +
                     (agotado ? '<span class="lmd-pos-producto-card__agotado-badge">Agotado</span>' : '') +
                 '</div>' +

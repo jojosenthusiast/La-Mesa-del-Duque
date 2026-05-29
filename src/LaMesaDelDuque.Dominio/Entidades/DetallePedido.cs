@@ -9,9 +9,12 @@ public class DetallePedido
     public Producto Producto { get; private set; }
     public int Cantidad { get; private set; }
     public decimal PrecioUnitario { get; private set; }
+    public decimal PrecioOriginal { get; private set; }
+    public decimal DescuentoAplicado { get; private set; }
+    public string? PromocionNombre { get; private set; }
     public string? Notas { get; private set; }
     public string? ModificacionesJson { get; private set; }
-    public decimal Subtotal => Cantidad * PrecioUnitario;
+    public decimal Subtotal => Cantidad * (PrecioUnitario - DescuentoAplicado);
 
     private DetallePedido()
     {
@@ -33,8 +36,19 @@ public class DetallePedido
         Producto = producto;
         Cantidad = cantidad;
         PrecioUnitario = precioUnitario;
+        PrecioOriginal = precioUnitario;
+        DescuentoAplicado = 0;
         Notas = notas;
         ModificacionesJson = modificacionesJson;
+    }
+
+    public void AplicarPromocion(decimal descuentoMonto, string nombrePromo)
+    {
+        if (descuentoMonto < 0)
+            throw new ReglaDominioException("El monto de descuento no puede ser negativo.");
+
+        DescuentoAplicado = descuentoMonto;
+        PromocionNombre = nombrePromo;
     }
 
     public void ActualizarCantidad(int nuevaCantidad)

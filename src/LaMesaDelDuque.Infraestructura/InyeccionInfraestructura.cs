@@ -20,8 +20,12 @@ public static class InyeccionInfraestructura
 
         Console.WriteLine($"[DBG] esDesarrollo={esDesarrollo} cs='{connectionString}' isEmpty={string.IsNullOrWhiteSpace(connectionString)}");
 
-        servicios.AddDbContext<LaMesaDelDuqueDbContext>(opciones =>
+        servicios.AddScoped<AuditoriaInterceptor>();
+
+        servicios.AddDbContext<LaMesaDelDuqueDbContext>((sp, opciones) =>
         {
+            opciones.AddInterceptors(sp.GetRequiredService<AuditoriaInterceptor>());
+
             if (esDesarrollo && string.IsNullOrWhiteSpace(connectionString))
             {
                 Console.WriteLine("[DBG] USING SQLITE (desarrollo)");
@@ -65,6 +69,8 @@ public static class InyeccionInfraestructura
         servicios.AddScoped<IAlergenoRepositorio, AlergenoRepositorio>();
         servicios.AddScoped<ZonaSalonRepositorio>();
         servicios.AddScoped<IMetricaRepositorio, MetricaRepositorio>();
+        servicios.AddScoped<TurnoCajaRepositorio>();
+        servicios.AddScoped<PromocionRepositorio>();
 
         // Unidad de Trabajo
         servicios.AddScoped<IUnidadDeTrabajo, UnidadDeTrabajo>();

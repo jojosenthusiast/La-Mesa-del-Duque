@@ -45,7 +45,27 @@ internal class CatalogoProductosServicio : ICatalogoProductosServicio
     public async Task<List<ProductoDto>> ListarProductosAsync(CancellationToken cancelacion = default)
     {
         var productos = await _uot.Productos.ObtenerTodosAsync(cancelacion);
-        return productos.Select(MapToDto).ToList();
+        var hoy = DateOnly.FromDateTime(DateTime.UtcNow);
+
+        var dtos = new List<ProductoDto>(productos.Count);
+        foreach (var producto in productos)
+        {
+            var dto = MapToDto(producto);
+            var promos = await _uot.Promociones.ObtenerActivasPorProductoAsync(producto.Id, hoy, cancelacion);
+            if (promos.Count > 0)
+            {
+                var mejor = promos.OrderByDescending(pp =>
+                    pp.Promocion.TipoDescuento == "porcentaje"
+                        ? producto.Precio * pp.Promocion.ValorDescuento / 100
+                        : pp.Promocion.ValorDescuento
+                ).First();
+                dto.PromoNombre = mejor.Promocion.Nombre;
+                dto.PromoDescuento = mejor.Promocion.ValorDescuento;
+                dto.PromoTipo = mejor.Promocion.TipoDescuento;
+            }
+            dtos.Add(dto);
+        }
+        return dtos;
     }
 
     public async Task<List<ProductoDto>> ListarProductosPorCategoriaAsync(Guid categoriaId, CancellationToken cancelacion = default)
