@@ -18,9 +18,10 @@ public class IndexModel : PageModel
         var esEncargado = autenticado && User.IsInRole("Encargado");
         var esMesero = autenticado && User.IsInRole("Mesero");
         var esCocinero = autenticado && User.IsInRole("Cocinero");
+        var esCajero = autenticado && User.IsInRole("Cajero");
 
-        // Pedidos: Admin, Encargado, Mesero
-        if (esAdmin || esEncargado || esMesero)
+        // Pedidos: Admin, Encargado, Cajero
+        if (esAdmin || esEncargado || esCajero)
             modulos.Add(new("Pedidos", "/Operaciones/Pedidos/Index", "Captura rápida de órdenes y punto de venta."));
 
         // Cocina: Cocinero, Encargado, Admin
@@ -35,8 +36,8 @@ public class IndexModel : PageModel
         if (esAdmin || esEncargado || esMesero)
             modulos.Add(new("Mapa Salón", "/Operaciones/Salon/Mapa", "Mapa visual interactivo con drag & drop."));
 
-        // Despacho: Admin, Encargado, Mesero
-        if (esAdmin || esEncargado || esMesero)
+        // Despacho: Admin, Encargado, Cajero
+        if (esAdmin || esEncargado || esCajero)
             modulos.Add(new("Despacho", "/Operaciones/Despacho/Index", "Pedidos listos para entregar y liberar mesas."));
 
         // Productos: Admin, Encargado
@@ -51,8 +52,8 @@ public class IndexModel : PageModel
         if (esAdmin || esEncargado)
             modulos.Add(new("Dashboard", "/Admin/Dashboard/Dashboard", "KPIs y métricas operativas en tiempo real."));
 
-        // Cierre: Admin, Encargado
-        if (esAdmin || esEncargado)
+        // Cierre: Admin, Encargado, Cajero
+        if (esAdmin || esEncargado || esCajero)
             modulos.Add(new("Cierre", "/Operaciones/Cierre/Index", "Apertura y cierre de caja diario."));
 
         // Usuarios: solo Admin

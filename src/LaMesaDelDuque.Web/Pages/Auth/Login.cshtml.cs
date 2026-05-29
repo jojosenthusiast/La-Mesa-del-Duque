@@ -74,7 +74,7 @@ public class LoginModel : PageModel
         {
             "Administrador" or "Encargado" => "/Admin/Dashboard/Dashboard",
             "Cajero"                        => "/Operaciones/Pedidos/Index",
-            "Mesero"                        => "/Operaciones/Pedidos/Index",
+            "Mesero"                        => "/Operaciones/Mesero/Index",
             "Cocinero"                      => "/Cocina/KDS",
             _                               => "/Index"
         };

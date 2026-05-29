@@ -1,0 +1,26 @@
+@page
+@model LaMesaDelDuque.Web.Pages.Operaciones.Mesero.IndexModel
+@{
+    ViewData["Title"] = "Mesero";
+}
+@Html.AntiForgeryToken()
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/pos-ux.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/mesero.css" asp-append-version="true" />
+}
+
+<section id="lmd-mesero-contenido">
+    <div class="text-center py-5" style="color:#f7f4ec;">Cargando...</div>
+</section>
+
+<script>
+    window.__lmdProductosMesero = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+        Model.ProductosDisponibles.Select(p => new { p.Id, p.Nombre, p.Precio, p.CategoriaNombre, p.TiempoPreparacionMin, p.ImagenUrl }),
+        new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase }));
+</script>
+
+@section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.0/signalr.min.js"></script>
+    <script src="~/js/mesero.js" asp-append-version="true"></script>
+}

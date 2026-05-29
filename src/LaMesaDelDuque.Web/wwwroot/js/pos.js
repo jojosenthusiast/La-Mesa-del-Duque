@@ -100,13 +100,21 @@
             mesasHtml += '<div class="lmd-pos-mesa-zona-separator">' + cap + ' personas</div>';
             grupos[cap].forEach(function (m) {
                 var disponible = m.estado === 'Disponible';
+                var enGracia = disponible && m.graciaHasta && new Date(m.graciaHasta) > Date.now();
                 var hayTab = !disponible && m.pedidoActualId;
                 var enCobro = hayTab && m.pedidoEstado === 'EnCobro';
-                var cls = disponible ? 'lmd-pos-mesa-card--disponible'
+                var cls = enGracia ? 'lmd-pos-mesa-card--en-gracia'
+                    : disponible ? 'lmd-pos-mesa-card--disponible'
                     : enCobro ? 'lmd-pos-mesa-card--en-cobro'
                     : 'lmd-pos-mesa-card--ocupada';
+                var onclick = enGracia ? '' : ' onclick="pos.seleccionarMesa(\'' + m.id + '\',' + m.numero + ')"';
                 var badgeHtml = '';
-                if (enCobro) {
+                if (enGracia) {
+                    var secsLeft = Math.max(0, Math.floor((new Date(m.graciaHasta).getTime() - Date.now()) / 1000));
+                    var mins = Math.floor(secsLeft / 60), secs = secsLeft % 60;
+                    badgeHtml = '<span class="lmd-pos-mesa-card__gracia-badge" data-gracia-hasta="' + m.graciaHasta + '">' +
+                        icon('timer') + ' <span class="lmd-gracia-tiempo">' + mins + ':' + (secs < 10 ? '0' : '') + secs + '</span></span>';
+                } else if (enCobro) {
                     badgeHtml = '<span class="lmd-pos-mesa-card__cobrar-badge">' + icon('receipt') + ' Cobrar</span>';
                 } else if (hayTab) {
                     var fechaAttr = m.pedidoFechaCreacion ? ' data-pedido-fecha="' + m.pedidoFechaCreacion + '"' : '';
@@ -114,7 +122,7 @@
                     var tiempoLabel = minTab > 0 ? minTab + ' min' : 'Tab';
                     badgeHtml = '<span class="lmd-pos-mesa-card__tab-badge"' + fechaAttr + '>' + icon('clock') + ' <span class="lmd-tab-tiempo">' + tiempoLabel + '</span></span>';
                 }
-                mesasHtml += '<div class="lmd-pos-mesa-card ' + cls + '" onclick="pos.seleccionarMesa(\'' + m.id + '\',' + m.numero + ')">' +
+                mesasHtml += '<div class="lmd-pos-mesa-card ' + cls + '"' + onclick + '>' +
                     '<span class="lmd-pos-mesa-card__numero">' + m.numero + '</span>' +
                     '<span class="lmd-pos-mesa-card__capacidad">' + m.capacidad + ' pax</span>' +
                     badgeHtml +
@@ -1201,6 +1209,7 @@
             } catch (e) { lmdToast('Error de conexión', 'error'); return; }
         }
 
+        await refrescarMesas();
         state.pagado = true;
         cerrarTodasOverlaysPago();
         renderProductos();
@@ -1618,11 +1627,33 @@
         });
     }
 
+    var _graciaRefrescada = false;
+    function actualizarTimersGracia() {
+        var badges = document.querySelectorAll('[data-gracia-hasta]');
+        var hayVencidos = false;
+        badges.forEach(function (badge) {
+            var span = badge.querySelector('.lmd-gracia-tiempo');
+            if (!span) return;
+            var secsLeft = Math.max(0, Math.floor((new Date(badge.dataset.graciaHasta).getTime() - Date.now()) / 1000));
+            if (secsLeft <= 0) { hayVencidos = true; return; }
+            var mins = Math.floor(secsLeft / 60), secs = secsLeft % 60;
+            span.textContent = mins + ':' + (secs < 10 ? '0' : '') + secs;
+        });
+        if (hayVencidos && !_graciaRefrescada) {
+            _graciaRefrescada = true;
+            refrescarMesas()
+                .then(function () { renderSeleccion(); })
+                .catch(function () {})
+                .finally(function () { _graciaRefrescada = false; });
+        }
+    }
+
     document.addEventListener('DOMContentLoaded', async function () {
         await refrescarMesas();
         renderSeleccion();
         initSignalR();
         setInterval(actualizarTiemposEnMesa, 30000);
+        setInterval(actualizarTimersGracia, 1000);
 
         window.addEventListener('offline', function () {
             var banner = document.getElementById('lmd-offline-banner');
