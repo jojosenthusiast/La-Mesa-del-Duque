@@ -243,13 +243,26 @@ public class IndexModel : PageModel
             if (pedido.Estado is "Cancelado" or "Pagado" or "Despachado")
                 return BadRequest(ErrorSeguro(new InvalidOperationException($"El pedido ya fue {pedido.Estado.ToLower()}.")));
 
-            var metodo = metodoPago?.ToLower() ?? "efectivo";
-            if (metodo == "efectivo" && monto.HasValue && monto.Value < pedido.Total)
+            var metodo = (metodoPago ?? "efectivo").Trim().ToLowerInvariant() switch
+            {
+                "tarjeta" => MetodoPago.Tarjeta,
+                "qr" or "transferencia" => MetodoPago.Transferencia,
+                _ => MetodoPago.Efectivo
+            };
+            var referenciaNormalizada = referencia?.Trim();
+
+            if ((metodo == MetodoPago.Tarjeta || metodo == MetodoPago.Transferencia)
+                && string.IsNullOrWhiteSpace(referenciaNormalizada))
+            {
+                return BadRequest(ErrorSeguro(new ArgumentException("La referencia del pago es obligatoria para tarjeta o transferencia.")));
+            }
+
+            if (metodo == MetodoPago.Efectivo && monto.HasValue && monto.Value < pedido.Total)
                 return BadRequest(ErrorSeguro(new ArgumentException($"Faltan ${pedido.Total - monto.Value:F2}")));
 
-            await _pedidosServicio.PagarPedidoAsync(pedidoId);
+            await _pedidosServicio.PagarPedidoAsync(pedidoId, metodo, referenciaNormalizada);
 
-            var cambio = monto.HasValue && metodo == "efectivo" ? monto.Value - pedido.Total : 0;
+            var cambio = monto.HasValue && metodo == MetodoPago.Efectivo ? monto.Value - pedido.Total : 0;
             return new JsonResult(new
             {
                 ok = true,
