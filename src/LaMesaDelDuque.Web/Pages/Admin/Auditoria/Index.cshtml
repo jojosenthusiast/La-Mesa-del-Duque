@@ -1,0 +1,135 @@
+@page
+@model LaMesaDelDuque.Web.Pages.Admin.Auditoria.IndexModel
+@{
+    ViewData["Title"] = "Auditoría";
+    ViewData["ActiveTab"] = "Auditoría";
+}
+
+<section class="lmd-page-header rounded-top">
+    <div>
+        <h1>Auditoría</h1>
+        <p class="lmd-page-subtitle">Registro inmutable de acciones y cambios del sistema.</p>
+    </div>
+    <a asp-page-handler="ExportarCsv"
+       asp-route-fechaDesde="@Model.FechaDesde?.ToString("yyyy-MM-dd")"
+       asp-route-fechaHasta="@Model.FechaHasta?.ToString("yyyy-MM-dd")"
+       asp-route-usuario="@Model.Usuario"
+       asp-route-accion="@Model.Accion"
+       class="btn btn-sm lmd-action-neutral">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Exportar CSV
+    </a>
+</section>
+
+<section class="bg-white p-4 rounded-bottom">
+    <div class="lmd-toast-zone mb-3">
+        @if (!string.IsNullOrWhiteSpace(Model.ToastError))
+        {
+            <div class="alert alert-danger alert-dismissible fade show py-2 mb-2" data-lmd-toast="true" role="alert">
+                @Model.ToastError
+                <button type="button" class="btn-close" aria-label="Cerrar"></button>
+            </div>
+        }
+    </div>
+
+    <form method="get" class="row g-2 mb-4">
+        <div class="col-md-2">
+            <label class="form-label form-label-sm">Desde</label>
+            <input class="form-control form-control-sm" type="date" name="fechaDesde"
+                   value="@Model.FechaDesde?.ToString("yyyy-MM-dd")" />
+        </div>
+        <div class="col-md-2">
+            <label class="form-label form-label-sm">Hasta</label>
+            <input class="form-control form-control-sm" type="date" name="fechaHasta"
+                   value="@Model.FechaHasta?.ToString("yyyy-MM-dd")" />
+        </div>
+        <div class="col-md-3">
+            <label class="form-label form-label-sm">Usuario</label>
+            <input class="form-control form-control-sm" type="text" name="usuario"
+                   value="@Model.Usuario" placeholder="Nombre…" />
+        </div>
+        <div class="col-md-2">
+            <label class="form-label form-label-sm">Acción</label>
+            <select class="form-select form-select-sm" name="accion">
+                <option value="">Todas</option>
+                <option value="INSERT" selected="@(Model.Accion == "INSERT")">INSERT</option>
+                <option value="UPDATE" selected="@(Model.Accion == "UPDATE")">UPDATE</option>
+                <option value="DELETE" selected="@(Model.Accion == "DELETE")">DELETE</option>
+            </select>
+        </div>
+        <div class="col-md-2 d-flex align-items-end">
+            <button type="submit" class="btn btn-sm lmd-action-primary w-100">Filtrar</button>
+        </div>
+        <div class="col-md-1 d-flex align-items-end">
+            <a asp-page="Index" class="btn btn-sm lmd-action-neutral w-100">Limpiar</a>
+        </div>
+    </form>
+
+    <div class="d-flex justify-content-between align-items-center mb-2">
+        <small class="text-muted">@Model.TotalRegistros resultado(s). Página @Model.Pagina de @Model.TotalPaginas</small>
+    </div>
+
+    @if (Model.Registros.Count == 0)
+    {
+        <div class="lmd-empty-state">No hay registros de auditoría con los filtros aplicados.</div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="lmd-ops-table small">
+                <thead>
+                    <tr>
+                        <th>Timestamp</th>
+                        <th>Usuario</th>
+                        <th>Acción</th>
+                        <th>Tabla</th>
+                        <th>Datos anteriores</th>
+                        <th>Datos nuevos</th>
+                        <th>IP</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var r in Model.Registros)
+                    {
+                        <tr>
+                            <td class="text-nowrap">@r.Fecha.ToLocalTime().ToString("dd/MM/yy HH:mm")</td>
+                            <td>@r.UsuarioNombre</td>
+                            <td>
+                                <span class="lmd-status-badge @(r.Accion == "DELETE" ? "lmd-status-badge--danger" : r.Accion == "INSERT" ? "lmd-status-badge--active" : "lmd-status-badge--neutral")">
+                                    @r.Accion
+                                </span>
+                            </td>
+                            <td>@r.TablaAfectada</td>
+                            <td class="text-muted" style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="@r.DatosAnteriores">
+                                @(r.DatosAnteriores ?? "—")
+                            </td>
+                            <td class="text-muted" style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="@r.DatosNuevos">
+                                @(r.DatosNuevos ?? "—")
+                            </td>
+                            <td class="text-muted">@(r.IpAddress ?? "—")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        @if (Model.TotalPaginas > 1)
+        {
+            <nav class="mt-3">
+                <ul class="pagination pagination-sm mb-0">
+                    @for (int i = 1; i <= Model.TotalPaginas; i++)
+                    {
+                        <li class="page-item @(i == Model.Pagina ? "active" : "")">
+                            <a class="page-link" asp-page="Index"
+                               asp-route-pagina="@i"
+                               asp-route-fechaDesde="@Model.FechaDesde?.ToString("yyyy-MM-dd")"
+                               asp-route-fechaHasta="@Model.FechaHasta?.ToString("yyyy-MM-dd")"
+                               asp-route-usuario="@Model.Usuario"
+                               asp-route-accion="@Model.Accion">@i</a>
+                        </li>
+                    }
+                </ul>
+            </nav>
+        }
+    }
+</section>

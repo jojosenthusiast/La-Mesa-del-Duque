@@ -204,8 +204,26 @@
         card.querySelector('.lmd-kds-btn-listo').addEventListener('click', () => marcarListo(orden.id));
         const btn86 = card.querySelector('.lmd-kds-btn-86');
         if (btn86) {
-            btn86.addEventListener('click', () => {
-                if (connection) connection.invoke('MarcarAgotado', orden.productoId);
+            btn86.addEventListener('click', async () => {
+                btn86.disabled = true;
+                btn86.textContent = '…';
+                try {
+                    const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value ?? '';
+                    const resp = await fetch('?handler=Marcar86Json', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': token },
+                        body: JSON.stringify({ productoId: orden.productoId })
+                    });
+                    const data = await resp.json();
+                    if (!data.ok) {
+                        btn86.disabled = false;
+                        btn86.textContent = '86';
+                        alert(data.error ?? 'Error al marcar agotado.');
+                    }
+                } catch {
+                    btn86.disabled = false;
+                    btn86.textContent = '86';
+                }
             });
         }
         container.appendChild(card);

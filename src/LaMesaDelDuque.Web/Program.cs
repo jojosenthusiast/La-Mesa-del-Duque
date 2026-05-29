@@ -3,10 +3,12 @@ using LaMesaDelDuque.Aplicacion.Notificaciones;
 using LaMesaDelDuque.Dominio.Entidades;
 using LaMesaDelDuque.Infraestructura;
 using LaMesaDelDuque.Infraestructura.Persistencia;
+using LaMesaDelDuque.Web.Filtros;
 using LaMesaDelDuque.Web.Hubs;
 using LaMesaDelDuque.Web.Servicios;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 // Requerido por Npgsql 6+ con Supabase: sin esto los DateTime fallan al leer/escribir
@@ -15,11 +17,13 @@ AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
+builder.Services.AddScoped<ManejadorExcepcionesJsonFilter>();
 builder.Services.AddRazorPages(options =>
 {
     options.Conventions.AuthorizePage("/Index");
     options.Conventions.AuthorizeFolder("/Operaciones");
     options.Conventions.AuthorizeFolder("/Admin");
+    options.Conventions.ConfigureFilter(new TypeFilterAttribute(typeof(ManejadorExcepcionesJsonFilter)));
 });
 
 // Autenticación por cookies
@@ -45,6 +49,7 @@ builder.Services.AgregarAplicacion();
 builder.Services.AddScoped<INotificadorPedidos, SignalRNotificadorPedidos>();
 builder.Services.AddScoped<INotificadorSalon, SignalRNotificadorSalon>();
 builder.Services.AddScoped<INotificadorDashboard, SignalRNotificadorDashboard>();
+builder.Services.AddScoped<INotificadorProductos, SignalRNotificadorProductos>();
 
 // Persistencia con fail-fast si no hay connection string
 builder.Services.AgregarPersistencia(builder.Configuration, builder.Environment.IsDevelopment());

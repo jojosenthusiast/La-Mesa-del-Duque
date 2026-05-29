@@ -18,17 +18,20 @@ public class IndexModel : PageModel
     private readonly ICatalogoProductosServicio _catalogoProductosServicio;
     private readonly IMesasServicio _mesasServicio;
     private readonly IHubContext<PedidosHub> _hubContext;
+    private readonly ILogger<IndexModel> _logger;
 
     public IndexModel(
         IPedidosServicio pedidosServicio,
         ICatalogoProductosServicio catalogoProductosServicio,
         IMesasServicio mesasServicio,
-        IHubContext<PedidosHub> hubContext)
+        IHubContext<PedidosHub> hubContext,
+        ILogger<IndexModel> logger)
     {
         _pedidosServicio = pedidosServicio;
         _catalogoProductosServicio = catalogoProductosServicio;
         _mesasServicio = mesasServicio;
         _hubContext = hubContext;
+        _logger = logger;
     }
 
     public List<ProductoDto> ProductosDisponibles { get; set; } = [];
@@ -73,7 +76,9 @@ public class IndexModel : PageModel
             });
             return new JsonResult(new { mesas = data });
         }
-        catch (Exception ex) { return BadRequest(ErrorSeguro(ex)); }
+        catch (ReglaDominioException ex) { return StatusCode(422, new { ok = false, error = ex.Message }); }
+        catch (ArgumentException ex) { return BadRequest(new { ok = false, error = ex.Message }); }
+        catch (Exception ex) { _logger.LogError(ex, "Error en handler JSON"); return StatusCode(500, new { ok = false, error = "Ocurrió un error interno." }); }
     }
 
     // ── Detalles de pedido ────────────────────────────────────────────────────
@@ -94,7 +99,9 @@ public class IndexModel : PageModel
             });
             return new JsonResult(new { detalles, total = pedido.Total, estado = pedido.Estado });
         }
-        catch (Exception ex) { return BadRequest(ErrorSeguro(ex)); }
+        catch (ReglaDominioException ex) { return StatusCode(422, new { ok = false, error = ex.Message }); }
+        catch (ArgumentException ex) { return BadRequest(new { ok = false, error = ex.Message }); }
+        catch (Exception ex) { _logger.LogError(ex, "Error en handler JSON"); return StatusCode(500, new { ok = false, error = "Ocurrió un error interno." }); }
     }
 
     // ── Agregar ítem ──────────────────────────────────────────────────────────
@@ -111,7 +118,9 @@ public class IndexModel : PageModel
             var pedido = await _pedidosServicio.ObtenerPedidoAsync(pedidoId);
             return new JsonResult(new { ok = true, total = pedido?.Total ?? 0 });
         }
-        catch (Exception ex) { return BadRequest(ErrorSeguro(ex)); }
+        catch (ReglaDominioException ex) { return StatusCode(422, new { ok = false, error = ex.Message }); }
+        catch (ArgumentException ex) { return BadRequest(new { ok = false, error = ex.Message }); }
+        catch (Exception ex) { _logger.LogError(ex, "Error en handler JSON"); return StatusCode(500, new { ok = false, error = "Ocurrió un error interno." }); }
     }
 
     // ── Actualizar cantidad de ítem ───────────────────────────────────────────
@@ -141,7 +150,9 @@ public class IndexModel : PageModel
             });
             return new JsonResult(new { ok = true, total = pedido?.Total ?? 0, detalles });
         }
-        catch (Exception ex) { return BadRequest(ErrorSeguro(ex)); }
+        catch (ReglaDominioException ex) { return StatusCode(422, new { ok = false, error = ex.Message }); }
+        catch (ArgumentException ex) { return BadRequest(new { ok = false, error = ex.Message }); }
+        catch (Exception ex) { _logger.LogError(ex, "Error en handler JSON"); return StatusCode(500, new { ok = false, error = "Ocurrió un error interno." }); }
     }
 
     // ── Anular ítem ───────────────────────────────────────────────────────────
@@ -153,7 +164,9 @@ public class IndexModel : PageModel
             var pedido = await _pedidosServicio.ObtenerPedidoAsync(pedidoId);
             return new JsonResult(new { ok = true, total = pedido?.Total ?? 0 });
         }
-        catch (Exception ex) { return BadRequest(ErrorSeguro(ex)); }
+        catch (ReglaDominioException ex) { return StatusCode(422, new { ok = false, error = ex.Message }); }
+        catch (ArgumentException ex) { return BadRequest(new { ok = false, error = ex.Message }); }
+        catch (Exception ex) { _logger.LogError(ex, "Error en handler JSON"); return StatusCode(500, new { ok = false, error = "Ocurrió un error interno." }); }
     }
 
     // ── Solicitar cuenta ──────────────────────────────────────────────────────
@@ -165,7 +178,9 @@ public class IndexModel : PageModel
             await _hubContext.Clients.Group($"pedido-{pedidoId}").SendAsync("EstadoCambiado", pedidoId, "EnCobro");
             return new JsonResult(new { ok = true });
         }
-        catch (Exception ex) { return BadRequest(ErrorSeguro(ex)); }
+        catch (ReglaDominioException ex) { return StatusCode(422, new { ok = false, error = ex.Message }); }
+        catch (ArgumentException ex) { return BadRequest(new { ok = false, error = ex.Message }); }
+        catch (Exception ex) { _logger.LogError(ex, "Error en handler JSON"); return StatusCode(500, new { ok = false, error = "Ocurrió un error interno." }); }
     }
 
     // ── Sentar mesa — crear pedido con primer ítem ───────────────────────────
@@ -208,7 +223,9 @@ public class IndexModel : PageModel
             var pedido = await _pedidosServicio.CrearPedidoAsync(TipoServicio.ComerAqui, mesaId, detalles);
             return new JsonResult(new { ok = true, pedidoId = pedido.Id, total = pedido.Total });
         }
-        catch (Exception ex) { return BadRequest(ErrorSeguro(ex)); }
+        catch (ReglaDominioException ex) { return StatusCode(422, new { ok = false, error = ex.Message }); }
+        catch (ArgumentException ex) { return BadRequest(new { ok = false, error = ex.Message }); }
+        catch (Exception ex) { _logger.LogError(ex, "Error en handler JSON"); return StatusCode(500, new { ok = false, error = "Ocurrió un error interno." }); }
     }
 
     // ── Cobrar en mesa ────────────────────────────────────────────────────────
@@ -239,7 +256,9 @@ public class IndexModel : PageModel
                 mensaje = cambio > 0 ? $"Pedido pagado. Cambio: ${cambio:F2}" : "Pedido pagado correctamente."
             });
         }
-        catch (Exception ex) { return BadRequest(ErrorSeguro(ex)); }
+        catch (ReglaDominioException ex) { return StatusCode(422, new { ok = false, error = ex.Message }); }
+        catch (ArgumentException ex) { return BadRequest(new { ok = false, error = ex.Message }); }
+        catch (Exception ex) { _logger.LogError(ex, "Error en handler JSON"); return StatusCode(500, new { ok = false, error = "Ocurrió un error interno." }); }
     }
 
     private sealed record ItemCarritoDto(Guid ProductoId, int Cantidad);

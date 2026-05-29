@@ -37,8 +37,8 @@ public class IndexModel : PageModel
         if (esAdmin || esEncargado || esMesero)
             modulos.Add(new("Mapa Salón", "/Operaciones/Salon/Mapa", "Mapa visual interactivo con drag & drop."));
 
-        // Despacho: Admin, Encargado, Cajero
-        if (esAdmin || esEncargado || esCajero)
+        // Despacho: Admin, Encargado, Cajero, Mesero
+        if (esAdmin || esEncargado || esCajero || esMesero)
             modulos.Add(new("Despacho", "/Operaciones/Despacho/Index", "Pedidos listos para entregar y liberar mesas."));
 
         // Productos: Admin, Encargado
@@ -56,6 +56,18 @@ public class IndexModel : PageModel
         // Cierre: Admin, Encargado, Cajero (Gerente solo lectura via Dashboard)
         if (esAdmin || esEncargado || esCajero)
             modulos.Add(new("Cierre", "/Operaciones/Cierre/Index", "Apertura y cierre de caja diario."));
+
+        // Dashboard Gerencial: Admin, Gerente
+        if (esAdmin || esGerente)
+            modulos.Add(new("Dashboard Gerencial", "/Admin/Dashboard/Gerente", "Análisis de período, tendencias y comparativas."));
+
+        // Configuración: solo Admin
+        if (esAdmin)
+            modulos.Add(new("Configuración", "/Admin/Configuracion/Index", "Parámetros del restaurante."));
+
+        // Auditoría: Admin, Gerente
+        if (esAdmin || esGerente)
+            modulos.Add(new("Auditoría", "/Admin/Auditoria/Index", "Registro de acciones y cambios del sistema."));
 
         // Usuarios: solo Admin
         if (esAdmin)

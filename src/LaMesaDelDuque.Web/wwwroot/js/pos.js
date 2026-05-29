@@ -1628,13 +1628,46 @@
                 }
             });
             connection.on('ProductoAgotado', function (productoId) {
+                marcarProductoAgotadoEnUI(productoId, '');
+            });
+            connection.on('productoAgotado', function (productoId, nombreProducto) {
+                marcarProductoAgotadoEnUI(productoId, nombreProducto);
+            });
+            connection.on('productoReactivado', function (productoId) {
                 var prods = window.__lmdProductosDisponibles || [];
-                var marcado = false;
-                prods.forEach(function (p) { if (p.id === productoId) { p.agotado = true; marcado = true; } });
-                if (marcado) { renderProductos(); lmdToast('Un producto fue marcado como agotado', 'warn'); }
+                prods.forEach(function (p) { if (String(p.id) === String(productoId)) { p.agotado = false; } });
+                document.querySelectorAll('[data-producto-id="' + productoId + '"]').forEach(function (el) {
+                    el.classList.remove('lmd-producto-agotado');
+                    var badge = el.querySelector('.lmd-badge-agotado');
+                    if (badge) badge.remove();
+                    el.style.pointerEvents = '';
+                });
+                renderProductos && renderProductos();
             });
             await connection.start();
         } catch (e) {}
+    }
+
+    function marcarProductoAgotadoEnUI(productoId, nombre) {
+        var prods = window.__lmdProductosDisponibles || [];
+        var marcado = false;
+        prods.forEach(function (p) {
+            if (String(p.id) === String(productoId)) { p.agotado = true; marcado = true; }
+        });
+        document.querySelectorAll('[data-producto-id="' + productoId + '"]').forEach(function (el) {
+            el.classList.add('lmd-producto-agotado');
+            el.style.pointerEvents = 'none';
+            if (!el.querySelector('.lmd-badge-agotado')) {
+                var badge = document.createElement('span');
+                badge.className = 'lmd-badge-agotado';
+                badge.textContent = 'AGOTADO';
+                el.appendChild(badge);
+            }
+        });
+        if (marcado) {
+            renderProductos();
+            lmdToast((nombre ? nombre + ': ' : '') + 'producto marcado como agotado (86)', 'warn');
+        }
     }
 
     async function refrescarMesas() {

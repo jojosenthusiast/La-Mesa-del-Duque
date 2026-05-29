@@ -1,5 +1,5 @@
-using System;
 using LaMesaDelDuque.Aplicacion.Servicios;
+using LaMesaDelDuque.Dominio.Excepciones;
 using LaMesaDelDuque.Dominio.Modelos;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -11,10 +11,12 @@ namespace LaMesaDelDuque.Web.Pages.Admin.Dashboard;
 public class DashboardModel : PageModel
 {
     private readonly IMetricaServicio _metricaServicio;
+    private readonly ILogger<DashboardModel> _logger;
 
-    public DashboardModel(IMetricaServicio metricaServicio)
+    public DashboardModel(IMetricaServicio metricaServicio, ILogger<DashboardModel> logger)
     {
         _metricaServicio = metricaServicio;
+        _logger = logger;
     }
 
     public MetricasOperativasDto Metricas { get; set; } = new();
@@ -35,7 +37,8 @@ public class DashboardModel : PageModel
             var metricas = await _metricaServicio.ObtenerMetricasOperativasAsync();
             return new JsonResult(metricas);
         }
-        catch (Exception ex) { return BadRequest(new { error = ex.Message }); }
+        catch (ReglaDominioException ex) { return StatusCode(422, new { ok = false, error = ex.Message }); }
+        catch (Exception ex) { _logger.LogError(ex, "Error en handler JSON"); return StatusCode(500, new { ok = false, error = "Ocurrió un error interno." }); }
     }
 
     public async Task<IActionResult> OnGetVentasPorHoraJsonAsync()
@@ -45,7 +48,8 @@ public class DashboardModel : PageModel
             var ventas = await _metricaServicio.ObtenerVentasPorHoraAsync();
             return new JsonResult(ventas);
         }
-        catch (Exception ex) { return BadRequest(new { error = ex.Message }); }
+        catch (ReglaDominioException ex) { return StatusCode(422, new { ok = false, error = ex.Message }); }
+        catch (Exception ex) { _logger.LogError(ex, "Error en handler JSON"); return StatusCode(500, new { ok = false, error = "Ocurrió un error interno." }); }
     }
 
     private async Task CargarDatosAsync()

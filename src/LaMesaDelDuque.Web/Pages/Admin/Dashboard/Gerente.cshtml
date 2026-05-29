@@ -1,0 +1,182 @@
+@page
+@model LaMesaDelDuque.Web.Pages.Admin.Dashboard.GerenteModel
+@{
+    ViewData["Title"] = "Dashboard Gerencial";
+    ViewData["ActiveTab"] = "Dashboard Gerencial";
+}
+
+<section class="lmd-page-header rounded-top">
+    <div>
+        <h1>Dashboard Gerencial</h1>
+        <p class="lmd-page-subtitle">Análisis de ventas, tendencias y métricas de período.</p>
+    </div>
+</section>
+
+<section class="bg-white p-4 rounded-bottom">
+    <div class="row g-4">
+        <!-- Comparativa semanal -->
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header">
+                    <strong>Comparativa semanal</strong>
+                    <small class="text-muted ms-2">Últimos 7 días vs. 7 días anteriores</small>
+                </div>
+                <div class="card-body" id="lmd-card-comparativa">
+                    <div class="placeholder-glow">
+                        <span class="placeholder col-8"></span>
+                        <span class="placeholder col-4"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Ticket promedio -->
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header">
+                    <strong>Ticket promedio</strong>
+                    <small class="text-muted ms-2">Últimos 30 días</small>
+                </div>
+                <div class="card-body" id="lmd-card-ticket">
+                    <div class="placeholder-glow">
+                        <span class="placeholder col-6"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Top 10 productos -->
+        <div class="col-md-7">
+            <div class="card h-100">
+                <div class="card-header">
+                    <strong>Top 10 productos</strong>
+                    <small class="text-muted ms-2">Últimos 30 días</small>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-sm mb-0" id="lmd-tabla-top-productos">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Producto</th>
+                                    <th class="text-end">Unidades</th>
+                                    <th class="text-end">Monto</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td colspan="4" class="text-center py-3 text-muted">Cargando…</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Ventas por día de semana -->
+        <div class="col-md-5">
+            <div class="card h-100">
+                <div class="card-header">
+                    <strong>Ventas por día de semana</strong>
+                    <small class="text-muted ms-2">Últimos 30 días</small>
+                </div>
+                <div class="card-body d-flex align-items-end" id="lmd-chart-dias" style="min-height:180px">
+                    <div class="text-muted small">Cargando…</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+@section Scripts {
+<script>
+(function () {
+    const fmt = v => new Intl.NumberFormat("es-SV", { style: "currency", currency: "USD" }).format(v);
+
+    async function fetchJson(url) {
+        const r = await fetch(url);
+        if (!r.ok) throw new Error("Error HTTP " + r.status);
+        return r.json();
+    }
+
+    async function cargarComparativa() {
+        const el = document.getElementById("lmd-card-comparativa");
+        try {
+            const d = await fetchJson("?handler=MetricasComparativasJson");
+            const flecha = d.porcentajeCambio >= 0 ? "&#x2197;" : "&#x2198;";
+            const cls = d.porcentajeCambio >= 0 ? "text-success" : "text-danger";
+            el.innerHTML = `
+                <div class="d-flex gap-4 mb-2">
+                    <div>
+                        <div class="small text-muted">Esta semana</div>
+                        <div class="fs-4 fw-bold">${fmt(d.semanaActual)}</div>
+                    </div>
+                    <div>
+                        <div class="small text-muted">Semana anterior</div>
+                        <div class="fs-4 fw-bold text-muted">${fmt(d.semanaAnterior)}</div>
+                    </div>
+                </div>
+                <span class="${cls} fw-bold">${flecha} ${Math.abs(d.porcentajeCambio)}%</span>
+                <span class="text-muted ms-1 small">vs. semana anterior</span>`;
+        } catch {
+            el.innerHTML = '<div class="text-danger small">No se pudo cargar la comparativa.</div>';
+        }
+    }
+
+    async function cargarTicket() {
+        const el = document.getElementById("lmd-card-ticket");
+        try {
+            const d = await fetchJson("?handler=TicketPromedioJson");
+            el.innerHTML = `
+                <div class="fs-2 fw-bold">${fmt(d.ticketPromedio)}</div>
+                <div class="text-muted small">${d.totalPedidos} pedidos en los ${d.periodo}</div>`;
+        } catch {
+            el.innerHTML = '<div class="text-danger small">No se pudo cargar el ticket promedio.</div>';
+        }
+    }
+
+    async function cargarTopProductos() {
+        const tbody = document.querySelector("#lmd-tabla-top-productos tbody");
+        try {
+            const datos = await fetchJson("?handler=TopProductosJson");
+            if (!datos.length) {
+                tbody.innerHTML = '<tr><td colspan="4" class="text-center py-3 text-muted">Sin datos.</td></tr>';
+                return;
+            }
+            tbody.innerHTML = datos.map((p, i) => `
+                <tr>
+                    <td class="text-muted">${i + 1}</td>
+                    <td>${p.nombre}</td>
+                    <td class="text-end">${p.cantidadTotal}</td>
+                    <td class="text-end">${fmt(p.montoTotal)}</td>
+                </tr>`).join("");
+        } catch {
+            tbody.innerHTML = '<tr><td colspan="4" class="text-danger small text-center py-2">Error al cargar.</td></tr>';
+        }
+    }
+
+    async function cargarVentasDia() {
+        const el = document.getElementById("lmd-chart-dias");
+        try {
+            const datos = await fetchJson("?handler=VentasPorDiaSemanaJson");
+            const max = Math.max(...datos.map(d => d.ventaTotal), 1);
+            const barras = datos.map(d => {
+                const pct = Math.round((d.ventaTotal / max) * 100);
+                return `
+                    <div class="d-flex flex-column align-items-center flex-fill" title="${fmt(d.ventaTotal)}">
+                        <div class="text-muted" style="font-size:0.65rem">${fmt(d.ventaTotal)}</div>
+                        <div class="bg-primary rounded-top w-75" style="height:${Math.max(pct, 4)}px; min-height:4px"></div>
+                        <div class="mt-1 text-muted" style="font-size:0.7rem">${d.dia}</div>
+                    </div>`;
+            }).join("");
+            el.innerHTML = `<div class="d-flex align-items-end gap-1 w-100" style="height:160px">${barras}</div>`;
+        } catch {
+            el.innerHTML = '<div class="text-danger small">Error al cargar.</div>';
+        }
+    }
+
+    Promise.all([cargarComparativa(), cargarTicket(), cargarTopProductos(), cargarVentasDia()]);
+}());
+</script>
+}

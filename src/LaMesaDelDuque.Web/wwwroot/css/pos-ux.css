@@ -1845,3 +1845,22 @@ html:has(#lmd-pos-contenido) .lmd-main-surface {
 .lmd-pos-propina-hint {
     margin: 0; color: var(--lmd-text-muted, #888); font-size: 0.9rem; text-align: center;
 }
+
+/* Producto 86 / agotado */
+.lmd-producto-agotado {
+    opacity: 0.45;
+    position: relative;
+    cursor: not-allowed !important;
+}
+.lmd-badge-agotado {
+    position: absolute;
+    top: 4px; right: 4px;
+    background: #e74c3c;
+    color: #fff;
+    font-size: 0.6rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    padding: 2px 5px;
+    border-radius: 3px;
+    pointer-events: none;
+}
