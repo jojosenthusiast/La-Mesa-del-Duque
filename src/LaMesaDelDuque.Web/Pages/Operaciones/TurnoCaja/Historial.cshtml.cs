@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 
 namespace LaMesaDelDuque.Web.Pages.Operaciones.TurnoCaja;
 
-[Authorize(Roles = "Administrador,Encargado,Gerente")]
+[Authorize(Roles = "Administrador,Encargado,Gerente,Cajero")]
 public class HistorialModel : PageModel
 {
     private readonly ITurnoCajaServicio _servicio;

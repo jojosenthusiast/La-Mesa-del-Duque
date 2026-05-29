@@ -18,20 +18,36 @@ public sealed class DespachoServicio : IDespachoServicio
         var pedido = await _uot.Pedidos.ObtenerConDetallesParaActualizarAsync(pedidoId, cancelacion)
             ?? throw new ReglaDominioException("Pedido no encontrado.");
 
-        // Si el pedido está Pagado (ej. Para Llevar sin órdenes de cocina), marcarlo Listo primero
+        var mesaId = pedido.Mesa?.Id;
+
         if (pedido.Estado == EstadoPedido.Pagado)
             pedido.MarcarListo();
 
         pedido.MarcarDespachado();
 
-        if (pedido.Mesa is not null)
+        if (mesaId.HasValue && !await TieneOtrosPedidosActivosEnMesaAsync(mesaId.Value, pedido.Id, cancelacion))
         {
-            var mesa = await _uot.Mesas.ObtenerParaActualizarAsync(pedido.Mesa.Id, cancelacion)
+            var mesa = await _uot.Mesas.ObtenerParaActualizarAsync(mesaId.Value, cancelacion)
                 ?? throw new ReglaDominioException("Mesa no encontrada.");
 
             mesa.Liberar();
+            var minutosGracia = await _uot.ObtenerPeriodoGraciaMinutosAsync(cancelacion);
+            mesa.IniciarGracia(minutosGracia);
         }
 
         await _uot.GuardarCambiosAsync(cancelacion);
     }
+
+    private async Task<bool> TieneOtrosPedidosActivosEnMesaAsync(Guid mesaId, Guid pedidoActualId, CancellationToken cancelacion)
+    {
+        var pedidosMesa = await _uot.Pedidos.ObtenerPorMesaAsync(mesaId, cancelacion);
+        return pedidosMesa.Any(p => p.Id != pedidoActualId && MantieneMesaOcupada(p.Estado));
+    }
+
+    private static bool MantieneMesaOcupada(EstadoPedido estado) =>
+        estado is EstadoPedido.Pendiente
+            or EstadoPedido.EnPreparacion
+            or EstadoPedido.EnCobro
+            or EstadoPedido.Pagado
+            or EstadoPedido.Listo;
 }

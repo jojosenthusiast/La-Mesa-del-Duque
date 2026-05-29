@@ -164,8 +164,6 @@ internal class PedidosServicio : IPedidosServicio
         }
 
         pedido.MarcarComoPagado();
-        await LiberarMesaSiCorrespondeAsync(pedido, cancelacion);
-        await AplicarGraciaMesaSiCorrespondeAsync(pedido, cancelacion);
         await _uot.GuardarCambiosAsync(cancelacion);
         await _notificadorPedidos.NotificarEstadoCambiadoAsync(pedido.Id, pedido.Estado, cancelacion);
         await NotificarMetricasInvalidadasSiExisteAsync(cancelacion);
@@ -529,15 +527,6 @@ internal class PedidosServicio : IPedidosServicio
             await _notificadorDashboard.NotificarMetricasInvalidadasAsync(cancelacion);
     }
 
-    private async Task AplicarGraciaMesaSiCorrespondeAsync(Pedido pedido, CancellationToken cancelacion)
-    {
-        if (pedido.Mesa is null) return;
-        var minutos = await _uot.ObtenerPeriodoGraciaMinutosAsync(cancelacion);
-        if (minutos <= 0) return;
-        var mesa = await _uot.Mesas.ObtenerParaActualizarAsync(pedido.Mesa.Id, cancelacion);
-        mesa?.IniciarGracia(minutos);
-    }
-
     private async Task LiberarMesaSiCorrespondeAsync(Pedido pedido, CancellationToken cancelacion)
     {
         if (pedido.Mesa is null) return;
@@ -545,7 +534,7 @@ internal class PedidosServicio : IPedidosServicio
         var pedidosMesa = await _uot.Pedidos.ObtenerPorMesaAsync(pedido.Mesa.Id, cancelacion);
         var tieneActivos = pedidosMesa.Any(p =>
             p.Id != pedido.Id &&
-            (p.Estado == EstadoPedido.Pendiente || p.Estado == EstadoPedido.EnPreparacion));
+            MantieneMesaOcupada(p.Estado));
 
         if (!tieneActivos)
         {
@@ -553,6 +542,13 @@ internal class PedidosServicio : IPedidosServicio
             mesa?.CambiarEstado(EstadoMesa.Disponible);
         }
     }
+
+    private static bool MantieneMesaOcupada(EstadoPedido estado) =>
+        estado is EstadoPedido.Pendiente
+            or EstadoPedido.EnPreparacion
+            or EstadoPedido.EnCobro
+            or EstadoPedido.Pagado
+            or EstadoPedido.Listo;
 
     private static PedidoDto MapToDto(Pedido pedido)
     {

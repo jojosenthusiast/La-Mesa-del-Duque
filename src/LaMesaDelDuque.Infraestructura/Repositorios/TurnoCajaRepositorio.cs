@@ -27,8 +27,8 @@ internal class TurnoCajaRepositorio : ITurnoCajaRepositorio
     public async Task<TurnoCaja?> ObtenerPorIdAsync(Guid id, CancellationToken ct = default)
     {
         return await _contexto.Set<TurnoCaja>()
-            .AsNoTracking()
             .Include(t => t.Cajero)
+            .Include(t => t.Movimientos)
             .FirstOrDefaultAsync(t => t.Id == id, ct);
     }
 
@@ -46,5 +46,10 @@ internal class TurnoCajaRepositorio : ITurnoCajaRepositorio
     public async Task AgregarAsync(TurnoCaja turno, CancellationToken ct = default)
     {
         await _contexto.Set<TurnoCaja>().AddAsync(turno, ct);
+    }
+
+    public async Task AgregarMovimientoAsync(MovimientoCaja movimiento, CancellationToken ct = default)
+    {
+        await _contexto.Set<MovimientoCaja>().AddAsync(movimiento, ct);
     }
 }

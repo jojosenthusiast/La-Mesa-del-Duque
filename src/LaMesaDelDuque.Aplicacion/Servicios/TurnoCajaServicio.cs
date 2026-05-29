@@ -79,6 +79,7 @@ public class TurnoCajaServicio : ITurnoCajaServicio
 
         var movimiento = new MovimientoCaja(turnoId, tipo, monto, motivo, usuarioId);
         turno.RegistrarMovimiento(movimiento);
+        await _uot.TurnosCaja.AgregarMovimientoAsync(movimiento, ct);
         await _uot.GuardarCambiosAsync(ct);
     }
 
