@@ -86,6 +86,15 @@
         return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
     }
 
+    function escapeHtml(value) {
+        return String(value ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
     function calcularColor(orden) {
         const elapsed = (Date.now() - new Date(orden.horaRecibido).getTime()) / 60000;
         const maxTime = orden.tiempoPreparacionMin || 15;
@@ -145,14 +154,14 @@
         if (orden.ingredientesQuitados) {
             orden.ingredientesQuitados.split(',').forEach(ing => {
                 const limpio = ing.trim();
-                if (limpio) partes.push(`<li class="lmd-kds-mod lmd-kds-mod--quitar">SIN ${limpio.toUpperCase()}</li>`);
+                if (limpio) partes.push(`<li class="lmd-kds-mod lmd-kds-mod--quitar">SIN ${escapeHtml(limpio.toUpperCase())}</li>`);
             });
         }
 
         if (orden.ingredientesExtra) {
             orden.ingredientesExtra.split(',').forEach(ing => {
                 const limpio = ing.trim();
-                if (limpio) partes.push(`<li class="lmd-kds-mod lmd-kds-mod--extra">+ EXTRA ${limpio.toUpperCase()}</li>`);
+                if (limpio) partes.push(`<li class="lmd-kds-mod lmd-kds-mod--extra">+ EXTRA ${escapeHtml(limpio.toUpperCase())}</li>`);
             });
         }
 
@@ -168,8 +177,15 @@
         asegurarCursoHeader(colId, curso);
 
         const colorClass = calcularColor(orden);
+        const ordenId = escapeHtml(orden.id);
+        const productoId = escapeHtml(orden.productoId);
+        const productoNombre = escapeHtml(orden.productoNombre);
+        const cantidad = escapeHtml(orden.cantidad);
+        const horaRecibido = escapeHtml(orden.horaRecibido);
+        const notas = escapeHtml(orden.notas);
+        const alergenos = escapeHtml(String(orden.alergenos ?? '').toUpperCase());
         const mesaTexto = orden.mesaNumero
-            ? `Mesa ${orden.mesaNumero}`
+            ? `Mesa ${escapeHtml(orden.mesaNumero)}`
             : (orden.tipoServicio === 'ParaLlevar' ? '<svg class="lmd-kds-icon" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><use href="https://cdn.jsdelivr.net/npm/lucide-static@latest/icons/package.svg#icon"/></svg> Para llevar' : 'Sin mesa');
 
         const tieneModificaciones = orden.ingredientesQuitados || orden.ingredientesExtra;
@@ -182,22 +198,23 @@
         card.dataset.ordenId = orden.id;
         card.dataset.curso = curso;
         card.dataset.tiempoPreparacionMin = orden.tiempoPreparacionMin || 15;
+        card.dataset.horaRecibido = orden.horaRecibido || '';
 
         card.innerHTML = `
-            ${tieneAlergenos ? `<div class="lmd-kds-alergeno-banner"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><use href="https://cdn.jsdelivr.net/npm/lucide-static@latest/icons/alert-triangle.svg#icon"/></svg> ALÉRGENO: ${orden.alergenos.toUpperCase()}</div>` : ''}
+            ${tieneAlergenos ? `<div class="lmd-kds-alergeno-banner"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><use href="https://cdn.jsdelivr.net/npm/lucide-static@latest/icons/alert-triangle.svg#icon"/></svg> ALÉRGENO: ${alergenos}</div>` : ''}
             <header class="lmd-kds-card__header">
                 <span class="lmd-kds-card__mesa">${mesaTexto}</span>
-                <span class="lmd-kds-card__timer" data-hora-recibido="${orden.horaRecibido}">${formatearTiempo(orden.minutosTranscurridos || 0)}</span>
+                <span class="lmd-kds-card__timer" data-hora-recibido="${horaRecibido}">${formatearTiempo(orden.minutosTranscurridos || 0)}</span>
             </header>
             <div class="lmd-kds-card__dish-row">
-                <span class="lmd-kds-card__producto">${orden.productoNombre}</span>
-                <span class="lmd-kds-card__cantidad">${orden.cantidad}</span>
+                <span class="lmd-kds-card__producto">${productoNombre}</span>
+                <span class="lmd-kds-card__cantidad">${cantidad}</span>
             </div>
             ${tieneModificaciones ? `<div class="lmd-kds-card__modificaciones">${renderModificaciones(orden)}</div>` : ''}
-            ${tieneNotas ? `<div class="lmd-kds-card__notas-block"><span class="lmd-kds-notas-label">NOTA</span> ${orden.notas}</div>` : ''}
+            ${tieneNotas ? `<div class="lmd-kds-card__notas-block"><span class="lmd-kds-notas-label">NOTA</span> ${notas}</div>` : ''}
             <footer class="lmd-kds-card__footer">
-                <button class="lmd-kds-btn-listo" data-orden-id="${orden.id}"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5"><use href="https://cdn.jsdelivr.net/npm/lucide-static@latest/icons/check.svg#icon"/></svg> LISTO</button>
-                ${orden.productoId ? `<button class="lmd-kds-btn-86" data-producto-id="${orden.productoId}" title="86 — Agotado">86</button>` : ''}
+                <button class="lmd-kds-btn-listo" data-orden-id="${ordenId}"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5"><use href="https://cdn.jsdelivr.net/npm/lucide-static@latest/icons/check.svg#icon"/></svg> LISTO</button>
+                ${orden.productoId ? `<button class="lmd-kds-btn-86" data-producto-id="${productoId}" title="86 — Agotado">86</button>` : ''}
             </footer>
         `;
 
@@ -238,7 +255,7 @@
             if (countEl) countEl.textContent = cardsInGroup + ' items';
             else {
                 const header = mesaGroup.querySelector('.lmd-kds-mesa-group-header');
-                if (header) header.innerHTML = 'Mesa ' + orden.mesaNumero + ' <span class="lmd-kds-mesa-group-count">' + cardsInGroup + ' items</span>';
+                if (header) header.innerHTML = 'Mesa ' + escapeHtml(orden.mesaNumero) + ' <span class="lmd-kds-mesa-group-count">' + cardsInGroup + ' items</span>';
             }
         }
     }
@@ -347,12 +364,13 @@
     function agregarSeparadorMesa(container, orden) {
         if (!orden.mesaNumero) return;
         const groupId = 'mesa-group-' + orden.mesaNumero;
+        const mesaNumero = escapeHtml(orden.mesaNumero);
         let group = document.getElementById(groupId);
         if (!group) {
             group = document.createElement('div');
             group.id = groupId;
             group.className = 'lmd-kds-mesa-group';
-            group.innerHTML = '<div class="lmd-kds-mesa-group-header">Mesa ' + orden.mesaNumero + '</div>';
+            group.innerHTML = '<div class="lmd-kds-mesa-group-header">Mesa ' + mesaNumero + '</div>';
             container.appendChild(group);
         }
         return group;
