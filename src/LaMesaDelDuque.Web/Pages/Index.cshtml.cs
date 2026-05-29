@@ -37,8 +37,8 @@ public class IndexModel : PageModel
         if (esCocinero || esEncargado || esAdmin)
             modulos.Add(new("Cocina", "/Cocina/KDS", "Pantalla de cocina con órdenes pendientes."));
 
-        // Mesas: Admin, Encargado, Mesero
-        if (esAdmin || esEncargado || esMesero)
+        // Mesas: Admin, Encargado
+        if (esAdmin || esEncargado)
             modulos.Add(new("Mesas", "/Operaciones/Mesas/Index", "Gestión visual del salón y estados."));
 
         // Mapa Salón: Admin, Encargado, Mesero

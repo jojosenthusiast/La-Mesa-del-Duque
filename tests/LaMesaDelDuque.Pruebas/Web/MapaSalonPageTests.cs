@@ -93,7 +93,7 @@ public class MapaSalonPageTests
     }
 
     [Fact]
-    public async Task OnPostCambiarEstado_Mesero_Autorizado_Debe_Retornar_Exito()
+    public async Task OnPostCambiarEstado_Mesero_NoAutorizado_Debe_Retornar_403()
     {
         var mesasServicio = new FakeMapaMesasServicio();
         var zonasServicio = new FakeMapaZonasServicio();
@@ -110,8 +110,7 @@ public class MapaSalonPageTests
         var result = await page.OnPostCambiarEstadoAsync(request);
 
         var json = Assert.IsType<JsonResult>(result);
-        var data = JsonToDict(json.Value);
-        Assert.True(data.ContainsKey("exito") && (bool)data["exito"]!);
+        Assert.Equal(403, json.StatusCode);
     }
 
     [Fact]

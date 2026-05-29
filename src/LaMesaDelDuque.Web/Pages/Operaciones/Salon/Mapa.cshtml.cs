@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 
 namespace LaMesaDelDuque.Web.Pages.Operaciones.Salon;
 
-[Authorize(Roles = "Administrador,Encargado")]
+[Authorize(Roles = "Administrador,Encargado,Mesero")]
 public class MapaModel : PageModel
 {
     private readonly IMesasServicio _mesasServicio;
@@ -62,7 +62,7 @@ public class MapaModel : PageModel
 
     public async Task<IActionResult> OnPostCambiarEstadoAsync([FromBody] CambiarEstadoRequest request)
     {
-        if (User?.IsInRole("Administrador") != true && User?.IsInRole("Encargado") != true && User?.IsInRole("Mesero") != true)
+        if (User?.IsInRole("Administrador") != true && User?.IsInRole("Encargado") != true)
         {
             return new JsonResult(new { exito = false, error = "No autorizado." }) { StatusCode = 403 };
         }
