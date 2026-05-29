@@ -17,6 +17,28 @@
         return lineas.reduce(function (s, l) { return s + (l.precioUnitario || 0) * (l.cantidad || 0); }, 0);
     }
 
+    function escapeHtml(value) {
+        return String(value ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    function escapeJsString(value) {
+        return String(value ?? '')
+            .replace(/\\/g, '\\\\')
+            .replace(/'/g, "\\'")
+            .replace(/\r/g, '\\r')
+            .replace(/\n/g, '\\n')
+            .replace(/</g, '\\x3C')
+            .replace(/>/g, '\\x3E')
+            .replace(/&/g, '\\x26')
+            .replace(/"/g, '&quot;');
+    }
+
+
     // ── State ──────────────────────────────────────────
     const state = {
         pantalla: 'seleccion',     // seleccion | productos
@@ -126,7 +148,7 @@
                     '<span class="lmd-pos-mesa-card__numero">' + m.numero + '</span>' +
                     '<span class="lmd-pos-mesa-card__capacidad">' + m.capacidad + ' pax</span>' +
                     badgeHtml +
-                    (m.zona ? '<span class="lmd-pos-mesa-card__zona">' + m.zona + '</span>' : '') +
+                    (m.zona ? '<span class="lmd-pos-mesa-card__zona">' + escapeHtml(m.zona) + '</span>' : '') +
                 '</div>';
             });
         });
@@ -251,8 +273,8 @@
         cats.sort(function (a, b) { return a === 'Todos' ? -1 : b === 'Todos' ? 1 : a.localeCompare(b); });
 
         var catHtml = cats.map(function (c) {
-            return '<button class="lmd-pos-cat-btn' + (c === 'Todos' ? ' lmd-pos-cat-btn--activa' : '') + '" data-cat="' + c + '" onclick="pos.filtrarCategoria(\'' + c.replace(/'/g, "\\'") + '\')">' +
-                icon(c === 'Todos' ? 'layers' : c === 'Bebidas' ? 'wine' : c === 'Postres' ? 'cake-slice' : 'utensils') + '<span>' + c + '</span>' +
+            return '<button class="lmd-pos-cat-btn' + (c === 'Todos' ? ' lmd-pos-cat-btn--activa' : '') + '" data-cat="' + escapeHtml(c) + '" onclick="pos.filtrarCategoria(\'' + escapeJsString(c) + '\')">' +
+                icon(c === 'Todos' ? 'layers' : c === 'Bebidas' ? 'wine' : c === 'Postres' ? 'cake-slice' : 'utensils') + '<span>' + escapeHtml(c) + '</span>' +
             '</button>';
         }).join('');
 
@@ -265,7 +287,7 @@
             : state.lineas.map(function (l, i) {
                 return '<div class="lmd-pos-cart-item">' +
                     '<div class="lmd-pos-cart-item__info">' +
-                        '<span class="lmd-pos-cart-item__nombre">' + (l.productoNombre || l.nombre || '') + (l.tieneModificaciones ? '<span class="lmd-pos-mod-dot" title="Tiene modificaciones"></span>' : '') + '</span>' +
+                        '<span class="lmd-pos-cart-item__nombre">' + escapeHtml(l.productoNombre || l.nombre || '') + (l.tieneModificaciones ? '<span class="lmd-pos-mod-dot" title="Tiene modificaciones"></span>' : '') + '</span>' +
                         '<span class="lmd-pos-cart-item__precio">' + fmt((l.precioUnitario || 0) * (l.cantidad || 0)) + '</span>' +
                     '</div>' +
                     '<div class="lmd-pos-cart-item__controles">' +
@@ -333,11 +355,11 @@
                   '</span>'
                 : '<span class="lmd-pos-producto-card__precio">' + fmt(p.precio || 0) + '</span>';
             return '<div class="lmd-pos-producto-card' + (agotado ? ' lmd-pos-producto-card--agotado' : '') + (tienePromo ? ' lmd-pos-producto-card--promo' : '') + '">' +
-                '<div class="lmd-pos-producto-card__body" onclick="' + (agotado || state.pagado ? '' : 'pos.agregarAlCarrito(\'' + p.id + '\',\'' + (p.nombre || '').replace(/'/g, "\\'") + '\',' + (p.precio || 0) + ')') + '">' +
+                '<div class="lmd-pos-producto-card__body" onclick="' + (agotado || state.pagado ? '' : 'pos.agregarAlCarrito(\'' + escapeJsString(p.id) + '\',\'' + escapeJsString(p.nombre || '') + '\',' + (p.precio || 0) + ')') + '">' +
                     '<div class="lmd-pos-producto-card__ico">' + icon(ico) + '</div>' +
-                    '<span class="lmd-pos-producto-card__nombre">' + (p.nombre || '') + '</span>' +
+                    '<span class="lmd-pos-producto-card__nombre">' + escapeHtml(p.nombre || '') + '</span>' +
                     precioHtml +
-                    (tienePromo ? '<span class="lmd-pos-producto-card__promo-badge">' + icon('tag') + ' ' + (p.promoNombre || 'PROMO') + '</span>' : '') +
+                    (tienePromo ? '<span class="lmd-pos-producto-card__promo-badge">' + icon('tag') + ' ' + escapeHtml(p.promoNombre || 'PROMO') + '</span>' : '') +
                     (p.tiempoPreparacionMin ? '<span class="lmd-pos-producto-card__tiempo">' + p.tiempoPreparacionMin + ' min</span>' : '') +
                     (agotado ? '<span class="lmd-pos-producto-card__agotado-badge">Agotado</span>' : '') +
                 '</div>' +
@@ -1004,7 +1026,7 @@
             }
             var pendiente = !esMixto && item.persona < 0;
             return '<tr' + (pendiente ? ' class="lmd-pos-split-asig-row--pendiente"' : '') + '>' +
-                '<td class="lmd-pos-split-asig-nombre">' + (item.cantidad > 1 ? item.cantidad + 'x ' : '') + item.nombre + '<span class="lmd-pos-split-asig-precio">' + fmt(item.precio) + '</span></td>' +
+                '<td class="lmd-pos-split-asig-nombre">' + (item.cantidad > 1 ? item.cantidad + 'x ' : '') + escapeHtml(item.nombre) + '<span class="lmd-pos-split-asig-precio">' + fmt(item.precio) + '</span></td>' +
                 celdas + '</tr>';
         }).join('');
 
@@ -1117,7 +1139,7 @@
         var persona = personas[idx];
         var html =
             '<div class="lmd-pos-ov-header">' +
-                '<span class="lmd-pos-ov-title">' + icon('user') + ' ' + persona.nombre + '</span>' +
+                '<span class="lmd-pos-ov-title">' + icon('user') + ' ' + escapeHtml(persona.nombre) + '</span>' +
                 '<div class="lmd-pos-ov-total">' + fmt(persona.monto) + '</div>' +
             '</div>' +
             '<div class="lmd-pos-pm-grid">' +
@@ -1132,7 +1154,7 @@
             '<div class="lmd-pos-split-progress">' +
                 personas.map(function (p, i) {
                     return '<div class="lmd-pos-split-progress__item' + (p.pagado ? ' pagado' : '') + (i === idx ? ' activo' : '') + '">' +
-                        '<span>' + p.nombre + '</span><span>' + (p.pagado ? icon('check') : fmt(p.monto)) + '</span>' +
+                        '<span>' + escapeHtml(p.nombre) + '</span><span>' + (p.pagado ? icon('check') : fmt(p.monto)) + '</span>' +
                     '</div>';
                 }).join('') +
             '</div>';
@@ -1164,7 +1186,7 @@
         var html =
             '<div class="lmd-pos-ov-header">' +
                 '<button class="lmd-pos-ov-back" onclick="pos.cobrarSiguientePersona()">' + icon('arrow-left') + '</button>' +
-                '<span class="lmd-pos-ov-title">' + icon('banknote') + ' Efectivo — ' + state.split.personas[idx].nombre + '</span>' +
+                '<span class="lmd-pos-ov-title">' + icon('banknote') + ' Efectivo — ' + escapeHtml(state.split.personas[idx].nombre) + '</span>' +
                 '<div class="lmd-pos-ov-total">' + fmt(total) + '</div>' +
             '</div>' +
             '<div class="lmd-pos-efectivo-body">' +
@@ -1401,7 +1423,7 @@
         var alergenosHtml = _mod.alergenosProducto.length > 0
             ? _mod.alergenosProducto.map(function (a) {
                 var activo = _mod.alergias.indexOf(a.nombre.toLowerCase()) >= 0;
-                return '<button class="lmd-mod-alergia-btn' + (activo ? ' activo' : '') + '" onclick="pos.toggleAlergia(\'' + a.nombre.toLowerCase() + '\')">' + a.nombre + '</button>';
+                return '<button class="lmd-mod-alergia-btn' + (activo ? ' activo' : '') + '" onclick="pos.toggleAlergia(\'' + escapeJsString(a.nombre.toLowerCase()) + '\')">' + escapeHtml(a.nombre) + '</button>';
               }).join('')
             : '<span class="lmd-mod-empty">Sin alérgenos registrados</span>';
 
@@ -1410,18 +1432,18 @@
                 var est = ing.estado || 'normal';
                 var otros = _mod.ingredientes.filter(function (o) { return o.id !== ing.id; });
                 var reemplazoSel = est === 'quitado' && otros.length > 0
-                    ? '<select class="lmd-mod-ing-reemplazo" onchange="pos.cambiarReemplazo(\'' + ing.id + '\', this.value)">' +
+                    ? '<select class="lmd-mod-ing-reemplazo" onchange="pos.cambiarReemplazo(\'' + escapeJsString(ing.id) + '\', this.value)">' +
                           '<option value="">— Sin reemplazo</option>' +
                           otros.map(function (o) {
-                              return '<option value="' + o.id + '"' + (ing.reemplazoId === o.id ? ' selected' : '') + '>' + o.nombre + '</option>';
+                              return '<option value="' + escapeHtml(o.id) + '"' + (ing.reemplazoId === o.id ? ' selected' : '') + '>' + escapeHtml(o.nombre) + '</option>';
                           }).join('') +
                       '</select>'
                     : '';
                 return '<div class="lmd-mod-ing-row lmd-mod-ing-row--' + est + '">' +
-                    '<span class="lmd-mod-ing-nombre">' + ing.nombre + ' <small>(' + ing.cantidad + ')</small></span>' +
+                    '<span class="lmd-mod-ing-nombre">' + escapeHtml(ing.nombre) + ' <small>(' + escapeHtml(ing.cantidad) + ')</small></span>' +
                     '<div class="lmd-mod-ing-acciones">' +
-                        '<button class="lmd-mod-ing-btn lmd-mod-ing-btn--extra' + (est === 'extra' ? ' activo' : '') + '" onclick="pos.toggleEstadoIngrediente(\'' + ing.id + '\', \'extra\')" title="Extra">' + icon('plus-circle') + '</button>' +
-                        '<button class="lmd-mod-ing-btn lmd-mod-ing-btn--quitar' + (est === 'quitado' ? ' activo' : '') + '" onclick="pos.toggleEstadoIngrediente(\'' + ing.id + '\', \'quitado\')" title="Quitar">' + icon('minus-circle') + '</button>' +
+                        '<button class="lmd-mod-ing-btn lmd-mod-ing-btn--extra' + (est === 'extra' ? ' activo' : '') + '" onclick="pos.toggleEstadoIngrediente(\'' + escapeJsString(ing.id) + '\', \'extra\')" title="Extra">' + icon('plus-circle') + '</button>' +
+                        '<button class="lmd-mod-ing-btn lmd-mod-ing-btn--quitar' + (est === 'quitado' ? ' activo' : '') + '" onclick="pos.toggleEstadoIngrediente(\'' + escapeJsString(ing.id) + '\', \'quitado\')" title="Quitar">' + icon('minus-circle') + '</button>' +
                     '</div>' +
                     reemplazoSel +
                 '</div>';
@@ -1430,7 +1452,7 @@
 
         var html =
             '<div class="lmd-pos-ov-header">' +
-                '<span class="lmd-pos-ov-title">' + icon('edit-3') + ' ' + _mod.productoNombre + '</span>' +
+                '<span class="lmd-pos-ov-title">' + icon('edit-3') + ' ' + escapeHtml(_mod.productoNombre) + '</span>' +
                 '<button class="lmd-pos-ov-close" onclick="pos.cerrarModificadores()">' + icon('x') + '</button>' +
             '</div>' +
             '<div class="lmd-mod-body">' +
@@ -1444,7 +1466,7 @@
                 '</div>' +
                 '<div class="lmd-mod-section">' +
                     '<div class="lmd-mod-section__title">' + icon('message-square') + ' Nota para cocina</div>' +
-                    '<textarea class="lmd-mod-nota" rows="2" placeholder="Ej: sin sal, bien cocido..." oninput="pos._setNotaCustom(this.value)">' + (_mod.notaCustom || '') + '</textarea>' +
+                    '<textarea class="lmd-mod-nota" rows="2" placeholder="Ej: sin sal, bien cocido..." oninput="pos._setNotaCustom(this.value)">' + escapeHtml(_mod.notaCustom || '') + '</textarea>' +
                 '</div>' +
                 '<button class="lmd-mod-confirmar" onclick="pos.confirmarModificadores()">' + icon('check-circle') + ' Confirmar cambios</button>' +
             '</div>';
@@ -1603,7 +1625,7 @@
             '</div>' +
             '<div class="lmd-pos-error-pago-body">' +
                 '<div class="lmd-pos-error-pago-icon">' + icon('x-circle') + '</div>' +
-                '<p class="lmd-pos-error-pago-mensaje">' + mensaje + '</p>' +
+                '<p class="lmd-pos-error-pago-mensaje">' + escapeHtml(mensaje) + '</p>' +
                 '<div class="lmd-pos-error-pago-actions">' +
                     '<button class="lmd-pos-ov-btn lmd-pos-ov-btn--primary" onclick="pos.reintentarPago(\'' + metodo + '\')">' + icon('refresh-cw') + ' Reintentar</button>' +
                     '<button class="lmd-pos-ov-btn" onclick="pos.volverAMetodos()">' + icon('credit-card') + ' Otro método</button>' +

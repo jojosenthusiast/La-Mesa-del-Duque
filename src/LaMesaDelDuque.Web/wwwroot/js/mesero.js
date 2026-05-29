@@ -14,6 +14,28 @@
         return new Intl.NumberFormat('es-SV', { style: 'currency', currency: 'USD' }).format(n || 0);
     }
 
+    function escapeHtml(value) {
+        return String(value ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    function escapeJsString(value) {
+        return String(value ?? '')
+            .replace(/\\/g, '\\\\')
+            .replace(/'/g, "\\'")
+            .replace(/\r/g, '\\r')
+            .replace(/\n/g, '\\n')
+            .replace(/</g, '\\x3C')
+            .replace(/>/g, '\\x3E')
+            .replace(/&/g, '\\x26')
+            .replace(/"/g, '&quot;');
+    }
+
+
     // ── State ──────────────────────────────────────────
     var state = {
         mesas: [],
@@ -128,7 +150,7 @@
                     '<span class="lmd-pos-mesa-card__numero">' + m.numero + '</span>' +
                     '<span class="lmd-pos-mesa-card__capacidad">' + m.capacidad + ' pax</span>' +
                     badgeHtml +
-                    (m.zona ? '<span class="lmd-pos-mesa-card__zona">' + m.zona + '</span>' : '') +
+                    (m.zona ? '<span class="lmd-pos-mesa-card__zona">' + escapeHtml(m.zona) + '</span>' : '') +
                 '</div>';
             });
         });
@@ -189,7 +211,7 @@
         var estadoLabel = _ESTADO_LABEL[state.pedidoEstado] || state.pedidoEstado || '';
         var estadoBadge = estadoLabel
             ? '<span class="lmd-mesero-estado-badge lmd-mesero-estado-badge--' +
-              (state.pedidoEstado || '').toLowerCase() + '">' + estadoLabel + '</span>'
+              escapeHtml((state.pedidoEstado || '').toLowerCase()) + '">' + escapeHtml(estadoLabel) + '</span>'
             : '';
 
         var itemsHtml = state.pedidoDetalles.length === 0
@@ -198,18 +220,18 @@
                 var qtyHtml = enCobro
                     ? '<span class="lmd-mesero-item__cant">× ' + d.cantidad + '</span>'
                     : '<div class="lmd-mesero-item__qty-ctrl">' +
-                        '<button onclick="mesero.ajustarCantidad(\'' + m.pedidoActualId + '\',\'' + d.id + '\',-1)">' + icon('minus') + '</button>' +
+                        '<button onclick="mesero.ajustarCantidad(\'' + escapeJsString(m.pedidoActualId) + '\',\'' + escapeJsString(d.id) + '\',-1)">' + icon('minus') + '</button>' +
                         '<span>' + d.cantidad + '</span>' +
-                        '<button onclick="mesero.ajustarCantidad(\'' + m.pedidoActualId + '\',\'' + d.id + '\',1)">' + icon('plus') + '</button>' +
+                        '<button onclick="mesero.ajustarCantidad(\'' + escapeJsString(m.pedidoActualId) + '\',\'' + escapeJsString(d.id) + '\',1)">' + icon('plus') + '</button>' +
                       '</div>';
                 var voidBtn = !enCobro
                     ? '<button class="lmd-mesero-item__void" title="Anular" ' +
-                      'onclick="mesero.voidItem(\'' + m.pedidoActualId + '\',\'' + d.id + '\',\'' + d.productoNombre.replace(/'/g, "\\'") + '\')">' +
+                      'onclick="mesero.voidItem(\'' + escapeJsString(m.pedidoActualId) + '\',\'' + escapeJsString(d.id) + '\',\'' + escapeJsString(d.productoNombre) + '\')">' +
                       icon('trash-2') + '</button>'
                     : '';
                 return '<div class="lmd-mesero-item">' +
                     '<div class="lmd-mesero-item__info">' +
-                        '<span class="lmd-mesero-item__nombre">' + d.productoNombre + '</span>' +
+                        '<span class="lmd-mesero-item__nombre">' + escapeHtml(d.productoNombre) + '</span>' +
                         qtyHtml +
                     '</div>' +
                     '<div class="lmd-mesero-item__right">' +
@@ -228,7 +250,7 @@
         var html =
             '<div class="lmd-pos-ov-header">' +
                 '<button class="lmd-pos-ov-back" onclick="mesero.cerrarDetalle()">' + icon('arrow-left') + '</button>' +
-                '<span class="lmd-pos-ov-title">' + icon('armchair') + ' Mesa ' + m.numero + estadoBadge + '</span>' +
+                '<span class="lmd-pos-ov-title">' + icon('armchair') + ' Mesa ' + escapeHtml(m.numero) + estadoBadge + '</span>' +
                 '<div class="lmd-pos-ov-total">' + fmt(state.pedidoTotal) + '</div>' +
             '</div>' +
             '<div class="lmd-mesero-detalle-body">' +
@@ -350,9 +372,9 @@
 
         var catHtml = cats.map(function (c) {
             return '<button class="lmd-pos-cat-btn' + (c === state.catFiltro ? ' lmd-pos-cat-btn--activa' : '') + '" ' +
-                'onclick="mesero.filtrarCat(\'' + c.replace(/'/g, "\\'") + '\')">' +
+                'onclick="mesero.filtrarCat(\'' + escapeJsString(c) + '\')">' +
                 icon(c === 'Todos' ? 'layers' : c === 'Bebidas' ? 'wine' : c === 'Postres' ? 'cake-slice' : 'utensils') +
-                '<span>' + c + '</span>' +
+                '<span>' + escapeHtml(c) + '</span>' +
             '</button>';
         }).join('');
 
@@ -364,8 +386,8 @@
         });
 
         var prodHtml = filtrados.map(function (p) {
-            return '<div class="lmd-pos-product-card" onclick="mesero.addToCart(\'' + p.id + '\')">' +
-                '<span class="lmd-pos-product-card__nombre">' + p.nombre + '</span>' +
+            return '<div class="lmd-pos-product-card" onclick="mesero.addToCart(\'' + escapeJsString(p.id) + '\')">' +
+                '<span class="lmd-pos-product-card__nombre">' + escapeHtml(p.nombre) + '</span>' +
                 '<span class="lmd-pos-product-card__precio">' + fmt(p.precio) + '</span>' +
             '</div>';
         }).join('');
@@ -375,7 +397,7 @@
             ? '<div class="lmd-pos-cart__empty">' + icon('shopping-cart') + '<span>Sin ítems</span></div>'
             : state.carrito.map(function (item) {
                 return '<div class="lmd-mesero-cart-item">' +
-                    '<span class="lmd-mesero-cart-item__nombre">' + item.nombre + '</span>' +
+                    '<span class="lmd-mesero-cart-item__nombre">' + escapeHtml(item.nombre) + '</span>' +
                     '<div class="lmd-mesero-cart-item__qty">' +
                         '<button onclick="mesero.decCart(\'' + item.id + '\')">' + icon('minus') + '</button>' +
                         '<span>' + item.cantidad + '</span>' +
