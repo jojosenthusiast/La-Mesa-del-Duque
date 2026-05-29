@@ -1,0 +1,119 @@
+@page
+@model LaMesaDelDuque.Web.Pages.Operaciones.Descuentos.PendientesModel
+@{ ViewData["Title"] = "Descuentos Pendientes"; ViewData["ActiveTab"] = "Descuentos"; }
+
+<section class="lmd-page-header rounded-top">
+    <h1>Descuentos y Cortesías Pendientes</h1>
+    <p class="lmd-page-subtitle">Aprobá o rechazá solicitudes de descuento del personal.</p>
+</section>
+
+<section class="bg-white p-3 rounded-bottom">
+    @if (!string.IsNullOrWhiteSpace(Model.ToastError))
+    {
+        <div class="alert alert-danger alert-dismissible fade show py-2 mb-3" role="alert">
+            @Model.ToastError
+            <button type="button" class="btn-close" aria-label="Cerrar"></button>
+        </div>
+    }
+    @if (!string.IsNullOrWhiteSpace(Model.ToastSuccess))
+    {
+        <div class="alert alert-success alert-dismissible fade show py-2 mb-3" role="alert">
+            @Model.ToastSuccess
+            <button type="button" class="btn-close" aria-label="Cerrar"></button>
+        </div>
+    }
+
+    @if (Model.Pendientes.Count == 0)
+    {
+        <div class="alert alert-info">No hay descuentos pendientes de aprobación.</div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>Pedido</th>
+                        <th>Motivo</th>
+                        <th>Tipo</th>
+                        <th>Valor</th>
+                        <th>Monto</th>
+                        <th>Solicitado</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var d in Model.Pendientes)
+                    {
+                        <tr>
+                            <td><code>@d.PedidoId.ToString()[..8]</code></td>
+                            <td>@d.Motivo.Nombre</td>
+                            <td>
+                                @switch (d.TipoDescuento)
+                                {
+                                    case "porcentaje": <span class="badge bg-info text-dark">@d.Valor %</span> break;
+                                    case "fijo": <span class="badge bg-warning text-dark">Fijo</span> break;
+                                    case "cortesia": <span class="badge bg-success">Cortesía</span> break;
+                                    default: <span class="badge bg-secondary">@d.TipoDescuento</span> break;
+                                }
+                            </td>
+                            <td>@d.Valor</td>
+                            <td>@d.MontoAplicado.ToString("C")</td>
+                            <td>@d.FechaSolicitud.ToLocalTime().ToString("dd/MM HH:mm")</td>
+                            <td>
+                                <form method="post" asp-page-handler="Aprobar" class="d-inline me-1">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="descuentoId" value="@d.Id" />
+                                    <button type="submit" class="btn btn-sm btn-success">Aprobar</button>
+                                </form>
+                                <button type="button" class="btn btn-sm btn-danger"
+                                        data-bs-toggle="modal" data-bs-target="#modalRechazar"
+                                        data-id="@d.Id">
+                                    Rechazar
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</section>
+
+<!-- Modal Rechazar -->
+<div class="modal fade" id="modalRechazar" tabindex="-1" aria-labelledby="modalRechazarLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <form method="post" asp-page-handler="Rechazar">
+            @Html.AntiForgeryToken()
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalRechazarLabel">Rechazar descuento</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" name="descuentoId" id="rechazarDescuentoId" />
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Nota (opcional)</label>
+                        <textarea name="nota" class="form-control" rows="3" placeholder="Razón del rechazo..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-danger">Confirmar rechazo</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    document.getElementById('modalRechazar').addEventListener('show.bs.modal', function (e) {
+        var btn = e.relatedTarget;
+        document.getElementById('rechazarDescuentoId').value = btn.dataset.id;
+    });
+
+    // Polling cada 30s para refrescar si hay nuevos pendientes
+    setTimeout(() => location.reload(), 30000);
+</script>
+}

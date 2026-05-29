@@ -44,6 +44,13 @@ public class LaMesaDelDuqueDbContext : DbContext
     public DbSet<TurnoCaja> TurnosCaja => Set<TurnoCaja>();
     public DbSet<MovimientoCaja> MovimientosCaja => Set<MovimientoCaja>();
 
+    // Nuevas entidades §2.2 — Descuentos y cortesías
+    public DbSet<MotivoDescuento> MotivosDescuento => Set<MotivoDescuento>();
+    public DbSet<DescuentoAplicado> DescuentosAplicados => Set<DescuentoAplicado>();
+
+    // Nuevas entidades §2.3 — Devoluciones de cobro
+    public DbSet<DevolucionPago> DevolucionesPago => Set<DevolucionPago>();
+
     protected override void OnModelCreating(ModelBuilder constructorDeModelos)
     {
         constructorDeModelos.ApplyConfigurationsFromAssembly(typeof(LaMesaDelDuqueDbContext).Assembly);

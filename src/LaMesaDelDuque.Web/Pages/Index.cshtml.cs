@@ -65,6 +65,18 @@ public class IndexModel : PageModel
         if (esAdmin || esGerente)
             modulos.Add(new("Dashboard Gerencial", "/Admin/Dashboard/Gerente", "Análisis de período, tendencias y comparativas."));
 
+        // Reportes: Admin, Encargado, Gerente
+        if (esAdmin || esEncargado || esGerente)
+            modulos.Add(new("Reportes", "/Admin/Reportes/Index", "Generar y descargar reportes en PDF y Excel."));
+
+        // Descuentos: Admin, Encargado
+        if (esAdmin || esEncargado)
+            modulos.Add(new("Descuentos", "/Operaciones/Descuentos/Pendientes", "Aprobar descuentos y cortesías pendientes."));
+
+        // Devoluciones: Admin, Gerente
+        if (esAdmin || esGerente)
+            modulos.Add(new("Devoluciones", "/Admin/Devoluciones/Index", "Gestionar devoluciones de cobro."));
+
         // Configuración: solo Admin
         if (esAdmin)
             modulos.Add(new("Configuración", "/Admin/Configuracion/Index", "Parámetros del restaurante."));

@@ -1,0 +1,75 @@
+@page
+@model LaMesaDelDuque.Web.Pages.Operaciones.Descuentos.SolicitarModel
+@{ ViewData["Title"] = "Solicitar Descuento"; ViewData["ActiveTab"] = "Descuentos"; }
+
+<section class="lmd-page-header rounded-top">
+    <h1>Solicitar Descuento o Cortesía</h1>
+    <p class="lmd-page-subtitle">Registra un descuento o cortesía para el pedido #@Model.PedidoId.ToString()[..8].</p>
+</section>
+
+<section class="bg-white p-3 rounded-bottom">
+    @if (!string.IsNullOrWhiteSpace(Model.ToastError))
+    {
+        <div class="alert alert-danger alert-dismissible fade show py-2 mb-3" role="alert">
+            @Model.ToastError
+            <button type="button" class="btn-close" aria-label="Cerrar"></button>
+        </div>
+    }
+    @if (!string.IsNullOrWhiteSpace(Model.ToastSuccess))
+    {
+        <div class="alert alert-success alert-dismissible fade show py-2 mb-3" role="alert">
+            @Model.ToastSuccess
+            <button type="button" class="btn-close" aria-label="Cerrar"></button>
+        </div>
+    }
+
+    <form method="post" class="row g-3">
+        <input type="hidden" name="PedidoId" value="@Model.PedidoId" />
+
+        <div class="col-md-6">
+            <label class="form-label fw-semibold">Motivo</label>
+            <select name="MotivoId" class="form-select" required>
+                <option value="">-- Seleccionar motivo --</option>
+                @foreach (var m in Model.Motivos)
+                {
+                    <option value="@m.Id">@m.Nombre</option>
+                }
+            </select>
+        </div>
+
+        <div class="col-md-3">
+            <label class="form-label fw-semibold">Tipo de descuento</label>
+            <select name="TipoDescuento" id="tipoDescuento" class="form-select" required>
+                <option value="porcentaje">Porcentaje (%)</option>
+                <option value="fijo">Monto fijo</option>
+                <option value="cortesia">Cortesía (100%)</option>
+            </select>
+        </div>
+
+        <div class="col-md-3" id="campoValor">
+            <label class="form-label fw-semibold">Valor</label>
+            <input type="number" name="Valor" step="0.01" min="0.01" class="form-control" required />
+        </div>
+
+        <div class="col-md-6">
+            <label class="form-label fw-semibold">Monto del pedido</label>
+            <input type="number" name="MontoAplicado" step="0.01" min="0" class="form-control"
+                   placeholder="Monto real descontado" required />
+            <div class="form-text">Calculá el monto real que se descuenta del total.</div>
+        </div>
+
+        <div class="col-12">
+            <button type="submit" class="btn btn-primary">Enviar solicitud</button>
+            <a href="javascript:history.back()" class="btn btn-secondary ms-2">Cancelar</a>
+        </div>
+    </form>
+</section>
+
+@section Scripts {
+<script>
+    document.getElementById('tipoDescuento').addEventListener('change', function () {
+        const campoValor = document.getElementById('campoValor');
+        campoValor.style.display = this.value === 'cortesia' ? 'none' : '';
+    });
+</script>
+}

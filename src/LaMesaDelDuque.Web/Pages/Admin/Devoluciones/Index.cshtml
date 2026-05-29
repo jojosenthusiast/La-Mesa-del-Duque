@@ -1,0 +1,148 @@
+@page
+@model LaMesaDelDuque.Web.Pages.Admin.Devoluciones.IndexModel
+@{ ViewData["Title"] = "Devoluciones"; ViewData["ActiveTab"] = "Devoluciones"; }
+
+<section class="lmd-page-header rounded-top">
+    <h1>Devoluciones de Cobro</h1>
+    <p class="lmd-page-subtitle">Registrá devoluciones de pagos ya realizados y consultá el historial del día.</p>
+</section>
+
+<section class="bg-white p-3 rounded-bottom">
+    @if (!string.IsNullOrWhiteSpace(Model.ToastError))
+    {
+        <div class="alert alert-danger alert-dismissible fade show py-2 mb-3" role="alert">
+            @Model.ToastError
+            <button type="button" class="btn-close" aria-label="Cerrar"></button>
+        </div>
+    }
+    @if (!string.IsNullOrWhiteSpace(Model.ToastSuccess))
+    {
+        <div class="alert alert-success alert-dismissible fade show py-2 mb-3" role="alert">
+            @Model.ToastSuccess
+            <button type="button" class="btn-close" aria-label="Cerrar"></button>
+        </div>
+    }
+
+    <div class="row g-4">
+        <!-- Formulario búsqueda de pago -->
+        <div class="col-md-5">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header fw-semibold">Buscar pago para devolver</div>
+                <div class="card-body">
+                    <form method="get" class="mb-3">
+                        <label class="form-label">ID del pago o pedido</label>
+                        <div class="input-group">
+                            <input type="text" name="pagoId" class="form-control" placeholder="UUID del pago..."
+                                   value="@Model.BusquedaPagoId" />
+                            <button type="submit" class="btn btn-outline-primary">Buscar</button>
+                        </div>
+                    </form>
+
+                    @if (Model.PagoEncontrado is not null)
+                    {
+                        var p = Model.PagoEncontrado;
+                        <div class="alert alert-light border mb-3">
+                            <div class="row g-2 small">
+                                <div class="col-6"><strong>Pago ID:</strong></div>
+                                <div class="col-6"><code>@p.Id.ToString()[..8]</code></div>
+                                <div class="col-6"><strong>Monto:</strong></div>
+                                <div class="col-6">@p.Monto.ToString("C")</div>
+                                <div class="col-6"><strong>Método:</strong></div>
+                                <div class="col-6">@p.Metodo</div>
+                                <div class="col-6"><strong>Fecha:</strong></div>
+                                <div class="col-6">@p.FechaPago.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</div>
+                            </div>
+                        </div>
+
+                        <form method="post" asp-page-handler="ProcesarDevolucion">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="pagoOriginalId" value="@p.Id" />
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Monto a devolver</label>
+                                <input type="number" name="montoDevuelto" step="0.01" min="0.01"
+                                       max="@p.Monto" class="form-control" value="@p.Monto" required />
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Método de devolución</label>
+                                <select name="metodoDevolucion" class="form-select" required>
+                                    <option value="efectivo">Efectivo</option>
+                                    <option value="tarjeta">Tarjeta</option>
+                                    <option value="transferencia">Transferencia</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Motivo (obligatorio)</label>
+                                <textarea name="motivo" class="form-control" rows="3"
+                                          placeholder="Describe el motivo de la devolución..." required></textarea>
+                            </div>
+                            <button type="submit" class="btn btn-danger w-100">Procesar devolución</button>
+                        </form>
+                    }
+                    else if (!string.IsNullOrWhiteSpace(Model.BusquedaPagoId))
+                    {
+                        <div class="alert alert-warning">Pago no encontrado.</div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Historial del día -->
+        <div class="col-md-7">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header fw-semibold">
+                    Devoluciones del día — @DateTime.Now.ToString("dd/MM/yyyy")
+                </div>
+                <div class="card-body p-0">
+                    @if (Model.DevolucionesDelDia.Count == 0)
+                    {
+                        <div class="p-3 text-muted">No hay devoluciones registradas hoy.</div>
+                    }
+                    else
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-sm table-hover mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Hora</th>
+                                        <th>Pago original</th>
+                                        <th>Monto</th>
+                                        <th>Método</th>
+                                        <th>Stock</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var d in Model.DevolucionesDelDia)
+                                    {
+                                        <tr>
+                                            <td>@d.FechaHora.ToLocalTime().ToString("HH:mm")</td>
+                                            <td><code>@d.PagoOriginalId.ToString()[..8]</code></td>
+                                            <td>@d.MontoDevuelto.ToString("C")</td>
+                                            <td>@d.MetodoDevolucion</td>
+                                            <td>
+                                                @if (d.StockReintegrado)
+                                                {
+                                                    <span class="badge bg-success">Reintegrado</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge bg-secondary">N/A</span>
+                                                }
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                                <tfoot class="table-light fw-bold">
+                                    <tr>
+                                        <td colspan="2">Total devuelto</td>
+                                        <td>@Model.DevolucionesDelDia.Sum(d => d.MontoDevuelto).ToString("C")</td>
+                                        <td colspan="2"></td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</section>

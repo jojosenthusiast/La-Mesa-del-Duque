@@ -10,9 +10,13 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using QuestPDF.Infrastructure;
 
 // Requerido por Npgsql 6+ con Supabase: sin esto los DateTime fallan al leer/escribir
 AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
+
+// QuestPDF Community License
+QuestPDF.Settings.License = LicenseType.Community;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -289,6 +293,19 @@ if (app.Environment.IsDevelopment())
             new TimeOnly(23, 0),
             cantidadMesas: 10,
             periodoGraciaMinutos: 5));
+        await db.SaveChangesAsync();
+    }
+
+    // ── Seed: Motivos de descuento ──────────────────────────
+    if (!await db.Set<MotivoDescuento>().AnyAsync())
+    {
+        db.Set<MotivoDescuento>().AddRange(
+            new MotivoDescuento("Error de cocina", "Producto llegó frío, incorrecto o tarde."),
+            new MotivoDescuento("Cliente VIP", "Cliente frecuente o de alto valor."),
+            new MotivoDescuento("Aniversario o celebración", "Descuento por ocasión especial del cliente."),
+            new MotivoDescuento("Cortesía de la casa", "Obsequio discrecional del establecimiento."),
+            new MotivoDescuento("Inconveniencia al cliente", "Compensación por demora o problema de servicio.")
+        );
         await db.SaveChangesAsync();
     }
 
