@@ -5,6 +5,7 @@ using LaMesaDelDuque.Infraestructura;
 using LaMesaDelDuque.Infraestructura.Persistencia;
 using LaMesaDelDuque.Web.Filtros;
 using LaMesaDelDuque.Web.Hubs;
+using LaMesaDelDuque.Web.Seguridad;
 using LaMesaDelDuque.Web.Servicios;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authentication.Cookies;
@@ -67,6 +68,7 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 
+app.UseLaMesaSecurityHeaders();
 app.UseHttpsRedirection();
 app.UseStaticFiles();
 
