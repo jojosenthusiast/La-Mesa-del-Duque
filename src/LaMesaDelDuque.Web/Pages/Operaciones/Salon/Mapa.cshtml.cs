@@ -13,11 +13,13 @@ public class MapaModel : PageModel
 {
     private readonly IMesasServicio _mesasServicio;
     private readonly IZonasSalonServicio _zonasServicio;
+    private readonly ILogger<MapaModel> _logger;
 
-    public MapaModel(IMesasServicio mesasServicio, IZonasSalonServicio zonasServicio)
+    public MapaModel(IMesasServicio mesasServicio, IZonasSalonServicio zonasServicio, ILogger<MapaModel> logger)
     {
         _mesasServicio = mesasServicio;
         _zonasServicio = zonasServicio;
+        _logger = logger;
     }
 
     [BindProperty]
@@ -52,6 +54,10 @@ public class MapaModel : PageModel
         {
             return new JsonResult(new { exito = false, error = ex.Message });
         }
+        catch (Exception ex)
+        {
+            return ErrorInesperadoJson(ex, "actualizar posicion de mesa");
+        }
     }
 
     public async Task<IActionResult> OnPostCambiarEstadoAsync([FromBody] CambiarEstadoRequest request)
@@ -74,6 +80,10 @@ public class MapaModel : PageModel
         {
             return new JsonResult(new { exito = false, error = ex.Message });
         }
+        catch (Exception ex)
+        {
+            return ErrorInesperadoJson(ex, "cambiar estado de mesa");
+        }
     }
 
     public async Task<IActionResult> OnGetObtenerDatosAsync()
@@ -85,6 +95,12 @@ public class MapaModel : PageModel
             mesas = Vm.Mesas,
             puedeEditar = Vm.PuedeEditar
         });
+    }
+
+    private JsonResult ErrorInesperadoJson(Exception ex, string accion)
+    {
+        _logger.LogError(ex, "Error inesperado al {Accion} en mapa de salon.", accion);
+        return new JsonResult(new { exito = false, error = "Ocurrio un error interno." }) { StatusCode = 500 };
     }
 
     private async Task CargarDatosAsync()

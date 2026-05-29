@@ -4,6 +4,7 @@ using LaMesaDelDuque.Web.Pages.Operaciones.Salon;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.Extensions.Logging.Abstractions;
 using System.Security.Claims;
 
 namespace LaMesaDelDuque.Pruebas.Web;
@@ -16,7 +17,7 @@ public class MapaSalonPageTests
         var mesasServicio = new FakeMapaMesasServicio();
         var zonasServicio = new FakeMapaZonasServicio();
 
-        var page = new MapaModel(mesasServicio, zonasServicio);
+        var page = new MapaModel(mesasServicio, zonasServicio, NullLogger<MapaModel>.Instance);
         SetUserRoles(page, "Encargado");
 
         await page.OnGetAsync();
@@ -34,7 +35,7 @@ public class MapaSalonPageTests
         var mesasServicio = new FakeMapaMesasServicio();
         var zonasServicio = new FakeMapaZonasServicio();
 
-        var page = new MapaModel(mesasServicio, zonasServicio);
+        var page = new MapaModel(mesasServicio, zonasServicio, NullLogger<MapaModel>.Instance);
         SetUserRoles(page, "Mesero");
 
         await page.OnGetAsync();
@@ -48,7 +49,7 @@ public class MapaSalonPageTests
         var mesasServicio = new FakeMapaMesasServicio();
         var zonasServicio = new FakeMapaZonasServicio();
 
-        var page = new MapaModel(mesasServicio, zonasServicio);
+        var page = new MapaModel(mesasServicio, zonasServicio, NullLogger<MapaModel>.Instance);
         SetUserRoles(page, "Encargado");
 
         var request = new MapaModel.ActualizarPosicionRequest
@@ -73,7 +74,7 @@ public class MapaSalonPageTests
         var mesasServicio = new FakeMapaMesasServicio();
         var zonasServicio = new FakeMapaZonasServicio();
 
-        var page = new MapaModel(mesasServicio, zonasServicio);
+        var page = new MapaModel(mesasServicio, zonasServicio, NullLogger<MapaModel>.Instance);
         SetUserRoles(page, "Mesero");
 
         var request = new MapaModel.ActualizarPosicionRequest
@@ -97,7 +98,7 @@ public class MapaSalonPageTests
         var mesasServicio = new FakeMapaMesasServicio();
         var zonasServicio = new FakeMapaZonasServicio();
 
-        var page = new MapaModel(mesasServicio, zonasServicio);
+        var page = new MapaModel(mesasServicio, zonasServicio, NullLogger<MapaModel>.Instance);
         SetUserRoles(page, "Mesero");
 
         var request = new MapaModel.CambiarEstadoRequest
@@ -119,7 +120,7 @@ public class MapaSalonPageTests
         var mesasServicio = new FakeMapaMesasServicio();
         var zonasServicio = new FakeMapaZonasServicio();
 
-        var page = new MapaModel(mesasServicio, zonasServicio);
+        var page = new MapaModel(mesasServicio, zonasServicio, NullLogger<MapaModel>.Instance);
         // Sin roles
 
         var request = new MapaModel.CambiarEstadoRequest
@@ -140,7 +141,7 @@ public class MapaSalonPageTests
         var mesasServicio = new FakeMapaMesasServicio();
         var zonasServicio = new FakeMapaZonasServicio();
 
-        var page = new MapaModel(mesasServicio, zonasServicio);
+        var page = new MapaModel(mesasServicio, zonasServicio, NullLogger<MapaModel>.Instance);
         SetUserRoles(page, "Mesero");
 
         var result = await page.OnGetObtenerDatosAsync();

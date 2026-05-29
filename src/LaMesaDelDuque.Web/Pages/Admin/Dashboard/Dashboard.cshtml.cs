@@ -59,7 +59,11 @@ public class DashboardModel : PageModel
             Metricas = await _metricaServicio.ObtenerMetricasOperativasAsync();
             VentasPorHora = await _metricaServicio.ObtenerVentasPorHoraAsync();
         }
-        catch (Exception ex) { ToastError = $"Error al cargar dashboard: {ex.Message}"; }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error inesperado al cargar dashboard administrativo.");
+            ToastError = "No se pudo cargar el dashboard. Intenta nuevamente.";
+        }
     }
 
     private void SetUiContext()
