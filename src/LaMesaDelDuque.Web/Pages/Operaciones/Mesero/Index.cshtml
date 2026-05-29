@@ -5,6 +5,10 @@
 }
 @Html.AntiForgeryToken()
 
+<nav class="p-3 text-end">
+    <a class="btn btn-outline-light btn-sm" asp-page="/Operaciones/Mesero/Handoff">Transferir mesas / cambio de turno</a>
+</nav>
+
 @section Styles {
     <link rel="stylesheet" href="~/css/pos-ux.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/mesero.css" asp-append-version="true" />

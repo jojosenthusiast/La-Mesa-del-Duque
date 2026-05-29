@@ -45,6 +45,10 @@ public class IndexModel : PageModel
         if (esAdmin || esEncargado || esMesero)
             modulos.Add(new("Mapa Salón", "/Operaciones/Salon/Mapa", "Mapa visual interactivo con drag & drop."));
 
+        // Transferir mesas: Admin, Encargado, Mesero
+        if (esAdmin || esEncargado || esMesero)
+            modulos.Add(new("Transferir mesas", "/Operaciones/Mesero/Handoff", "Traspaso de mesas activas durante cambio de turno."));
+
         // Despacho: Admin, Encargado, Despacho
         if (esAdmin || esEncargado || esDespacho)
             modulos.Add(new("Despacho", "/Operaciones/Despacho/Index", "Pedidos listos para entregar y liberar mesas."));

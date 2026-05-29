@@ -1,17 +1,59 @@
 using System.Security.Claims;
 using LaMesaDelDuque.Aplicacion.Dtos;
 using LaMesaDelDuque.Aplicacion.Servicios;
+using LaMesaDelDuque.Pruebas.Calidad;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Extensions.Logging.Abstractions;
 using HandoffModel = LaMesaDelDuque.Web.Pages.Operaciones.Mesero.HandoffModel;
+using HomeIndexModel = LaMesaDelDuque.Web.Pages.IndexModel;
 
 namespace LaMesaDelDuque.Pruebas.Web;
 
 public class MeseroHandoffPageTests
 {
+    [Theory]
+    [InlineData("Administrador")]
+    [InlineData("Encargado")]
+    [InlineData("Mesero")]
+    public void Home_DebeMostrarTransferirMesasAGestionYMesero(string rol)
+    {
+        var page = CreateHomePageForRole(rol);
+
+        page.OnGet();
+
+        Assert.Contains(
+            page.ModuleLinks,
+            module => module.Label == "Transferir mesas" && module.Page == "/Operaciones/Mesero/Handoff");
+    }
+
+    [Theory]
+    [InlineData("Cajero")]
+    [InlineData("Cocinero")]
+    [InlineData("Gerente")]
+    [InlineData("Despacho")]
+    public void Home_NoDebeMostrarTransferirMesasAOtrosRolesOperativos(string rol)
+    {
+        var page = CreateHomePageForRole(rol);
+
+        page.OnGet();
+
+        Assert.DoesNotContain(
+            page.ModuleLinks,
+            module => module.Label == "Transferir mesas" || module.Page == "/Operaciones/Mesero/Handoff");
+    }
+
+    [Fact]
+    public void MeseroIndex_DebeEnlazarHandoffDeTurno()
+    {
+        var source = ReadSource("src", "LaMesaDelDuque.Web", "Pages", "Operaciones", "Mesero", "Index.cshtml");
+
+        Assert.Contains("asp-page=\"/Operaciones/Mesero/Handoff\"", source);
+        Assert.Contains("Transferir mesas", source);
+    }
+
     [Fact]
     public void HandoffPage_DebePermitirGestionYMesero()
     {
@@ -112,6 +154,30 @@ public class MeseroHandoffPageTests
             }
         };
     }
+
+    private static HomeIndexModel CreateHomePageForRole(string rol)
+    {
+        var identity = new ClaimsIdentity(
+            [
+                new Claim(ClaimTypes.Name, rol.ToLowerInvariant()),
+                new Claim(ClaimTypes.Role, rol)
+            ],
+            authenticationType: "TestAuth");
+
+        return new HomeIndexModel
+        {
+            PageContext = new PageContext
+            {
+                HttpContext = new DefaultHttpContext
+                {
+                    User = new ClaimsPrincipal(identity)
+                }
+            }
+        };
+    }
+
+    private static string ReadSource(params string[] paths) =>
+        File.ReadAllText(Path.Combine([ProjectPaths.RepoRoot, .. paths]));
 
     private sealed class FakeHandoffServicio : IShiftHandoffServicio
     {
