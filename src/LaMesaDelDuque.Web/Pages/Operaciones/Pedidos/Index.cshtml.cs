@@ -512,7 +512,7 @@ public class IndexModel : PageModel
             var tabPorMesa = pedidos
                 .Where(p => p.MesaId.HasValue)
                 .GroupBy(p => p.MesaId!.Value)
-                .ToDictionary(g => g.Key, g => g.OrderByDescending(p => p.Total).First());
+                .ToDictionary(g => g.Key, g => g.OrderByDescending(p => p.FechaCreacion).First());
 
             var data = mesas.Where(m => m.Activa).Select(m =>
             {
@@ -524,7 +524,8 @@ public class IndexModel : PageModel
                     PedidoActualId = tab?.Id,
                     PedidoTotal = tab?.Total,
                     PedidoEstado = tab?.Estado,
-                    PedidoFechaCreacion = tab?.FechaCreacion
+                    PedidoFechaCreacion = tab?.FechaCreacion,
+                    GraciaHasta = m.GraciaHasta
                 };
             });
             return new JsonResult(new { mesas = data });
@@ -644,6 +645,7 @@ public class IndexModel : PageModel
         {
             ArgumentException => ex.Message,
             InvalidOperationException => ex.Message,
+            ReglaDominioException => ex.Message,
             _ => "Ocurrió un error interno al procesar la solicitud."
         };
 

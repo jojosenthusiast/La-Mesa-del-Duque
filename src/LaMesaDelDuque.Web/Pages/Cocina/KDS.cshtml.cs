@@ -112,6 +112,7 @@ public class KDSModel : PageModel
         {
             ArgumentException => ex.Message,
             InvalidOperationException => ex.Message,
+            ReglaDominioException => ex.Message,
             _ => "Ocurrió un error interno al procesar la solicitud."
         };
 
