@@ -16,6 +16,7 @@ public class RestauranteConfig
     public TimeOnly HorarioCierre { get; private set; }
     public int CantidadMesas { get; private set; }
     public string? DatosTicketJson { get; private set; }
+    public int PeriodoGraciaMinutos { get; private set; } = 5;
     public DateTime CreatedAt { get; private set; }
     public DateTime UpdatedAt { get; private set; }
 
@@ -32,7 +33,8 @@ public class RestauranteConfig
         TimeOnly horarioCierre,
         int cantidadMesas,
         string? telefono = null,
-        string? datosTicketJson = null)
+        string? datosTicketJson = null,
+        int periodoGraciaMinutos = 5)
     {
         if (string.IsNullOrWhiteSpace(nombre))
             throw new ReglaDominioException("El nombre del restaurante es obligatorio.");
@@ -63,7 +65,16 @@ public class RestauranteConfig
         HorarioCierre = horarioCierre;
         CantidadMesas = cantidadMesas;
         DatosTicketJson = datosTicketJson;
+        PeriodoGraciaMinutos = periodoGraciaMinutos >= 0 && periodoGraciaMinutos <= 60 ? periodoGraciaMinutos : 5;
         CreatedAt = DateTime.UtcNow;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void EstablecerGracia(int minutos)
+    {
+        if (minutos < 0 || minutos > 60)
+            throw new ReglaDominioException("El período de gracia debe estar entre 0 y 60 minutos.");
+        PeriodoGraciaMinutos = minutos;
         UpdatedAt = DateTime.UtcNow;
     }
 

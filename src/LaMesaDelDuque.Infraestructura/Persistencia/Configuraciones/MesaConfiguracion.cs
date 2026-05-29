@@ -47,5 +47,8 @@ internal class MesaConfiguracion : IEntityTypeConfiguration<Mesa>
 
         constructor.Property(m => m.OcupadaDesde)
             .HasColumnType("timestamp with time zone");
+
+        constructor.Property(m => m.GraciaHasta)
+            .HasColumnType("timestamp with time zone");
     }
 }

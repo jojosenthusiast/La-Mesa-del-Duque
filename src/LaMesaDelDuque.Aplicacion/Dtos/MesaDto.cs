@@ -15,4 +15,5 @@ public class MesaDto
     public string? Forma { get; set; }
     public int? Rotacion { get; set; }
     public DateTime? OcupadaDesde { get; set; }
+    public DateTime? GraciaHasta { get; set; }
 }

@@ -1,5 +1,7 @@
+using LaMesaDelDuque.Dominio.Entidades;
 using LaMesaDelDuque.Dominio.Repositorios;
 using LaMesaDelDuque.Infraestructura.Persistencia;
+using Microsoft.EntityFrameworkCore;
 
 namespace LaMesaDelDuque.Infraestructura.Repositorios;
 
@@ -98,5 +100,14 @@ internal class UnidadDeTrabajo : IUnidadDeTrabajo
     public async Task<int> GuardarCambiosAsync(CancellationToken cancelacion = default)
     {
         return await _contexto.SaveChangesAsync(cancelacion);
+    }
+
+    public async Task<int> ObtenerPeriodoGraciaMinutosAsync(CancellationToken cancelacion = default)
+    {
+        return await _contexto.Set<RestauranteConfig>()
+            .AsNoTracking()
+            .Where(c => c.Id == 1)
+            .Select(c => c.PeriodoGraciaMinutos)
+            .FirstOrDefaultAsync(cancelacion);
     }
 }

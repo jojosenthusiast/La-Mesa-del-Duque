@@ -83,6 +83,7 @@ internal class PedidosServicio : IPedidosServicio
 
         var detalle = new DetallePedido(producto, cantidad, precioUnitario, notas, modificacionesJson);
         pedido.AgregarDetalle(detalle);
+        await _uot.Pedidos.AgregarDetalleAsync(detalle, cancelacion);
 
         await ValidarStockSuficienteAsync([detalle], cancelacion);
         await DescontarStockAsync([detalle], cancelacion);
@@ -106,6 +107,7 @@ internal class PedidosServicio : IPedidosServicio
                 ?? throw new ArgumentException($"No se encontró el producto con ID {item.ProductoId}.", nameof(items));
             var detalle = new DetallePedido(producto, item.Cantidad, item.PrecioUnitario, item.Notas, item.ModificacionesJson);
             pedido.AgregarDetalle(detalle);
+            await _uot.Pedidos.AgregarDetalleAsync(detalle, cancelacion);
             nuevosDetalles.Add(detalle);
         }
 
@@ -145,6 +147,7 @@ internal class PedidosServicio : IPedidosServicio
 
         pedido.MarcarComoPagado();
         await LiberarMesaSiCorrespondeAsync(pedido, cancelacion);
+        await AplicarGraciaMesaSiCorrespondeAsync(pedido, cancelacion);
         await _uot.GuardarCambiosAsync(cancelacion);
         await _notificadorPedidos.NotificarEstadoCambiadoAsync(pedido.Id, pedido.Estado, cancelacion);
         await NotificarMetricasInvalidadasSiExisteAsync(cancelacion);
@@ -342,7 +345,7 @@ internal class PedidosServicio : IPedidosServicio
     {
         var pedidos = await _uot.Pedidos.ObtenerTodosAsync(cancelacion);
         return pedidos
-            .Where(p => p.Estado == EstadoPedido.Pendiente || p.Estado == EstadoPedido.EnPreparacion)
+            .Where(p => p.Estado == EstadoPedido.Pendiente || p.Estado == EstadoPedido.EnPreparacion || p.Estado == EstadoPedido.EnCobro)
             .Select(MapToDto)
             .ToList();
     }
@@ -487,6 +490,15 @@ internal class PedidosServicio : IPedidosServicio
     {
         if (_notificadorDashboard is not null)
             await _notificadorDashboard.NotificarMetricasInvalidadasAsync(cancelacion);
+    }
+
+    private async Task AplicarGraciaMesaSiCorrespondeAsync(Pedido pedido, CancellationToken cancelacion)
+    {
+        if (pedido.Mesa is null) return;
+        var minutos = await _uot.ObtenerPeriodoGraciaMinutosAsync(cancelacion);
+        if (minutos <= 0) return;
+        var mesa = await _uot.Mesas.ObtenerParaActualizarAsync(pedido.Mesa.Id, cancelacion);
+        mesa?.IniciarGracia(minutos);
     }
 
     private async Task LiberarMesaSiCorrespondeAsync(Pedido pedido, CancellationToken cancelacion)

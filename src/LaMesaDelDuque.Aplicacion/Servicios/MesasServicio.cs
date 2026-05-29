@@ -148,7 +148,8 @@ internal class MesasServicio : IMesasServicio
             ZonaId = mesa.ZonaId,
             Forma = mesa.Forma?.ToString(),
             Rotacion = mesa.Rotacion,
-            OcupadaDesde = mesa.OcupadaDesde
+            OcupadaDesde = mesa.OcupadaDesde,
+            GraciaHasta  = mesa.GraciaHasta
         };
     }
 }

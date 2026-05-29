@@ -11,6 +11,7 @@ public class Mesa
     public EstadoMesa Estado { get; private set; }
     public bool Activa { get; private set; }
     public DateTime? OcupadaDesde { get; private set; }
+    public DateTime? GraciaHasta { get; private set; }
 
     // Campos de posición para mapa visual (nullable para compatibilidad con mesas legacy)
     public int? PosicionX { get; private set; }
@@ -45,6 +46,7 @@ public class Mesa
             OcupadaDesde = DateTime.UtcNow;
         else if (Estado == EstadoMesa.Ocupada && nuevoEstado != EstadoMesa.Ocupada)
             OcupadaDesde = null;
+        GraciaHasta = null;
         Estado = nuevoEstado;
     }
 
@@ -52,12 +54,20 @@ public class Mesa
     {
         Estado = EstadoMesa.Ocupada;
         OcupadaDesde = DateTime.UtcNow;
+        GraciaHasta = null;
     }
 
     public void Liberar()
     {
         Estado = EstadoMesa.Disponible;
         OcupadaDesde = null;
+        GraciaHasta = null;
+    }
+
+    public void IniciarGracia(int minutos)
+    {
+        if (minutos > 0)
+            GraciaHasta = DateTime.UtcNow.AddMinutes(minutos);
     }
 
     public void Desactivar()

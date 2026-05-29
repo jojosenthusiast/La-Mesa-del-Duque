@@ -59,6 +59,16 @@ internal class PedidoRepositorio : IPedidoRepositorio
         await _contexto.Set<Pedido>().AddAsync(pedido, cancelacion);
     }
 
+    // Registra explícitamente un DetallePedido nuevo como Added en el contexto.
+    // Necesario porque DetallePedido.Id es un Guid asignado por el cliente (Guid.NewGuid()),
+    // por lo que EF Core no puede inferir el estado Added por sí solo cuando descubre
+    // la entidad durante DetectChanges (la trataría como Unchanged al tener PK no-cero).
+    public Task AgregarDetalleAsync(DetallePedido detalle, CancellationToken cancelacion = default)
+    {
+        _contexto.Set<DetallePedido>().Add(detalle);
+        return Task.CompletedTask;
+    }
+
     public void Eliminar(Pedido pedido)
     {
         _contexto.Set<Pedido>().Remove(pedido);
