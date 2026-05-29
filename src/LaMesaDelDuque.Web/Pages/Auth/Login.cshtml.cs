@@ -76,6 +76,7 @@ public class LoginModel : PageModel
             "Cajero"                        => "/Operaciones/Pedidos/Index",
             "Mesero"                        => "/Operaciones/Mesero/Index",
             "Cocinero"                      => "/Cocina/KDS",
+            "Despacho"                      => "/Operaciones/Despacho/Index",
             _                               => "/Index"
         };
         return RedirectToPage(destino);

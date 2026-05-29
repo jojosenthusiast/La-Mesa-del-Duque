@@ -96,9 +96,10 @@ if (app.Environment.IsDevelopment())
         var meseroRol = new Rol("Mesero", "Captura de pedidos y consulta de salón");
         var encargadoRol = new Rol("Encargado", "Gestión de catálogo, mesas y reportes");
         var cocineroRol = new Rol("Cocinero", "Visualización de pedidos en preparación");
-        var cajeroRol = new Rol("Cajero", "Cobro en caja, despacho y cierre de turno");
+        var cajeroRol = new Rol("Cajero", "Cobro en caja y cierre de turno");
         var gerenteRol = new Rol("Gerente", "Acceso a reportes, dashboard y auditoría sin módulos operativos");
-        db.Set<Rol>().AddRange(adminRol, meseroRol, encargadoRol, cocineroRol, cajeroRol, gerenteRol);
+        var despachoRol = new Rol("Despacho", "Entrega pedidos listos y libera mesas");
+        db.Set<Rol>().AddRange(adminRol, meseroRol, encargadoRol, cocineroRol, cajeroRol, gerenteRol, despachoRol);
         await db.SaveChangesAsync();
 
         var adminHash = BCrypt.Net.BCrypt.HashPassword("Admin123!", 12);
@@ -107,13 +108,15 @@ if (app.Environment.IsDevelopment())
         var cocineroHash = BCrypt.Net.BCrypt.HashPassword("Cocina456!", 12);
         var cajeroHash = BCrypt.Net.BCrypt.HashPassword("Cajero567!", 12);
         var gerenteHash = BCrypt.Net.BCrypt.HashPassword("Gerente890!", 12);
+        var despachoHash = BCrypt.Net.BCrypt.HashPassword("Despacho901!", 12);
         db.Set<Usuario>().AddRange(
             new Usuario("admin", "admin@mesadelduque.com", adminHash, "Administrador", adminRol),
             new Usuario("maria", "maria@mesadelduque.com", meseroHash, "María Mesera", meseroRol),
             new Usuario("carlos", "carlos@mesadelduque.com", encargadoHash, "Carlos Encargado", encargadoRol),
             new Usuario("pedro", "pedro@mesadelduque.com", cocineroHash, "Pedro Cocinero", cocineroRol),
             new Usuario("sofia", "sofia@mesadelduque.com", cajeroHash, "Sofía Cajera", cajeroRol),
-            new Usuario("luciana", "luciana@mesadelduque.com", gerenteHash, "Luciana Gerente", gerenteRol)
+            new Usuario("luciana", "luciana@mesadelduque.com", gerenteHash, "Luciana Gerente", gerenteRol),
+            new Usuario("ana", "ana@mesadelduque.com", despachoHash, "Ana Despacho", despachoRol)
         );
         await db.SaveChangesAsync();
 
@@ -286,6 +289,35 @@ if (app.Environment.IsDevelopment())
         }
     }
 
+    // Repair incremental development seeds added after the original bootstrap.
+    var despachoRolPersistente = await db.Set<Rol>().FirstOrDefaultAsync(r => r.Nombre == "Despacho");
+    if (despachoRolPersistente is null)
+    {
+        despachoRolPersistente = new Rol("Despacho", "Entrega pedidos listos y libera mesas");
+        db.Set<Rol>().Add(despachoRolPersistente);
+        await db.SaveChangesAsync();
+        Console.WriteLine("[DEV] Despacho role created.");
+    }
+
+    var despachoUsuario = await db.Set<Usuario>().FirstOrDefaultAsync(u => u.Username == "ana");
+    if (despachoUsuario is null)
+    {
+        db.Set<Usuario>().Add(new Usuario(
+            "ana",
+            "ana@mesadelduque.com",
+            BCrypt.Net.BCrypt.HashPassword("Despacho901!", 12),
+            "Ana Despacho",
+            despachoRolPersistente));
+        await db.SaveChangesAsync();
+        Console.WriteLine("[DEV] ana despacho user created.");
+    }
+    else if (despachoUsuario.RolId != despachoRolPersistente.Id)
+    {
+        despachoUsuario.CambiarRol(despachoRolPersistente);
+        await db.SaveChangesAsync();
+        Console.WriteLine("[DEV] ana assigned to Despacho role.");
+    }
+
     if (!await db.Set<RestauranteConfig>().AnyAsync())
     {
         db.Set<RestauranteConfig>().Add(new RestauranteConfig(
@@ -318,7 +350,9 @@ if (app.Environment.IsDevelopment())
         ["maria"]   = "Mesero789!",
         ["carlos"]  = "Encargado321!",
         ["pedro"]   = "Cocina456!",
-        ["sofia"]   = "Cajero567!"
+        ["sofia"]   = "Cajero567!",
+        ["luciana"] = "Gerente890!",
+        ["ana"]     = "Despacho901!"
     };
     var seedUsernames = seedCredentials.Keys.ToList();
     var seedUsers = await db.Set<Usuario>().Where(u => seedUsernames.Contains(u.Username)).ToListAsync();

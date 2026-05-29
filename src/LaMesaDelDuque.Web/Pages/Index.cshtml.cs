@@ -27,6 +27,7 @@ public class IndexModel : PageModel
         var esCocinero = user.IsInRole("Cocinero");
         var esCajero = user.IsInRole("Cajero");
         var esGerente = user.IsInRole("Gerente");
+        var esDespacho = user.IsInRole("Despacho");
 
         // Pedidos: Admin, Encargado, Cajero
         if (esAdmin || esEncargado || esCajero)
@@ -44,8 +45,8 @@ public class IndexModel : PageModel
         if (esAdmin || esEncargado || esMesero)
             modulos.Add(new("Mapa Salón", "/Operaciones/Salon/Mapa", "Mapa visual interactivo con drag & drop."));
 
-        // Despacho: Admin, Encargado, Cajero, Mesero
-        if (esAdmin || esEncargado || esCajero || esMesero)
+        // Despacho: Admin, Encargado, Despacho
+        if (esAdmin || esEncargado || esDespacho)
             modulos.Add(new("Despacho", "/Operaciones/Despacho/Index", "Pedidos listos para entregar y liberar mesas."));
 
         // Productos: Admin, Encargado

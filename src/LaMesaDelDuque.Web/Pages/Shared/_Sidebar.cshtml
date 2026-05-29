@@ -66,6 +66,12 @@
                 <i class="bi bi-display"></i>
                 <span>KDS Cocina</span>
             </a>
+            <a asp-page="/Operaciones/Despacho/Index"
+               class="lmd-sidebar__item @(activeTab == "Despacho" ? "lmd-sidebar__item--active" : "")"
+               title="Despacho">
+                <i class="bi bi-truck"></i>
+                <span>Despacho</span>
+            </a>
             <a asp-page="/Operaciones/Cierre/Index"
                class="lmd-sidebar__item @(activeTab == "Cierre" ? "lmd-sidebar__item--active" : "")"
                title="Cierre de caja">
