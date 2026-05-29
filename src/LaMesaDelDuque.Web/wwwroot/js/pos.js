@@ -186,6 +186,13 @@
         state.pagoMonto = null;
         state.pagoReferencia = null;
         state.split = { activo: false, personas: [], personaActual: 0 };
+        var csrf = document.querySelector('input[name="__RequestVerificationToken"]');
+        var form = new FormData();
+        form.append('__RequestVerificationToken', csrf ? csrf.value : '');
+        form.append('pedidoId', pedidoId);
+        try {
+            await fetch('?handler=MarcarEnCobroJson', { method: 'POST', body: form, headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+        } catch (e) { /* continúa aunque falle el server */ }
         renderProductos();
         mostrarPantalla('productos');
         lmdToast('Tab retomado — Mesa ' + mesaNumero, 'success');
@@ -1568,7 +1575,7 @@
                 .withAutomaticReconnect()
                 .build();
             connection.on('EstadoCambiado', function (pedidoId, nuevoEstado) {
-                if (nuevoEstado === 'Pagado' || nuevoEstado === 'Despachado') refrescarMesas();
+                if (nuevoEstado === 'Pagado' || nuevoEstado === 'Despachado' || nuevoEstado === 'EnCobro') refrescarMesas();
             });
             connection.on('PedidoCreado', function () { refrescarMesas(); });
             connection.on('ItemRecuperado', function (orden) {
@@ -1654,6 +1661,7 @@
         initSignalR();
         setInterval(actualizarTiemposEnMesa, 30000);
         setInterval(actualizarTimersGracia, 1000);
+        setInterval(refrescarMesas, 30000);
 
         window.addEventListener('offline', function () {
             var banner = document.getElementById('lmd-offline-banner');
