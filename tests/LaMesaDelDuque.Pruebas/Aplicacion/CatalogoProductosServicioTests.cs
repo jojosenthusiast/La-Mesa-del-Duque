@@ -42,7 +42,8 @@ public class CatalogoProductosServicioTests : IDisposable
             new RecetaProductoRepositorio(_contexto),
             new OrdenCocinaRepositorio(_contexto),
             new CuentaRepositorio(_contexto),
-            new PagoRepositorio(_contexto));
+            new PagoRepositorio(_contexto),
+            new ZonaSalonRepositorio(_contexto));
 
         _servicio = new CatalogoProductosServicio(_uot);
     }
