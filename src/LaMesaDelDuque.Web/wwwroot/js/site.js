@@ -90,31 +90,79 @@
         });
     });
 
+    function setProductFormValue(id, value) {
+        var input = document.getElementById(id);
+        if (input) {
+            input.value = value || "";
+        }
+    }
+
+    function setProductFormMode(text) {
+        var title = document.getElementById("producto-form-mode");
+        if (title) {
+            title.textContent = text;
+        }
+    }
+
+    function openProductForm() {
+        var formContainer = document.getElementById("producto-form");
+        if (formContainer) {
+            formContainer.classList.add("show");
+        }
+
+        var nameInput = document.getElementById("Vm_Form_Nombre");
+        if (nameInput) {
+            nameInput.focus();
+        }
+    }
+
+    function resetProductForm() {
+        setProductFormMode("Nuevo producto");
+        setProductFormValue("Vm_Form_Id", "");
+        setProductFormValue("Vm_Form_Nombre", "");
+        setProductFormValue("Vm_Form_Precio", "");
+        setProductFormValue("Vm_Form_CategoriaId", "");
+        setProductFormValue("Vm_Form_Descripcion", "");
+        setProductFormValue("Vm_Form_ImagenUrl", "");
+        setProductFormValue("Vm_Form_TiempoPreparacionMin", "");
+
+        var fileInput = document.getElementById("Vm_Form_ImagenFile");
+        if (fileInput) {
+            fileInput.value = "";
+        }
+
+        var removeImageInput = document.getElementById("Vm_Form_EliminarImagen");
+        if (removeImageInput) {
+            removeImageInput.checked = false;
+        }
+    }
+
+    document.addEventListener("click", function (event) {
+        var newButton = event.target.closest("[data-lmd-new-product]");
+        if (!newButton) {
+            return;
+        }
+
+        event.preventDefault();
+        resetProductForm();
+        openProductForm();
+    });
+
     document.addEventListener("click", function (event) {
         var editButton = event.target.closest("[data-lmd-edit-product]");
         if (!editButton) {
             return;
         }
 
-        var setValue = function (id, value) {
-            var input = document.getElementById(id);
-            if (input) {
-                input.value = value || "";
-            }
-        };
-
-        setValue("Vm_Form_Id", editButton.getAttribute("data-producto-id"));
-        setValue("Vm_Form_Nombre", editButton.getAttribute("data-producto-nombre"));
-        setValue("Vm_Form_Precio", editButton.getAttribute("data-producto-precio"));
-        setValue("Vm_Form_CategoriaId", editButton.getAttribute("data-producto-categoria-id"));
-        setValue("Vm_Form_Descripcion", editButton.getAttribute("data-producto-descripcion"));
-        setValue("Vm_Form_ImagenUrl", editButton.getAttribute("data-producto-imagen-url"));
-        setValue("Vm_Form_TiempoPreparacionMin", editButton.getAttribute("data-producto-tiempo-preparacion"));
-
-        var formContainer = document.getElementById("producto-form");
-        if (formContainer) {
-            formContainer.classList.add("show");
-        }
+        setProductFormMode("Editar producto");
+        setProductFormValue("Vm_Form_Id", editButton.getAttribute("data-producto-id"));
+        setProductFormValue("Vm_Form_Nombre", editButton.getAttribute("data-producto-nombre"));
+        setProductFormValue("Vm_Form_Precio", editButton.getAttribute("data-producto-precio"));
+        setProductFormValue("Vm_Form_CategoriaId", editButton.getAttribute("data-producto-categoria-id"));
+        setProductFormValue("Vm_Form_Descripcion", editButton.getAttribute("data-producto-descripcion"));
+        setProductFormValue("Vm_Form_ImagenUrl", editButton.getAttribute("data-producto-imagen-url"));
+        setProductFormValue("Vm_Form_TiempoPreparacionMin", editButton.getAttribute("data-producto-tiempo-preparacion"));
+        openProductForm();
     });
 
     if (window.signalR && window.lmdPedidosHubUrl) {

@@ -31,6 +31,9 @@ public class IndexModel : PageModel
     [BindProperty(SupportsGet = true)]
     public string Estado { get; set; } = "todos";
 
+    [BindProperty(SupportsGet = true)]
+    public Guid? ProductoGuardadoId { get; set; }
+
     [BindProperty]
     public ProductosPageVm Vm { get; set; } = new();
 
@@ -89,7 +92,7 @@ public class IndexModel : PageModel
                     imagenUrl = await GuardarArchivoImagenAsync(productoId, archivo);
                 }
 
-                await _catalogoProductosServicio.ActualizarProductoAsync(
+                var actualizado = await _catalogoProductosServicio.ActualizarProductoAsync(
                     productoId,
                     Vm.Form.Nombre,
                     Vm.Form.Precio,
@@ -97,7 +100,7 @@ public class IndexModel : PageModel
                     Vm.Form.Descripcion,
                     imagenUrl,
                     Vm.Form.TiempoPreparacionMin);
-                ToastSuccess = "Producto actualizado correctamente.";
+                ToastSuccess = $"Producto \"{actualizado.Nombre}\" actualizado correctamente.";
             }
             else
             {
@@ -123,10 +126,15 @@ public class IndexModel : PageModel
                         creado.TiempoPreparacionMin);
                 }
 
-                ToastSuccess = "Producto creado correctamente.";
+                ToastSuccess = $"Producto \"{creado.Nombre}\" creado correctamente.";
             }
 
-            return RedirectToPage(new { Buscar, CategoriaId, Estado });
+            if (Vm.Form.Id.HasValue)
+            {
+                return RedirectToPage(new { Buscar, CategoriaId, Estado, ProductoGuardadoId = productoId });
+            }
+
+            return RedirectToPage(new { Buscar = Vm.Form.Nombre.Trim(), CategoriaId = (Guid?)null, Estado = "todos", ProductoGuardadoId = productoId });
         }
         catch (ReglaDominioException ex)
         {
@@ -234,30 +242,46 @@ public class IndexModel : PageModel
     {
         Vm.Categorias = await _catalogoProductosServicio.ListarCategoriasAsync();
 
-        var productos = await _catalogoProductosServicio.ListarProductosAsync();
+        var todosLosProductos = await _catalogoProductosServicio.ListarProductosAsync();
+        var productos = todosLosProductos;
+        var filtros = new List<string>();
+
         if (!string.IsNullOrWhiteSpace(Buscar))
         {
-            productos = productos.Where(p => p.Nombre.Contains(Buscar, StringComparison.OrdinalIgnoreCase)).ToList();
+            var busqueda = Buscar.Trim();
+            productos = productos.Where(p => p.Nombre.Contains(busqueda, StringComparison.OrdinalIgnoreCase)).ToList();
+            filtros.Add($"búsqueda \"{busqueda}\"");
         }
 
         if (CategoriaId.HasValue)
         {
             productos = productos.Where(p => p.CategoriaId == CategoriaId.Value).ToList();
+            var categoriaNombre = Vm.Categorias.FirstOrDefault(c => c.Id == CategoriaId.Value)?.Nombre;
+            filtros.Add($"categoría \"{(string.IsNullOrWhiteSpace(categoriaNombre) ? CategoriaId.Value.ToString() : categoriaNombre)}\"");
         }
 
         if (Estado == "activos")
         {
             productos = productos.Where(p => p.Activo).ToList();
+            filtros.Add("estado activo");
         }
         else if (Estado == "inactivos")
         {
             productos = productos.Where(p => !p.Activo).ToList();
+            filtros.Add("estado inactivo");
         }
 
         Vm.Buscar = Buscar;
         Vm.CategoriaId = CategoriaId;
         Vm.Estado = Estado;
+        Vm.ProductoGuardadoId = ProductoGuardadoId;
         Vm.Productos = productos;
+        Vm.TotalProductos = todosLosProductos.Count;
+        Vm.TotalVisibles = productos.Count;
+        Vm.ProductoGuardadoVisible = ProductoGuardadoId.HasValue && productos.Any(p => p.Id == ProductoGuardadoId.Value);
+        Vm.DescripcionFiltros = filtros.Count == 0
+            ? "Sin filtros aplicados."
+            : $"Filtros activos: {string.Join(", ", filtros)}.";
     }
 
     private void SetUiContext()
