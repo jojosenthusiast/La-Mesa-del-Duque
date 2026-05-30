@@ -10,5 +10,6 @@ public class PedidoDto
     public string Estado { get; set; } = string.Empty;
     public decimal Total { get; set; }
     public DateTime FechaCreacion { get; set; }
+    public DateTime? FechaListoDespacho { get; set; }
     public List<DetallePedidoDto> Detalles { get; set; } = [];
 }

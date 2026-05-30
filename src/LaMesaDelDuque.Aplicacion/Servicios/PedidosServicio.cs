@@ -403,10 +403,30 @@ internal class PedidosServicio : IPedidosServicio
     public async Task<List<PedidoDto>> ListarListosParaDespachoAsync(CancellationToken cancelacion = default)
     {
         var pedidos = await _uot.Pedidos.ObtenerTodosAsync(cancelacion);
-        return pedidos
+        var listos = pedidos
             .Where(p => p.Estado == EstadoPedido.Listo || p.Estado == EstadoPedido.Pagado)
-            .Select(MapToDto)
             .ToList();
+
+        var dtos = new List<PedidoDto>(listos.Count);
+        foreach (var pedido in listos)
+        {
+            var dto = MapToDto(pedido);
+            dto.FechaListoDespacho = await ObtenerFechaListoDespachoAsync(pedido.Id, cancelacion);
+            dtos.Add(dto);
+        }
+
+        return dtos;
+    }
+
+    private async Task<DateTime?> ObtenerFechaListoDespachoAsync(Guid pedidoId, CancellationToken cancelacion)
+    {
+        var ordenes = await _uot.OrdenesCocina.ListarPorPedidoAsync(pedidoId, cancelacion);
+        var horasListas = ordenes
+            .Where(o => o.HoraListo.HasValue)
+            .Select(o => o.HoraListo!.Value)
+            .ToList();
+
+        return horasListas.Count == 0 ? null : horasListas.Max();
     }
 
     public async Task MarcarEnCobroAsync(Guid pedidoId, CancellationToken cancelacion = default)

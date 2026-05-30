@@ -102,6 +102,42 @@ public class PedidosServicioTests : IDisposable
     }
 
     [Fact]
+    public async Task ListarListosParaDespachoAsync_DebeUsarHoraListoDeCocinaComoReferenciaDespacho()
+    {
+        var (mesa, producto) = await CrearMesaYProductoAsync(80);
+        var pedido = new Pedido(TipoServicio.ComerAqui, mesa);
+        pedido.AgregarDetalle(new DetallePedido(producto, 1, 3.50m, null, null));
+        pedido.MarcarEnPreparacion();
+        pedido.MarcarListo();
+
+        typeof(Pedido).GetProperty(nameof(Pedido.CreatedAt))!
+            .SetValue(pedido, DateTime.UtcNow.AddHours(-6));
+
+        var orden = new OrdenCocina(
+            pedido.Id,
+            pedido.Detalles.Single().Id,
+            producto.Nombre,
+            1,
+            EstacionCocina.Bar,
+            mesa.Numero,
+            pedido.TipoServicio.ToString(),
+            productoId: producto.Id);
+        orden.MarcarComoListo();
+        var horaLista = orden.HoraListo!.Value;
+
+        await _uot.Pedidos.AgregarAsync(pedido);
+        await _uot.OrdenesCocina.AgregarAsync(orden);
+        await _uot.GuardarCambiosAsync();
+
+        var listos = await _servicio.ListarListosParaDespachoAsync();
+
+        var dto = Assert.Single(listos, p => p.Id == pedido.Id);
+        Assert.NotNull(dto.FechaListoDespacho);
+        Assert.True((dto.FechaListoDespacho!.Value - horaLista).Duration() < TimeSpan.FromSeconds(2));
+        Assert.True((dto.FechaListoDespacho.Value - dto.FechaCreacion).Duration() > TimeSpan.FromHours(5));
+    }
+
+    [Fact]
     public async Task CrearPedido_ParaLlevar_SinMesa_DebeCrearPedidoEnPreparacion()
     {
         var (_, producto) = await CrearMesaYProductoAsync();

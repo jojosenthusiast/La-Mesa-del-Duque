@@ -48,7 +48,8 @@
             <div class="row g-3" id="lmd-despacho-cards">
                 @foreach (var pedido in Model.PedidosListos.OrderBy(p => p.FechaCreacion))
                 {
-                    var minutos = (int)(DateTime.UtcNow - pedido.FechaCreacion).TotalMinutes;
+                    var referenciaDespacho = pedido.FechaListoDespacho ?? pedido.FechaCreacion;
+                    var minutos = IndexModel.CalcularMinutosEsperaDespacho(referenciaDespacho, DateTime.UtcNow);
                     var urgente = minutos > 20;
                     <div class="col-sm-6 col-lg-4">
                         <article class="card h-100 border @(urgente ? "border-danger" : "border-success")" data-pedido-id="@pedido.Id">
@@ -61,8 +62,8 @@
                                 {
                                     <strong class="fs-5">Para llevar</strong>
                                 }
-                                <span class="lmd-status-badge @(urgente ? "lmd-status-badge--danger" : "lmd-status-badge--active")">
-                                    @minutos min
+                                <span class="lmd-status-badge @(urgente ? "lmd-status-badge--danger" : "lmd-status-badge--active")" title="Tiempo desde que cocina dejó el pedido listo para despacho">
+                                    @(minutos == 0 ? "Ahora" : $"{minutos} min")
                                 </span>
                             </div>
                             <div class="card-body py-2">

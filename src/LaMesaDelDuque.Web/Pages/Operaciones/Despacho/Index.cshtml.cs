@@ -26,6 +26,23 @@ public class IndexModel : PageModel
         _logger = logger;
     }
 
+    public static int CalcularMinutosEsperaDespacho(DateTime referencia, DateTime ahoraUtc)
+    {
+        var referenciaUtc = NormalizarReferenciaUtc(referencia);
+        var minutos = (int)Math.Floor((ahoraUtc - referenciaUtc).TotalMinutes);
+        return Math.Max(0, minutos);
+    }
+
+    private static DateTime NormalizarReferenciaUtc(DateTime referencia)
+    {
+        return referencia.Kind switch
+        {
+            DateTimeKind.Utc => referencia,
+            DateTimeKind.Local => referencia.ToUniversalTime(),
+            _ => DateTime.SpecifyKind(referencia, DateTimeKind.Utc)
+        };
+    }
+
     public async Task OnGetAsync()
     {
         PedidosListos = await _pedidos.ListarListosParaDespachoAsync();
