@@ -1,4 +1,5 @@
 using System.Text;
+using System.Text.Encodings.Web;
 using LaMesaDelDuque.Dominio.Enumeraciones;
 using LaMesaDelDuque.Dominio.Repositorios;
 
@@ -31,7 +32,12 @@ public class TicketServicio : ITicketServicio
 
         var ahora = DateTime.Now;
         var ticketId = pedidoId.ToString("N")[..8].ToUpper();
-        var mesa = pedido.Mesa != null ? pedido.Mesa.Numero.ToString() : "Para llevar";
+        var servicio = pedido.TipoServicio switch
+        {
+            TipoServicio.ComerAqui => "Comer aquí",
+            TipoServicio.Domicilio => "Domicilio",
+            _ => "Para llevar"
+        };
         var metodoPagoLabel = pago?.Metodo switch
         {
             MetodoPago.Tarjeta => "Tarjeta",
@@ -58,15 +64,25 @@ public class TicketServicio : ITicketServicio
         sb.AppendLine("</style></head><body>");
         sb.AppendLine("<div class=\"hdr\"><h1>La Mesa del Duque</h1><p>Ticket de compra</p></div>");
         sb.AppendLine("<div class=\"info\">");
-        sb.AppendLine("<span><b>Ticket:</b> " + ticketId + "</span>");
-        sb.AppendLine("<span><b>Fecha:</b> " + ahora.ToString("dd/MM/yyyy HH:mm") + "</span>");
-        sb.AppendLine("<span><b>Mesa:</b> " + mesa + "</span>");
+        sb.AppendLine("<span><b>Ticket:</b> " + E(ticketId) + "</span>");
+        sb.AppendLine("<span><b>Fecha:</b> " + E(ahora.ToString("dd/MM/yyyy HH:mm")) + "</span>");
+        sb.AppendLine("<span><b>Servicio:</b> " + E(servicio) + "</span>");
+        if (pedido.TipoServicio == TipoServicio.ComerAqui && pedido.Mesa is not null)
+            sb.AppendLine("<span><b>Mesa:</b> " + E(pedido.Mesa.Numero.ToString()) + "</span>");
+        if (pedido.TipoServicio == TipoServicio.Domicilio)
+        {
+            sb.AppendLine("<span><b>Cliente:</b> " + E(pedido.NombreClienteEntrega) + "</span>");
+            sb.AppendLine("<span><b>Teléfono:</b> " + E(pedido.TelefonoEntrega) + "</span>");
+            sb.AppendLine("<span><b>Dirección:</b> " + E(pedido.DireccionEntrega) + "</span>");
+            if (!string.IsNullOrWhiteSpace(pedido.ReferenciaEntrega))
+                sb.AppendLine("<span><b>Referencia:</b> " + E(pedido.ReferenciaEntrega) + "</span>");
+        }
         sb.AppendLine("</div>");
         sb.AppendLine("<table>");
 
         foreach (var d in pedido.Detalles)
         {
-            sb.AppendLine("<tr><td>" + d.Cantidad + "x " + d.Producto.Nombre + "</td><td style=\"text-align:right\">$" + d.Subtotal.ToString("F2") + "</td></tr>");
+            sb.AppendLine("<tr><td>" + d.Cantidad + "x " + E(d.Producto.Nombre) + "</td><td style=\"text-align:right\">$" + d.Subtotal.ToString("F2") + "</td></tr>");
         }
 
         sb.AppendLine("</table>");
@@ -74,9 +90,9 @@ public class TicketServicio : ITicketServicio
 
         if (pago != null)
         {
-            sb.AppendLine("<div class=\"pago\">Pago: " + metodoPagoLabel + "</div>");
+            sb.AppendLine("<div class=\"pago\">Pago: " + E(metodoPagoLabel) + "</div>");
             if (!string.IsNullOrWhiteSpace(pago.ReferenciaPos))
-                sb.AppendLine("<div class=\"pago\">Auth: " + pago.ReferenciaPos + "</div>");
+                sb.AppendLine("<div class=\"pago\">Auth: " + E(pago.ReferenciaPos) + "</div>");
         }
 
         sb.AppendLine("<div class=\"ftr\"><p>Gracias por su visita</p><p>Este ticket no es factura fiscal</p></div>");
@@ -84,4 +100,6 @@ public class TicketServicio : ITicketServicio
 
         return sb.ToString();
     }
+
+    private static string E(string? valor) => HtmlEncoder.Default.Encode(valor ?? string.Empty);
 }

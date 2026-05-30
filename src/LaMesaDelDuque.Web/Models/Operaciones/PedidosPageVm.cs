@@ -21,6 +21,18 @@ public class CrearPedidoFormVm
 
     public Guid? MesaId { get; set; }
 
+    [MaxLength(120)]
+    public string? NombreClienteEntrega { get; set; }
+
+    [MaxLength(30)]
+    public string? TelefonoEntrega { get; set; }
+
+    [MaxLength(250)]
+    public string? DireccionEntrega { get; set; }
+
+    [MaxLength(250)]
+    public string? ReferenciaEntrega { get; set; }
+
     [MinLength(1, ErrorMessage = "Debe incluir al menos una línea en el pedido.")]
     public List<LineaPedidoFormVm> Lineas { get; set; } = [];
 }

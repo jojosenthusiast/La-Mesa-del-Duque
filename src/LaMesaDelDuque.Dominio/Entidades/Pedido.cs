@@ -13,6 +13,10 @@ public class Pedido
     public TipoServicio TipoServicio { get; private set; }
     public Mesa? Mesa { get; private set; }
     public Guid? MeseroAsignadoId { get; private set; }
+    public string? NombreClienteEntrega { get; private set; }
+    public string? TelefonoEntrega { get; private set; }
+    public string? DireccionEntrega { get; private set; }
+    public string? ReferenciaEntrega { get; private set; }
     public EstadoPedido Estado { get; private set; }
     public DateTime CreatedAt { get; private set; }
     public IReadOnlyList<DetallePedido> Detalles => _detalles.AsReadOnly();
@@ -24,16 +28,55 @@ public class Pedido
     {
     }
 
-    public Pedido(TipoServicio tipoServicio, Mesa? mesa = null)
+    public Pedido(
+        TipoServicio tipoServicio,
+        Mesa? mesa = null,
+        string? nombreClienteEntrega = null,
+        string? telefonoEntrega = null,
+        string? direccionEntrega = null,
+        string? referenciaEntrega = null)
     {
         if (tipoServicio == TipoServicio.ParaLlevar && mesa is not null)
             throw new ReglaDominioException("Un pedido para llevar no puede tener mesa asignada.");
+
+        if (tipoServicio == TipoServicio.Domicilio && mesa is not null)
+            throw new ReglaDominioException("Un pedido a domicilio no puede tener mesa asignada.");
 
         Id = Guid.NewGuid();
         TipoServicio = tipoServicio;
         Mesa = mesa;
         Estado = EstadoPedido.Pendiente;
         CreatedAt = DateTime.UtcNow;
+
+        if (tipoServicio == TipoServicio.Domicilio)
+            EstablecerDatosEntrega(nombreClienteEntrega, telefonoEntrega, direccionEntrega, referenciaEntrega);
+    }
+
+    private void EstablecerDatosEntrega(string? nombreCliente, string? telefono, string? direccion, string? referencia)
+    {
+        NombreClienteEntrega = NormalizarObligatorio(nombreCliente, "El nombre del cliente es obligatorio para pedidos a domicilio.");
+        TelefonoEntrega = NormalizarObligatorio(telefono, "El teléfono del cliente es obligatorio para pedidos a domicilio.");
+        DireccionEntrega = NormalizarObligatorio(direccion, "La dirección de entrega es obligatoria para pedidos a domicilio.");
+        ReferenciaEntrega = string.IsNullOrWhiteSpace(referencia) ? null : referencia.Trim();
+
+        ValidarLongitud(NombreClienteEntrega, 120, "El nombre del cliente no puede superar 120 caracteres.");
+        ValidarLongitud(TelefonoEntrega, 30, "El teléfono del cliente no puede superar 30 caracteres.");
+        ValidarLongitud(DireccionEntrega, 250, "La dirección de entrega no puede superar 250 caracteres.");
+        ValidarLongitud(ReferenciaEntrega, 250, "La referencia de entrega no puede superar 250 caracteres.");
+    }
+
+    private static string NormalizarObligatorio(string? valor, string mensaje)
+    {
+        if (string.IsNullOrWhiteSpace(valor))
+            throw new ReglaDominioException(mensaje);
+
+        return valor.Trim();
+    }
+
+    private static void ValidarLongitud(string? valor, int maximo, string mensaje)
+    {
+        if (valor is not null && valor.Length > maximo)
+            throw new ReglaDominioException(mensaje);
     }
 
     public void AsignarMesero(Guid meseroId)

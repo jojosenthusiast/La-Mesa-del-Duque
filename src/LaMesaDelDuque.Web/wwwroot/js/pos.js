@@ -45,6 +45,7 @@
         tipoServicio: null,
         mesaId: null,
         mesaNumero: null,
+        datosEntrega: { nombreCliente: '', telefono: '', direccion: '', referencia: '' },
         lineas: [],
         pedidoActual: null,        // { id }
         pagado: false,
@@ -63,6 +64,7 @@
     let connection = null;
     let keypadValue = '0';
     let _creandoPedido = false;
+    let _alConfirmarDomicilio = null;
 
     // ── Screen machine ──────────────────────────────────
     function mostrarPantalla(nombre) {
@@ -101,10 +103,120 @@
     }
 
     function cerrarTodasOverlaysPago() {
-        ['pago', 'efectivo', 'tarjeta', 'qr', 'otro', 'split', 'splitdetalle'].forEach(cerrarOverlay);
+        ['pago', 'efectivo', 'tarjeta', 'qr', 'otro', 'split', 'splitdetalle', 'domicilio'].forEach(cerrarOverlay);
     }
 
     // ═══════════════════════════════════════════════════
+    function datosEntregaVacios() {
+        return { nombreCliente: '', telefono: '', direccion: '', referencia: '' };
+    }
+
+    function limpiarDatosEntrega() {
+        state.datosEntrega = datosEntregaVacios();
+    }
+
+    function datosEntregaDesdeFormulario() {
+        function valor(id) {
+            var el = document.getElementById(id);
+            return el ? (el.value || '').trim() : '';
+        }
+        return {
+            nombreCliente: valor('lmd-pos-entrega-nombre'),
+            telefono: valor('lmd-pos-entrega-telefono'),
+            direccion: valor('lmd-pos-entrega-direccion'),
+            referencia: valor('lmd-pos-entrega-referencia')
+        };
+    }
+
+    function datosEntregaActuales() {
+        var d = state.datosEntrega || datosEntregaVacios();
+        return {
+            nombreCliente: (d.nombreCliente || '').trim(),
+            telefono: (d.telefono || '').trim(),
+            direccion: (d.direccion || '').trim(),
+            referencia: (d.referencia || '').trim()
+        };
+    }
+
+    function validarDatosEntrega(d) {
+        if (!d.nombreCliente) { lmdToast('El nombre del cliente es obligatorio para domicilio', 'error'); return false; }
+        if (!d.telefono) { lmdToast('El tel\u00e9fono del cliente es obligatorio para domicilio', 'error'); return false; }
+        if (!d.direccion) { lmdToast('La direcci\u00f3n de entrega es obligatoria para domicilio', 'error'); return false; }
+        return true;
+    }
+
+    function appendDatosEntregaForm(form) {
+        if (state.tipoServicio !== 'Domicilio') return true;
+        var d = datosEntregaActuales();
+        if (!validarDatosEntrega(d)) return false;
+        form.append('Vm.CrearPedido.NombreClienteEntrega', d.nombreCliente);
+        form.append('Vm.CrearPedido.TelefonoEntrega', d.telefono);
+        form.append('Vm.CrearPedido.DireccionEntrega', d.direccion);
+        if (d.referencia) form.append('Vm.CrearPedido.ReferenciaEntrega', d.referencia);
+        return true;
+    }
+
+    function labelServicio() {
+        if (state.tipoServicio === 'ComerAqui') return 'Mesa ' + (state.mesaNumero || 'sin asignar');
+        if (state.tipoServicio === 'Domicilio') {
+            var d = datosEntregaActuales();
+            return d.nombreCliente ? 'Domicilio - ' + d.nombreCliente : 'Domicilio';
+        }
+        return 'Para llevar';
+    }
+
+    function detalleDomicilioCartHtml() {
+        if (state.tipoServicio !== 'Domicilio') return '';
+        var d = datosEntregaActuales();
+        var partes = [];
+        if (d.telefono) partes.push(escapeHtml(d.telefono));
+        if (d.direccion) partes.push(escapeHtml(d.direccion));
+        return '<div class="lmd-pos-cart__delivery">' + icon('send') + ' ' + (partes.join(' - ') || 'Complete datos de entrega') + '</div>';
+    }
+
+    function abrirFormularioDomicilio(alConfirmar) {
+        _alConfirmarDomicilio = typeof alConfirmar === 'function' ? alConfirmar : null;
+        var d = datosEntregaActuales();
+        var html =
+            '<div class="lmd-pos-ov-header">' +
+                '<span class="lmd-pos-ov-title">' + icon('send') + ' Datos de domicilio</span>' +
+                '<button class="lmd-pos-ov-close" onclick="pos.cerrarDomicilio()">' + icon('x') + '</button>' +
+            '</div>' +
+            '<div class="lmd-pos-cambiar-servicio-body">' +
+                '<label class="lmd-pos-field"><span>Cliente</span><input id="lmd-pos-entrega-nombre" maxlength="120" value="' + escapeHtml(d.nombreCliente) + '" placeholder="Nombre de quien recibe"></label>' +
+                '<label class="lmd-pos-field"><span>Tel\u00e9fono</span><input id="lmd-pos-entrega-telefono" maxlength="30" value="' + escapeHtml(d.telefono) + '" placeholder="809-000-0000"></label>' +
+                '<label class="lmd-pos-field"><span>Direcci\u00f3n</span><textarea id="lmd-pos-entrega-direccion" maxlength="250" placeholder="Calle, n\u00famero, sector">' + escapeHtml(d.direccion) + '</textarea></label>' +
+                '<label class="lmd-pos-field"><span>Referencia opcional</span><textarea id="lmd-pos-entrega-referencia" maxlength="250" placeholder="Ej.: port\u00f3n negro, segundo piso">' + escapeHtml(d.referencia) + '</textarea></label>' +
+                '<div class="lmd-pos-ov-actions">' +
+                    '<button class="lmd-pos-ov-btn" onclick="pos.cerrarDomicilio()">Cancelar</button>' +
+                    '<button class="lmd-pos-ov-btn lmd-pos-ov-btn--primary" onclick="pos.confirmarDatosDomicilio()">' + icon('check') + ' Confirmar domicilio</button>' +
+                '</div>' +
+            '</div>';
+        abrirOverlay('domicilio', html, { closeOnBackdrop: false, wide: true });
+        setTimeout(function () {
+            var el = document.getElementById('lmd-pos-entrega-nombre');
+            if (el) el.focus();
+        }, 50);
+    }
+
+    function confirmarDatosDomicilio() {
+        var d = datosEntregaDesdeFormulario();
+        if (!validarDatosEntrega(d)) return;
+        state.tipoServicio = 'Domicilio';
+        state.mesaId = null;
+        state.mesaNumero = null;
+        state.datosEntrega = d;
+        cerrarOverlay('domicilio');
+        var cb = _alConfirmarDomicilio;
+        _alConfirmarDomicilio = null;
+        if (cb) cb();
+    }
+
+    function cerrarDomicilio() {
+        _alConfirmarDomicilio = null;
+        cerrarOverlay('domicilio');
+    }
+
     // SCREEN 1 — Selección
     // ═══════════════════════════════════════════════════
     function renderSeleccion() {
@@ -158,12 +270,17 @@
                 '<div class="lmd-pos-seleccion__header">' + icon('utensils-crossed') + ' Comer aquí</div>' +
                 '<div class="lmd-pos-mesas-grid">' + (mesasHtml || '<div class="lmd-pos-empty">Sin mesas disponibles</div>') + '</div>' +
             '</div>' +
-            '<div class="lmd-pos-seleccion__mitad lmd-pos-seleccion__para-llevar" onclick="pos.seleccionarParaLlevar()">' +
-                '<div class="lmd-pos-seleccion__header">' + icon('package') + ' Para llevar</div>' +
-                '<div class="lmd-pos-para-llevar-card">' +
+            '<div class="lmd-pos-seleccion__mitad lmd-pos-seleccion__para-llevar">' +
+                '<div class="lmd-pos-seleccion__header">' + icon('package') + ' Pedidos sin mesa</div>' +
+                '<div class="lmd-pos-para-llevar-card" onclick="pos.seleccionarParaLlevar()">' +
                     '<div class="lmd-pos-para-llevar-card__icon">' + icon('shopping-bag') + '</div>' +
                     '<div class="lmd-pos-para-llevar-card__titulo">Para llevar</div>' +
-                    '<div class="lmd-pos-para-llevar-card__sub">Toca para iniciar sin mesa</div>' +
+                    '<div class="lmd-pos-para-llevar-card__sub">Cliente retira en mostrador</div>' +
+                '</div>' +
+                '<div class="lmd-pos-para-llevar-card" onclick="pos.seleccionarDomicilio()">' +
+                    '<div class="lmd-pos-para-llevar-card__icon">' + icon('send') + '</div>' +
+                    '<div class="lmd-pos-para-llevar-card__titulo">Domicilio</div>' +
+                    '<div class="lmd-pos-para-llevar-card__sub">Registra cliente, tel\u00e9fono y direcci\u00f3n</div>' +
                 '</div>' +
             '</div>' +
         '</div>';
@@ -190,6 +307,7 @@
         state.tipoServicio = 'ComerAqui';
         state.mesaId = mesaId;
         state.mesaNumero = numero;
+        limpiarDatosEntrega();
         _resetPedido();
         renderProductos();
         mostrarPantalla('productos');
@@ -201,6 +319,7 @@
         state.tipoServicio = 'ComerAqui';
         state.mesaId = mesaId;
         state.mesaNumero = mesaNumero;
+        limpiarDatosEntrega();
         state.lineas = [];
         state.pedidoActual = { id: pedidoId, total: tabTotal, detalles: [] };
         state.pagado = false;
@@ -224,6 +343,7 @@
         state.tipoServicio = 'ComerAqui';
         state.mesaId = mesaId;
         state.mesaNumero = mesaNumero;
+        limpiarDatosEntrega();
         state.lineas = [];
         state.pedidoActual = { id: pedidoId, total: tabTotal, detalles: [] };
         state.pagado = false;
@@ -242,9 +362,19 @@
         state.tipoServicio = 'ParaLlevar';
         state.mesaId = null;
         state.mesaNumero = null;
+        limpiarDatosEntrega();
         _resetPedido();
         renderProductos();
         mostrarPantalla('productos');
+    }
+
+    function seleccionarDomicilio() {
+        abrirFormularioDomicilio(function () {
+            _resetPedido();
+            renderProductos();
+            mostrarPantalla('productos');
+            lmdToast('Pedido a domicilio iniciado', 'success');
+        });
     }
 
     function _resetPedido() {
@@ -315,11 +445,12 @@
             '<div class="lmd-pos-cart">' +
                 '<div class="lmd-pos-cart__header">' +
                     icon('shopping-bag') +
-                    '<span>' + (state.tipoServicio === 'ComerAqui' ? 'Mesa ' + state.mesaNumero : 'Para llevar') + '</span>' +
+                    '<span>' + escapeHtml(labelServicio()) + '</span>' +
                     (state.pedidoActual && !state.pagado ? '<span class="lmd-pos-tab-activo-badge">' + icon('clock') + ' Tab activo</span>' : '') +
                     (!state.pagado ? '<button class="lmd-pos-cart-change-servicio" onclick="pos.cambiarServicio()" title="Cambiar tipo de servicio">' + icon('refresh-cw') + '</button>' : '') +
                     (state.pagado ? '<span class="lmd-pos-pagado-badge">' + icon('check-circle') + ' Pagado</span>' : '') +
                 '</div>' +
+                detalleDomicilioCartHtml() +
                 '<div class="lmd-pos-cart__items" id="lmd-pos-cart-items">' + cartItemsHtml + '</div>' +
                 '<div class="lmd-pos-cart__total">' + fmt(total) + '</div>' +
                 '<div class="lmd-pos-cart__acciones">' +
@@ -485,6 +616,7 @@
         form.append('__RequestVerificationToken', csrf ? csrf.value : '');
         form.append('Vm.CrearPedido.TipoServicio', state.tipoServicio || 'ComerAqui');
         if (state.mesaId) form.append('Vm.CrearPedido.MesaId', state.mesaId);
+        if (!appendDatosEntregaForm(form)) { _creandoPedido = false; return; }
         state.lineas.forEach(function (l, i) {
             form.append('Vm.CrearPedido.Lineas[' + i + '].ProductoId', l.productoId);
             form.append('Vm.CrearPedido.Lineas[' + i + '].Cantidad', l.cantidad || 1);
@@ -496,7 +628,7 @@
             var data = await res.json();
             if (data.pedidoId) {
                 lmdToast('Pedido enviado a cocina', 'success');
-                if (state.tipoServicio === 'ParaLlevar') {
+                if (state.tipoServicio === 'ParaLlevar' || state.tipoServicio === 'Domicilio') {
                     _creandoPedido = false;
                     nuevaOrden();
                 } else {
@@ -537,6 +669,7 @@
             form.append('__RequestVerificationToken', csrf ? csrf.value : '');
             form.append('Vm.CrearPedido.TipoServicio', state.tipoServicio || 'ComerAqui');
             if (state.mesaId) form.append('Vm.CrearPedido.MesaId', state.mesaId);
+            if (!appendDatosEntregaForm(form)) { _creandoPedido = false; return; }
             state.lineas.forEach(function (l, i) {
                 form.append('Vm.CrearPedido.Lineas[' + i + '].ProductoId', l.productoId);
                 form.append('Vm.CrearPedido.Lineas[' + i + '].Cantidad', l.cantidad || 1);
@@ -1381,6 +1514,7 @@
         state.tipoServicio = null;
         state.mesaId = null;
         state.mesaNumero = null;
+        limpiarDatosEntrega();
         _resetPedido();
         await refrescarMesas();
         renderSeleccion();
@@ -1564,17 +1698,21 @@
             '</button>';
         }).join('');
 
-        var esComerAqui = state.tipoServicio === 'ComerAqui';
+        var esParaLlevar = state.tipoServicio === 'ParaLlevar';
+        var esDomicilio = state.tipoServicio === 'Domicilio';
         var html =
             '<div class="lmd-pos-ov-header">' +
                 '<span class="lmd-pos-ov-title">' + icon('refresh-cw') + ' Cambiar servicio</span>' +
                 '<button class="lmd-pos-ov-close" onclick="pos.cerrarCambiarServicio()">' + icon('x') + '</button>' +
             '</div>' +
             '<div class="lmd-pos-cambiar-servicio-body">' +
-                '<button class="lmd-pos-cambiar-servicio-opcion' + (!esComerAqui ? ' lmd-pos-cambiar-servicio-opcion--activa' : '') + '" onclick="pos.cambiarAParaLlevar()">' +
+                '<button class="lmd-pos-cambiar-servicio-opcion' + (esParaLlevar ? ' lmd-pos-cambiar-servicio-opcion--activa' : '') + '" onclick="pos.cambiarAParaLlevar()">' +
                     icon('package') + '<span>Para llevar</span>' +
                 '</button>' +
-                '<div class="lmd-pos-cambiar-servicio-sep">— o selecciona una mesa —</div>' +
+                '<button class="lmd-pos-cambiar-servicio-opcion' + (esDomicilio ? ' lmd-pos-cambiar-servicio-opcion--activa' : '') + '" onclick="pos.cambiarADomicilio()">' +
+                    icon('send') + '<span>Domicilio</span>' +
+                '</button>' +
+                '<div class="lmd-pos-cambiar-servicio-sep">&mdash; o selecciona una mesa &mdash;</div>' +
                 '<div class="lmd-pos-mesas-grid lmd-pos-mesas-grid--mini">' +
                     (mesasHtml || '<span class="lmd-pos-empty">Sin mesas disponibles</span>') +
                 '</div>' +
@@ -1590,6 +1728,7 @@
         state.tipoServicio = 'ComerAqui';
         state.mesaId = mesaId;
         state.mesaNumero = numero;
+        limpiarDatosEntrega();
         cerrarOverlay('cambiarservicio');
         renderProductos();
         lmdToast('Cambiado a Mesa ' + numero, 'success');
@@ -1599,9 +1738,18 @@
         state.tipoServicio = 'ParaLlevar';
         state.mesaId = null;
         state.mesaNumero = null;
+        limpiarDatosEntrega();
         cerrarOverlay('cambiarservicio');
         renderProductos();
         lmdToast('Cambiado a Para llevar', 'success');
+    }
+
+    function cambiarADomicilio() {
+        abrirFormularioDomicilio(function () {
+            cerrarOverlay('cambiarservicio');
+            renderProductos();
+            lmdToast('Cambiado a Domicilio', 'success');
+        });
     }
 
     function cerrarCambiarServicio() { cerrarOverlay('cambiarservicio'); }
@@ -1717,7 +1865,7 @@
 
     // ── Public API ──────────────────────────────────────
     window.pos = {
-        seleccionarMesa, seleccionarParaLlevar,
+        seleccionarMesa, seleccionarParaLlevar, seleccionarDomicilio,
         filtrarCategoria, agregarAlCarrito, incrementarItem, decrementarItem, eliminarDelCarrito,
         cancelarOrden, confirmarListo, irAPago,
         cerrarPago, procesarPago,
@@ -1733,7 +1881,8 @@
         confirmarPropina,
         abrirModificadores, toggleAlergia, _setNotaCustom,
         cerrarModificadores, confirmarModificadores,
-        cambiarServicio, cambiarAMesa, cambiarAParaLlevar, cerrarCambiarServicio,
+        cambiarServicio, cambiarAMesa, cambiarAParaLlevar, cambiarADomicilio, cerrarCambiarServicio,
+        confirmarDatosDomicilio, cerrarDomicilio,
         simularRechazo, reintentarPago
     };
 

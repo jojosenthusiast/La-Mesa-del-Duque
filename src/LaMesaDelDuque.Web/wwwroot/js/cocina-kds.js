@@ -186,7 +186,9 @@
         const alergenos = escapeHtml(String(orden.alergenos ?? '').toUpperCase());
         const mesaTexto = orden.mesaNumero
             ? `Mesa ${escapeHtml(orden.mesaNumero)}`
-            : (orden.tipoServicio === 'ParaLlevar' ? '<svg class="lmd-kds-icon" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><use href="/lib/lucide-static/icons/package.svg#icon"/></svg> Para llevar' : 'Sin mesa');
+            : orden.tipoServicio === 'Domicilio'
+                ? '<svg class="lmd-kds-icon" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><use href="/lib/lucide-static/icons/send.svg#icon"/></svg> Domicilio'
+                : (orden.tipoServicio === 'ParaLlevar' ? '<svg class="lmd-kds-icon" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><use href="/lib/lucide-static/icons/package.svg#icon"/></svg> Para llevar' : 'Sin mesa');
 
         const tieneModificaciones = orden.ingredientesQuitados || orden.ingredientesExtra;
         const tieneNotas = !!orden.notas;

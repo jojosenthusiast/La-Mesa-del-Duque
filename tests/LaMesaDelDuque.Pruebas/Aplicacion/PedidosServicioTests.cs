@@ -195,6 +195,55 @@ public class PedidosServicioTests : IDisposable
         Assert.Equal(mesero.Id, pedido.MeseroAsignadoId);
         Assert.Equal(mesero.Id, persistido.MeseroAsignadoId);
     }
+
+    [Fact]
+    public async Task CrearPedido_Domicilio_DebePersistirDatosEntregaYNoAsignarMesa()
+    {
+        var (_, producto) = await CrearMesaYProductoAsync(20);
+        var datosEntrega = new DatosEntregaDto
+        {
+            NombreCliente = "Laura Gómez",
+            Telefono = "809-555-0199",
+            Direccion = "Av. Independencia #120",
+            Referencia = "Apartamento 3B"
+        };
+
+        var pedido = await _servicio.CrearPedidoAsync(TipoServicio.Domicilio, null, new List<DetalleCreacionDto>
+        {
+            new() { ProductoId = producto.Id, Cantidad = 2, PrecioUnitario = 3.50m }
+        }, datosEntrega);
+
+        var persistido = await _contexto.Set<Pedido>()
+            .AsNoTracking()
+            .SingleAsync(p => p.Id == pedido.Id);
+
+        Assert.Equal("Domicilio", pedido.TipoServicio);
+        Assert.Null(pedido.MesaId);
+        Assert.Null(pedido.MesaNumero);
+        Assert.Equal("Laura Gómez", pedido.NombreClienteEntrega);
+        Assert.Equal("809-555-0199", pedido.TelefonoEntrega);
+        Assert.Equal("Av. Independencia #120", pedido.DireccionEntrega);
+        Assert.Equal("Apartamento 3B", pedido.ReferenciaEntrega);
+        Assert.Equal("Laura Gómez", persistido.NombreClienteEntrega);
+        Assert.Equal("Av. Independencia #120", persistido.DireccionEntrega);
+    }
+
+    [Fact]
+    public async Task CrearPedido_Domicilio_ConMesa_DebeRechazarOperacion()
+    {
+        var (mesa, producto) = await CrearMesaYProductoAsync(21);
+        var datosEntrega = new DatosEntregaDto
+        {
+            NombreCliente = "Laura Gómez",
+            Telefono = "809-555-0199",
+            Direccion = "Av. Independencia #120"
+        };
+
+        await Assert.ThrowsAsync<ReglaDominioException>(() => _servicio.CrearPedidoAsync(TipoServicio.Domicilio, mesa.Id, new List<DetalleCreacionDto>
+        {
+            new() { ProductoId = producto.Id, Cantidad = 1, PrecioUnitario = 3.50m }
+        }, datosEntrega));
+    }
     [Fact]
     public async Task CrearPedido_ParaLlevar_ConMesa_DebeLanzarExcepcion()
     {

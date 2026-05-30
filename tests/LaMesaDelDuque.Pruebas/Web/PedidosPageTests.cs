@@ -29,6 +29,74 @@ public class PedidosPageTests
         Assert.NotEmpty(page.Vm.MesasDisponibles);
         Assert.NotEmpty(page.Vm.PedidosActivos);
     }
+
+    [Fact]
+    public async Task OnPostCrearJsonAsync_Domicilio_DebeEnviarDatosEntregaAlServicio()
+    {
+        var catalogo = new FakeCatalogoPedidosProductosServicio();
+        var pedidos = new FakePedidosServicio();
+        var page = new IndexModel(
+            pedidos,
+            catalogo,
+            new FakePedidosMesasServicio(),
+            new FakeRecetasProductosServicio(),
+            new FakeTicketServicio(),
+            new FakeAlergenoServicio(),
+            new FakeHubContext<PedidosHub>(),
+            NullLogger<IndexModel>.Instance)
+        {
+            Vm = new LaMesaDelDuque.Web.Models.Operaciones.PedidosPageVm
+            {
+                CrearPedido = new LaMesaDelDuque.Web.Models.Operaciones.CrearPedidoFormVm
+                {
+                    TipoServicio = "Domicilio",
+                    MesaId = Guid.NewGuid(),
+                    NombreClienteEntrega = "Carlos Ruiz",
+                    TelefonoEntrega = "809-555-0100",
+                    DireccionEntrega = "Calle Las Flores #12",
+                    ReferenciaEntrega = "Portón negro",
+                    Lineas =
+                    [
+                        new LaMesaDelDuque.Web.Models.Operaciones.LineaPedidoFormVm
+                        {
+                            ProductoId = catalogo.ProductoActivoId,
+                            Cantidad = 1,
+                            PrecioUnitario = 20m
+                        }
+                    ]
+                }
+            }
+        };
+
+        await page.OnPostCrearJsonAsync();
+
+        Assert.Equal(LaMesaDelDuque.Dominio.Enumeraciones.TipoServicio.Domicilio, pedidos.UltimoTipoServicio);
+        Assert.Null(pedidos.UltimaMesaId);
+        Assert.NotNull(pedidos.UltimosDatosEntrega);
+        Assert.Equal("Carlos Ruiz", pedidos.UltimosDatosEntrega!.NombreCliente);
+        Assert.Equal("809-555-0100", pedidos.UltimosDatosEntrega.Telefono);
+        Assert.Equal("Calle Las Flores #12", pedidos.UltimosDatosEntrega.Direccion);
+        Assert.Equal("Portón negro", pedidos.UltimosDatosEntrega.Referencia);
+    }
+
+    [Fact]
+    public async Task OnPostCambiarTipoAsync_Domicilio_DebeMostrarMensajeDeEntrega()
+    {
+        var page = new IndexModel(
+            new FakePedidosServicio(),
+            new FakeCatalogoPedidosProductosServicio(),
+            new FakePedidosMesasServicio(),
+            new FakeRecetasProductosServicio(),
+            new FakeTicketServicio(),
+            new FakeAlergenoServicio(),
+            new FakeHubContext<PedidosHub>(),
+            NullLogger<IndexModel>.Instance);
+
+        await page.OnPostCambiarTipoAsync(Guid.NewGuid(), "Domicilio");
+
+        Assert.Equal("Modo cambiado a Domicilio. Complete los datos de entrega.", page.ToastSuccess);
+    }
+
 }
 
 internal sealed class FakeHubContext<THub> : IHubContext<THub> where THub : Hub
@@ -63,6 +131,10 @@ internal sealed class FakeGroupManager : IGroupManager
 
 internal sealed class FakePedidosServicio : IPedidosServicio
 {
+    public LaMesaDelDuque.Dominio.Enumeraciones.TipoServicio? UltimoTipoServicio { get; private set; }
+    public Guid? UltimaMesaId { get; private set; }
+    public DatosEntregaDto? UltimosDatosEntrega { get; private set; }
+
     private readonly PedidoDto _pedido = new()
     {
         Id = Guid.NewGuid(),
@@ -73,7 +145,13 @@ internal sealed class FakePedidosServicio : IPedidosServicio
         Detalles = [new DetallePedidoDto { Id = Guid.NewGuid(), ProductoId = Guid.NewGuid(), ProductoNombre = "Sopa", Cantidad = 1, PrecioUnitario = 20, Subtotal = 20 }]
     };
 
-    public Task<PedidoDto> CrearPedidoAsync(LaMesaDelDuque.Dominio.Enumeraciones.TipoServicio tipoServicio, Guid? mesaId, List<DetalleCreacionDto> detalles, CancellationToken cancelacion = default) => Task.FromResult(_pedido);
+    public Task<PedidoDto> CrearPedidoAsync(LaMesaDelDuque.Dominio.Enumeraciones.TipoServicio tipoServicio, Guid? mesaId, List<DetalleCreacionDto> detalles, DatosEntregaDto? datosEntrega = null, CancellationToken cancelacion = default)
+    {
+        UltimoTipoServicio = tipoServicio;
+        UltimaMesaId = mesaId;
+        UltimosDatosEntrega = datosEntrega;
+        return Task.FromResult(_pedido);
+    }
     public Task<PedidoDto> AgregarDetalleAsync(Guid pedidoId, Guid productoId, int cantidad, decimal precioUnitario, string? modificacionesJson = null, string? notas = null, CancellationToken cancelacion = default) => Task.FromResult(_pedido);
     public Task<PedidoDto> EliminarDetalleAsync(Guid pedidoId, Guid detalleId, CancellationToken cancelacion = default) => Task.FromResult(_pedido);
     public Task<PedidoDto> ActualizarCantidadDetalleAsync(Guid pedidoId, Guid detalleId, int nuevaCantidad, CancellationToken cancelacion = default) => Task.FromResult(_pedido);
@@ -96,6 +174,10 @@ internal sealed class FakePedidosServicio : IPedidosServicio
 
 internal sealed class FakeCatalogoPedidosProductosServicio : ICatalogoProductosServicio
 {
+    public Guid ProductoActivoId { get; } = Guid.NewGuid();
+    public Guid ProductoInactivoId { get; } = Guid.NewGuid();
+    public Guid CategoriaId { get; } = Guid.NewGuid();
+
     public Task<List<CategoriaProductoDto>> ListarCategoriasAsync(CancellationToken cancelacion = default) => Task.FromResult(new List<CategoriaProductoDto>());
     public Task<CategoriaProductoDto> CrearCategoriaAsync(string nombre, CancellationToken cancelacion = default) => throw new NotImplementedException();
     public Task<CategoriaProductoDto> ActualizarCategoriaAsync(Guid categoriaId, string nombre, CancellationToken cancelacion = default) => throw new NotImplementedException();
@@ -103,8 +185,8 @@ internal sealed class FakeCatalogoPedidosProductosServicio : ICatalogoProductosS
     public Task<List<ProductoDto>> ListarProductosAsync(CancellationToken cancelacion = default)
         => Task.FromResult(new List<ProductoDto>
         {
-            new() { Id = Guid.NewGuid(), Nombre = "Sopa", CategoriaNombre = "Entradas", CategoriaId = Guid.NewGuid(), Precio = 20, Activo = true },
-            new() { Id = Guid.NewGuid(), Nombre = "Inactivo", CategoriaNombre = "Entradas", CategoriaId = Guid.NewGuid(), Precio = 10, Activo = false }
+            new() { Id = ProductoActivoId, Nombre = "Sopa", CategoriaNombre = "Entradas", CategoriaId = CategoriaId, Precio = 20, Activo = true },
+            new() { Id = ProductoInactivoId, Nombre = "Inactivo", CategoriaNombre = "Entradas", CategoriaId = CategoriaId, Precio = 10, Activo = false }
         });
     public Task<List<ProductoDto>> ListarProductosPorCategoriaAsync(Guid categoriaId, CancellationToken cancelacion = default) => Task.FromResult(new List<ProductoDto>());
     public Task<ProductoDto> CrearProductoAsync(string nombre, decimal precio, Guid categoriaId, string? descripcion = null, string? imagenUrl = null, int tiempoPreparacionMin = 5, CancellationToken cancelacion = default) => throw new NotImplementedException();
