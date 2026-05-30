@@ -35,6 +35,9 @@ public class LaMesaDelDuqueDbContext : DbContext
     public DbSet<OrdenCocina> OrdenesCocina => Set<OrdenCocina>();
     public DbSet<Pago> Pagos => Set<Pago>();
 
+    // Nuevas entidades Sprint 3 — Slice 1: Mapa Visual de Mesas
+    public DbSet<ZonaSalon> ZonasSalon => Set<ZonaSalon>();
+
     protected override void OnModelCreating(ModelBuilder constructorDeModelos)
     {
         constructorDeModelos.ApplyConfigurationsFromAssembly(typeof(LaMesaDelDuqueDbContext).Assembly);
