@@ -24,8 +24,9 @@
     var esCocinero  = isAuth && User.IsInRole("Cocinero");
     var esCajero    = isAuth && User.IsInRole("Cajero");
     var esDespacho  = isAuth && User.IsInRole("Despacho");
-    var esGestion   = esAdmin || esEncargado;
-    var rolStrip    = esDespacho ? "Despacho" : esCajero ? "Caja" : esMesero ? "Mesero" : esCocinero ? "Cocina" : "";
+    var esGerente   = isAuth && User.IsInRole("Gerente");
+    var esGestion   = esAdmin || esEncargado || esGerente;
+    var rolStrip    = esDespacho ? "Despacho" : esCajero ? "Caja" : esMesero ? "Mesero" : esCocinero ? "Cocina" : esGerente ? "Gerente" : "";
 }
 
     <div id="lmd-offline-banner" class="lmd-offline-banner" style="display:none;">

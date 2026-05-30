@@ -29,12 +29,12 @@ public class IndexModel : PageModel
         var esGerente = user.IsInRole("Gerente");
         var esDespacho = user.IsInRole("Despacho");
 
-        // Pedidos: Admin, Encargado, Cajero
-        if (esAdmin || esEncargado || esCajero)
+        // Pedidos: Encargado, Cajero
+        if (esEncargado || esCajero)
             modulos.Add(new("Pedidos", "/Operaciones/Pedidos/Index", "Captura rápida de órdenes y punto de venta."));
 
-        // Cocina: Cocinero, Encargado, Admin
-        if (esCocinero || esEncargado || esAdmin)
+        // Cocina: Cocinero, Encargado
+        if (esCocinero || esEncargado)
             modulos.Add(new("Cocina", "/Cocina/KDS", "Pantalla de cocina con órdenes pendientes."));
 
         // Mesas: Admin, Encargado
@@ -45,12 +45,12 @@ public class IndexModel : PageModel
         if (esAdmin || esEncargado || esMesero)
             modulos.Add(new("Mapa Salón", "/Operaciones/Salon/Mapa", "Mapa visual interactivo con drag & drop."));
 
-        // Transferir mesas: Admin, Encargado, Mesero
-        if (esAdmin || esEncargado || esMesero)
+        // Transferir mesas: Encargado, Mesero
+        if (esEncargado || esMesero)
             modulos.Add(new("Transferir mesas", "/Operaciones/Mesero/Handoff", "Traspaso de mesas activas durante cambio de turno."));
 
-        // Despacho: Admin, Encargado, Despacho
-        if (esAdmin || esEncargado || esDespacho)
+        // Despacho: Encargado, Despacho
+        if (esEncargado || esDespacho)
             modulos.Add(new("Despacho", "/Operaciones/Despacho/Index", "Pedidos listos para entregar y liberar mesas."));
 
         // Productos: Admin, Encargado
@@ -69,8 +69,8 @@ public class IndexModel : PageModel
         if (esAdmin || esEncargado || esCajero)
             modulos.Add(new("Cierre", "/Operaciones/Cierre/Index", "Apertura y cierre de caja diario."));
 
-        // Caja: Admin, Encargado, Cajero
-        if (esAdmin || esEncargado || esCajero)
+        // Caja: Encargado, Cajero
+        if (esEncargado || esCajero)
             modulos.Add(new("Caja", "/Operaciones/TurnoCaja/Index", "Apertura, cierre de turno y Reporte Z."));
 
         // Dashboard Gerencial: Admin, Gerente

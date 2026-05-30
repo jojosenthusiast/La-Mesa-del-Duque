@@ -28,10 +28,9 @@ public class DespachoRbacTests
     }
 
     [Theory]
-    [InlineData("Administrador")]
     [InlineData("Encargado")]
     [InlineData("Despacho")]
-    public void Home_DebeMostrarDespachoSoloAGestionYDespacho(string rol)
+    public void Home_DebeMostrarDespachoSoloAEncargadoYDespacho(string rol)
     {
         var page = CreateHomePageForRole(rol);
 
@@ -41,6 +40,7 @@ public class DespachoRbacTests
     }
 
     [Theory]
+    [InlineData("Administrador")]
     [InlineData("Cajero")]
     [InlineData("Mesero")]
     [InlineData("Cocinero")]
@@ -79,12 +79,12 @@ public class DespachoRbacTests
     public void Layouts_DebenExponerDespachoSoloEnNavegacionAutorizada()
     {
         var layout = ReadSource("src", "LaMesaDelDuque.Web", "Pages", "Shared", "_Layout.cshtml");
-        var sidebar = ReadSource("src", "LaMesaDelDuque.Web", "Pages", "Shared", "_Sidebar.cshtml");
+        var navigation = ReadSource("src", "LaMesaDelDuque.Web", "Navegacion", "GestionSidebarNavigation.cs");
 
         Assert.Contains("esDespacho", layout);
         Assert.Contains("esDespacho ? \"Despacho\"", layout);
-        Assert.Contains("asp-page=\"/Operaciones/Despacho/Index\"", sidebar);
-        Assert.Contains("activeTab == \"Despacho\"", sidebar);
+        Assert.Contains("/Operaciones/Despacho/Index", navigation);
+        Assert.Contains("\"Despacho\"", navigation);
     }
 
     private static HomeIndexModel CreateHomePageForRole(string rol)

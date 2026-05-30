@@ -15,10 +15,9 @@ namespace LaMesaDelDuque.Pruebas.Web;
 public class MeseroHandoffPageTests
 {
     [Theory]
-    [InlineData("Administrador")]
     [InlineData("Encargado")]
     [InlineData("Mesero")]
-    public void Home_DebeMostrarTransferirMesasAGestionYMesero(string rol)
+    public void Home_DebeMostrarTransferirMesasAEncargadoYMesero(string rol)
     {
         var page = CreateHomePageForRole(rol);
 
@@ -30,6 +29,7 @@ public class MeseroHandoffPageTests
     }
 
     [Theory]
+    [InlineData("Administrador")]
     [InlineData("Cajero")]
     [InlineData("Cocinero")]
     [InlineData("Gerente")]
