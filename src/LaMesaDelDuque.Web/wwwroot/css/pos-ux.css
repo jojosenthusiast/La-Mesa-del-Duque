@@ -491,6 +491,19 @@ html:has(#lmd-pos-contenido) .lmd-main-surface {
     scrollbar-color: rgba(201, 162, 78, 0.2) transparent;
 }
 
+.lmd-pos-cart__delivery {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.45rem;
+    padding: 0.55rem 0.85rem;
+    border-bottom: 1px solid rgba(201, 162, 78, 0.12);
+    background: rgba(201, 162, 78, 0.07);
+    color: rgba(247, 244, 236, 0.78);
+    font-size: 0.76rem;
+    line-height: 1.35;
+}
+.lmd-pos-cart__delivery svg { width: 15px; height: 15px; stroke: #c9a24e; flex-shrink: 0; margin-top: 0.05rem; }
+
 
 .lmd-pos-cart__total {
     padding: 0.75rem 1rem;
@@ -1728,6 +1741,40 @@ html:has(#lmd-pos-contenido) .lmd-main-surface {
 .lmd-pos-cambiar-servicio-body {
     padding: 1.25rem 1rem;
 }
+.lmd-pos-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    margin-bottom: 0.85rem;
+    color: rgba(247, 244, 236, 0.82);
+    font-size: 0.78rem;
+    font-weight: 700;
+}
+.lmd-pos-field input,
+.lmd-pos-field textarea {
+    width: 100%;
+    border: 1px solid rgba(201, 162, 78, 0.2);
+    border-radius: 0.65rem;
+    background: #0f1b2d;
+    color: #f7f4ec;
+    padding: 0.65rem 0.75rem;
+    font: inherit;
+    font-weight: 600;
+    outline: none;
+}
+.lmd-pos-field textarea { min-height: 76px; resize: vertical; }
+.lmd-pos-field input:focus,
+.lmd-pos-field textarea:focus {
+    border-color: #c9a24e;
+    box-shadow: 0 0 0 2px rgba(201, 162, 78, 0.14);
+}
+.lmd-pos-ov-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.65rem;
+    margin-top: 1rem;
+}
+
 .lmd-pos-cambiar-servicio-opcion {
     width: 100%;
     display: flex;

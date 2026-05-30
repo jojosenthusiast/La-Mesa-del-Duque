@@ -104,7 +104,8 @@ public class IndexModel : PageModel
         try
         {
             var mesaId = tipoServicio == TipoServicio.ComerAqui ? Vm.CrearPedido.MesaId : null;
-            var pedido = await _pedidosServicio.CrearPedidoAsync(tipoServicio, mesaId, detalles);
+            var datosEntrega = CrearDatosEntregaSiCorresponde(tipoServicio);
+            var pedido = await _pedidosServicio.CrearPedidoAsync(tipoServicio, mesaId, detalles, datosEntrega);
             ToastSuccess = "Pedido creado correctamente.";
             return RedirectToPage(new { PedidoActualId = pedido.Id });
         }
@@ -167,9 +168,12 @@ public class IndexModel : PageModel
             // Solo cambiamos el tipo en el pedido actual; el cambio real
             // (asignar/quitar mesa) lo hace CrearPedidoAsync o la UI lo ajusta.
             // Aquí simplemente reflejamos la intención.
-            ToastSuccess = tipo == TipoServicio.ComerAqui
-                ? "Modo cambiado a Comer aquí. Asigne una mesa si lo desea."
-                : "Modo cambiado a Para llevar.";
+            ToastSuccess = tipo switch
+            {
+                TipoServicio.ComerAqui => "Modo cambiado a Comer aquí. Asigne una mesa si lo desea.",
+                TipoServicio.Domicilio => "Modo cambiado a Domicilio. Complete los datos de entrega.",
+                _ => "Modo cambiado a Para llevar."
+            };
             return RedirectToPage(new { PedidoActualId = pedidoId });
         }
         catch (Exception ex)
@@ -258,8 +262,11 @@ public class IndexModel : PageModel
         if (Vm.CrearPedido.Lineas.Count == 0 || Vm.CrearPedido.Lineas[0].ProductoId == Guid.Empty)
             return BadRequest("Debe seleccionar un producto.");
 
-        Enum.TryParse<TipoServicio>(Vm.CrearPedido.TipoServicio, true, out var tipoServicio);
+        if (!Enum.TryParse<TipoServicio>(Vm.CrearPedido.TipoServicio, true, out var tipoServicio))
+            return BadRequest("Tipo de servicio inválido.");
+
         var mesaId = tipoServicio == TipoServicio.ComerAqui ? Vm.CrearPedido.MesaId : null;
+        var datosEntrega = CrearDatosEntregaSiCorresponde(tipoServicio);
 
         var prods = (await _catalogoProductosServicio.ListarProductosAsync()).Where(p => p.Activo).ToDictionary(p => p.Id);
         var detalles = new List<DetalleCreacionDto>();
@@ -272,7 +279,7 @@ public class IndexModel : PageModel
 
         try
         {
-            var pedido = await _pedidosServicio.CrearPedidoAsync(tipoServicio, mesaId, detalles);
+            var pedido = await _pedidosServicio.CrearPedidoAsync(tipoServicio, mesaId, detalles, datosEntrega);
             var detallesResponse = pedido.Detalles.Select(d => new
             {
                 id = d.Id, productoId = d.ProductoId,
@@ -681,7 +688,7 @@ public class IndexModel : PageModel
                 ? Vm.PedidosActivos.FirstOrDefault(p => p.Id == PedidoActualId.Value)
                 : Vm.PedidosActivos.OrderByDescending(p => p.Total).FirstOrDefault();
 
-            Vm.CrearPedido.TipoServicio = Vm.CrearPedido.TipoServicio is "ParaLlevar" or "ComerAqui" ? Vm.CrearPedido.TipoServicio : "ComerAqui";
+            Vm.CrearPedido.TipoServicio = Vm.CrearPedido.TipoServicio is "ParaLlevar" or "ComerAqui" or "Domicilio" ? Vm.CrearPedido.TipoServicio : "ComerAqui";
 
             if (Vm.CrearPedido.Lineas.Count == 0)
                 Vm.CrearPedido.Lineas.Add(new LineaPedidoFormVm());
@@ -693,6 +700,20 @@ public class IndexModel : PageModel
             Vm.PedidosActivos = [];
             ToastError = $"Error al cargar datos: {ex.Message}";
         }
+    }
+
+    private DatosEntregaDto? CrearDatosEntregaSiCorresponde(TipoServicio tipoServicio)
+    {
+        if (tipoServicio != TipoServicio.Domicilio)
+            return null;
+
+        return new DatosEntregaDto
+        {
+            NombreCliente = Vm.CrearPedido.NombreClienteEntrega,
+            Telefono = Vm.CrearPedido.TelefonoEntrega,
+            Direccion = Vm.CrearPedido.DireccionEntrega,
+            Referencia = Vm.CrearPedido.ReferenciaEntrega
+        };
     }
 
     private void SetUiContext()

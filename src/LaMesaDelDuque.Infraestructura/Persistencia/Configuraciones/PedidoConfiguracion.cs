@@ -10,6 +10,13 @@ internal class PedidoConfiguracion : IEntityTypeConfiguration<Pedido>
     {
         constructor.HasKey(p => p.Id);
 
+        const string domicilioDatosEntregaConstraint = "\"TipoServicio\" <> 'Domicilio' OR (\"MesaId\" IS NULL AND \"NombreClienteEntrega\" IS NOT NULL AND length(trim(\"NombreClienteEntrega\")) > 0 AND \"TelefonoEntrega\" IS NOT NULL AND length(trim(\"TelefonoEntrega\")) > 0 AND \"DireccionEntrega\" IS NOT NULL AND length(trim(\"DireccionEntrega\")) > 0)";
+
+        constructor.ToTable(t =>
+        {
+            t.HasCheckConstraint("CK_Pedido_Domicilio_DatosEntrega", domicilioDatosEntregaConstraint);
+        });
+
         constructor.Property(p => p.FechaCreacion)
             .HasColumnType("timestamp with time zone")
             .IsRequired();
@@ -30,6 +37,22 @@ internal class PedidoConfiguracion : IEntityTypeConfiguration<Pedido>
             .IsRequired();
 
         constructor.Property(p => p.MeseroAsignadoId)
+            .IsRequired(false);
+
+        constructor.Property(p => p.NombreClienteEntrega)
+            .HasMaxLength(120)
+            .IsRequired(false);
+
+        constructor.Property(p => p.TelefonoEntrega)
+            .HasMaxLength(30)
+            .IsRequired(false);
+
+        constructor.Property(p => p.DireccionEntrega)
+            .HasMaxLength(250)
+            .IsRequired(false);
+
+        constructor.Property(p => p.ReferenciaEntrega)
+            .HasMaxLength(250)
             .IsRequired(false);
 
         // Total es calculado, no se persiste

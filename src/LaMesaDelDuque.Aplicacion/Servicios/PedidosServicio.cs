@@ -26,7 +26,7 @@ internal class PedidosServicio : IPedidosServicio
         _notificadorDashboard = notificadorDashboard;
     }
 
-    public async Task<PedidoDto> CrearPedidoAsync(TipoServicio tipoServicio, Guid? mesaId, List<DetalleCreacionDto> detalles, CancellationToken cancelacion = default)
+    public async Task<PedidoDto> CrearPedidoAsync(TipoServicio tipoServicio, Guid? mesaId, List<DetalleCreacionDto> detalles, DatosEntregaDto? datosEntrega = null, CancellationToken cancelacion = default)
     {
         await AsegurarDiaOperativoAbiertoAsync(cancelacion);
 
@@ -38,6 +38,9 @@ internal class PedidosServicio : IPedidosServicio
         if (tipoServicio == TipoServicio.ParaLlevar && mesaId.HasValue)
             throw new ReglaDominioException("Un pedido para llevar no puede tener mesa asignada.");
 
+        if (tipoServicio == TipoServicio.Domicilio && mesaId.HasValue)
+            throw new ReglaDominioException("Un pedido a domicilio no puede tener mesa asignada.");
+
         if (mesaId.HasValue)
         {
             mesa = await _uot.Mesas.ObtenerParaActualizarAsync(mesaId.Value, cancelacion)
@@ -47,7 +50,13 @@ internal class PedidosServicio : IPedidosServicio
                 throw new ReglaDominioException("Solo se puede asignar una mesa disponible.");
         }
 
-        var pedido = new Pedido(tipoServicio, mesa);
+        var pedido = new Pedido(
+            tipoServicio,
+            mesa,
+            datosEntrega?.NombreCliente,
+            datosEntrega?.Telefono,
+            datosEntrega?.Direccion,
+            datosEntrega?.Referencia);
 
         var meseroActualId = ObtenerMeseroActualId();
         if (mesa is not null && meseroActualId != Guid.Empty)
@@ -772,6 +781,10 @@ internal class PedidosServicio : IPedidosServicio
             MesaId = pedido.Mesa?.Id,
             MesaNumero = pedido.Mesa?.Numero,
             MeseroAsignadoId = pedido.MeseroAsignadoId,
+            NombreClienteEntrega = pedido.NombreClienteEntrega,
+            TelefonoEntrega = pedido.TelefonoEntrega,
+            DireccionEntrega = pedido.DireccionEntrega,
+            ReferenciaEntrega = pedido.ReferenciaEntrega,
             Estado = pedido.Estado.ToString(),
             Total = pedido.Total,
             FechaCreacion = pedido.CreatedAt,

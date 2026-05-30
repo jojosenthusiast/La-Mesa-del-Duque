@@ -63,7 +63,7 @@ public class ReportesServicio : IReportesServicio
         int rD = 2;
         foreach (var p in pedidos)
         {
-            var mesa = p.Mesa is not null ? $"Mesa {p.Mesa.Numero}" : "Para llevar";
+            var mesa = DescribirServicio(p);
             foreach (var det in p.Detalles)
             {
                 wsD.Cell(rD, 1).Value = p.FechaCreacion.ToLocalTime().ToString("yyyy-MM-dd HH:mm");
@@ -469,6 +469,13 @@ public class ReportesServicio : IReportesServicio
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
+
+    internal static string DescribirServicio(Pedido pedido) => pedido.TipoServicio switch
+    {
+        TipoServicio.ComerAqui when pedido.Mesa is not null => $"Mesa {pedido.Mesa.Numero}",
+        TipoServicio.Domicilio => "Domicilio",
+        _ => "Para llevar"
+    };
 
     private async Task<List<Pedido>> ObtenerPedidosPagadosAsync(
         DateTime desde, DateTime hasta, CancellationToken ct)

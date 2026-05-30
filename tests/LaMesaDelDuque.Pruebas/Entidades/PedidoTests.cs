@@ -61,6 +61,54 @@ public class PedidoTests
     }
 
     [Fact]
+    public void CrearPedido_Domicilio_ConDatosEntrega_DebeCrearInstancia()
+    {
+        var pedido = new Pedido(
+            TipoServicio.Domicilio,
+            mesa: null,
+            nombreClienteEntrega: "Ana Pérez",
+            telefonoEntrega: "809-555-0101",
+            direccionEntrega: "Calle Duarte #45, Santo Domingo",
+            referenciaEntrega: "Casa azul frente al parque");
+
+        Assert.Null(pedido.Mesa);
+        Assert.Equal(TipoServicio.Domicilio, pedido.TipoServicio);
+        Assert.Equal("Ana Pérez", pedido.NombreClienteEntrega);
+        Assert.Equal("809-555-0101", pedido.TelefonoEntrega);
+        Assert.Equal("Calle Duarte #45, Santo Domingo", pedido.DireccionEntrega);
+        Assert.Equal("Casa azul frente al parque", pedido.ReferenciaEntrega);
+    }
+
+    [Fact]
+    public void CrearPedido_Domicilio_ConMesa_DebeLanzarExcepcion()
+    {
+        var ex = Assert.Throws<ReglaDominioException>(() => new Pedido(
+            TipoServicio.Domicilio,
+            _mesa,
+            nombreClienteEntrega: "Ana Pérez",
+            telefonoEntrega: "809-555-0101",
+            direccionEntrega: "Calle Duarte #45",
+            referenciaEntrega: null));
+
+        Assert.Contains("domicilio", ex.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("mesa", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void CrearPedido_Domicilio_SinDireccion_DebeLanzarExcepcion()
+    {
+        var ex = Assert.Throws<ReglaDominioException>(() => new Pedido(
+            TipoServicio.Domicilio,
+            mesa: null,
+            nombreClienteEntrega: "Ana Pérez",
+            telefonoEntrega: "809-555-0101",
+            direccionEntrega: " ",
+            referenciaEntrega: null));
+
+        Assert.Contains("dirección", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public void AgregarDetalle_CuandoDetalleEsValido_DebeAgregarlo()
     {
         var pedido = new Pedido(TipoServicio.ParaLlevar);
