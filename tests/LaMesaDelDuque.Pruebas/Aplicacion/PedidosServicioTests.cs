@@ -43,7 +43,8 @@ public class PedidosServicioTests : IDisposable
             new RecetaProductoRepositorio(_contexto),
             new OrdenCocinaRepositorio(_contexto),
             new CuentaRepositorio(_contexto),
-            new PagoRepositorio(_contexto));
+            new PagoRepositorio(_contexto),
+            new ZonaSalonRepositorio(_contexto));
 
         _notificadorSpy = new NotificadorPedidosSpy();
         _servicio = new PedidosServicio(_uot, _notificadorSpy);
@@ -82,7 +83,7 @@ public class PedidosServicioTests : IDisposable
     }
 
     [Fact]
-    public async Task CrearPedido_ParaLlevar_SinMesa_DebeCrearPedidoPendiente()
+    public async Task CrearPedido_ParaLlevar_SinMesa_DebeCrearPedidoEnPreparacion()
     {
         var (_, producto) = await CrearMesaYProductoAsync();
 
@@ -91,7 +92,7 @@ public class PedidosServicioTests : IDisposable
             new() { ProductoId = producto.Id, Cantidad = 2, PrecioUnitario = 3.50m }
         });
 
-        Assert.Equal("Pendiente", pedido.Estado);
+        Assert.Equal("EnPreparacion", pedido.Estado);
         Assert.Equal("ParaLlevar", pedido.TipoServicio);
         Assert.Null(pedido.MesaId);
         Assert.Null(pedido.MesaNumero);
@@ -137,8 +138,6 @@ public class PedidosServicioTests : IDisposable
         {
             new() { ProductoId = producto.Id, Cantidad = 2, PrecioUnitario = 3.00m }
         });
-
-        await _servicio.MarcarEnPreparacionAsync(pedido.Id);
 
         var actualizado = await _servicio.ActualizarCantidadDetalleAsync(pedido.Id, pedido.Detalles[0].Id, 4);
 
@@ -234,8 +233,6 @@ public class PedidosServicioTests : IDisposable
             new() { ProductoId = producto2.Id, Cantidad = 1, PrecioUnitario = 3.50m }
         });
 
-        await _servicio.MarcarEnPreparacionAsync(enPreparacion.Id);
-
         var activos = await _servicio.ListarPedidosActivosAsync();
 
         Assert.Contains(activos, x => x.Id == pendiente.Id);
@@ -288,11 +285,11 @@ public class PedidosServicioTests : IDisposable
 
         var notificacion = Assert.Single(_notificadorSpy.PedidosCreados);
         Assert.Equal(pedido.Id, notificacion.PedidoId);
-        Assert.Equal(EstadoPedido.Pendiente, notificacion.Estado);
+        Assert.Equal(EstadoPedido.EnPreparacion, notificacion.Estado);
     }
 
     [Fact]
-    public async Task MarcarEnPreparacion_DebeEmitirNotificacionDeCambioEstado()
+    public async Task MarcarEnCobro_DebeEmitirNotificacionDeCambioEstado()
     {
         var (_, producto) = await CrearMesaYProductoAsync(41);
 
@@ -303,11 +300,11 @@ public class PedidosServicioTests : IDisposable
 
         _notificadorSpy.EstadosCambiados.Clear();
 
-        await _servicio.MarcarEnPreparacionAsync(pedido.Id);
+        await _servicio.MarcarEnCobroAsync(pedido.Id);
 
         var notificacion = Assert.Single(_notificadorSpy.EstadosCambiados);
         Assert.Equal(pedido.Id, notificacion.PedidoId);
-        Assert.Equal(EstadoPedido.EnPreparacion, notificacion.Estado);
+        Assert.Equal(EstadoPedido.EnCobro, notificacion.Estado);
     }
 
     [Fact]

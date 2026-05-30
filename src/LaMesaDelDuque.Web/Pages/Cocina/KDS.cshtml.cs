@@ -102,7 +102,20 @@ public class KDSModel : PageModel
         }
         catch (Exception ex)
         {
-            return BadRequest(ex.Message);
+            return BadRequest(ErrorSeguro(ex));
         }
+    }
+
+    private static object ErrorSeguro(Exception ex)
+    {
+        var mensaje = ex switch
+        {
+            ArgumentException => ex.Message,
+            InvalidOperationException => ex.Message,
+            ReglaDominioException => ex.Message,
+            _ => "Ocurrió un error interno al procesar la solicitud."
+        };
+
+        return new { error = mensaje };
     }
 }

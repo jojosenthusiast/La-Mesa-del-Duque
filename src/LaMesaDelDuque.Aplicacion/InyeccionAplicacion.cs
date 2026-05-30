@@ -13,6 +13,19 @@ public static class InyeccionAplicacion
         servicios.AddScoped<IPedidosServicio, PedidosServicio>();
         servicios.AddScoped<IUsuariosServicio, UsuariosServicio>();
         servicios.AddScoped<ICocinaServicio, CocinaServicio>();
+        servicios.AddScoped<IAlertaStockServicio, AlertaStockServicio>();
+        servicios.AddScoped<ITicketServicio, TicketServicio>();
+        servicios.AddScoped<IAlergenoServicio, AlergenoServicio>();
+        servicios.AddScoped<ITableTimerServicio, TableTimerServicio>();
+        servicios.AddScoped<IUpsellServicio, UpsellServicio>();
+        servicios.AddScoped<IShiftHandoffServicio, ShiftHandoffServicio>();
+        servicios.AddScoped<IInventarioServicio, InventarioServicio>();
+        servicios.AddScoped<IMargenServicio, MargenServicio>();
+        servicios.AddScoped<IMermaServicio, MermaServicio>();
+        servicios.AddScoped<ICierreServicio, CierreServicio>();
+        servicios.AddScoped<IDespachoServicio, DespachoServicio>();
+        servicios.AddScoped<IZonasSalonServicio, ZonasSalonServicio>();
+        servicios.AddScoped<IMetricaServicio, MetricaServicio>();
 
         return servicios;
     }

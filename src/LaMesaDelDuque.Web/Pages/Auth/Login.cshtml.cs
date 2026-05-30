@@ -10,8 +10,8 @@ namespace LaMesaDelDuque.Web.Pages.Auth;
 
 public class LoginModel : PageModel
 {
-    private static readonly ConcurrentDictionary<string, (int Count, DateTimeOffset FirstAttemptUtc)> IntentosFallidos = new();
-    private const int MaxIntentosPorMinuto = 5;
+    private static readonly ConcurrentDictionary<string, (int Count, DateTimeOffset? LockedUntilUtc)> IntentosFallidos = new();
+    private const int MaxIntentosConsecutivos = 5;
     private readonly IUsuariosServicio _usuariosServicio;
 
     public LoginModel(IUsuariosServicio usuariosServicio)
@@ -31,12 +31,12 @@ public class LoginModel : PageModel
 
     public async Task<IActionResult> OnPostAsync()
     {
-        var llaveIntento = $"{HttpContext.Connection.RemoteIpAddress}:{Username?.Trim().ToLowerInvariant()}";
+        var llaveIntento = (Username ?? string.Empty).Trim().ToLowerInvariant();
         if (IntentosFallidos.TryGetValue(llaveIntento, out var intento)
-            && intento.FirstAttemptUtc > DateTimeOffset.UtcNow.AddMinutes(-1)
-            && intento.Count >= MaxIntentosPorMinuto)
+            && intento.LockedUntilUtc.HasValue
+            && intento.LockedUntilUtc.Value > DateTimeOffset.UtcNow)
         {
-            MensajeError = "Demasiados intentos fallidos. Espere un minuto antes de reintentar.";
+            MensajeError = "Cuenta bloqueada por múltiples intentos fallidos. Intente de nuevo más tarde.";
             return Page();
         }
 
@@ -70,16 +70,31 @@ public class LoginModel : PageModel
 
         await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal);
 
-        return RedirectToPage("/Index");
+        var destino = usuario.RolNombre switch
+        {
+            "Administrador" or "Encargado" => "/Admin/Dashboard/Dashboard",
+            "Cajero"                        => "/Operaciones/Pedidos/Index",
+            "Mesero"                        => "/Operaciones/Mesero/Index",
+            "Cocinero"                      => "/Cocina/KDS",
+            _                               => "/Index"
+        };
+        return RedirectToPage(destino);
     }
 
     private static void RegistrarIntentoFallido(string llaveIntento)
     {
         IntentosFallidos.AddOrUpdate(
             llaveIntento,
-            _ => (1, DateTimeOffset.UtcNow),
-            (_, actual) => actual.FirstAttemptUtc <= DateTimeOffset.UtcNow.AddMinutes(-1)
-                ? (1, DateTimeOffset.UtcNow)
-                : (actual.Count + 1, actual.FirstAttemptUtc));
+            _ => (1, null),
+            (_, actual) =>
+            {
+                var nuevoConteo = actual.LockedUntilUtc.HasValue && actual.LockedUntilUtc.Value <= DateTimeOffset.UtcNow
+                    ? 1
+                    : actual.Count + 1;
+
+                return nuevoConteo >= MaxIntentosConsecutivos
+                    ? (nuevoConteo, DateTimeOffset.UtcNow.AddMinutes(15))
+                    : (nuevoConteo, null);
+            });
     }
 }

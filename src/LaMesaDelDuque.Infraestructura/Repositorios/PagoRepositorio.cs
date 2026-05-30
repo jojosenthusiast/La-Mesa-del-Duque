@@ -14,18 +14,22 @@ internal class PagoRepositorio : IPagoRepositorio
         _contexto = contexto;
     }
 
-    public async Task<Pago?> ObtenerPorIdAsync(Guid id, CancellationToken cancelacion = default)
+    public async Task<Pago?> ObtenerPorIdAsync(Guid id, CancellationToken cancelacion = default) =>
+        await _contexto.Set<Pago>().AsNoTracking().FirstOrDefaultAsync(p => p.Id == id, cancelacion);
+
+    public async Task<List<Pago>> ObtenerPorCuentaAsync(Guid cuentaId, CancellationToken cancelacion = default) =>
+        await _contexto.Set<Pago>().AsNoTracking().Where(p => p.CuentaId == cuentaId).ToListAsync(cancelacion);
+
+    public async Task<List<Pago>> ObtenerDelDiaAsync(DateOnly fecha, CancellationToken cancelacion = default)
     {
-        return await _contexto.Set<Pago>().AsNoTracking().FirstOrDefaultAsync(p => p.Id == id, cancelacion);
+        var inicio = fecha.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+        var fin = inicio.AddDays(1);
+        return await _contexto.Set<Pago>()
+            .AsNoTracking()
+            .Where(p => p.FechaPago >= inicio && p.FechaPago < fin)
+            .ToListAsync(cancelacion);
     }
 
-    public async Task<List<Pago>> ObtenerPorCuentaAsync(Guid cuentaId, CancellationToken cancelacion = default)
-    {
-        return await _contexto.Set<Pago>().AsNoTracking().Where(p => p.CuentaId == cuentaId).ToListAsync(cancelacion);
-    }
-
-    public async Task AgregarAsync(Pago pago, CancellationToken cancelacion = default)
-    {
+    public async Task AgregarAsync(Pago pago, CancellationToken cancelacion = default) =>
         await _contexto.Set<Pago>().AddAsync(pago, cancelacion);
-    }
 }

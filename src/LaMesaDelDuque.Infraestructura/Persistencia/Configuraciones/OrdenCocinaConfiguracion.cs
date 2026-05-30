@@ -41,6 +41,13 @@ internal class OrdenCocinaConfiguracion : IEntityTypeConfiguration<OrdenCocina>
         constructor.Property(o => o.TiempoPreparacionMin)
             .IsRequired();
 
+        constructor.Property(o => o.HoraRecibido)
+            .HasColumnType("timestamp with time zone")
+            .IsRequired();
+
+        constructor.Property(o => o.HoraListo)
+            .HasColumnType("timestamp with time zone");
+
         constructor.HasIndex(o => new { o.Estado, o.HoraRecibido })
             .HasDatabaseName("IX_OrdenesCocina_Estado_HoraRecibido");
 

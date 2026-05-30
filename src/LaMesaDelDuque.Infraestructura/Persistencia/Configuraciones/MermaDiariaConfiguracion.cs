@@ -19,6 +19,14 @@ internal class MermaDiariaConfiguracion : IEntityTypeConfiguration<MermaDiaria>
             .IsRequired()
             .HasDefaultValue(0m);
 
+        constructor.Property(m => m.Tipo)
+            .HasConversion<string>()
+            .HasMaxLength(30)
+            .IsRequired();
+
+        constructor.Property(m => m.Lote)
+            .HasMaxLength(50);
+
         constructor.Property(m => m.Notas)
             .HasMaxLength(500);
 

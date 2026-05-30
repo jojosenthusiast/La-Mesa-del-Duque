@@ -4,6 +4,13 @@
    ============================================================================ */
 
 (function () {
+    function mostrarToast(mensaje, tipo = 'error') {
+        if (window.lmdToast) {
+            window.lmdToast(mensaje, tipo);
+        } else {
+            alert(tipo + ': ' + mensaje);
+        }
+    }
     const api = {
         async crear(tipoServicio, mesaId, lineas) {
             const form = new FormData();
@@ -13,7 +20,7 @@
             lineas.forEach((l, i) => {
                 form.append(`Vm.CrearPedido.Lineas[${i}].ProductoId`, l.productoId);
                 form.append(`Vm.CrearPedido.Lineas[${i}].Cantidad`, l.cantidad);
-                form.append(`Vm.CrearPedido.Lineas[${i}].PrecioUnitario`, '0');
+                form.append(`Vm.CrearPedido.Lineas[${i}].PrecioUnitario`, (l.precioUnitario || 0).toString());
             });
 
             const res = await fetch('?handler=CrearJson', { method: 'POST', body: form, headers: { 'X-Requested-With': 'XMLHttpRequest' } });
@@ -245,7 +252,7 @@
                     }];
                     await joinPedidoGroup(state.pedidoActual.id);
                 } catch (e) {
-                    alert('Error al crear pedido: ' + e.message);
+                    mostrarToast('Error al crear pedido: ' + e.message, 'error');
                     return;
                 }
             } else {
@@ -266,7 +273,7 @@
                         });
                     }
                 } catch (e) {
-                    alert('Error: ' + e.message);
+                    mostrarToast('Error: ' + e.message, 'error');
                     return;
                 }
             }
@@ -293,12 +300,12 @@
                 // Opcional: feedback visual
                 const btn = document.getElementById('tableside-btn-enviar');
                 if (btn) {
-                    const original = btn.textContent;
-                    btn.textContent = '✓ Enviado';
-                    setTimeout(() => btn.textContent = original, 2000);
+                    const original = btn.innerHTML;
+                    btn.innerHTML = '<svg class="lmd-icon" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="https://cdn.jsdelivr.net/npm/lucide-static@latest/icons/check.svg#icon"/></svg> Enviado';
+                    setTimeout(() => btn.innerHTML = original, 2000);
                 }
             } catch (e) {
-                alert('Error: ' + e.message);
+                mostrarToast('Error: ' + e.message, 'error');
             }
         }
     };

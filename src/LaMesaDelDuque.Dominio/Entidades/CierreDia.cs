@@ -15,6 +15,13 @@ public class CierreDia
     public string? ResumenJson { get; private set; }
     public Guid UsuarioId { get; private set; }
     public Usuario Usuario { get; private set; }
+    public decimal EfectivoReal { get; private set; }
+    public decimal TarjetaReal { get; private set; }
+    public decimal DiferenciaEfectivo { get; private set; }
+    public decimal DiferenciaTarjeta { get; private set; }
+    public bool EsCerrado { get; private set; }
+    public DateTime? CerradoEn { get; private set; }
+    public string? Observacion { get; private set; }
     public DateTime CreatedAt { get; private set; }
 
     private CierreDia()
@@ -30,12 +37,9 @@ public class CierreDia
         int totalPedidos,
         int totalPedidosCancelados,
         decimal totalMermaValorizada,
-        Usuario usuario,
+        Usuario? usuario = null,
         string? resumenJson = null)
     {
-        if (usuario is null)
-            throw new ReglaDominioException("El usuario que realiza el cierre es obligatorio.");
-
         if (totalVentas < 0)
             throw new ReglaDominioException("El total de ventas no puede ser negativo.");
 
@@ -62,9 +66,49 @@ public class CierreDia
         TotalPedidos = totalPedidos;
         TotalPedidosCancelados = totalPedidosCancelados;
         TotalMermaValorizada = totalMermaValorizada;
-        Usuario = usuario;
-        UsuarioId = usuario.Id;
+        Usuario = usuario!;
+        UsuarioId = usuario?.Id ?? Guid.Empty;
         ResumenJson = resumenJson;
+        EsCerrado = false;
         CreatedAt = DateTime.UtcNow;
+    }
+
+    public void Cerrar(
+        decimal totalVentas,
+        decimal totalVentasEfectivo,
+        decimal totalVentasTarjeta,
+        int totalPedidos,
+        int totalPedidosCancelados,
+        decimal totalMermaValorizada,
+        decimal efectivoReal,
+        decimal tarjetaReal,
+        string? observacion = null)
+    {
+        if (EsCerrado)
+            throw new ReglaDominioException("El cierre de día ya fue cerrado.");
+
+        if (totalVentas < 0 || totalVentasEfectivo < 0 || totalVentasTarjeta < 0
+            || totalPedidos < 0 || totalPedidosCancelados < 0 || totalMermaValorizada < 0
+            || efectivoReal < 0 || tarjetaReal < 0)
+            throw new ReglaDominioException("Los totales no pueden ser negativos.");
+
+        TotalVentas = totalVentas;
+        TotalVentasEfectivo = totalVentasEfectivo;
+        TotalVentasTarjeta = totalVentasTarjeta;
+        TotalPedidos = totalPedidos;
+        TotalPedidosCancelados = totalPedidosCancelados;
+        TotalMermaValorizada = totalMermaValorizada;
+        EfectivoReal = efectivoReal;
+        TarjetaReal = tarjetaReal;
+        DiferenciaEfectivo = efectivoReal - totalVentasEfectivo;
+        DiferenciaTarjeta = tarjetaReal - totalVentasTarjeta;
+
+        var hayDescuadre = DiferenciaEfectivo != 0m || DiferenciaTarjeta != 0m;
+        if (hayDescuadre && string.IsNullOrWhiteSpace(observacion))
+            throw new ReglaDominioException("La observacion es obligatoria cuando existe descuadre de caja.");
+
+        Observacion = string.IsNullOrWhiteSpace(observacion) ? null : observacion.Trim();
+        EsCerrado = true;
+        CerradoEn = DateTime.UtcNow;
     }
 }

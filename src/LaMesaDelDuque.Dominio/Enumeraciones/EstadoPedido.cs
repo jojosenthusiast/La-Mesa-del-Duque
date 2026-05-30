@@ -6,5 +6,8 @@ public enum EstadoPedido
     EnPreparacion,
     EnCobro,
     Pagado,
-    Cancelado
+    Listo,
+    Despachado,
+    Cancelado,
+    AnuladoPago
 }

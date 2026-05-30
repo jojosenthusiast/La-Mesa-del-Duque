@@ -15,6 +15,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="~/css/marca.css" asp-append-version="true" />
+    <script src="~/js/site.js" asp-append-version="true"></script>
     @Html.AntiForgeryToken()
 </head>
 <body class="lmd-tableside-body">
@@ -28,7 +29,7 @@
     <div class="lmd-tableside-grid" id="tableside-grid"></div>
 
     <div class="lmd-tableside-bottom">
-        <button class="lmd-tableside-btn-volver" onclick="tableside.irAMesas()">← Mesas</button>
+        <button class="lmd-tableside-btn-volver" onclick="tableside.irAMesas()"><svg class="lmd-icon" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="https://cdn.jsdelivr.net/npm/lucide-static@latest/icons/arrow-left.svg#icon"/></svg> Mesas</button>
         <div class="lmd-tableside-pedido-info" id="tableside-pedido-info">0 items — $0.00</div>
         <button class="lmd-tableside-btn-enviar" id="tableside-btn-enviar" onclick="tableside.enviarACocina()" disabled>Enviar a Cocina</button>
     </div>

@@ -9,6 +9,9 @@
     let audioContext = null;
     let audioDesbloqueado = false;
     let ultimoListo = null;
+    let ultimoListoColumna = null;
+    let timerEscalacion = null;
+    const ALERTA_ESCALACION_MIN = 45;
 
     const COOKS = window.__lmdKdsCooks || [
         { id: 1, name: 'Cocinero 1', color: '#e74c3c' },
@@ -117,7 +120,7 @@
         if (curso === 'Entrada') {
             const fireBtn = document.createElement('button');
             fireBtn.className = 'lmd-kds-fire-btn';
-            fireBtn.textContent = '🔥 Disparar entradas';
+            fireBtn.textContent = 'Disparar entradas';
             fireBtn.addEventListener('click', () => dispararCurso(colId, 'Entrada'));
             header.appendChild(fireBtn);
         }
@@ -167,7 +170,7 @@
         const colorClass = calcularColor(orden);
         const mesaTexto = orden.mesaNumero
             ? `Mesa ${orden.mesaNumero}`
-            : (orden.tipoServicio === 'ParaLlevar' ? '🛍 Para llevar' : 'Sin mesa');
+            : (orden.tipoServicio === 'ParaLlevar' ? '<svg class="lmd-kds-icon" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><use href="https://cdn.jsdelivr.net/npm/lucide-static@latest/icons/package.svg#icon"/></svg> Para llevar' : 'Sin mesa');
 
         const tieneModificaciones = orden.ingredientesQuitados || orden.ingredientesExtra;
         const tieneNotas = !!orden.notas;
@@ -181,7 +184,7 @@
         card.dataset.tiempoPreparacionMin = orden.tiempoPreparacionMin || 15;
 
         card.innerHTML = `
-            ${tieneAlergenos ? `<div class="lmd-kds-alergeno-banner">⚠ ALÉRGENO: ${orden.alergenos.toUpperCase()}</div>` : ''}
+            ${tieneAlergenos ? `<div class="lmd-kds-alergeno-banner"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><use href="https://cdn.jsdelivr.net/npm/lucide-static@latest/icons/alert-triangle.svg#icon"/></svg> ALÉRGENO: ${orden.alergenos.toUpperCase()}</div>` : ''}
             <header class="lmd-kds-card__header">
                 <span class="lmd-kds-card__mesa">${mesaTexto}</span>
                 <span class="lmd-kds-card__timer" data-hora-recibido="${orden.horaRecibido}">${formatearTiempo(orden.minutosTranscurridos || 0)}</span>
@@ -193,7 +196,7 @@
             ${tieneModificaciones ? `<div class="lmd-kds-card__modificaciones">${renderModificaciones(orden)}</div>` : ''}
             ${tieneNotas ? `<div class="lmd-kds-card__notas-block"><span class="lmd-kds-notas-label">NOTA</span> ${orden.notas}</div>` : ''}
             <footer class="lmd-kds-card__footer">
-                <button class="lmd-kds-btn-listo" data-orden-id="${orden.id}">✓ LISTO</button>
+                <button class="lmd-kds-btn-listo" data-orden-id="${orden.id}"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5"><use href="https://cdn.jsdelivr.net/npm/lucide-static@latest/icons/check.svg#icon"/></svg> LISTO</button>
                 ${orden.productoId ? `<button class="lmd-kds-btn-86" data-producto-id="${orden.productoId}" title="86 — Agotado">86</button>` : ''}
             </footer>
         `;
@@ -206,6 +209,20 @@
             });
         }
         container.appendChild(card);
+
+        // Add mesa group separator
+        const mesaGroup = agregarSeparadorMesa(container, orden);
+        if (mesaGroup) {
+            card.remove();
+            mesaGroup.appendChild(card);
+            const countEl = mesaGroup.querySelector('.lmd-kds-mesa-group-count');
+            const cardsInGroup = mesaGroup.querySelectorAll('.lmd-kds-card:not(.lmd-kds-card--completing)').length;
+            if (countEl) countEl.textContent = cardsInGroup + ' items';
+            else {
+                const header = mesaGroup.querySelector('.lmd-kds-mesa-group-header');
+                if (header) header.innerHTML = 'Mesa ' + orden.mesaNumero + ' <span class="lmd-kds-mesa-group-count">' + cardsInGroup + ' items</span>';
+            }
+        }
     }
 
     function agregarCard(orden) {
@@ -223,16 +240,41 @@
     function removerOrden(ordenId) {
         const card = document.querySelector(`.lmd-kds-card[data-orden-id="${ordenId}"]`);
         if (card) {
-            ultimoListo = { ordenId, html: card.outerHTML };
-            card.remove();
+            const container = card.closest('.lmd-kds-orders');
+            ultimoListo = { ordenId, html: card.outerHTML, columnaId: container?.id };
+            card.classList.add('lmd-kds-card--completing');
+            setTimeout(() => { card.remove(); actualizarContadores(); verificarMesasVacias(); }, 300);
         }
         actualizarContadores();
+        actualizarEscalacion();
     }
 
     function recuperarUltimoListo() {
-        if (!ultimoListo) return;
-        // In a real implementation, this would call the API to recover
-        console.log('Recuperar último listo:', ultimoListo.ordenId);
+        if (!ultimoListo) {
+            mostrarToastKds('Nada para recuperar', 'warn');
+            return;
+        }
+        const container = ultimoListo.columnaId
+            ? document.getElementById(ultimoListo.columnaId)
+            : document.getElementById(`kds-cards-${COOKS[0].id}`);
+        if (!container) return;
+
+        const temp = document.createElement('div');
+        temp.innerHTML = ultimoListo.html;
+        const card = temp.querySelector('.lmd-kds-card');
+        if (!card) return;
+        card.classList.remove('lmd-kds-card--completing');
+        card.classList.add('lmd-kds-card--recuperada');
+
+        // Re-attach LISTO button handler
+        const btn = card.querySelector('.lmd-kds-btn-listo');
+        if (btn) {
+            btn.addEventListener('click', () => marcarListo(ultimoListo.ordenId));
+        }
+        container.appendChild(card);
+        mostrarToastKds('Orden recuperada', 'success');
+        actualizarContadores();
+        ultimoListo = null;
     }
 
     function actualizarContadores() {
@@ -241,11 +283,62 @@
         COOKS.forEach(cook => {
             const container = document.getElementById(`kds-cards-${cook.id}`);
             const countEl = document.getElementById(`kds-count-${cook.id}`);
-            const count = container ? container.querySelectorAll('.lmd-kds-card').length : 0;
+            const count = container ? container.querySelectorAll('.lmd-kds-card:not(.lmd-kds-card--completing)').length : 0;
             total += count;
-            if (countEl) {
-                countEl.textContent = `${count} ${count === 1 ? 'orden' : 'ordenes'}`;
+            if (countEl) countEl.textContent = count + ' ordenes';
+        });
+        if (contador) contador.textContent = total + ' ordenes';
+        actualizarEscalacion();
+    }
+
+    // ── Auto-escalación >45min ──────────────────────────
+    function actualizarEscalacion() {
+        clearTimeout(timerEscalacion);
+        const ahora = Date.now();
+        let maxMinutos = 0;
+        document.querySelectorAll('.lmd-kds-card[data-hora-recibido]').forEach(card => {
+            const ts = new Date(card.dataset.horaRecibido).getTime();
+            const min = Math.floor((ahora - ts) / 60000);
+            if (min > maxMinutos) maxMinutos = min;
+            card.classList.toggle('lmd-kds-card--escalado', min >= ALERTA_ESCALACION_MIN);
+            if (min >= ALERTA_ESCALACION_MIN) {
+                const timer = card.querySelector('.lmd-kds-card__timer');
+                if (timer && !timer.textContent.includes('ESCALAR')) {
+                    timer.textContent = 'ESCALAR ' + formatearTiempo(min);
+                }
             }
+        });
+        if (maxMinutos >= ALERTA_ESCALACION_MIN) {
+            timerEscalacion = setTimeout(() => {
+                mostrarToastKds('ATENCIÓN: órdenes >' + ALERTA_ESCALACION_MIN + 'min sin completar', 'error');
+                reproducirAlerta();
+            }, 5000);
+        }
+    }
+
+    // ── Group separator: Mesa X → Y items ───────────────
+    function verificarMesasVacias() {
+        // Clean empty mesa separators
+        document.querySelectorAll('.lmd-kds-mesa-group').forEach(g => {
+            const col = g.closest('.lmd-kds-orders');
+            const cards = col ? col.querySelectorAll('.lmd-kds-card:not(.lmd-kds-card--completing)') : [];
+            if (cards.length === 0) g.remove();
+        });
+    }
+
+    function agregarSeparadorMesa(container, orden) {
+        if (!orden.mesaNumero) return;
+        const groupId = 'mesa-group-' + orden.mesaNumero;
+        let group = document.getElementById(groupId);
+        if (!group) {
+            group = document.createElement('div');
+            group.id = groupId;
+            group.className = 'lmd-kds-mesa-group';
+            group.innerHTML = '<div class="lmd-kds-mesa-group-header">Mesa ' + orden.mesaNumero + '</div>';
+            container.appendChild(group);
+        }
+        return group;
+    }
         });
         if (contador) {
             contador.textContent = `${total} ${total === 1 ? 'orden' : 'ordenes'}`;
@@ -451,8 +544,8 @@
     // ── UI Tabs ─────────────────────────────────────────────
     function cambiarEstacion(estacion) {
         estacionActual = estacion;
-        document.querySelectorAll('.lmd-kds-tab').forEach(tab => {
-            tab.classList.toggle('lmd-kds-tab--activo', tab.dataset.estacion === estacion);
+        document.querySelectorAll('.lmd-kds-station-btn').forEach(tab => {
+            tab.classList.toggle('lmd-kds-station-btn--active', tab.dataset.estacion === estacion);
         });
 
         // Limpiar columnas
@@ -542,7 +635,7 @@
         document.body.addEventListener('click', inicializarAudio, { once: true });
 
         // Tabs de estación
-        document.querySelectorAll('.lmd-kds-tab').forEach(tab => {
+        document.querySelectorAll('.lmd-kds-station-btn').forEach(tab => {
             tab.addEventListener('click', () => cambiarEstacion(tab.dataset.estacion));
         });
 
@@ -554,7 +647,7 @@
         iniciarSignalR();
 
         // Timer updater cada 10s
-        setInterval(actualizarTimers, 10000);
+        setInterval(actualizarTimers, 1000);
 
         // Clock
         const clock = document.getElementById('lmd-kds-reloj');
@@ -564,4 +657,7 @@
             }, 1000);
         }
     });
+
+    // Exponer undo globalmente
+    window.__lmdKdsUndo = recuperarUltimoListo;
 })();

@@ -13,15 +13,17 @@ internal class PedidosServicio : IPedidosServicio
 {
     private readonly IUnidadDeTrabajo _uot;
     private readonly INotificadorPedidos _notificadorPedidos;
+    private readonly INotificadorDashboard? _notificadorDashboard;
     private readonly ICocinaServicio? _cocinaServicio;
     private readonly IHttpContextAccessor? _httpContextAccessor;
 
-    public PedidosServicio(IUnidadDeTrabajo uot, INotificadorPedidos notificadorPedidos, ICocinaServicio? cocinaServicio = null, IHttpContextAccessor? httpContextAccessor = null)
+    public PedidosServicio(IUnidadDeTrabajo uot, INotificadorPedidos notificadorPedidos, ICocinaServicio? cocinaServicio = null, IHttpContextAccessor? httpContextAccessor = null, INotificadorDashboard? notificadorDashboard = null)
     {
         _uot = uot;
         _notificadorPedidos = notificadorPedidos;
         _cocinaServicio = cocinaServicio;
         _httpContextAccessor = httpContextAccessor;
+        _notificadorDashboard = notificadorDashboard;
     }
 
     public async Task<PedidoDto> CrearPedidoAsync(TipoServicio tipoServicio, Guid? mesaId, List<DetalleCreacionDto> detalles, CancellationToken cancelacion = default)
@@ -58,11 +60,15 @@ internal class PedidosServicio : IPedidosServicio
         }
 
         await _uot.Pedidos.AgregarAsync(pedido, cancelacion);
+        pedido.MarcarEnPreparacion();
+        await ValidarStockSuficienteAsync(pedido.Detalles, cancelacion);
+        await DescontarStockAsync(pedido.Detalles, cancelacion);
         await _uot.GuardarCambiosAsync(cancelacion);
         await _notificadorPedidos.NotificarPedidoCreadoAsync(pedido.Id, pedido.Estado, cancelacion);
+        await NotificarMetricasInvalidadasSiExisteAsync(cancelacion);
 
         if (_cocinaServicio is not null)
-            await _cocinaServicio.GenerarOrdenesAsync(pedido.Id, cancelacion);
+            await _cocinaServicio.GenerarOrdenesAsync(pedido.Id, null, cancelacion);
 
         return MapToDto(pedido);
     }
@@ -77,10 +83,40 @@ internal class PedidosServicio : IPedidosServicio
 
         var detalle = new DetallePedido(producto, cantidad, precioUnitario, notas, modificacionesJson);
         pedido.AgregarDetalle(detalle);
+        await _uot.Pedidos.AgregarDetalleAsync(detalle, cancelacion);
 
+        await ValidarStockSuficienteAsync([detalle], cancelacion);
+        await DescontarStockAsync([detalle], cancelacion);
         await _uot.GuardarCambiosAsync(cancelacion);
 
+        if (_cocinaServicio is not null)
+            await _cocinaServicio.GenerarOrdenesAsync(pedidoId, new[] { detalle.Id }, cancelacion);
+
         return MapToDto(pedido);
+    }
+
+    public async Task AgregarItemsAsync(Guid pedidoId, List<DetalleCreacionDto> items, CancellationToken cancelacion = default)
+    {
+        var pedido = await _uot.Pedidos.ObtenerConDetallesParaActualizarAsync(pedidoId, cancelacion)
+            ?? throw new ArgumentException($"No se encontró el pedido con ID {pedidoId}.", nameof(pedidoId));
+
+        var nuevosDetalles = new List<DetallePedido>();
+        foreach (var item in items)
+        {
+            var producto = await _uot.Productos.ObtenerConTrackingAsync(item.ProductoId, cancelacion)
+                ?? throw new ArgumentException($"No se encontró el producto con ID {item.ProductoId}.", nameof(items));
+            var detalle = new DetallePedido(producto, item.Cantidad, item.PrecioUnitario, item.Notas, item.ModificacionesJson);
+            pedido.AgregarDetalle(detalle);
+            await _uot.Pedidos.AgregarDetalleAsync(detalle, cancelacion);
+            nuevosDetalles.Add(detalle);
+        }
+
+        await ValidarStockSuficienteAsync(nuevosDetalles, cancelacion);
+        await DescontarStockAsync(nuevosDetalles, cancelacion);
+        await _uot.GuardarCambiosAsync(cancelacion);
+
+        if (_cocinaServicio is not null && nuevosDetalles.Count > 0)
+            await _cocinaServicio.GenerarOrdenesAsync(pedidoId, nuevosDetalles.Select(d => d.Id), cancelacion);
     }
 
     public async Task MarcarEnPreparacionAsync(Guid pedidoId, CancellationToken cancelacion = default)
@@ -89,6 +125,17 @@ internal class PedidosServicio : IPedidosServicio
             ?? throw new ArgumentException($"No se encontró el pedido con ID {pedidoId}.", nameof(pedidoId));
 
         pedido.MarcarEnPreparacion();
+        await _uot.GuardarCambiosAsync(cancelacion);
+        await _notificadorPedidos.NotificarEstadoCambiadoAsync(pedido.Id, pedido.Estado, cancelacion);
+        await NotificarMetricasInvalidadasSiExisteAsync(cancelacion);
+    }
+
+    public async Task MarcarListoAsync(Guid pedidoId, CancellationToken cancelacion = default)
+    {
+        var pedido = await _uot.Pedidos.ObtenerConDetallesParaActualizarAsync(pedidoId, cancelacion)
+            ?? throw new ArgumentException($"No se encontró el pedido con ID {pedidoId}.", nameof(pedidoId));
+
+        pedido.MarcarListo();
         await _uot.GuardarCambiosAsync(cancelacion);
         await _notificadorPedidos.NotificarEstadoCambiadoAsync(pedido.Id, pedido.Estado, cancelacion);
     }
@@ -100,8 +147,112 @@ internal class PedidosServicio : IPedidosServicio
 
         pedido.MarcarComoPagado();
         await LiberarMesaSiCorrespondeAsync(pedido, cancelacion);
+        await AplicarGraciaMesaSiCorrespondeAsync(pedido, cancelacion);
         await _uot.GuardarCambiosAsync(cancelacion);
         await _notificadorPedidos.NotificarEstadoCambiadoAsync(pedido.Id, pedido.Estado, cancelacion);
+        await NotificarMetricasInvalidadasSiExisteAsync(cancelacion);
+    }
+
+    private async Task ValidarStockSuficienteAsync(IEnumerable<DetallePedido> detalles, CancellationToken ct)
+    {
+        var faltantes = new List<string>();
+        foreach (var detalle in detalles)
+        {
+            var receta = await _uot.RecetasProductos.ObtenerPorProductoIdAsync(detalle.Producto.Id, ct);
+            if (receta is null) continue;
+
+            var consumos = CalcularConsumosDetalle(detalle, receta);
+
+            foreach (var (ingId, consumo) in consumos)
+            {
+                var ingrediente = await _uot.Ingredientes.ObtenerPorIdAsync(ingId, ct);
+                if (ingrediente is null) continue;
+                if (ingrediente.StockActual < consumo)
+                    faltantes.Add($"{ingrediente.Nombre} (necesario: {consumo} {ingrediente.UnidadMedida}, disponible: {ingrediente.StockActual})");
+            }
+        }
+
+        if (faltantes.Count > 0)
+            throw new InvalidOperationException($"Stock insuficiente para completar el pago: {string.Join("; ", faltantes)}");
+    }
+
+    private async Task DescontarStockAsync(IEnumerable<DetallePedido> detalles, CancellationToken ct)
+    {
+        foreach (var detalle in detalles)
+        {
+            var receta = await _uot.RecetasProductos.ObtenerPorProductoIdAsync(detalle.Producto.Id, ct);
+            if (receta is null) continue;
+
+            var consumos = CalcularConsumosDetalle(detalle, receta);
+
+            foreach (var (ingId, consumo) in consumos)
+            {
+                var ingrediente = await _uot.Ingredientes.ObtenerPorIdAsync(ingId, ct);
+                if (ingrediente is null) continue;
+                ingrediente.DescontarStock(consumo);
+            }
+        }
+    }
+
+    private async Task DevolverStockAsync(IEnumerable<DetallePedido> detalles, CancellationToken ct)
+    {
+        foreach (var detalle in detalles)
+        {
+            var receta = await _uot.RecetasProductos.ObtenerPorProductoIdAsync(detalle.Producto.Id, ct);
+            if (receta is null) continue;
+            var consumos = CalcularConsumosDetalle(detalle, receta);
+            foreach (var (ingId, consumo) in consumos)
+            {
+                var ingrediente = await _uot.Ingredientes.ObtenerPorIdAsync(ingId, ct);
+                if (ingrediente is null) continue;
+                ingrediente.DevolverStock(consumo);
+            }
+        }
+    }
+
+    private static Dictionary<Guid, decimal> CalcularConsumosDetalle(DetallePedido detalle, RecetaProducto receta)
+    {
+        var mods = detalle.ObtenerModificaciones();
+
+        var quitados = mods
+            .Where(m => m.Accion == "quitar")
+            .Select(m => m.IngredienteId)
+            .ToHashSet();
+
+        var intercambios = mods
+            .Where(m => m.Accion == "intercambiar" && m.IngredienteReemplazoId.HasValue)
+            .ToDictionary(m => m.IngredienteId, m => m.IngredienteReemplazoId!.Value);
+
+        var extras = mods
+            .Where(m => m.Accion == "extra")
+            .Select(m => m.IngredienteId)
+            .ToHashSet();
+
+        var consumos = new Dictionary<Guid, decimal>();
+
+        foreach (var ri in receta.Ingredientes)
+        {
+            if (quitados.Contains(ri.IngredienteId)) continue;
+
+            var targetId = intercambios.TryGetValue(ri.IngredienteId, out var reemplazo)
+                ? reemplazo
+                : ri.IngredienteId;
+
+            var cantidad = ri.CantidadRequerida * detalle.Cantidad;
+            if (extras.Contains(ri.IngredienteId))
+                cantidad += ri.CantidadRequerida * detalle.Cantidad;
+
+            consumos[targetId] = consumos.TryGetValue(targetId, out var prev) ? prev + cantidad : cantidad;
+        }
+
+        foreach (var m in mods.Where(m => m.Accion == "extra"))
+        {
+            if (receta.Ingredientes.Any(ri => ri.IngredienteId == m.IngredienteId)) continue;
+            var cantidad = detalle.Cantidad;
+            consumos[m.IngredienteId] = consumos.TryGetValue(m.IngredienteId, out var prev) ? prev + cantidad : cantidad;
+        }
+
+        return consumos;
     }
 
     public async Task<PedidoDto> EliminarDetalleAsync(Guid pedidoId, Guid detalleId, CancellationToken cancelacion = default)
@@ -140,10 +291,27 @@ internal class PedidosServicio : IPedidosServicio
         var pedido = await _uot.Pedidos.ObtenerConDetallesParaActualizarAsync(pedidoId, cancelacion)
             ?? throw new ArgumentException($"No se encontró el pedido con ID {pedidoId}.", nameof(pedidoId));
 
+        var stockDescontado = pedido.Estado is EstadoPedido.EnPreparacion or EstadoPedido.Listo or EstadoPedido.EnCobro;
         pedido.Cancelar();
         await LiberarMesaSiCorrespondeAsync(pedido, cancelacion);
+        if (stockDescontado)
+            await DevolverStockAsync(pedido.Detalles, cancelacion);
         await _uot.GuardarCambiosAsync(cancelacion);
         await _notificadorPedidos.NotificarPedidoCanceladoAsync(pedido.Id, cancelacion);
+        await NotificarMetricasInvalidadasSiExisteAsync(cancelacion);
+    }
+
+    public async Task AnularPagoAsync(Guid pedidoId, CancellationToken cancelacion = default)
+    {
+        var pedido = await _uot.Pedidos.ObtenerConDetallesParaActualizarAsync(pedidoId, cancelacion)
+            ?? throw new ArgumentException($"No se encontró el pedido con ID {pedidoId}.", nameof(pedidoId));
+
+        pedido.AnularPago();
+        await LiberarMesaSiCorrespondeAsync(pedido, cancelacion);
+        await DevolverStockAsync(pedido.Detalles, cancelacion);
+        await _uot.GuardarCambiosAsync(cancelacion);
+        await _notificadorPedidos.NotificarPedidoCanceladoAsync(pedido.Id, cancelacion);
+        await NotificarMetricasInvalidadasSiExisteAsync(cancelacion);
     }
 
     public async Task EliminarPedidoPendienteAsync(Guid pedidoId, Guid usuarioId, string? ipAddress = null, CancellationToken cancelacion = default)
@@ -151,8 +319,8 @@ internal class PedidosServicio : IPedidosServicio
         var pedido = await _uot.Pedidos.ObtenerConDetallesParaActualizarAsync(pedidoId, cancelacion)
             ?? throw new ArgumentException($"No se encontró el pedido con ID {pedidoId}.", nameof(pedidoId));
 
-        if (pedido.Estado != EstadoPedido.Pendiente)
-            throw new ReglaDominioException("Solo se puede eliminar un pedido pendiente que no ha sido pagado.");
+        if (pedido.Estado == EstadoPedido.Pagado || pedido.Estado == EstadoPedido.Cancelado)
+            throw new ReglaDominioException("Solo se puede eliminar un pedido que no haya sido pagado ni cancelado.");
 
         var usuario = await _uot.Usuarios.ObtenerPorIdAsync(usuarioId, cancelacion)
             ?? throw new ArgumentException($"No se encontró el usuario con ID {usuarioId}.", nameof(usuarioId));
@@ -177,7 +345,16 @@ internal class PedidosServicio : IPedidosServicio
     {
         var pedidos = await _uot.Pedidos.ObtenerTodosAsync(cancelacion);
         return pedidos
-            .Where(p => p.Estado == EstadoPedido.Pendiente || p.Estado == EstadoPedido.EnPreparacion)
+            .Where(p => p.Estado == EstadoPedido.Pendiente || p.Estado == EstadoPedido.EnPreparacion || p.Estado == EstadoPedido.EnCobro)
+            .Select(MapToDto)
+            .ToList();
+    }
+
+    public async Task<List<PedidoDto>> ListarListosParaDespachoAsync(CancellationToken cancelacion = default)
+    {
+        var pedidos = await _uot.Pedidos.ObtenerTodosAsync(cancelacion);
+        return pedidos
+            .Where(p => p.Estado == EstadoPedido.Listo || p.Estado == EstadoPedido.Pagado)
             .Select(MapToDto)
             .ToList();
     }
@@ -190,6 +367,7 @@ internal class PedidosServicio : IPedidosServicio
         pedido.MarcarEnCobro();
         await _uot.GuardarCambiosAsync(cancelacion);
         await _notificadorPedidos.NotificarEstadoCambiadoAsync(pedido.Id, pedido.Estado, cancelacion);
+        await NotificarMetricasInvalidadasSiExisteAsync(cancelacion);
     }
 
     public async Task<List<CuentaDto>> CrearCuentasAsync(Guid pedidoId, int cantidad, CancellationToken cancelacion = default)
@@ -207,6 +385,7 @@ internal class PedidosServicio : IPedidosServicio
 
         await _uot.GuardarCambiosAsync(cancelacion);
         await _notificadorPedidos.NotificarEstadoCambiadoAsync(pedido.Id, pedido.Estado, cancelacion);
+        await NotificarMetricasInvalidadasSiExisteAsync(cancelacion);
 
         return cuentas.Select(MapToCuentaDto).ToList();
     }
@@ -245,6 +424,7 @@ internal class PedidosServicio : IPedidosServicio
 
         await _uot.GuardarCambiosAsync(cancelacion);
         await _notificadorPedidos.NotificarEstadoCambiadoAsync(pedido.Id, pedido.Estado, cancelacion);
+        await NotificarMetricasInvalidadasSiExisteAsync(cancelacion);
 
         return cuentas.Select(MapToCuentaDto).ToList();
     }
@@ -259,6 +439,9 @@ internal class PedidosServicio : IPedidosServicio
                     ?? throw new ArgumentException($"No se encontró la cuenta con ID {cuentaId}.", nameof(cuentaId));
 
                 var usuarioId = ObtenerUsuarioIdActual();
+                if (usuarioId == Guid.Empty)
+                    throw new InvalidOperationException("No se pudo identificar el usuario actual para registrar el pago.");
+
                 cuenta.Pagar(metodoPago, propinaMonto, usuarioId);
 
                 var pago = new Pago(cuentaId, cuenta.Total, metodoPago, propinaMonto, usuarioId);
@@ -268,11 +451,11 @@ internal class PedidosServicio : IPedidosServicio
                 if (pedido is not null && pedido.EstaPagadoCompletamente)
                 {
                     pedido.MarcarComoPagado();
-                    await LiberarMesaSiCorrespondeAsync(pedido, cancelacion);
                     await _notificadorPedidos.NotificarEstadoCambiadoAsync(pedido.Id, pedido.Estado, cancelacion);
                 }
 
                 await _uot.GuardarCambiosAsync(cancelacion);
+                await NotificarMetricasInvalidadasSiExisteAsync(cancelacion);
                 return MapToCuentaDto(cuenta);
             }
             catch (ConcurrenciaException) when (intento < 2)
@@ -303,6 +486,21 @@ internal class PedidosServicio : IPedidosServicio
         return Guid.Empty;
     }
 
+    private async Task NotificarMetricasInvalidadasSiExisteAsync(CancellationToken cancelacion)
+    {
+        if (_notificadorDashboard is not null)
+            await _notificadorDashboard.NotificarMetricasInvalidadasAsync(cancelacion);
+    }
+
+    private async Task AplicarGraciaMesaSiCorrespondeAsync(Pedido pedido, CancellationToken cancelacion)
+    {
+        if (pedido.Mesa is null) return;
+        var minutos = await _uot.ObtenerPeriodoGraciaMinutosAsync(cancelacion);
+        if (minutos <= 0) return;
+        var mesa = await _uot.Mesas.ObtenerParaActualizarAsync(pedido.Mesa.Id, cancelacion);
+        mesa?.IniciarGracia(minutos);
+    }
+
     private async Task LiberarMesaSiCorrespondeAsync(Pedido pedido, CancellationToken cancelacion)
     {
         if (pedido.Mesa is null) return;
@@ -329,6 +527,7 @@ internal class PedidosServicio : IPedidosServicio
             MesaNumero = pedido.Mesa?.Numero,
             Estado = pedido.Estado.ToString(),
             Total = pedido.Total,
+            FechaCreacion = pedido.CreatedAt,
             Detalles = pedido.Detalles.Select(d => new DetallePedidoDto
             {
                 Id = d.Id,

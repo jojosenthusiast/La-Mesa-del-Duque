@@ -59,6 +59,16 @@ internal class PedidoRepositorio : IPedidoRepositorio
         await _contexto.Set<Pedido>().AddAsync(pedido, cancelacion);
     }
 
+    // Registra explícitamente un DetallePedido nuevo como Added en el contexto.
+    // Necesario porque DetallePedido.Id es un Guid asignado por el cliente (Guid.NewGuid()),
+    // por lo que EF Core no puede inferir el estado Added por sí solo cuando descubre
+    // la entidad durante DetectChanges (la trataría como Unchanged al tener PK no-cero).
+    public Task AgregarDetalleAsync(DetallePedido detalle, CancellationToken cancelacion = default)
+    {
+        _contexto.Set<DetallePedido>().Add(detalle);
+        return Task.CompletedTask;
+    }
+
     public void Eliminar(Pedido pedido)
     {
         _contexto.Set<Pedido>().Remove(pedido);
@@ -71,7 +81,7 @@ internal class PedidoRepositorio : IPedidoRepositorio
             .Include(p => p.Mesa)
             .Include(p => p.Detalles)
                 .ThenInclude(d => d.Producto)
-            .Where(p => p.Mesa != null && p.Mesa.Id == mesaId && p.Estado != EstadoPedido.Cancelado)
+            .Where(p => p.Mesa != null && p.Mesa.Id == mesaId && p.Estado != EstadoPedido.Cancelado && p.Estado != EstadoPedido.AnuladoPago)
             .ToListAsync(cancelacion);
     }
 
@@ -85,5 +95,25 @@ internal class PedidoRepositorio : IPedidoRepositorio
             .Include(p => p.Cuentas)
                 .ThenInclude(c => c.DetallesAsignados)
             .FirstOrDefaultAsync(p => p.Id == id, cancelacion);
+    }
+
+
+    public async Task<int> ContarCanceladosDelDiaAsync(DateOnly fecha, CancellationToken cancelacion = default)
+    {
+        var inicio = fecha.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+        var fin = inicio.AddDays(1);
+        return await _contexto.Set<Pedido>()
+            .Where(p => p.Estado == EstadoPedido.Cancelado
+                     && p.CreatedAt >= inicio && p.CreatedAt < fin)
+            .CountAsync(cancelacion);
+    }
+
+    public async Task<int> ContarDelDiaAsync(DateOnly fecha, CancellationToken cancelacion = default)
+    {
+        var inicio = fecha.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+        var fin = inicio.AddDays(1);
+        return await _contexto.Set<Pedido>()
+            .Where(p => p.CreatedAt >= inicio && p.CreatedAt < fin)
+            .CountAsync(cancelacion);
     }
 }

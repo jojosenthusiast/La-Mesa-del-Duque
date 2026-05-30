@@ -9,9 +9,11 @@ public class Pedido
     private readonly List<Cuenta> _cuentas = [];
 
     public Guid Id { get; private set; }
+    public DateTime FechaCreacion { get; private set; } = DateTime.UtcNow;
     public TipoServicio TipoServicio { get; private set; }
     public Mesa? Mesa { get; private set; }
     public EstadoPedido Estado { get; private set; }
+    public DateTime CreatedAt { get; private set; }
     public IReadOnlyList<DetallePedido> Detalles => _detalles.AsReadOnly();
     public IReadOnlyList<Cuenta> Cuentas => _cuentas.AsReadOnly();
     public decimal Total => _detalles.Sum(d => d.Subtotal);
@@ -30,6 +32,7 @@ public class Pedido
         TipoServicio = tipoServicio;
         Mesa = mesa;
         Estado = EstadoPedido.Pendiente;
+        CreatedAt = DateTime.UtcNow;
     }
 
     public void MarcarEnPreparacion()
@@ -68,6 +71,22 @@ public class Pedido
         Estado = EstadoPedido.Pagado;
     }
 
+    public void MarcarListo()
+    {
+        if (Estado != EstadoPedido.EnPreparacion && Estado != EstadoPedido.Pagado)
+            throw new ReglaDominioException("Solo un pedido en preparación o pagado puede ser marcado como listo.");
+
+        Estado = EstadoPedido.Listo;
+    }
+
+    public void MarcarDespachado()
+    {
+        if (Estado != EstadoPedido.Listo)
+            throw new ReglaDominioException("Solo un pedido listo puede ser despachado.");
+
+        Estado = EstadoPedido.Despachado;
+    }
+
     public void Cancelar()
     {
         if (Estado == EstadoPedido.Cancelado)
@@ -77,6 +96,14 @@ public class Pedido
             throw new ReglaDominioException("No se puede cancelar un pedido pagado.");
 
         Estado = EstadoPedido.Cancelado;
+    }
+
+    public void AnularPago()
+    {
+        if (Estado != EstadoPedido.Pagado)
+            throw new ReglaDominioException("Solo se puede anular el pago de un pedido en estado Pagado.");
+
+        Estado = EstadoPedido.AnuladoPago;
     }
 
     public void AgregarDetalle(DetallePedido detalle)

@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="utf-8" />
@@ -10,91 +10,67 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Montserrat:wght@400;500;600&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
     <link rel="stylesheet" href="~/css/marca.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/sidebar.css" asp-append-version="true" />
+    @RenderSection("Styles", required: false)
     <link rel="stylesheet" href="~/LaMesaDelDuque.Web.styles.css" asp-append-version="true" />
     <link rel="manifest" href="~/manifest.json" />
 </head>
 <body>
+@{
+    var isAuth      = User.Identity?.IsAuthenticated == true;
+    var esAdmin     = isAuth && User.IsInRole("Administrador");
+    var esEncargado = isAuth && User.IsInRole("Encargado");
+    var esMesero    = isAuth && User.IsInRole("Mesero");
+    var esCocinero  = isAuth && User.IsInRole("Cocinero");
+    var esCajero    = isAuth && User.IsInRole("Cajero");
+    var esGestion   = esAdmin || esEncargado;
+    var rolStrip    = esCajero ? "Caja" : esMesero ? "Mesero" : esCocinero ? "Cocina" : "";
+}
+
     <div id="lmd-offline-banner" class="lmd-offline-banner" style="display:none;">
         <span id="lmd-offline-texto">Modo offline</span>
         <span id="lmd-offline-pendientes" class="lmd-offline-pendientes-badge" style="display:none;"></span>
     </div>
-    <nav class="navbar navbar-expand-lg lmd-ops-nav">
-        <div class="container lmd-shell-container">
-            <a class="navbar-brand lmd-ops-brand" asp-page="/Index">
-                <img src="~/img/marca/canvas.png" alt="La Mesa del Duque" style="height:40px;" />
-                <span>La Mesa del Duque</span>
-            </a>
 
-            @if (User.Identity?.IsAuthenticated == true)
-            {
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#ops-nav-collapse"
-                    aria-controls="ops-nav-collapse" aria-expanded="false" aria-label="Menú de navegación">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-
-            <div class="navbar-collapse collapse" id="ops-nav-collapse">
-                <ul class="navbar-nav lmd-module-tabs mx-auto">
-                    @{
-                        var esAdmin = User.IsInRole("Administrador");
-                        var esEncargado = User.IsInRole("Encargado");
-                        var esMesero = User.IsInRole("Mesero");
-                        var esCocinero = User.IsInRole("Cocinero");
-                    }
-                    @if (esAdmin || esEncargado)
-                    {
-                    <li class="nav-item">
-                        <a class="nav-link @(ViewData["ActiveTab"]?.ToString() == "Productos" ? "active" : "")"
-                           asp-page="/Operaciones/Productos/Index">Productos</a>
-                    </li>
-                    }
-                    @if (esAdmin || esEncargado || esMesero)
-                    {
-                    <li class="nav-item">
-                        <a class="nav-link @(ViewData["ActiveTab"]?.ToString() == "Mesas" ? "active" : "")"
-                           asp-page="/Operaciones/Mesas/Index">Mesas</a>
-                    </li>
-                    }
-                    @if (esAdmin || esEncargado || esMesero)
-                    {
-                    <li class="nav-item">
-                        <a class="nav-link @(ViewData["ActiveTab"]?.ToString() == "Pedidos" ? "active" : "")"
-                           asp-page="/Operaciones/Pedidos/Index">Pedidos</a>
-                    </li>
-                    }
-                    @if (esCocinero || esEncargado || esAdmin)
-                    {
-                        <li class="nav-item">
-                            <a class="nav-link @(ViewData["ActiveTab"]?.ToString() == "Cocina" ? "active" : "")"
-                               asp-page="/Cocina/KDS">COCINA</a>
-                        </li>
-                    }
-                    @if (esAdmin)
-                    {
-                        <li class="nav-item">
-                            <a class="nav-link @(ViewData["ActiveTab"]?.ToString() == "Usuarios" ? "active" : "")"
-                               asp-page="/Admin/Usuarios/Index">Usuarios</a>
-                        </li>
-                    }
-                </ul>
-
-                <div class="lmd-user-info d-flex align-items-center gap-2 ms-auto">
-                    <span class="lmd-user-name">@User.Identity.Name</span>
-                    <form method="post" asp-page="/Auth/Logout" class="d-inline">
-                        <button type="submit" class="btn btn-sm lmd-action-neutral">Salir</button>
-                    </form>
-                </div>
+    @if (isAuth && esGestion)
+    {
+        <div class="lmd-app-shell">
+            <partial name="_Sidebar" />
+            <div class="lmd-shell-with-sidebar" id="lmdShellMain">
+                <main role="main" class="lmd-main-surface lmd-main-surface--sidebar">
+                    @RenderBody()
+                </main>
             </div>
-            }
         </div>
-    </nav>
-
-    <div class="container lmd-shell-container lmd-shell-main">
-        <main role="main" class="lmd-main-surface">
+    }
+    else if (isAuth)
+    {
+        <header class="lmd-ops-strip">
+            <a asp-page="/Index" class="lmd-ops-strip__brand" aria-label="Inicio">
+                <img src="~/img/marca/logo-simbolo.png" alt="La Mesa del Duque" />
+            </a>
+            <span class="lmd-ops-strip__role">@rolStrip</span>
+            <div class="lmd-ops-strip__user">
+                <span class="lmd-ops-strip__username">@User.Identity!.Name</span>
+                <form method="post" asp-page="/Auth/Logout" class="d-inline">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="lmd-ops-strip__logout" title="Cerrar sesión">
+                        <i class="bi bi-box-arrow-right"></i>
+                    </button>
+                </form>
+            </div>
+        </header>
+        <main role="main" class="lmd-ops-fullscreen">
             @RenderBody()
         </main>
-    </div>
+    }
+    else
+    {
+        @RenderBody()
+    }
 
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>

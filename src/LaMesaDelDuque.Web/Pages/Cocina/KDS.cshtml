@@ -10,24 +10,26 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>KDS — La Mesa del Duque</title>
     <link rel="stylesheet" href="~/css/marca.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/kds.css" asp-append-version="true" />
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600&family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet" />
     <link rel="manifest" href="~/manifest.json" />
 </head>
-<body class="lmd-kds-body">
+<body class="lmd-kds-shell">
     <header class="lmd-kds-header">
         <div class="lmd-kds-header__left">
             <h1 class="lmd-kds-titulo">Cocina</h1>
             <span id="lmd-kds-reloj" class="lmd-kds-reloj">--:--</span>
         </div>
-        <nav class="lmd-kds-tabs">
-            <button class="lmd-kds-tab lmd-kds-tab--activo" data-estacion="Todas">Todas</button>
-            <button class="lmd-kds-tab" data-estacion="Parrilla">Parrilla</button>
-            <button class="lmd-kds-tab" data-estacion="Fria">Fría</button>
-            <button class="lmd-kds-tab" data-estacion="Caliente">Caliente</button>
-            <button class="lmd-kds-tab" data-estacion="Bar">Bar</button>
-            <button class="lmd-kds-tab" data-estacion="Expo">Expo</button>
+        <nav class="lmd-kds-stations">
+            <button class="lmd-kds-station-btn lmd-kds-station-btn--active" data-estacion="Todas">Todas</button>
+            <button class="lmd-kds-station-btn" data-estacion="Parrilla">Parrilla</button>
+            <button class="lmd-kds-station-btn" data-estacion="Fria">Fría</button>
+            <button class="lmd-kds-station-btn" data-estacion="Caliente">Caliente</button>
+            <button class="lmd-kds-station-btn" data-estacion="Bar">Bar</button>
+            <button class="lmd-kds-station-btn" data-estacion="Expo">Expo</button>
         </nav>
         <div class="lmd-kds-header__right">
+            <button class="lmd-kds-undo-btn" onclick="window.__lmdKdsUndo && window.__lmdKdsUndo()" title="Deshacer último listo">↩ Deshacer</button>
             <span id="lmd-kds-offline-badge" class="lmd-kds-offline-badge">OFFLINE</span>
             <span id="lmd-kds-contador" class="lmd-kds-contador">0 ordenes</span>
             <div id="lmd-kds-indicador-visual" class="lmd-kds-indicador"></div>
@@ -43,11 +45,18 @@
                         <span class="lmd-kds-col-name">@cook.Name</span>
                         <span class="lmd-kds-col-count" id="kds-count-@cook.Id">0 ordenes</span>
                     </div>
-                    <div class="lmd-kds-col-cards" id="kds-cards-@cook.Id"></div>
+                    <div class="lmd-kds-orders" id="kds-cards-@cook.Id"></div>
                 </div>
             }
         </div>
     </main>
+
+    <footer class="lmd-kds-legend">
+        <span class="lmd-kds-legend-item"><span class="lmd-kds-legend-dot lmd-kds-legend-dot--fresh"></span> &lt;15min</span>
+        <span class="lmd-kds-legend-item"><span class="lmd-kds-legend-dot lmd-kds-legend-dot--warn"></span> 15-30min</span>
+        <span class="lmd-kds-legend-item"><span class="lmd-kds-legend-dot lmd-kds-legend-dot--alert"></span> &gt;30min</span>
+        <span class="ms-auto text-muted" style="font-size:0.7rem">KDS v3 — LMDD</span>
+    </footer>
 
     @Html.AntiForgeryToken()
     <script>

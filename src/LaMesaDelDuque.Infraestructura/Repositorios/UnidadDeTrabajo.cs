@@ -1,5 +1,7 @@
+using LaMesaDelDuque.Dominio.Entidades;
 using LaMesaDelDuque.Dominio.Repositorios;
 using LaMesaDelDuque.Infraestructura.Persistencia;
+using Microsoft.EntityFrameworkCore;
 
 namespace LaMesaDelDuque.Infraestructura.Repositorios;
 
@@ -20,7 +22,11 @@ internal class UnidadDeTrabajo : IUnidadDeTrabajo
         RecetaProductoRepositorio recetaProductoRepositorio,
         OrdenCocinaRepositorio ordenCocinaRepositorio,
         CuentaRepositorio cuentaRepositorio,
-        PagoRepositorio pagoRepositorio)
+        PagoRepositorio pagoRepositorio,
+        ProveedorRepositorio? proveedorRepositorio = null,
+        MermaRepositorio? mermaRepositorio = null,
+        CierreDiaRepositorio? cierreDiaRepositorio = null,
+        ZonaSalonRepositorio? zonaSalonRepositorio = null)
     {
         _contexto = contexto;
         Categorias = categoriaRepositorio;
@@ -35,6 +41,43 @@ internal class UnidadDeTrabajo : IUnidadDeTrabajo
         OrdenesCocina = ordenCocinaRepositorio;
         Cuentas = cuentaRepositorio;
         Pagos = pagoRepositorio;
+        Proveedores = proveedorRepositorio;
+        Mermas = mermaRepositorio!;
+        CierresDia = cierreDiaRepositorio!;
+        ZonasSalon = zonaSalonRepositorio!;
+    }
+
+    // Overload compatible con tests previos al merge de mapa-visual (14 params + Zona opcional)
+    public UnidadDeTrabajo(
+        LaMesaDelDuqueDbContext contexto,
+        CategoriaProductoRepositorio categoriaRepositorio,
+        ProductoRepositorio productoRepositorio,
+        IngredienteRepositorio ingredienteRepositorio,
+        MesaRepositorio mesaRepositorio,
+        PedidoRepositorio pedidoRepositorio,
+        RolRepositorio rolRepositorio,
+        UsuarioRepositorio usuarioRepositorio,
+        AuditoriaRepositorio auditoriaRepositorio,
+        RecetaProductoRepositorio recetaProductoRepositorio,
+        OrdenCocinaRepositorio ordenCocinaRepositorio,
+        CuentaRepositorio cuentaRepositorio,
+        PagoRepositorio pagoRepositorio,
+        ZonaSalonRepositorio zonaSalonRepositorio)
+    {
+        _contexto = contexto;
+        Categorias = categoriaRepositorio;
+        Productos = productoRepositorio;
+        Ingredientes = ingredienteRepositorio;
+        Mesas = mesaRepositorio;
+        Pedidos = pedidoRepositorio;
+        Roles = rolRepositorio;
+        Usuarios = usuarioRepositorio;
+        Auditorias = auditoriaRepositorio;
+        RecetasProductos = recetaProductoRepositorio;
+        OrdenesCocina = ordenCocinaRepositorio;
+        Cuentas = cuentaRepositorio;
+        Pagos = pagoRepositorio;
+        ZonasSalon = zonaSalonRepositorio;
     }
 
     public ICategoriaProductoRepositorio Categorias { get; }
@@ -49,9 +92,22 @@ internal class UnidadDeTrabajo : IUnidadDeTrabajo
     public IOrdenCocinaRepositorio OrdenesCocina { get; }
     public ICuentaRepositorio Cuentas { get; }
     public IPagoRepositorio Pagos { get; }
+    public IProveedorRepositorio? Proveedores { get; }
+    public IMermaRepositorio Mermas { get; } = null!;
+    public ICierreDiaRepositorio CierresDia { get; } = null!;
+    public IZonaSalonRepositorio ZonasSalon { get; } = null!;
 
     public async Task<int> GuardarCambiosAsync(CancellationToken cancelacion = default)
     {
         return await _contexto.SaveChangesAsync(cancelacion);
+    }
+
+    public async Task<int> ObtenerPeriodoGraciaMinutosAsync(CancellationToken cancelacion = default)
+    {
+        return await _contexto.Set<RestauranteConfig>()
+            .AsNoTracking()
+            .Where(c => c.Id == 1)
+            .Select(c => c.PeriodoGraciaMinutos)
+            .FirstOrDefaultAsync(cancelacion);
     }
 }

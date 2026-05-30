@@ -14,6 +14,11 @@ public interface IUnidadDeTrabajo
     IOrdenCocinaRepositorio OrdenesCocina { get; }
     ICuentaRepositorio Cuentas { get; }
     IPagoRepositorio Pagos { get; }
+    IProveedorRepositorio? Proveedores { get; }
+    IMermaRepositorio Mermas { get; }
+    ICierreDiaRepositorio CierresDia { get; }
+    IZonaSalonRepositorio ZonasSalon { get; }
 
     Task<int> GuardarCambiosAsync(CancellationToken cancelacion = default);
+    Task<int> ObtenerPeriodoGraciaMinutosAsync(CancellationToken cancelacion = default);
 }

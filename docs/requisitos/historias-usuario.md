@@ -46,7 +46,7 @@ Este documento describe las historias de usuario (HU) que definen los requisitos
 
 ### HU-011: Gestionar productos
 
-**Como** administrador,
+**Como** administrador o encargado,
 **quiero** crear, editar, listar y eliminar productos del menú (con nombre, descripción, precio y categoría),
 **para** mantener actualizado el catálogo de productos ofrecidos en el restaurante.
 
@@ -70,7 +70,7 @@ Este documento describe las historias de usuario (HU) que definen los requisitos
 
 ### HU-016: Gestionar mesas
 
-**Como** administrador,
+**Como** administrador o encargado,
 **quiero** crear, editar, cambiar el estado (libre, ocupada, reservada) y eliminar mesas,
 **para** reflejar la distribución real del restaurante y asignar pedidos correctamente.
 

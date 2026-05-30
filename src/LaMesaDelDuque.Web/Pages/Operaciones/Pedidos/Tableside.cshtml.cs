@@ -9,7 +9,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 
 namespace LaMesaDelDuque.Web.Pages.Operaciones.Pedidos;
 
-[Authorize(Roles = "Mesero,Encargado,Administrador")]
+[Authorize(Roles = "Mesero,Cajero,Encargado,Administrador")]
 public class TablesideModel : PageModel
 {
     private readonly IPedidosServicio _pedidosServicio;
@@ -56,17 +56,20 @@ public class TablesideModel : PageModel
             var pedido = await _pedidosServicio.CrearPedidoAsync(tipoServicio, mesaId, detalles);
             return new JsonResult(new { pedidoId = pedido.Id, estado = pedido.Estado, lineas = pedido.Detalles });
         }
-        catch (Exception ex) { return BadRequest(ex.Message); }
+        catch (Exception ex) { return BadRequest(ErrorSeguro(ex)); }
     }
 
     public async Task<IActionResult> OnPostEnviarACocinaJsonAsync(Guid pedidoId)
     {
         try
         {
+            if (pedidoId == Guid.Empty)
+                return BadRequest("ID de pedido inválido.");
+
             await _pedidosServicio.MarcarEnPreparacionAsync(pedidoId);
             return new JsonResult(new { ok = true, estado = "EnPreparacion" });
         }
-        catch (Exception ex) { return BadRequest(ex.Message); }
+        catch (Exception ex) { return BadRequest(ErrorSeguro(ex)); }
     }
 
     public async Task<IActionResult> OnPostAgregarLineaJsonAsync(Guid pedidoId, Guid productoId, int cantidad, string? notas = null, string? modificacionesJson = null)
@@ -79,7 +82,20 @@ public class TablesideModel : PageModel
             await _pedidosServicio.AgregarDetalleAsync(pedidoId, productoId, cantidad, prod.Precio, notas, modificacionesJson);
             return new JsonResult(new { ok = true });
         }
-        catch (Exception ex) { return BadRequest(ex.Message); }
+        catch (Exception ex) { return BadRequest(ErrorSeguro(ex)); }
+    }
+
+    private static object ErrorSeguro(Exception ex)
+    {
+        var mensaje = ex switch
+        {
+            ArgumentException => ex.Message,
+            InvalidOperationException => ex.Message,
+            ReglaDominioException => ex.Message,
+            _ => "Ocurrió un error interno al procesar la solicitud."
+        };
+
+        return new { error = mensaje };
     }
 
     private async Task CargarDatosAsync()

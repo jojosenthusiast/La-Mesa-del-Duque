@@ -71,6 +71,32 @@ public class Proveedor
         CreatedAt = DateTime.UtcNow;
     }
 
+    public void Actualizar(string nombre, string nit, string? contacto, string? telefono, string? email, string? direccion)
+    {
+        if (string.IsNullOrWhiteSpace(nombre))
+            throw new ReglaDominioException("El nombre del proveedor es obligatorio.");
+        if (nombre.Trim().Length > LongitudMaximaNombre)
+            throw new ReglaDominioException($"El nombre no puede exceder {LongitudMaximaNombre} caracteres.");
+
+        var nitNormalizado = (nit ?? "").Trim();
+        if (string.IsNullOrWhiteSpace(nitNormalizado))
+            throw new ReglaDominioException("El NIT del proveedor es obligatorio.");
+        if (nitNormalizado.Length > LongitudMaximaNit)
+            throw new ReglaDominioException($"El NIT no puede exceder {LongitudMaximaNit} caracteres.");
+        if (!System.Text.RegularExpressions.Regex.IsMatch(nitNormalizado, @"^\d{4}-\d{6}-\d{3}-\d$"))
+            throw new ReglaDominioException("El NIT tiene un formato inválido. Formato esperado: 0000-000000-000-0.");
+
+        if (!string.IsNullOrWhiteSpace(email) && !System.Text.RegularExpressions.Regex.IsMatch(email.Trim(), @"^[^@\s]+@[^@\s]+\.[^@\s]+$"))
+            throw new ReglaDominioException("El email tiene un formato inválido.");
+
+        Nombre = nombre.Trim();
+        Nit = nitNormalizado;
+        Contacto = string.IsNullOrWhiteSpace(contacto) ? null : contacto.Trim();
+        Telefono = string.IsNullOrWhiteSpace(telefono) ? null : telefono.Trim();
+        Email = string.IsNullOrWhiteSpace(email) ? null : email.Trim();
+        Direccion = string.IsNullOrWhiteSpace(direccion) ? null : direccion.Trim();
+    }
+
     public void Desactivar() => Activo = false;
 
     public void Activar() => Activo = true;

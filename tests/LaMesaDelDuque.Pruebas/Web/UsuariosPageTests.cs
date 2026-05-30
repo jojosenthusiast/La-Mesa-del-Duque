@@ -80,4 +80,7 @@ internal sealed class FakeUsuariosServicio : IUsuariosServicio
 
     public Task<UsuarioDto?> ValidarCredencialesAsync(string username, string password, CancellationToken cancelacion = default)
         => Task.FromResult<UsuarioDto?>(null);
+
+    public Task<List<RolDto>> ListarRolesAsync(CancellationToken cancelacion = default)
+        => Task.FromResult(new List<RolDto>());
 }

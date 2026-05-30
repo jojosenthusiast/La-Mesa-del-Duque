@@ -50,4 +50,8 @@ internal sealed class FakeMesasServicio : IMesasServicio
 
     public Task DesactivarMesaAsync(Guid mesaId, CancellationToken cancelacion = default)
         => Task.CompletedTask;
+    public Task<MesaDto> ActualizarPosicionAsync(Guid mesaId, int posicionX, int posicionY, Guid zonaId, string forma, int? rotacion = null, CancellationToken cancelacion = default)
+        => Task.FromResult(new MesaDto { Id = mesaId, Numero = 1, Capacidad = 4, Estado = "Disponible", Activa = true });
+    public Task<MesaDto> LimpiarPosicionAsync(Guid mesaId, CancellationToken cancelacion = default)
+        => Task.FromResult(new MesaDto { Id = mesaId, Numero = 1, Capacidad = 4, Estado = "Disponible", Activa = true });
 }

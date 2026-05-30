@@ -13,20 +13,52 @@ public class IndexModel : PageModel
     public void OnGet()
     {
         var modulos = new List<ModuleLinkVm>();
-
         var autenticado = User?.Identity?.IsAuthenticated == true;
+        var esAdmin = autenticado && User!.IsInRole("Administrador");
+        var esEncargado = autenticado && User.IsInRole("Encargado");
+        var esMesero = autenticado && User.IsInRole("Mesero");
+        var esCocinero = autenticado && User.IsInRole("Cocinero");
+        var esCajero = autenticado && User.IsInRole("Cajero");
 
-        if (autenticado && (User.IsInRole("Administrador") || User.IsInRole("Encargado")))
-            modulos.Add(new("Productos", "/Operaciones/Productos/Index", "Catálogo operativo y mantenimiento seguro."));
+        // Pedidos: Admin, Encargado, Cajero
+        if (esAdmin || esEncargado || esCajero)
+            modulos.Add(new("Pedidos", "/Operaciones/Pedidos/Index", "Captura rápida de órdenes y punto de venta."));
 
-        if (autenticado && (User.IsInRole("Administrador") || User.IsInRole("Encargado") || User.IsInRole("Mesero")))
-            modulos.Add(new("Mesas", "/Operaciones/Mesas/Index", "Estado del salón y acciones rápidas."));
+        // Cocina: Cocinero, Encargado, Admin
+        if (esCocinero || esEncargado || esAdmin)
+            modulos.Add(new("Cocina", "/Cocina/KDS", "Pantalla de cocina con órdenes pendientes."));
 
-        if (autenticado)
-            modulos.Add(new("Pedidos", "/Operaciones/Pedidos/Index", "Captura rápida de órdenes y totales visibles."));
+        // Mesas: Admin, Encargado, Mesero
+        if (esAdmin || esEncargado || esMesero)
+            modulos.Add(new("Mesas", "/Operaciones/Mesas/Index", "Gestión visual del salón y estados."));
 
-        if (autenticado && User.IsInRole("Administrador"))
-            modulos.Add(new("Usuarios", "/Admin/Usuarios/Index", "Gestión de acceso y roles."));
+        // Mapa Salón: Admin, Encargado, Mesero
+        if (esAdmin || esEncargado || esMesero)
+            modulos.Add(new("Mapa Salón", "/Operaciones/Salon/Mapa", "Mapa visual interactivo con drag & drop."));
+
+        // Despacho: Admin, Encargado, Cajero
+        if (esAdmin || esEncargado || esCajero)
+            modulos.Add(new("Despacho", "/Operaciones/Despacho/Index", "Pedidos listos para entregar y liberar mesas."));
+
+        // Productos: Admin, Encargado
+        if (esAdmin || esEncargado)
+            modulos.Add(new("Productos", "/Operaciones/Productos/Index", "Catálogo y recetas del menú."));
+
+        // Inventario: Admin, Encargado
+        if (esAdmin || esEncargado)
+            modulos.Add(new("Inventario", "/Operaciones/Inventario/Index", "Ingredientes, proveedores y mermas."));
+
+        // Dashboard: Admin, Encargado
+        if (esAdmin || esEncargado)
+            modulos.Add(new("Dashboard", "/Admin/Dashboard/Dashboard", "KPIs y métricas operativas en tiempo real."));
+
+        // Cierre: Admin, Encargado, Cajero
+        if (esAdmin || esEncargado || esCajero)
+            modulos.Add(new("Cierre", "/Operaciones/Cierre/Index", "Apertura y cierre de caja diario."));
+
+        // Usuarios: solo Admin
+        if (esAdmin)
+            modulos.Add(new("Usuarios", "/Admin/Usuarios/Index", "Gestión de acceso y roles del sistema."));
 
         ModuleLinks = modulos;
     }

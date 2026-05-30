@@ -1,0 +1,129 @@
+@{
+    var activeTab  = ViewData["ActiveTab"]?.ToString() ?? "";
+    var esAdmin    = User.IsInRole("Administrador");
+    var rolLabel   = esAdmin ? "Administrador" : "Encargado";
+}
+
+<aside class="lmd-sidebar" id="lmdSidebar" role="navigation" aria-label="Menú principal">
+
+    <div class="lmd-sidebar__header">
+        <img src="~/img/marca/logo-simbolo.png" alt="La Mesa del Duque" class="lmd-sidebar__logo" />
+        <span class="lmd-sidebar__brand">La Mesa del Duque</span>
+        <button class="lmd-sidebar__toggle-btn" id="lmdSidebarToggle" aria-label="Colapsar menú">
+            <i class="bi bi-layout-sidebar-reverse"></i>
+        </button>
+    </div>
+
+    <nav class="lmd-sidebar__nav">
+
+        <div class="lmd-sidebar__section">
+            <span class="lmd-sidebar__section-label">Panel</span>
+            <a asp-page="/Admin/Dashboard/Dashboard"
+               class="lmd-sidebar__item @(activeTab == "Dashboard" ? "lmd-sidebar__item--active" : "")"
+               title="Dashboard">
+                <i class="bi bi-speedometer2"></i>
+                <span>Dashboard</span>
+            </a>
+        </div>
+
+        <div class="lmd-sidebar__section">
+            <span class="lmd-sidebar__section-label">Catálogo</span>
+            <a asp-page="/Operaciones/Productos/Index"
+               class="lmd-sidebar__item @(activeTab == "Productos" ? "lmd-sidebar__item--active" : "")"
+               title="Productos">
+                <i class="bi bi-box-seam"></i>
+                <span>Productos</span>
+            </a>
+            <a asp-page="/Operaciones/Inventario/Index"
+               class="lmd-sidebar__item @(activeTab == "Inventario" ? "lmd-sidebar__item--active" : "")"
+               title="Inventario">
+                <i class="bi bi-archive"></i>
+                <span>Inventario</span>
+            </a>
+        </div>
+
+        <div class="lmd-sidebar__section">
+            <span class="lmd-sidebar__section-label">Salón</span>
+            <a asp-page="/Operaciones/Mesas/Index"
+               class="lmd-sidebar__item @(activeTab == "Mesas" ? "lmd-sidebar__item--active" : "")"
+               title="Mesas">
+                <i class="bi bi-grid"></i>
+                <span>Mesas</span>
+            </a>
+            <a asp-page="/Operaciones/Salon/Mapa"
+               class="lmd-sidebar__item @(activeTab == "Mapa" ? "lmd-sidebar__item--active" : "")"
+               title="Mapa del salón">
+                <i class="bi bi-map"></i>
+                <span>Mapa del salón</span>
+            </a>
+        </div>
+
+        <div class="lmd-sidebar__section">
+            <span class="lmd-sidebar__section-label">Turno</span>
+            <a asp-page="/Cocina/KDS"
+               class="lmd-sidebar__item @(activeTab == "Cocina" ? "lmd-sidebar__item--active" : "")"
+               title="KDS Cocina">
+                <i class="bi bi-display"></i>
+                <span>KDS Cocina</span>
+            </a>
+            <a asp-page="/Operaciones/Cierre/Index"
+               class="lmd-sidebar__item @(activeTab == "Cierre" ? "lmd-sidebar__item--active" : "")"
+               title="Cierre de caja">
+                <i class="bi bi-cash-stack"></i>
+                <span>Cierre de caja</span>
+            </a>
+        </div>
+
+        @if (esAdmin)
+        {
+        <div class="lmd-sidebar__section">
+            <span class="lmd-sidebar__section-label">Sistema</span>
+            <a asp-page="/Admin/Usuarios/Index"
+               class="lmd-sidebar__item @(activeTab == "Usuarios" ? "lmd-sidebar__item--active" : "")"
+               title="Usuarios">
+                <i class="bi bi-people"></i>
+                <span>Usuarios</span>
+            </a>
+        </div>
+        }
+
+    </nav>
+
+    <div class="lmd-sidebar__footer">
+        <div class="lmd-sidebar__user">
+            <i class="bi bi-person-circle"></i>
+            <div class="lmd-sidebar__user-info">
+                <span class="lmd-sidebar__username">@User.Identity?.Name</span>
+                <span class="lmd-sidebar__userrole">@rolLabel</span>
+            </div>
+        </div>
+        <form method="post" asp-page="/Auth/Logout">
+            @Html.AntiForgeryToken()
+            <button type="submit" class="lmd-sidebar__logout" title="Cerrar sesión">
+                <i class="bi bi-box-arrow-right"></i>
+                <span>Cerrar sesión</span>
+            </button>
+        </form>
+    </div>
+
+</aside>
+
+<script>
+(function () {
+    var sidebar = document.getElementById('lmdSidebar');
+    var toggle  = document.getElementById('lmdSidebarToggle');
+    var shell   = document.getElementById('lmdShellMain');
+    var KEY     = 'lmd-sidebar-col';
+
+    if (localStorage.getItem(KEY) === '1') {
+        sidebar?.classList.add('lmd-sidebar--collapsed');
+        shell?.classList.add('lmd-shell-with-sidebar--collapsed');
+    }
+
+    toggle?.addEventListener('click', function () {
+        var col = sidebar.classList.toggle('lmd-sidebar--collapsed');
+        shell?.classList.toggle('lmd-shell-with-sidebar--collapsed', col);
+        localStorage.setItem(KEY, col ? '1' : '0');
+    });
+})();
+</script>

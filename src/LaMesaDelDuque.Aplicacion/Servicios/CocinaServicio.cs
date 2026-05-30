@@ -18,12 +18,17 @@ internal class CocinaServicio : ICocinaServicio
         _notificador = notificador;
     }
 
-    public async Task GenerarOrdenesAsync(Guid pedidoId, CancellationToken ct = default)
+    public async Task GenerarOrdenesAsync(Guid pedidoId, IEnumerable<Guid>? soloDetalles = null, CancellationToken ct = default)
     {
         var pedido = await _uot.Pedidos.ObtenerConDetallesAsync(pedidoId, ct)
             ?? throw new ArgumentException($"No se encontró el pedido con ID {pedidoId}.", nameof(pedidoId));
 
-        foreach (var detalle in pedido.Detalles)
+        var filtro = soloDetalles?.ToHashSet();
+        var detallesAFirar = filtro is not null
+            ? pedido.Detalles.Where(d => filtro.Contains(d.Id)).ToList()
+            : pedido.Detalles.ToList();
+
+        foreach (var detalle in detallesAFirar)
         {
             var estacion = detalle.Producto.Categoria?.EstacionCocina ?? EstacionCocina.Expo;
 
@@ -80,6 +85,26 @@ internal class CocinaServicio : ICocinaServicio
         await _uot.GuardarCambiosAsync(ct);
         await _notificador.NotificarItemListoAsync(orden.Estacion.ToString(), ordenId, ct);
 
+        // Si todas las órdenes del pedido están listas, marcar el pedido como Listo
+        var ordenesPedido = await _uot.OrdenesCocina.ListarPorPedidoAsync(orden.PedidoId, ct);
+        if (ordenesPedido.Count > 0 && ordenesPedido.All(o => o.Estado == EstadoLineaCocina.Listo))
+        {
+            var pedido = await _uot.Pedidos.ObtenerConDetallesParaActualizarAsync(orden.PedidoId, ct);
+            if (pedido is not null && pedido.Estado != EstadoPedido.Listo && pedido.Estado != EstadoPedido.Despachado)
+            {
+                try
+                {
+                    pedido.MarcarListo();
+                    await _uot.GuardarCambiosAsync(ct);
+                    await _notificador.NotificarEstadoCambiadoAsync(pedido.Id, pedido.Estado, ct);
+                }
+                catch
+                {
+                    // Si el pedido no está en estado que permita Listo, ignorar
+                }
+            }
+        }
+
         return MapToDto(orden);
     }
 
@@ -127,10 +152,14 @@ internal class CocinaServicio : ICocinaServicio
                 {
                     alergenosList.Add(m.IngredienteNombre);
                 }
-
-                if (m.Accion == "quitar" || m.Accion == "intercambiar")
+                else if (m.Accion == "quitar")
                 {
                     quitadosList.Add(m.IngredienteNombre);
+                }
+                else if (m.Accion == "intercambiar")
+                {
+                    var reemplazo = m.IngredienteReemplazoNombre ?? "otro";
+                    quitadosList.Add($"{m.IngredienteNombre} → {reemplazo}");
                 }
                 else if (m.Accion == "extra")
                 {

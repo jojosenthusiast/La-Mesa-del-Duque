@@ -6,6 +6,7 @@ namespace LaMesaDelDuque.Web.Models.Operaciones;
 public class UsuariosPageVm
 {
     public List<UsuarioDto> Usuarios { get; set; } = [];
+    public List<RolDto> Roles { get; set; } = [];
     public UsuarioFormVm Form { get; set; } = new();
 }
 

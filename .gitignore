@@ -107,3 +107,5 @@ openspec/
 .worktrees/
 AGENTS.md
 CLAUDE.md
+lmd-migrations.db
+qa-output/

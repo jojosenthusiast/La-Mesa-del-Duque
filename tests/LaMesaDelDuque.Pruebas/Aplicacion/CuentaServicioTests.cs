@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using LaMesaDelDuque.Aplicacion.Dtos;
 using LaMesaDelDuque.Aplicacion.Servicios;
 using LaMesaDelDuque.Dominio.Entidades;
@@ -6,6 +7,7 @@ using LaMesaDelDuque.Dominio.Excepciones;
 using LaMesaDelDuque.Dominio.Repositorios;
 using LaMesaDelDuque.Infraestructura.Persistencia;
 using LaMesaDelDuque.Infraestructura.Repositorios;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 
@@ -43,10 +45,23 @@ public class CuentaServicioTests : IDisposable
             new RecetaProductoRepositorio(_contexto),
             new OrdenCocinaRepositorio(_contexto),
             new CuentaRepositorio(_contexto),
-            new PagoRepositorio(_contexto));
+            new PagoRepositorio(_contexto),
+            new ZonaSalonRepositorio(_contexto));
 
         _notificadorSpy = new NotificadorPedidosSpy();
-        _servicio = new PedidosServicio(_uot, _notificadorSpy);
+
+        var usuarioId = Guid.NewGuid().ToString();
+        var claims = new ClaimsPrincipal(new ClaimsIdentity(new[]
+        {
+            new Claim(ClaimTypes.NameIdentifier, usuarioId)
+        }, "TestAuth"));
+
+        var httpContextAccessor = new HttpContextAccessor
+        {
+            HttpContext = new DefaultHttpContext { User = claims }
+        };
+
+        _servicio = new PedidosServicio(_uot, _notificadorSpy, null, httpContextAccessor);
     }
 
     public void Dispose()
@@ -76,7 +91,6 @@ public class CuentaServicioTests : IDisposable
         {
             new() { ProductoId = producto.Id, Cantidad = 2, PrecioUnitario = 10.00m }
         });
-        await _servicio.MarcarEnPreparacionAsync(pedido.Id);
         return pedido;
     }
 
@@ -120,7 +134,7 @@ public class CuentaServicioTests : IDisposable
     }
 
     [Fact]
-    public async Task PagarCuentaAsync_UltimaCuentaPendiente_DebeMarcarPedidoPagadoYLiberarMesa()
+    public async Task PagarCuentaAsync_UltimaCuentaPendiente_DebeMarcarPedidoPagadoSinLiberarMesa()
     {
         var pedido = await CrearPedidoEnPreparacionAsync();
         var cuentas = await _servicio.CrearCuentasAsync(pedido.Id, 2);
@@ -133,7 +147,7 @@ public class CuentaServicioTests : IDisposable
         Assert.Equal("Pagada", pagada.Estado);
         Assert.Equal("Pagado", pedidoActualizado.Estado);
         Assert.NotNull(mesa);
-        Assert.Equal(EstadoMesa.Disponible, mesa!.Estado);
+        Assert.Equal(EstadoMesa.Ocupada, mesa!.Estado);
     }
 
     [Fact]
@@ -178,7 +192,6 @@ public class CuentaServicioTests : IDisposable
             new() { ProductoId = producto.Id, Cantidad = 1, PrecioUnitario = 25.00m },
             new() { ProductoId = producto2.Id, Cantidad = 1, PrecioUnitario = 8.00m }
         });
-        await _servicio.MarcarEnPreparacionAsync(pedido.Id);
 
         var asignaciones = new Dictionary<int, List<(Guid detalleId, int cantidad)>>
         {

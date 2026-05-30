@@ -5,20 +5,17 @@
 }
 @Html.AntiForgeryToken()
 
-<section class="lmd-page-header rounded-top">
-    <div>
-        <h1>Pedidos</h1>
-        <p class="lmd-page-subtitle">Terminal de servicio rápido. Toque, seleccione, cobre.</p>
-    </div>
-</section>
+@section Styles {
+    <link rel="stylesheet" href="~/css/pos-ux.css" asp-append-version="true" />
+}
 
-<section class="bg-white p-0 rounded-bottom" id="lmd-pos-contenido">
-    <div class="text-center py-5 text-muted">Cargando...</div>
+<section id="lmd-pos-contenido">
+    <div class="text-center py-5 text-muted" style="color:#f7f4ec;">Cargando...</div>
 </section>
 
 <script>
     window.__lmdMesasDisponibles = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
-        Model.Vm.MesasDisponibles.Where(m => m.Estado == "Disponible").Select(m => new { m.Id, m.Numero, m.Capacidad }),
+        Model.Vm.MesasDisponibles.Where(m => m.Estado == "Disponible").Select(m => new { m.Id, m.Numero, m.Capacidad, Zona = m.Capacidad <= 2 ? "Pequeña" : m.Capacidad <= 4 ? "Mediana" : "Grande" }),
         new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase }));
 
     window.__lmdProductosDisponibles = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(

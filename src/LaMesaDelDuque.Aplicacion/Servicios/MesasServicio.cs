@@ -1,4 +1,5 @@
 using LaMesaDelDuque.Aplicacion.Dtos;
+using LaMesaDelDuque.Aplicacion.Notificaciones;
 using LaMesaDelDuque.Dominio.Entidades;
 using LaMesaDelDuque.Dominio.Enumeraciones;
 using LaMesaDelDuque.Dominio.Excepciones;
@@ -9,10 +10,17 @@ namespace LaMesaDelDuque.Aplicacion.Servicios;
 internal class MesasServicio : IMesasServicio
 {
     private readonly IUnidadDeTrabajo _uot;
+    private readonly INotificadorSalon? _notificador;
 
     public MesasServicio(IUnidadDeTrabajo uot)
     {
         _uot = uot;
+    }
+
+    public MesasServicio(IUnidadDeTrabajo uot, INotificadorSalon notificador)
+    {
+        _uot = uot;
+        _notificador = notificador;
     }
 
     public async Task<List<MesaDto>> ListarMesasAsync(CancellationToken cancelacion = default)
@@ -55,8 +63,23 @@ internal class MesasServicio : IMesasServicio
                 throw new ReglaDominioException("No se puede marcar la mesa como disponible porque tiene pedidos activos.");
         }
 
-        mesa.CambiarEstado(estado);
+        if (estado == EstadoMesa.Ocupada)
+        {
+            mesa.Ocupar();
+        }
+        else if (mesa.Estado == EstadoMesa.Ocupada && estado == EstadoMesa.Disponible)
+        {
+            mesa.Liberar();
+        }
+        else
+        {
+            mesa.CambiarEstado(estado);
+        }
+
         await _uot.GuardarCambiosAsync(cancelacion);
+
+        if (_notificador is not null)
+            await _notificador.NotificarMesaActualizadaAsync(mesaId, mesa.Estado.ToString(), cancelacion);
     }
 
     public async Task<MesaDto> ActualizarMesaAsync(Guid mesaId, int numero, int capacidad, CancellationToken cancelacion = default)
@@ -83,6 +106,34 @@ internal class MesasServicio : IMesasServicio
         await _uot.GuardarCambiosAsync(cancelacion);
     }
 
+    public async Task<MesaDto> ActualizarPosicionAsync(Guid mesaId, int posicionX, int posicionY, Guid zonaId, string forma, int? rotacion = null, CancellationToken cancelacion = default)
+    {
+        if (!Enum.TryParse<FormaMesa>(forma, ignoreCase: true, out var formaEnum))
+            throw new ArgumentException($"Forma de mesa no válida: {forma}.", nameof(forma));
+
+        var mesa = await _uot.Mesas.ObtenerParaActualizarAsync(mesaId, cancelacion)
+            ?? throw new ArgumentException($"No se encontró la mesa con ID {mesaId}.", nameof(mesaId));
+
+        mesa.ActualizarPosicion(posicionX, posicionY, zonaId, formaEnum, rotacion);
+        await _uot.GuardarCambiosAsync(cancelacion);
+
+        if (_notificador is not null)
+            await _notificador.NotificarMesaMovidaAsync(mesaId, posicionX, posicionY, cancelacion);
+
+        return MapToDto(mesa);
+    }
+
+    public async Task<MesaDto> LimpiarPosicionAsync(Guid mesaId, CancellationToken cancelacion = default)
+    {
+        var mesa = await _uot.Mesas.ObtenerParaActualizarAsync(mesaId, cancelacion)
+            ?? throw new ArgumentException($"No se encontró la mesa con ID {mesaId}.", nameof(mesaId));
+
+        mesa.LimpiarPosicion();
+        await _uot.GuardarCambiosAsync(cancelacion);
+
+        return MapToDto(mesa);
+    }
+
     private static MesaDto MapToDto(Mesa mesa)
     {
         return new MesaDto
@@ -91,7 +142,14 @@ internal class MesasServicio : IMesasServicio
             Numero = mesa.Numero,
             Capacidad = mesa.Capacidad,
             Estado = mesa.Estado.ToString(),
-            Activa = mesa.Activa
+            Activa = mesa.Activa,
+            PosicionX = mesa.PosicionX,
+            PosicionY = mesa.PosicionY,
+            ZonaId = mesa.ZonaId,
+            Forma = mesa.Forma?.ToString(),
+            Rotacion = mesa.Rotacion,
+            OcupadaDesde = mesa.OcupadaDesde,
+            GraciaHasta  = mesa.GraciaHasta
         };
     }
 }

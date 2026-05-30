@@ -76,7 +76,7 @@ Este documento detalla los criterios de aceptación para cada historia de usuari
 ### CA-011: Gestionar productos — HU-011
 
 **CA-011-01: Crear producto**
-- **Dado** que el usuario es "Administrador"
+- **Dado** que el usuario es "Administrador" o "Encargado"
 - **Cuando** completa el formulario con nombre, descripción, precio > 0 y categoría
 - **Entonces** el producto se registra en el sistema y aparece en la lista de productos.
 
@@ -87,17 +87,17 @@ Este documento detalla los criterios de aceptación para cada historia de usuari
 
 **CA-011-03: Editar producto**
 - **Dado** que existe un producto registrado
-- **Cuando** el administrador modifica su nombre, precio o categoría
+- **Cuando** el administrador o encargado modifica su nombre, precio o categoría
 - **Entonces** los cambios se reflejan inmediatamente. Si el producto está en pedidos activos, el precio no afecta pedidos ya registrados.
 
 **CA-011-04: Eliminar producto con pedidos activos**
 - **Dado** que un producto está incluido en al menos un pedido activo
-- **Cuando** el administrador intenta eliminarlo
+- **Cuando** el administrador o encargado intenta eliminarlo
 - **Entonces** el sistema muestra: "No se puede eliminar el producto porque está en pedidos activos" y rechaza la operación.
 
 **CA-011-05: Eliminar producto sin dependencias**
 - **Dado** que un producto no está en ningún pedido activo
-- **Cuando** el administrador confirma la eliminación
+- **Cuando** el administrador o encargado confirma la eliminación
 - **Entonces** el producto se elimina del catálogo.
 
 ---

@@ -38,6 +38,10 @@ internal class RestauranteConfigConfiguracion : IEntityTypeConfiguration<Restaur
         constructor.Property(r => r.DatosTicketJson)
             .HasColumnType("text");
 
+        constructor.Property(r => r.PeriodoGraciaMinutos)
+            .HasDefaultValue(5)
+            .IsRequired();
+
         constructor.Property(r => r.CreatedAt)
             .HasColumnType("timestamp with time zone")
             .HasDefaultValueSql("NOW()")

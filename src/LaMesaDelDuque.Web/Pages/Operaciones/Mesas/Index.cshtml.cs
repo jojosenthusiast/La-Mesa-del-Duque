@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 
 namespace LaMesaDelDuque.Web.Pages.Operaciones.Mesas;
 
-[Authorize(Roles = "Administrador,Encargado,Mesero")]
+[Authorize(Roles = "Administrador,Encargado")]
 public class IndexModel : PageModel
 {
     private static readonly string[] EstadosOrdenados = ["Disponible", "Ocupada", "Reservada", "Mantenimiento", "Inactiva"];
@@ -36,6 +36,10 @@ public class IndexModel : PageModel
     public async Task<IActionResult> OnPostGuardarAsync()
     {
         SetUiContext();
+        if (!(User.IsInRole("Administrador") || User.IsInRole("Encargado")))
+        {
+            return Forbid();
+        }
         if (!ModelState.IsValid)
         {
             await CargarDatosAsync();
@@ -75,6 +79,10 @@ public class IndexModel : PageModel
     public async Task<IActionResult> OnPostCambiarEstadoAsync(Guid id, string nuevoEstado)
     {
         SetUiContext();
+        if (!(User.IsInRole("Administrador") || User.IsInRole("Encargado")))
+        {
+            return Forbid();
+        }
         try
         {
             await _mesasServicio.CambiarEstadoMesaAsync(id, nuevoEstado);
@@ -95,6 +103,10 @@ public class IndexModel : PageModel
     public async Task<IActionResult> OnPostDesactivarAsync(Guid id)
     {
         SetUiContext();
+        if (!(User.IsInRole("Administrador") || User.IsInRole("Encargado")))
+        {
+            return Forbid();
+        }
         try
         {
             await _mesasServicio.DesactivarMesaAsync(id);

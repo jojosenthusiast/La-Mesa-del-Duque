@@ -56,6 +56,7 @@
 
     <div class="collapse mb-3 @(Model.ModelState.ErrorCount > 0 ? "show" : string.Empty)" id="producto-form">
         <form method="post" asp-page-handler="Guardar" class="border rounded p-3" enctype="multipart/form-data">
+            @Html.AntiForgeryToken()
             <input type="hidden" asp-for="Vm.Form.Id" />
             <input type="hidden" asp-for="Vm.Form.ImagenUrl" />
             <div asp-validation-summary="ModelOnly" class="text-danger mb-2"></div>
@@ -140,7 +141,7 @@
                                 }
                                 else
                                 {
-                                    <span class="text-muted" style="font-size:1.25rem;">🍽️</span>
+                                    <span class="text-muted small">Sin imagen</span>
                                 }
                             </td>
                             <td>@producto.Nombre</td>
@@ -165,13 +166,15 @@
                                 @if (!string.IsNullOrWhiteSpace(producto.ImagenUrl))
                                 {
                                     <form method="post" asp-page-handler="EliminarFoto" class="d-inline lmd-confirm-destructive" data-confirm-message="¿Eliminar la foto de este producto?">
+                                        @Html.AntiForgeryToken()
                                         <input type="hidden" name="id" value="@producto.Id" />
-                                        <button type="submit" class="btn btn-sm lmd-action-neutral">🗑 Foto</button>
+                                        <button type="submit" class="btn btn-sm lmd-action-neutral">Quitar foto</button>
                                     </form>
                                 }
                                 @if (producto.Activo)
                                 {
                                     <form method="post" asp-page-handler="Desactivar" class="d-inline lmd-confirm-destructive" data-confirm-message="¿Desactivar este producto?">
+                                        @Html.AntiForgeryToken()
                                         <input type="hidden" name="id" value="@producto.Id" />
                                         <button type="submit" class="btn btn-sm lmd-action-danger">Desactivar</button>
                                     </form>
