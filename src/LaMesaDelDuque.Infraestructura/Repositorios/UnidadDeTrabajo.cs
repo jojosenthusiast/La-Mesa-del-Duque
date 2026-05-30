@@ -1,4 +1,5 @@
 using LaMesaDelDuque.Dominio.Entidades;
+using LaMesaDelDuque.Dominio.Excepciones;
 using LaMesaDelDuque.Dominio.Repositorios;
 using LaMesaDelDuque.Infraestructura.Persistencia;
 using Microsoft.EntityFrameworkCore;
@@ -122,7 +123,14 @@ internal class UnidadDeTrabajo : IUnidadDeTrabajo
 
     public async Task<int> GuardarCambiosAsync(CancellationToken cancelacion = default)
     {
-        return await _contexto.SaveChangesAsync(cancelacion);
+        try
+        {
+            return await _contexto.SaveChangesAsync(cancelacion);
+        }
+        catch (DbUpdateConcurrencyException ex)
+        {
+            throw new ConcurrenciaException("La información fue modificada por otra operación. Vuelva a intentarlo.", ex);
+        }
     }
 
     public async Task<int> ObtenerPeriodoGraciaMinutosAsync(CancellationToken cancelacion = default)

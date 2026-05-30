@@ -53,9 +53,6 @@ internal class PedidosServicio : IPedidosServicio
         if (mesa is not null && meseroActualId != Guid.Empty)
             pedido.AsignarMesero(meseroActualId);
 
-        if (mesa is not null)
-            mesa.CambiarEstado(EstadoMesa.Ocupada);
-
         foreach (var d in detalles)
         {
             var producto = await _uot.Productos.ObtenerConTrackingAsync(d.ProductoId, cancelacion)
@@ -66,11 +63,14 @@ internal class PedidosServicio : IPedidosServicio
             pedido.AgregarDetalle(detalle);
         }
 
+        await ReservarStockAsync(pedido.Detalles, cancelacion);
+
+        if (mesa is not null)
+            mesa.CambiarEstado(EstadoMesa.Ocupada);
+
         await _uot.Pedidos.AgregarAsync(pedido, cancelacion);
         pedido.MarcarEnPreparacion();
-        await ValidarStockSuficienteAsync(pedido.Detalles, cancelacion);
-        await DescontarStockAsync(pedido.Detalles, cancelacion);
-        await _uot.GuardarCambiosAsync(cancelacion);
+        await GuardarCambiosDePedidoConStockAsync(cancelacion);
         await _notificadorPedidos.NotificarPedidoCreadoAsync(pedido.Id, pedido.Estado, cancelacion);
         await NotificarMetricasInvalidadasSiExisteAsync(cancelacion);
 
@@ -87,17 +87,22 @@ internal class PedidosServicio : IPedidosServicio
         var pedido = await _uot.Pedidos.ObtenerConDetallesParaActualizarAsync(pedidoId, cancelacion)
             ?? throw new ArgumentException($"No se encontró el pedido con ID {pedidoId}.", nameof(pedidoId));
 
+        if (pedido.Estado == EstadoPedido.Pagado)
+            throw new ReglaDominioException("No se pueden agregar detalles a un pedido pagado.");
+
+        if (pedido.Estado == EstadoPedido.Cancelado)
+            throw new ReglaDominioException("No se pueden agregar detalles a un pedido cancelado.");
+
         var producto = await _uot.Productos.ObtenerConTrackingAsync(productoId, cancelacion)
             ?? throw new ArgumentException($"No se encontró el producto con ID {productoId}.", nameof(productoId));
 
         var detalle = new DetallePedido(producto, cantidad, precioUnitario, notas, modificacionesJson);
         await AplicarMejorPromocionAsync(detalle, productoId, precioUnitario, cancelacion);
+        await ReservarStockAsync([detalle], cancelacion);
+
         pedido.AgregarDetalle(detalle);
         await _uot.Pedidos.AgregarDetalleAsync(detalle, cancelacion);
-
-        await ValidarStockSuficienteAsync([detalle], cancelacion);
-        await DescontarStockAsync([detalle], cancelacion);
-        await _uot.GuardarCambiosAsync(cancelacion);
+        await GuardarCambiosDePedidoConStockAsync(cancelacion);
 
         if (_cocinaServicio is not null)
             await _cocinaServicio.GenerarOrdenesAsync(pedidoId, new[] { detalle.Id }, cancelacion);
@@ -112,6 +117,12 @@ internal class PedidosServicio : IPedidosServicio
         var pedido = await _uot.Pedidos.ObtenerConDetallesParaActualizarAsync(pedidoId, cancelacion)
             ?? throw new ArgumentException($"No se encontró el pedido con ID {pedidoId}.", nameof(pedidoId));
 
+        if (pedido.Estado == EstadoPedido.Pagado)
+            throw new ReglaDominioException("No se pueden agregar detalles a un pedido pagado.");
+
+        if (pedido.Estado == EstadoPedido.Cancelado)
+            throw new ReglaDominioException("No se pueden agregar detalles a un pedido cancelado.");
+
         var nuevosDetalles = new List<DetallePedido>();
         foreach (var item in items)
         {
@@ -119,14 +130,18 @@ internal class PedidosServicio : IPedidosServicio
                 ?? throw new ArgumentException($"No se encontró el producto con ID {item.ProductoId}.", nameof(items));
             var detalle = new DetallePedido(producto, item.Cantidad, item.PrecioUnitario, item.Notas, item.ModificacionesJson);
             await AplicarMejorPromocionAsync(detalle, item.ProductoId, item.PrecioUnitario, cancelacion);
-            pedido.AgregarDetalle(detalle);
-            await _uot.Pedidos.AgregarDetalleAsync(detalle, cancelacion);
             nuevosDetalles.Add(detalle);
         }
 
-        await ValidarStockSuficienteAsync(nuevosDetalles, cancelacion);
-        await DescontarStockAsync(nuevosDetalles, cancelacion);
-        await _uot.GuardarCambiosAsync(cancelacion);
+        await ReservarStockAsync(nuevosDetalles, cancelacion);
+
+        foreach (var detalle in nuevosDetalles)
+        {
+            pedido.AgregarDetalle(detalle);
+            await _uot.Pedidos.AgregarDetalleAsync(detalle, cancelacion);
+        }
+
+        await GuardarCambiosDePedidoConStockAsync(cancelacion);
 
         if (_cocinaServicio is not null && nuevosDetalles.Count > 0)
             await _cocinaServicio.GenerarOrdenesAsync(pedidoId, nuevosDetalles.Select(d => d.Id), cancelacion);
@@ -184,60 +199,120 @@ internal class PedidosServicio : IPedidosServicio
         await NotificarMetricasInvalidadasSiExisteAsync(cancelacion);
     }
 
-    private async Task ValidarStockSuficienteAsync(IEnumerable<DetallePedido> detalles, CancellationToken ct)
+    private async Task ReservarStockAsync(IEnumerable<DetallePedido> detalles, CancellationToken ct)
     {
-        var faltantes = new List<string>();
+        var consumos = await CalcularConsumosTotalesAsync(detalles, ct);
+        await ValidarStockSuficienteAsync(consumos, ct);
+        await DescontarStockAsync(consumos, ct);
+        await SincronizarProductosPorIngredientesAsync(consumos.Keys, ct);
+    }
+
+    private async Task<Dictionary<Guid, ConsumoIngrediente>> CalcularConsumosTotalesAsync(IEnumerable<DetallePedido> detalles, CancellationToken ct)
+    {
+        var totales = new Dictionary<Guid, ConsumoIngrediente>();
+
         foreach (var detalle in detalles)
         {
             var receta = await _uot.RecetasProductos.ObtenerPorProductoIdAsync(detalle.Producto.Id, ct);
             if (receta is null) continue;
 
             var consumos = CalcularConsumosDetalle(detalle, receta);
-
-            foreach (var (ingId, consumo) in consumos)
+            foreach (var (ingredienteId, consumo) in consumos)
             {
-                var ingrediente = await _uot.Ingredientes.ObtenerPorIdAsync(ingId, ct);
-                if (ingrediente is null) continue;
-                if (ingrediente.StockActual < consumo)
-                    faltantes.Add($"{ingrediente.Nombre} (necesario: {consumo} {ingrediente.UnidadMedida}, disponible: {ingrediente.StockActual})");
+                if (!totales.TryGetValue(ingredienteId, out var total))
+                {
+                    total = new ConsumoIngrediente(ingredienteId);
+                    totales[ingredienteId] = total;
+                }
+
+                total.Cantidad += consumo;
+                total.Productos.Add(detalle.Producto.Nombre);
+            }
+        }
+
+        return totales;
+    }
+
+    private async Task ValidarStockSuficienteAsync(Dictionary<Guid, ConsumoIngrediente> consumos, CancellationToken ct)
+    {
+        var faltantes = new List<string>();
+
+        foreach (var consumo in consumos.Values)
+        {
+            var ingrediente = await _uot.Ingredientes.ObtenerPorIdAsync(consumo.IngredienteId, ct);
+            if (ingrediente is null) continue;
+
+            if (ingrediente.StockActual < consumo.Cantidad)
+            {
+                var productos = string.Join(", ", consumo.Productos.OrderBy(p => p));
+                faltantes.Add($"{productos}: {ingrediente.Nombre} (necesario: {consumo.Cantidad} {ingrediente.UnidadMedida}, disponible: {ingrediente.StockActual})");
             }
         }
 
         if (faltantes.Count > 0)
-            throw new InvalidOperationException($"Stock insuficiente para completar el pago: {string.Join("; ", faltantes)}");
+            throw new ReglaDominioException($"Stock insuficiente para completar el pedido: {string.Join("; ", faltantes)}");
     }
 
-    private async Task DescontarStockAsync(IEnumerable<DetallePedido> detalles, CancellationToken ct)
+    private async Task DescontarStockAsync(Dictionary<Guid, ConsumoIngrediente> consumos, CancellationToken ct)
     {
-        foreach (var detalle in detalles)
+        foreach (var consumo in consumos.Values)
         {
-            var receta = await _uot.RecetasProductos.ObtenerPorProductoIdAsync(detalle.Producto.Id, ct);
-            if (receta is null) continue;
-
-            var consumos = CalcularConsumosDetalle(detalle, receta);
-
-            foreach (var (ingId, consumo) in consumos)
-            {
-                var ingrediente = await _uot.Ingredientes.ObtenerPorIdAsync(ingId, ct);
-                if (ingrediente is null) continue;
-                ingrediente.DescontarStock(consumo);
-            }
+            var ingrediente = await _uot.Ingredientes.ObtenerPorIdAsync(consumo.IngredienteId, ct);
+            if (ingrediente is null) continue;
+            ingrediente.DescontarStock(consumo.Cantidad);
         }
     }
 
     private async Task DevolverStockAsync(IEnumerable<DetallePedido> detalles, CancellationToken ct)
     {
-        foreach (var detalle in detalles)
+        var consumos = await CalcularConsumosTotalesAsync(detalles, ct);
+        await DevolverConsumosAsync(consumos.ToDictionary(c => c.Key, c => c.Value.Cantidad), ct);
+        await SincronizarProductosPorIngredientesAsync(consumos.Keys, ct);
+    }
+
+    private async Task DevolverConsumosAsync(Dictionary<Guid, decimal> consumos, CancellationToken ct)
+    {
+        foreach (var (ingredienteId, consumo) in consumos)
         {
-            var receta = await _uot.RecetasProductos.ObtenerPorProductoIdAsync(detalle.Producto.Id, ct);
-            if (receta is null) continue;
-            var consumos = CalcularConsumosDetalle(detalle, receta);
-            foreach (var (ingId, consumo) in consumos)
+            var ingrediente = await _uot.Ingredientes.ObtenerPorIdAsync(ingredienteId, ct);
+            if (ingrediente is null) continue;
+            ingrediente.DevolverStock(consumo);
+        }
+    }
+
+    private async Task<Dictionary<Guid, decimal>> CalcularConsumosDetalleAsync(DetallePedido detalle, int cantidad, CancellationToken ct)
+    {
+        var receta = await _uot.RecetasProductos.ObtenerPorProductoIdAsync(detalle.Producto.Id, ct);
+        return receta is null ? [] : CalcularConsumosDetalle(detalle, receta, cantidad);
+    }
+
+    private async Task SincronizarProductosPorIngredientesAsync(IEnumerable<Guid> ingredienteIds, CancellationToken ct)
+    {
+        var recetasProcesadas = new HashSet<Guid>();
+
+        foreach (var ingredienteId in ingredienteIds.Distinct())
+        {
+            var recetas = await _uot.RecetasProductos.ObtenerPorIngredienteAsync(ingredienteId, ct);
+            foreach (var receta in recetas.Where(r => recetasProcesadas.Add(r.Id)))
             {
-                var ingrediente = await _uot.Ingredientes.ObtenerPorIdAsync(ingId, ct);
-                if (ingrediente is null) continue;
-                ingrediente.DevolverStock(consumo);
+                var disponible = receta.Ingredientes.All(ri =>
+                    ri.Ingrediente.Activo && ri.Ingrediente.StockActual >= ri.CantidadRequerida);
+
+                if (!disponible && receta.Producto.Activo)
+                    receta.Producto.Desactivar();
             }
+        }
+    }
+
+    private async Task GuardarCambiosDePedidoConStockAsync(CancellationToken ct)
+    {
+        try
+        {
+            await _uot.GuardarCambiosAsync(ct);
+        }
+        catch (ConcurrenciaException ex)
+        {
+            throw new ReglaDominioException("El stock cambió mientras se confirmaba el pedido. Revise disponibilidad e intente nuevamente.", ex);
         }
     }
 
@@ -260,7 +335,7 @@ internal class PedidosServicio : IPedidosServicio
         detalle.AplicarPromocion(Math.Min(descuento, precioUnitario), mejor.Promocion.Nombre);
     }
 
-    private static Dictionary<Guid, decimal> CalcularConsumosDetalle(DetallePedido detalle, RecetaProducto receta)
+    private static Dictionary<Guid, decimal> CalcularConsumosDetalle(DetallePedido detalle, RecetaProducto receta, int? cantidadOverride = null)
     {
         var mods = detalle.ObtenerModificaciones();
 
@@ -288,9 +363,10 @@ internal class PedidosServicio : IPedidosServicio
                 ? reemplazo
                 : ri.IngredienteId;
 
-            var cantidad = ri.CantidadRequerida * detalle.Cantidad;
+            var cantidadDetalle = cantidadOverride ?? detalle.Cantidad;
+            var cantidad = ri.CantidadRequerida * cantidadDetalle;
             if (extras.Contains(ri.IngredienteId))
-                cantidad += ri.CantidadRequerida * detalle.Cantidad;
+                cantidad += ri.CantidadRequerida * cantidadDetalle;
 
             consumos[targetId] = consumos.TryGetValue(targetId, out var prev) ? prev + cantidad : cantidad;
         }
@@ -298,7 +374,7 @@ internal class PedidosServicio : IPedidosServicio
         foreach (var m in mods.Where(m => m.Accion == "extra"))
         {
             if (receta.Ingredientes.Any(ri => ri.IngredienteId == m.IngredienteId)) continue;
-            var cantidad = detalle.Cantidad;
+            var cantidad = cantidadOverride ?? detalle.Cantidad;
             consumos[m.IngredienteId] = consumos.TryGetValue(m.IngredienteId, out var prev) ? prev + cantidad : cantidad;
         }
 
@@ -310,8 +386,12 @@ internal class PedidosServicio : IPedidosServicio
         var pedido = await _uot.Pedidos.ObtenerConDetallesParaActualizarAsync(pedidoId, cancelacion)
             ?? throw new ArgumentException($"No se encontró el pedido con ID {pedidoId}.", nameof(pedidoId));
 
+        var detalle = pedido.Detalles.FirstOrDefault(d => d.Id == detalleId)
+            ?? throw new ReglaDominioException("El detalle especificado no pertenece a este pedido.");
+
         pedido.EliminarDetalle(detalleId);
-        await _uot.GuardarCambiosAsync(cancelacion);
+        await DevolverStockAsync([detalle], cancelacion);
+        await GuardarCambiosDePedidoConStockAsync(cancelacion);
 
         return MapToDto(pedido);
     }
@@ -330,8 +410,41 @@ internal class PedidosServicio : IPedidosServicio
         var detalle = pedido.Detalles.FirstOrDefault(d => d.Id == detalleId)
             ?? throw new ReglaDominioException("El detalle especificado no pertenece a este pedido.");
 
+        if (nuevaCantidad == detalle.Cantidad)
+            return MapToDto(pedido);
+
+        if (nuevaCantidad <= 0)
+            throw new ReglaDominioException("La cantidad del detalle debe ser mayor que cero.");
+
+        var consumoActual = await CalcularConsumosDetalleAsync(detalle, detalle.Cantidad, cancelacion);
+        var consumoNuevo = await CalcularConsumosDetalleAsync(detalle, nuevaCantidad, cancelacion);
+        var incremento = RestarConsumos(consumoNuevo, consumoActual);
+        var devolucion = RestarConsumos(consumoActual, consumoNuevo);
+
+        if (incremento.Count > 0)
+        {
+            var consumos = incremento.ToDictionary(
+                c => c.Key,
+                c => new ConsumoIngrediente(c.Key)
+                {
+                    Cantidad = c.Value,
+                    Productos = { detalle.Producto.Nombre }
+                });
+            await ValidarStockSuficienteAsync(consumos, cancelacion);
+            await DescontarStockAsync(consumos, cancelacion);
+        }
+
+        if (devolucion.Count > 0)
+        {
+            await DevolverConsumosAsync(devolucion, cancelacion);
+            await SincronizarProductosPorIngredientesAsync(devolucion.Keys, cancelacion);
+        }
+
+        if (incremento.Count > 0)
+            await SincronizarProductosPorIngredientesAsync(incremento.Keys, cancelacion);
+
         detalle.ActualizarCantidad(nuevaCantidad);
-        await _uot.GuardarCambiosAsync(cancelacion);
+        await GuardarCambiosDePedidoConStockAsync(cancelacion);
 
         return MapToDto(pedido);
     }
@@ -346,7 +459,7 @@ internal class PedidosServicio : IPedidosServicio
         await LiberarMesaSiCorrespondeAsync(pedido, cancelacion);
         if (stockDescontado)
             await DevolverStockAsync(pedido.Detalles, cancelacion);
-        await _uot.GuardarCambiosAsync(cancelacion);
+        await GuardarCambiosDePedidoConStockAsync(cancelacion);
         await _notificadorPedidos.NotificarPedidoCanceladoAsync(pedido.Id, cancelacion);
         await NotificarMetricasInvalidadasSiExisteAsync(cancelacion);
     }
@@ -359,7 +472,7 @@ internal class PedidosServicio : IPedidosServicio
         pedido.AnularPago();
         await LiberarMesaSiCorrespondeAsync(pedido, cancelacion);
         await DevolverStockAsync(pedido.Detalles, cancelacion);
-        await _uot.GuardarCambiosAsync(cancelacion);
+        await GuardarCambiosDePedidoConStockAsync(cancelacion);
         await _notificadorPedidos.NotificarPedidoCanceladoAsync(pedido.Id, cancelacion);
         await NotificarMetricasInvalidadasSiExisteAsync(cancelacion);
     }
@@ -375,6 +488,10 @@ internal class PedidosServicio : IPedidosServicio
         var usuario = await _uot.Usuarios.ObtenerPorIdAsync(usuarioId, cancelacion)
             ?? throw new ArgumentException($"No se encontró el usuario con ID {usuarioId}.", nameof(usuarioId));
 
+        var stockDescontado = pedido.Estado is EstadoPedido.EnPreparacion or EstadoPedido.Listo or EstadoPedido.EnCobro;
+        if (stockDescontado)
+            await DevolverStockAsync(pedido.Detalles, cancelacion);
+
         if (pedido.Mesa is not null)
             pedido.Mesa.CambiarEstado(EstadoMesa.Disponible);
 
@@ -382,7 +499,7 @@ internal class PedidosServicio : IPedidosServicio
 
         await _uot.Auditorias.AgregarAsync(auditoria, cancelacion);
         _uot.Pedidos.Eliminar(pedido);
-        await _uot.GuardarCambiosAsync(cancelacion);
+        await GuardarCambiosDePedidoConStockAsync(cancelacion);
     }
 
     public async Task<PedidoDto?> ObtenerPedidoAsync(Guid pedidoId, CancellationToken cancelacion = default)
@@ -621,6 +738,30 @@ internal class PedidosServicio : IPedidosServicio
             or EstadoPedido.EnCobro
             or EstadoPedido.Pagado
             or EstadoPedido.Listo;
+
+    private static Dictionary<Guid, decimal> RestarConsumos(Dictionary<Guid, decimal> origen, Dictionary<Guid, decimal> aRestar)
+    {
+        var resultado = new Dictionary<Guid, decimal>();
+        foreach (var (ingredienteId, cantidad) in origen)
+        {
+            var delta = cantidad - aRestar.GetValueOrDefault(ingredienteId);
+            if (delta > 0) resultado[ingredienteId] = delta;
+        }
+
+        return resultado;
+    }
+
+    private sealed class ConsumoIngrediente
+    {
+        public ConsumoIngrediente(Guid ingredienteId)
+        {
+            IngredienteId = ingredienteId;
+        }
+
+        public Guid IngredienteId { get; }
+        public decimal Cantidad { get; set; }
+        public HashSet<string> Productos { get; } = new(StringComparer.OrdinalIgnoreCase);
+    }
 
     private static PedidoDto MapToDto(Pedido pedido)
     {
