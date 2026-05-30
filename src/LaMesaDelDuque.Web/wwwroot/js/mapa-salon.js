@@ -87,6 +87,7 @@
         const estado = mesaEl.dataset.mesaEstado;
         const capacidad = mesaEl.dataset.mesaCapacidad;
         const puedeEditar = mesaEl.dataset.puedeEditar === 'true';
+        const activa = mesaEl.dataset.mesaActiva !== 'false';
         const ocupadaDesde = mesaEl.dataset.mesaOcupadaDesde;
 
         mesaActivaId = mesaEl.dataset.mesaId;
@@ -99,7 +100,8 @@
             'Disponible': 'lmd-mapa--disponible',
             'Ocupada': 'lmd-mapa--ocupada-verde',
             'Reservada': 'lmd-mapa--reservada',
-            'EnMantenimiento': 'lmd-mapa--mantenimiento'
+            'EnMantenimiento': 'lmd-mapa--mantenimiento',
+            'Inactiva': 'lmd-mapa--inactiva'
         }[estado] || 'lmd-mapa--neutral';
         PANEL_ESTADO.classList.add(estadoClass);
 
@@ -114,7 +116,7 @@
 
         // Disable buttons for current estado
         PANEL_ACCIONES.querySelectorAll('.lmd-mapa-btn').forEach(btn => {
-            btn.disabled = btn.dataset.estado === estado || !puedeEditar;
+            btn.disabled = btn.dataset.estado === estado || !puedeEditar || !activa;
         });
 
         PANEL.style.display = 'block';
@@ -167,6 +169,13 @@
     const DRAG_THRESHOLD = 5; // px
 
     document.querySelectorAll(MESA_SELECTOR).forEach(mesa => {
+        mesa.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                abrirPanel(mesa);
+            }
+        });
+
         mesa.addEventListener('pointerdown', (e) => {
             const puedeEditar = mesa.dataset.puedeEditar === 'true';
             if (!puedeEditar) {
@@ -301,13 +310,14 @@
             const mesa = document.querySelector(`${MESA_SELECTOR}[data-mesa-id="${payload.mesaId}"]`);
             if (!mesa) return;
             mesa.dataset.mesaEstado = payload.estado;
-            mesa.classList.remove('lmd-mapa--disponible', 'lmd-mapa--ocupada-verde', 'lmd-mapa--ocupada-amarillo', 'lmd-mapa--ocupada-rojo', 'lmd-mapa--reservada', 'lmd-mapa--mantenimiento');
+            mesa.classList.remove('lmd-mapa--disponible', 'lmd-mapa--ocupada-verde', 'lmd-mapa--ocupada-amarillo', 'lmd-mapa--ocupada-rojo', 'lmd-mapa--reservada', 'lmd-mapa--mantenimiento', 'lmd-mapa--inactiva');
 
             const estadoClass = {
                 'Disponible': 'lmd-mapa--disponible',
                 'Ocupada': 'lmd-mapa--ocupada-verde',
                 'Reservada': 'lmd-mapa--reservada',
-                'EnMantenimiento': 'lmd-mapa--mantenimiento'
+                'EnMantenimiento': 'lmd-mapa--mantenimiento',
+                'Inactiva': 'lmd-mapa--inactiva'
             }[payload.estado] || 'lmd-mapa--neutral';
             mesa.classList.add(estadoClass);
 
@@ -377,17 +387,20 @@
         mesas.forEach(m => {
             const mesa = document.querySelector(`${MESA_SELECTOR}[data-mesa-id="${m.id}"]`);
             if (!mesa) return;
-            mesa.dataset.mesaEstado = m.estado;
+            const estado = m.estadoVisual || (m.activa === false ? 'Inactiva' : m.estado);
+            mesa.dataset.mesaEstado = estado;
+            mesa.dataset.mesaActiva = m.activa === false ? 'false' : 'true';
             mesa.style.left = (m.posicionX ?? 0) + '%';
             mesa.style.top = (m.posicionY ?? 0) + '%';
 
-            mesa.classList.remove('lmd-mapa--disponible', 'lmd-mapa--ocupada-verde', 'lmd-mapa--ocupada-amarillo', 'lmd-mapa--ocupada-rojo', 'lmd-mapa--reservada', 'lmd-mapa--mantenimiento');
+            mesa.classList.remove('lmd-mapa--disponible', 'lmd-mapa--ocupada-verde', 'lmd-mapa--ocupada-amarillo', 'lmd-mapa--ocupada-rojo', 'lmd-mapa--reservada', 'lmd-mapa--mantenimiento', 'lmd-mapa--inactiva');
             const estadoClass = {
                 'Disponible': 'lmd-mapa--disponible',
                 'Ocupada': 'lmd-mapa--ocupada-verde',
                 'Reservada': 'lmd-mapa--reservada',
-                'EnMantenimiento': 'lmd-mapa--mantenimiento'
-            }[m.estado] || 'lmd-mapa--neutral';
+                'EnMantenimiento': 'lmd-mapa--mantenimiento',
+                'Inactiva': 'lmd-mapa--inactiva'
+            }[estado] || 'lmd-mapa--neutral';
             mesa.classList.add(estadoClass);
 
             if (m.ocupadaDesde) mesa.dataset.mesaOcupadaDesde = m.ocupadaDesde;

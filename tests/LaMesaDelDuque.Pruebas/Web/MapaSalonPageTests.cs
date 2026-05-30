@@ -1,6 +1,7 @@
 using LaMesaDelDuque.Aplicacion.Dtos;
 using LaMesaDelDuque.Aplicacion.Servicios;
 using LaMesaDelDuque.Web.Pages.Operaciones.Salon;
+using LaMesaDelDuque.Web.Models.Operaciones;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
@@ -12,7 +13,7 @@ namespace LaMesaDelDuque.Pruebas.Web;
 public class MapaSalonPageTests
 {
     [Fact]
-    public async Task OnGetAsync_Carga_Zonas_Activas_Y_Mesas_Con_Posicion()
+    public async Task OnGetAsync_Carga_Zonas_Activas_Y_Todas_Las_Mesas_Del_Catalogo()
     {
         var mesasServicio = new FakeMapaMesasServicio();
         var zonasServicio = new FakeMapaZonasServicio();
@@ -23,10 +24,59 @@ public class MapaSalonPageTests
         await page.OnGetAsync();
 
         Assert.Equal(2, page.Vm.Zonas.Count);
-        Assert.Equal(2, page.Vm.Mesas.Count);
-        Assert.Contains(page.Vm.Mesas, m => m.Numero == 1);
-        Assert.DoesNotContain(page.Vm.Mesas, m => m.Numero == 3); // mesa sin posición
+        Assert.Equal(3, page.Vm.TotalMesas);
+        Assert.Equal(3, page.Vm.Mesas.Count);
+        Assert.Equal(1, page.Vm.MesasPendientesUbicacion);
+        Assert.Contains(page.Vm.Mesas, m => m.Numero == 1 && m.EsUbicacionSugerida is false);
+
+        var mesaSinPosicion = Assert.Single(page.Vm.Mesas, m => m.Numero == 3);
+        Assert.Equal(FakeMapaZonasServicio.TerrazaId, mesaSinPosicion.ZonaId);
+        Assert.True(mesaSinPosicion.EsUbicacionSugerida);
+        Assert.NotNull(mesaSinPosicion.PosicionX);
+        Assert.NotNull(mesaSinPosicion.PosicionY);
+        Assert.Equal("Redonda", mesaSinPosicion.Forma);
         Assert.True(page.Vm.PuedeEditar);
+    }
+
+    [Fact]
+    public async Task OnGetAsync_Cuando_No_Hay_Zonas_Pero_Hay_Mesas_Usa_Salon_Principal_Solo_Lectura()
+    {
+        var mesasServicio = new FakeMapaMesasServicio
+        {
+            Mesas =
+            [
+                new() { Id = Guid.NewGuid(), Numero = 10, Capacidad = 4, Estado = "Disponible", Activa = true }
+            ]
+        };
+        var zonasServicio = new FakeMapaZonasServicio { Zonas = [] };
+
+        var page = new MapaModel(mesasServicio, zonasServicio, NullLogger<MapaModel>.Instance);
+        SetUserRoles(page, "Encargado");
+
+        await page.OnGetAsync();
+
+        var zona = Assert.Single(page.Vm.Zonas);
+        Assert.Equal("Salón principal", zona.Nombre);
+        Assert.True(page.Vm.UsaZonaSugerida);
+        Assert.False(page.Vm.PuedeEditar);
+        var mesa = Assert.Single(page.Vm.Mesas);
+        Assert.Equal(zona.Id, mesa.ZonaId);
+        Assert.True(mesa.EsUbicacionSugerida);
+    }
+
+    [Fact]
+    public void MesaMapaItemVm_Inactiva_Usa_Estado_Visual_Inactivo()
+    {
+        var mesa = new MesaMapaItemVm
+        {
+            Numero = 8,
+            Capacidad = 2,
+            Estado = "Disponible",
+            Activa = false
+        };
+
+        Assert.Equal("Inactiva", mesa.EstadoVisual);
+        Assert.Equal("lmd-mapa--inactiva", mesa.ClaseUrgencia);
     }
 
     [Fact]
@@ -57,7 +107,7 @@ public class MapaSalonPageTests
             MesaId = mesasServicio.Mesas[0].Id,
             PosicionX = 60,
             PosicionY = 40,
-            ZonaId = Guid.NewGuid(),
+            ZonaId = FakeMapaZonasServicio.TerrazaId,
             Forma = "Redonda"
         };
 
@@ -82,7 +132,7 @@ public class MapaSalonPageTests
             MesaId = Guid.NewGuid(),
             PosicionX = 60,
             PosicionY = 40,
-            ZonaId = Guid.NewGuid(),
+            ZonaId = FakeMapaZonasServicio.TerrazaId,
             Forma = "Redonda"
         };
 
@@ -173,11 +223,11 @@ public class MapaSalonPageTests
 
 internal sealed class FakeMapaMesasServicio : IMesasServicio
 {
-    public List<MesaDto> Mesas { get; } =
+    public List<MesaDto> Mesas { get; set; } =
     [
-        new() { Id = Guid.NewGuid(), Numero = 1, Capacidad = 4, Estado = "Disponible", Activa = true, PosicionX = 10, PosicionY = 20, ZonaId = Guid.NewGuid(), Forma = "Redonda", Rotacion = 0 },
-        new() { Id = Guid.NewGuid(), Numero = 2, Capacidad = 6, Estado = "Ocupada", Activa = true, PosicionX = 50, PosicionY = 50, ZonaId = Guid.NewGuid(), Forma = "Cuadrada", Rotacion = 45 },
-        new() { Id = Guid.NewGuid(), Numero = 3, Capacidad = 2, Estado = "Disponible", Activa = true } // sin posición
+        new() { Id = Guid.NewGuid(), Numero = 1, Capacidad = 4, Estado = "Disponible", Activa = true, PosicionX = 10, PosicionY = 20, ZonaId = FakeMapaZonasServicio.TerrazaId, Forma = "Redonda", Rotacion = 0 },
+        new() { Id = Guid.NewGuid(), Numero = 2, Capacidad = 6, Estado = "Ocupada", Activa = true, PosicionX = 50, PosicionY = 50, ZonaId = FakeMapaZonasServicio.InteriorId, Forma = "Cuadrada", Rotacion = 45 },
+        new() { Id = Guid.NewGuid(), Numero = 3, Capacidad = 2, Estado = "Disponible", Activa = true }
     ];
 
     public Task<List<MesaDto>> ListarMesasAsync(CancellationToken cancelacion = default)
@@ -207,12 +257,17 @@ internal sealed class FakeMapaMesasServicio : IMesasServicio
 
 internal sealed class FakeMapaZonasServicio : IZonasSalonServicio
 {
+    public static readonly Guid TerrazaId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+    public static readonly Guid InteriorId = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
+
+    public List<ZonaSalonDto> Zonas { get; set; } =
+    [
+        new() { Id = TerrazaId, Nombre = "Terraza", Orden = 1, Activa = true },
+        new() { Id = InteriorId, Nombre = "Interior", Orden = 2, Activa = true }
+    ];
+
     public Task<List<ZonaSalonDto>> ListarActivasAsync(CancellationToken cancelacion = default)
-        => Task.FromResult(new List<ZonaSalonDto>
-        {
-            new() { Id = Guid.NewGuid(), Nombre = "Terraza", Orden = 1, Activa = true },
-            new() { Id = Guid.NewGuid(), Nombre = "Interior", Orden = 2, Activa = true }
-        });
+        => Task.FromResult(Zonas);
 
     public Task<List<ZonaSalonDto>> ListarTodasAsync(CancellationToken cancelacion = default)
         => Task.FromResult(new List<ZonaSalonDto>());
