@@ -21,6 +21,7 @@ public class IndexModel : PageModel
     private readonly ITicketServicio _ticketServicio;
     private readonly IAlergenoServicio _alergenoServicio;
     private readonly IHubContext<PedidosHub> _hubContext;
+    private readonly ILogger<IndexModel> _logger;
 
     public IndexModel(
         IPedidosServicio pedidosServicio,
@@ -29,7 +30,8 @@ public class IndexModel : PageModel
         IRecetasProductosServicio recetasServicio,
         ITicketServicio ticketServicio,
         IAlergenoServicio alergenoServicio,
-        IHubContext<PedidosHub> hubContext)
+        IHubContext<PedidosHub> hubContext,
+        ILogger<IndexModel> logger)
     {
         _pedidosServicio = pedidosServicio;
         _catalogoProductosServicio = catalogoProductosServicio;
@@ -38,6 +40,7 @@ public class IndexModel : PageModel
         _ticketServicio = ticketServicio;
         _alergenoServicio = alergenoServicio;
         _hubContext = hubContext;
+        _logger = logger;
     }
 
     [BindProperty(SupportsGet = true)]
@@ -277,7 +280,15 @@ public class IndexModel : PageModel
             });
             return new JsonResult(new { pedidoId = pedido.Id, total = pedido.Total, detalles = detallesResponse });
         }
-        catch (Exception ex) { return BadRequest(ErrorSeguro(ex)); }
+        catch (ReglaDominioException ex)
+        {
+            return StatusCode(422, new { ok = false, error = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error en OnPostCrearJsonAsync");
+            return StatusCode(500, new { ok = false, error = "Ocurrió un error interno." });
+        }
     }
 
     public async Task<IActionResult> OnPostEnviarMasJsonAsync()
@@ -308,7 +319,9 @@ public class IndexModel : PageModel
             });
             return new JsonResult(new { ok = true, total = pedido?.Total ?? 0, detalles = detallesResponse });
         }
-        catch (Exception ex) { return BadRequest(ErrorSeguro(ex)); }
+        catch (ReglaDominioException ex) { return StatusCode(422, new { ok = false, error = ex.Message }); }
+        catch (ArgumentException ex) { return BadRequest(new { ok = false, error = ex.Message }); }
+        catch (Exception ex) { _logger.LogError(ex, "Error en handler JSON"); return StatusCode(500, new { ok = false, error = "Ocurrió un error interno." }); }
     }
 
     public async Task<IActionResult> OnPostAgregarLineaJsonAsync(Guid pedidoId, Guid productoId, int cantidad, string? notas = null, string? modificacionesJson = null)
@@ -321,7 +334,9 @@ public class IndexModel : PageModel
             await _pedidosServicio.AgregarDetalleAsync(pedidoId, productoId, cantidad, prod.Precio, notas, modificacionesJson);
             return new JsonResult(new { ok = true });
         }
-        catch (Exception ex) { return BadRequest(ErrorSeguro(ex)); }
+        catch (ReglaDominioException ex) { return StatusCode(422, new { ok = false, error = ex.Message }); }
+        catch (ArgumentException ex) { return BadRequest(new { ok = false, error = ex.Message }); }
+        catch (Exception ex) { _logger.LogError(ex, "Error en handler JSON"); return StatusCode(500, new { ok = false, error = "Ocurrió un error interno." }); }
     }
 
     public async Task<IActionResult> OnPostEliminarLineaJsonAsync(Guid pedidoId, Guid detalleId)
@@ -331,7 +346,9 @@ public class IndexModel : PageModel
             await _pedidosServicio.EliminarDetalleAsync(pedidoId, detalleId);
             return new JsonResult(new { ok = true });
         }
-        catch (Exception ex) { return BadRequest(ErrorSeguro(ex)); }
+        catch (ReglaDominioException ex) { return StatusCode(422, new { ok = false, error = ex.Message }); }
+        catch (ArgumentException ex) { return BadRequest(new { ok = false, error = ex.Message }); }
+        catch (Exception ex) { _logger.LogError(ex, "Error en handler JSON"); return StatusCode(500, new { ok = false, error = "Ocurrió un error interno." }); }
     }
 
     public async Task<IActionResult> OnPostActualizarCantidadJsonAsync(Guid pedidoId, Guid detalleId, int cantidad)
@@ -341,7 +358,9 @@ public class IndexModel : PageModel
             await _pedidosServicio.ActualizarCantidadDetalleAsync(pedidoId, detalleId, cantidad);
             return new JsonResult(new { ok = true });
         }
-        catch (Exception ex) { return BadRequest(ErrorSeguro(ex)); }
+        catch (ReglaDominioException ex) { return StatusCode(422, new { ok = false, error = ex.Message }); }
+        catch (ArgumentException ex) { return BadRequest(new { ok = false, error = ex.Message }); }
+        catch (Exception ex) { _logger.LogError(ex, "Error en handler JSON"); return StatusCode(500, new { ok = false, error = "Ocurrió un error interno." }); }
     }
 
     public async Task<IActionResult> OnPostPagarEfectivoJsonAsync(Guid pedidoId, decimal efectivoRecibido)
@@ -362,7 +381,9 @@ public class IndexModel : PageModel
             var cambio = efectivoRecibido - pedido.Total;
             return new JsonResult(new { ok = true, mensaje = cambio > 0 ? $"Pedido pagado. Cambio: ${cambio:F2}" : "Pedido pagado correctamente." });
         }
-        catch (Exception ex) { return BadRequest(ErrorSeguro(ex)); }
+        catch (ReglaDominioException ex) { return StatusCode(422, new { ok = false, error = ex.Message }); }
+        catch (ArgumentException ex) { return BadRequest(new { ok = false, error = ex.Message }); }
+        catch (Exception ex) { _logger.LogError(ex, "Error en handler JSON"); return StatusCode(500, new { ok = false, error = "Ocurrió un error interno." }); }
     }
 
     public async Task<IActionResult> OnPostPagarJsonAsync(Guid pedidoId, string? metodoPago = null, decimal? monto = null, string? referencia = null)
@@ -379,17 +400,31 @@ public class IndexModel : PageModel
             if (pedido.Estado is "Cancelado" or "Pagado" or "Despachado")
                 return BadRequest(ErrorSeguro(new InvalidOperationException($"El pedido ya fue {pedido.Estado.ToLower()}.")));
 
-            // Validar monto para efectivo
-            var metodo = metodoPago?.ToLower() ?? "efectivo";
-            if (metodo == "efectivo" && monto.HasValue && monto.Value < pedido.Total)
+            var metodoStr = metodoPago?.ToLower() ?? "efectivo";
+            var metodoEnum = metodoStr switch
+            {
+                "tarjeta" => MetodoPago.Tarjeta,
+                "qr" or "transferencia" => MetodoPago.Transferencia,
+                _ => MetodoPago.Efectivo
+            };
+
+            if (metodoEnum == MetodoPago.Efectivo && monto.HasValue && monto.Value < pedido.Total)
                 return BadRequest(ErrorSeguro(new ArgumentException($"Faltan ${pedido.Total - monto.Value:F2}")));
 
-            await _pedidosServicio.PagarPedidoAsync(pedidoId);
+            await _pedidosServicio.PagarPedidoAsync(pedidoId, metodoEnum, referencia);
 
-            var cambio = monto.HasValue && metodo == "efectivo" ? monto.Value - pedido.Total : 0;
-            return new JsonResult(new { ok = true, mensaje = cambio > 0 ? $"Pedido pagado. Cambio: ${cambio:F2}" : "Pedido pagado correctamente." });
+            var cambio = monto.HasValue && metodoEnum == MetodoPago.Efectivo ? monto.Value - pedido.Total : 0;
+            var mensaje = cambio > 0 ? $"Pedido pagado. Cambio: ${cambio:F2}" : "Pedido pagado correctamente.";
+
+            string? ticketHtml = null;
+            try { ticketHtml = await _ticketServicio.GenerarHtmlTicketAsync(pedidoId); }
+            catch { /* no bloquear el pago si el ticket falla */ }
+
+            return new JsonResult(new { ok = true, mensaje, cambio, ticketHtml });
         }
-        catch (Exception ex) { return BadRequest(ErrorSeguro(ex)); }
+        catch (ReglaDominioException ex) { return StatusCode(422, new { ok = false, error = ex.Message }); }
+        catch (ArgumentException ex) { return BadRequest(new { ok = false, error = ex.Message }); }
+        catch (Exception ex) { _logger.LogError(ex, "Error en handler JSON"); return StatusCode(500, new { ok = false, error = "Ocurrió un error interno." }); }
     }
 
     public async Task<IActionResult> OnPostCancelarJsonAsync(Guid pedidoId)
@@ -401,7 +436,9 @@ public class IndexModel : PageModel
             await _pedidosServicio.CancelarPedidoAsync(pedidoId);
             return new JsonResult(new { ok = true, mensaje = "Pedido cancelado." });
         }
-        catch (Exception ex) { return BadRequest(ErrorSeguro(ex)); }
+        catch (ReglaDominioException ex) { return StatusCode(422, new { ok = false, error = ex.Message }); }
+        catch (ArgumentException ex) { return BadRequest(new { ok = false, error = ex.Message }); }
+        catch (Exception ex) { _logger.LogError(ex, "Error en handler JSON"); return StatusCode(500, new { ok = false, error = "Ocurrió un error interno." }); }
     }
 
     public async Task<IActionResult> OnPostAnularPagoJsonAsync(Guid pedidoId)
@@ -413,7 +450,9 @@ public class IndexModel : PageModel
             await _pedidosServicio.AnularPagoAsync(pedidoId);
             return new JsonResult(new { ok = true, mensaje = "Pago anulado." });
         }
-        catch (Exception ex) { return BadRequest(ErrorSeguro(ex)); }
+        catch (ReglaDominioException ex) { return StatusCode(422, new { ok = false, error = ex.Message }); }
+        catch (ArgumentException ex) { return BadRequest(new { ok = false, error = ex.Message }); }
+        catch (Exception ex) { _logger.LogError(ex, "Error en handler JSON"); return StatusCode(500, new { ok = false, error = "Ocurrió un error interno." }); }
     }
 
     // ── Cuentas y pago dividido (JSON) ────────────────────────
@@ -426,7 +465,9 @@ public class IndexModel : PageModel
             await _hubContext.Clients.Group($"pedido-{pedidoId}").SendAsync("EstadoCambiado", pedidoId, "EnCobro");
             return new JsonResult(new { ok = true });
         }
-        catch (Exception ex) { return BadRequest(ErrorSeguro(ex)); }
+        catch (ReglaDominioException ex) { return StatusCode(422, new { ok = false, error = ex.Message }); }
+        catch (ArgumentException ex) { return BadRequest(new { ok = false, error = ex.Message }); }
+        catch (Exception ex) { _logger.LogError(ex, "Error en handler JSON"); return StatusCode(500, new { ok = false, error = "Ocurrió un error interno." }); }
     }
 
     public async Task<IActionResult> OnPostCrearCuentasJsonAsync(Guid pedidoId, int cantidad)
@@ -437,7 +478,9 @@ public class IndexModel : PageModel
             await _hubContext.Clients.Group($"pedido-{pedidoId}").SendAsync("CuentasCreadas", pedidoId, cuentas);
             return new JsonResult(cuentas);
         }
-        catch (Exception ex) { return BadRequest(ErrorSeguro(ex)); }
+        catch (ReglaDominioException ex) { return StatusCode(422, new { ok = false, error = ex.Message }); }
+        catch (ArgumentException ex) { return BadRequest(new { ok = false, error = ex.Message }); }
+        catch (Exception ex) { _logger.LogError(ex, "Error en handler JSON"); return StatusCode(500, new { ok = false, error = "Ocurrió un error interno." }); }
     }
 
     public async Task<IActionResult> OnPostCrearCuentasConItemsJsonAsync([FromBody] CrearCuentasConItemsRequest request)
@@ -466,7 +509,9 @@ public class IndexModel : PageModel
             await _hubContext.Clients.Group($"pedido-{request.PedidoId}").SendAsync("CuentasCreadas", request.PedidoId, cuentas);
             return new JsonResult(cuentas);
         }
-        catch (Exception ex) { return BadRequest(ErrorSeguro(ex)); }
+        catch (ReglaDominioException ex) { return StatusCode(422, new { ok = false, error = ex.Message }); }
+        catch (ArgumentException ex) { return BadRequest(new { ok = false, error = ex.Message }); }
+        catch (Exception ex) { _logger.LogError(ex, "Error en handler JSON"); return StatusCode(500, new { ok = false, error = "Ocurrió un error interno." }); }
     }
 
     public async Task<IActionResult> OnPostObtenerCuentasJsonAsync(Guid pedidoId)
@@ -476,7 +521,9 @@ public class IndexModel : PageModel
             var cuentas = await _pedidosServicio.ObtenerCuentasAsync(pedidoId);
             return new JsonResult(cuentas);
         }
-        catch (Exception ex) { return BadRequest(ErrorSeguro(ex)); }
+        catch (ReglaDominioException ex) { return StatusCode(422, new { ok = false, error = ex.Message }); }
+        catch (ArgumentException ex) { return BadRequest(new { ok = false, error = ex.Message }); }
+        catch (Exception ex) { _logger.LogError(ex, "Error en handler JSON"); return StatusCode(500, new { ok = false, error = "Ocurrió un error interno." }); }
     }
 
     public async Task<IActionResult> OnPostPagarCuentaJsonAsync(Guid cuentaId, string metodoPago, decimal propinaMonto)
@@ -488,7 +535,9 @@ public class IndexModel : PageModel
             var cuenta = await _pedidosServicio.PagarCuentaAsync(cuentaId, metodo, propinaMonto);
             return new JsonResult(cuenta);
         }
-        catch (Exception ex) { return BadRequest(ErrorSeguro(ex)); }
+        catch (ReglaDominioException ex) { return StatusCode(422, new { ok = false, error = ex.Message }); }
+        catch (ArgumentException ex) { return BadRequest(new { ok = false, error = ex.Message }); }
+        catch (Exception ex) { _logger.LogError(ex, "Error en handler JSON"); return StatusCode(500, new { ok = false, error = "Ocurrió un error interno." }); }
     }
 
     // ── Ticket PDF / HTML ────────────────────────────────────
@@ -499,7 +548,9 @@ public class IndexModel : PageModel
             var html = await _ticketServicio.GenerarHtmlTicketAsync(pedidoId);
             return new JsonResult(new { ok = true, html });
         }
-        catch (Exception ex) { return BadRequest(ErrorSeguro(ex)); }
+        catch (ReglaDominioException ex) { return StatusCode(422, new { ok = false, error = ex.Message }); }
+        catch (ArgumentException ex) { return BadRequest(new { ok = false, error = ex.Message }); }
+        catch (Exception ex) { _logger.LogError(ex, "Error en handler JSON"); return StatusCode(500, new { ok = false, error = "Ocurrió un error interno." }); }
     }
 
     // ── Mesas (JSON para refresco SPA) ─────────────────────
@@ -530,7 +581,9 @@ public class IndexModel : PageModel
             });
             return new JsonResult(new { mesas = data });
         }
-        catch (Exception ex) { return BadRequest(ErrorSeguro(ex)); }
+        catch (ReglaDominioException ex) { return StatusCode(422, new { ok = false, error = ex.Message }); }
+        catch (ArgumentException ex) { return BadRequest(new { ok = false, error = ex.Message }); }
+        catch (Exception ex) { _logger.LogError(ex, "Error en handler JSON"); return StatusCode(500, new { ok = false, error = "Ocurrió un error interno." }); }
     }
 
     public async Task<IActionResult> OnGetDetallesPedidoJsonAsync(Guid pedidoId)
@@ -550,7 +603,9 @@ public class IndexModel : PageModel
             });
             return new JsonResult(new { detalles, total = pedido.Total });
         }
-        catch (Exception ex) { return BadRequest(ErrorSeguro(ex)); }
+        catch (ReglaDominioException ex) { return StatusCode(422, new { ok = false, error = ex.Message }); }
+        catch (ArgumentException ex) { return BadRequest(new { ok = false, error = ex.Message }); }
+        catch (Exception ex) { _logger.LogError(ex, "Error en handler JSON"); return StatusCode(500, new { ok = false, error = "Ocurrió un error interno." }); }
     }
 
     // ── Alérgenos por producto (JSON) ─────────────────────────
@@ -561,7 +616,9 @@ public class IndexModel : PageModel
             var alergenos = await _alergenoServicio.ObtenerPorProductoAsync(productoId);
             return new JsonResult(alergenos);
         }
-        catch (Exception ex) { return BadRequest(ErrorSeguro(ex)); }
+        catch (ReglaDominioException ex) { return StatusCode(422, new { ok = false, error = ex.Message }); }
+        catch (ArgumentException ex) { return BadRequest(new { ok = false, error = ex.Message }); }
+        catch (Exception ex) { _logger.LogError(ex, "Error en handler JSON"); return StatusCode(500, new { ok = false, error = "Ocurrió un error interno." }); }
     }
 
     // ── Ingredientes y modificaciones (JSON) ─────────────────
@@ -577,7 +634,9 @@ public class IndexModel : PageModel
                 receta.Instrucciones
             });
         }
-        catch (Exception ex) { return BadRequest(ErrorSeguro(ex)); }
+        catch (ReglaDominioException ex) { return StatusCode(422, new { ok = false, error = ex.Message }); }
+        catch (ArgumentException ex) { return BadRequest(new { ok = false, error = ex.Message }); }
+        catch (Exception ex) { _logger.LogError(ex, "Error en handler JSON"); return StatusCode(500, new { ok = false, error = "Ocurrió un error interno." }); }
     }
 
     public async Task<IActionResult> OnPostObtenerIngredientesJsonAsync(Guid productoId)
@@ -592,7 +651,9 @@ public class IndexModel : PageModel
                 receta.Instrucciones
             });
         }
-        catch (Exception ex) { return BadRequest(ErrorSeguro(ex)); }
+        catch (ReglaDominioException ex) { return StatusCode(422, new { ok = false, error = ex.Message }); }
+        catch (ArgumentException ex) { return BadRequest(new { ok = false, error = ex.Message }); }
+        catch (Exception ex) { _logger.LogError(ex, "Error en handler JSON"); return StatusCode(500, new { ok = false, error = "Ocurrió un error interno." }); }
     }
 
     // ── Helpers ───────────────────────────────────────────────

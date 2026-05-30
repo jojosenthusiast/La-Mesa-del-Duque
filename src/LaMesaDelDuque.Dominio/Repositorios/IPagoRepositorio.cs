@@ -7,5 +7,6 @@ public interface IPagoRepositorio
     Task<Pago?> ObtenerPorIdAsync(Guid id, CancellationToken cancelacion = default);
     Task<List<Pago>> ObtenerPorCuentaAsync(Guid cuentaId, CancellationToken cancelacion = default);
     Task<List<Pago>> ObtenerDelDiaAsync(DateOnly fecha, CancellationToken cancelacion = default);
+    Task<List<Pago>> ObtenerPorRangoFechaAsync(DateTime desde, DateTime hasta, CancellationToken cancelacion = default);
     Task AgregarAsync(Pago pago, CancellationToken cancelacion = default);
 }

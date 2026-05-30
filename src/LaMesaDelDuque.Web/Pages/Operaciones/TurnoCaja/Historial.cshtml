@@ -1,0 +1,189 @@
+@page
+@model LaMesaDelDuque.Web.Pages.Operaciones.TurnoCaja.HistorialModel
+@{ ViewData["Title"] = "Historial de Turnos"; ViewData["ActiveTab"] = "Caja"; }
+
+<section class="lmd-page-header rounded-top">
+    <h1>Historial de Turnos de Caja</h1>
+    <p class="lmd-page-subtitle">Registro histórico de aperturas y cierres de caja.</p>
+</section>
+
+<section class="bg-white p-3 rounded-bottom">
+    @if (!string.IsNullOrWhiteSpace(Model.ToastError))
+    {
+        <div class="alert alert-danger alert-dismissible fade show py-2 mb-3" role="alert">
+            @Model.ToastError
+            <button type="button" class="btn-close" aria-label="Cerrar"></button>
+        </div>
+    }
+
+    <div class="table-responsive">
+        <table class="table table-striped table-sm">
+            <thead>
+                <tr>
+                    <th>Apertura</th>
+                    <th>Cierre</th>
+                    <th>Cajero</th>
+                    <th>Fondo inicial</th>
+                    <th>Ef. esperado</th>
+                    <th>Ef. contado</th>
+                    <th>Diferencia</th>
+                    <th>Estado</th>
+                    <th>Reporte Z</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (!Model.Turnos.Any())
+                {
+                    <tr><td colspan="9" class="text-muted text-center py-3">Sin historial registrado.</td></tr>
+                }
+                @foreach (var t in Model.Turnos)
+                {
+                    <tr>
+                        <td class="small">@t.FechaApertura.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
+                        <td class="small text-muted">@(t.FechaCierre.HasValue ? t.FechaCierre.Value.ToLocalTime().ToString("dd/MM/yyyy HH:mm") : "—")</td>
+                        <td>@t.CajeroNombre</td>
+                        <td>@t.FondoInicial.ToString("C")</td>
+                        <td>@(t.EfectivoEsperado.HasValue ? t.EfectivoEsperado.Value.ToString("C") : "—")</td>
+                        <td>@(t.EfectivoContado.HasValue ? t.EfectivoContado.Value.ToString("C") : "—")</td>
+                        <td class="@(t.Diferencia < 0 ? "text-danger" : t.Diferencia > 0 ? "text-success" : "")">
+                            @(t.Diferencia.HasValue ? t.Diferencia.Value.ToString("C") : "—")
+                        </td>
+                        <td>
+                            <span class="badge @(t.Cerrado ? "bg-secondary" : "bg-success")">
+                                @(t.Cerrado ? "Cerrado" : "Activo")
+                            </span>
+                        </td>
+                        <td>
+                            @if (t.Cerrado)
+                            {
+                                <button class="btn btn-outline-primary btn-sm"
+                                        onclick="verReporteZ('@t.Id')">
+                                    Reporte Z
+                                </button>
+                            }
+                            else
+                            {
+                                <span class="text-muted small">—</span>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    @if (Model.Pagina > 1 || Model.Turnos.Count == HistorialModel.PorPagina)
+    {
+        <nav class="mt-3">
+            <ul class="pagination pagination-sm">
+                @if (Model.Pagina > 1)
+                {
+                    <li class="page-item">
+                        <a class="page-link" asp-page="Historial" asp-route-pagina="@(Model.Pagina - 1)">Anterior</a>
+                    </li>
+                }
+                <li class="page-item disabled"><span class="page-link">Página @Model.Pagina</span></li>
+                @if (Model.Turnos.Count == HistorialModel.PorPagina)
+                {
+                    <li class="page-item">
+                        <a class="page-link" asp-page="Historial" asp-route-pagina="@(Model.Pagina + 1)">Siguiente</a>
+                    </li>
+                }
+            </ul>
+        </nav>
+    }
+
+    <div class="mt-3">
+        <a asp-page="/Operaciones/TurnoCaja/Index" class="btn btn-outline-secondary btn-sm">Volver a Turno Activo</a>
+    </div>
+</section>
+
+<!-- Modal Reporte Z -->
+<div class="modal fade" id="modalReporteZ" tabindex="-1" aria-labelledby="modalReporteZLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalReporteZLabel">Reporte Z — Turno de Caja</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body" id="contenidoReporteZ">
+                <div class="text-center py-4"><div class="spinner-border text-primary" role="status"></div></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+async function verReporteZ(turnoId) {
+    const modal = new bootstrap.Modal(document.getElementById('modalReporteZ'));
+    document.getElementById('contenidoReporteZ').innerHTML =
+        '<div class="text-center py-4"><div class="spinner-border text-primary" role="status"></div></div>';
+    modal.show();
+
+    try {
+        const resp = await fetch(`?handler=ReporteZ&turnoId=${turnoId}`);
+        const data = await resp.json();
+
+        if (!resp.ok) {
+            document.getElementById('contenidoReporteZ').innerHTML =
+                `<div class="alert alert-danger">${data.error ?? 'Error al cargar el reporte.'}</div>`;
+            return;
+        }
+
+        const fmt = v => v?.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' }) ?? '—';
+        const desglose = Object.entries(data.desglosePorMetodoPago ?? {})
+            .map(([k, v]) => `<tr><td>${k}</td><td>${fmt(v)}</td></tr>`).join('');
+
+        const movimientos = (data.movimientos ?? [])
+            .map(m => `<tr>
+                <td><span class="badge bg-secondary">${m.tipo}</span></td>
+                <td>${fmt(m.monto)}</td>
+                <td>${m.motivo}</td>
+                <td class="text-muted small">${new Date(m.fechaHora).toLocaleString('es-AR')}</td>
+            </tr>`).join('') || '<tr><td colspan="4" class="text-muted text-center">Sin movimientos.</td></tr>';
+
+        document.getElementById('contenidoReporteZ').innerHTML = `
+            <div class="row g-2 mb-3">
+                <div class="col-6"><strong>Cajero:</strong> ${data.cajeroNombre}</div>
+                <div class="col-6"><strong>Apertura:</strong> ${new Date(data.fechaApertura).toLocaleString('es-AR')}</div>
+                <div class="col-6"><strong>Cierre:</strong> ${data.fechaCierre ? new Date(data.fechaCierre).toLocaleString('es-AR') : '—'}</div>
+                <div class="col-6"><strong>Fondo inicial:</strong> ${fmt(data.fondoInicial)}</div>
+            </div>
+            <hr/>
+            <div class="row g-2 mb-3">
+                <div class="col-4"><strong>Total ventas:</strong><br/><span class="fs-5">${fmt(data.totalVentas)}</span></div>
+                <div class="col-4"><strong>Tickets:</strong><br/><span class="fs-5">${data.cantidadTickets}</span></div>
+                <div class="col-4"><strong>Ticket promedio:</strong><br/><span class="fs-5">${fmt(data.ticketPromedio)}</span></div>
+            </div>
+            <h6>Desglose por método de pago</h6>
+            <table class="table table-sm table-bordered mb-3">
+                <thead><tr><th>Método</th><th>Total</th></tr></thead>
+                <tbody>${desglose || '<tr><td colspan="2" class="text-muted text-center">Sin pagos.</td></tr>'}</tbody>
+            </table>
+            <div class="row g-2 mb-3">
+                <div class="col-4"><strong>Ef. esperado:</strong><br/>${fmt(data.efectivoEsperado)}</div>
+                <div class="col-4"><strong>Ef. contado:</strong><br/>${fmt(data.efectivoContado)}</div>
+                <div class="col-4"><strong>Diferencia:</strong><br/>
+                    <span class="${data.diferencia < 0 ? 'text-danger' : data.diferencia > 0 ? 'text-success' : ''} fw-bold">
+                        ${fmt(data.diferencia)}
+                    </span>
+                </div>
+            </div>
+            ${data.observacionCierre ? `<div class="alert alert-secondary py-2"><strong>Observación:</strong> ${data.observacionCierre}</div>` : ''}
+            <h6>Movimientos del turno</h6>
+            <table class="table table-sm">
+                <thead><tr><th>Tipo</th><th>Monto</th><th>Motivo</th><th>Fecha/Hora</th></tr></thead>
+                <tbody>${movimientos}</tbody>
+            </table>
+        `;
+    } catch (e) {
+        document.getElementById('contenidoReporteZ').innerHTML =
+            '<div class="alert alert-danger">Error de red al cargar el reporte.</div>';
+    }
+}
+</script>
+}

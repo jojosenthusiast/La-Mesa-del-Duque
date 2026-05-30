@@ -1,6 +1,7 @@
 using LaMesaDelDuque.Aplicacion.Dtos;
 using LaMesaDelDuque.Aplicacion.Servicios;
 using LaMesaDelDuque.Dominio.Excepciones;
+using LaMesaDelDuque.Pruebas.Calidad;
 using LaMesaDelDuque.Web.Models.Operaciones;
 using LaMesaDelDuque.Web.Pages.Operaciones.Productos;
 using Microsoft.AspNetCore.Hosting;
@@ -50,6 +51,138 @@ public class ProductosPageTests
         Assert.Single(page.Vm.Productos);
         Assert.Equal("Café", page.Vm.Productos[0].Nombre);
         Assert.Equal(2, page.Vm.Categorias.Count);
+    }
+
+    [Fact]
+    public async Task OnGetAsync_exposes_filter_counts_and_saved_product_visibility()
+    {
+        var categoriaBebidas = new CategoriaProductoDto { Id = Guid.NewGuid(), Nombre = "Bebidas", Activo = true };
+        var categoriaPlatos = new CategoriaProductoDto { Id = Guid.NewGuid(), Nombre = "Platos Fuertes", Activo = true };
+        var polloId = Guid.Parse("11111111-1111-1111-1111-111111111111");
+
+        var servicio = new FakeCatalogoProductosServicio
+        {
+            Categorias = [categoriaBebidas, categoriaPlatos],
+            Productos =
+            [
+                new ProductoDto { Id = Guid.NewGuid(), Nombre = "Agua Mineral", CategoriaId = categoriaBebidas.Id, CategoriaNombre = "Bebidas", Precio = 2.50m, Activo = true },
+                new ProductoDto { Id = polloId, Nombre = "Pollo a la Brasa Familiar", CategoriaId = categoriaPlatos.Id, CategoriaNombre = "Platos Fuertes", Precio = 18.75m, Activo = true }
+            ]
+        };
+
+        var page = new IndexModel(servicio, CreateFakeEnv())
+        {
+            Buscar = "Pollo",
+            Estado = "todos",
+            ProductoGuardadoId = polloId
+        };
+
+        await page.OnGetAsync();
+
+        Assert.Equal(2, page.Vm.TotalProductos);
+        Assert.Equal(1, page.Vm.TotalVisibles);
+        Assert.True(page.Vm.FiltrosAplicados);
+        Assert.True(page.Vm.ProductoGuardadoVisible);
+        Assert.False(page.Vm.ProductoGuardadoOcultoPorFiltros);
+        Assert.Contains("Pollo", page.Vm.DescripcionFiltros, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task OnGetAsync_warns_when_saved_product_is_hidden_by_current_filters()
+    {
+        var categoriaBebidas = new CategoriaProductoDto { Id = Guid.NewGuid(), Nombre = "Bebidas", Activo = true };
+        var categoriaPlatos = new CategoriaProductoDto { Id = Guid.NewGuid(), Nombre = "Platos Fuertes", Activo = true };
+        var polloId = Guid.Parse("22222222-2222-2222-2222-222222222222");
+
+        var servicio = new FakeCatalogoProductosServicio
+        {
+            Categorias = [categoriaBebidas, categoriaPlatos],
+            Productos =
+            [
+                new ProductoDto { Id = Guid.NewGuid(), Nombre = "Agua Mineral", CategoriaId = categoriaBebidas.Id, CategoriaNombre = "Bebidas", Precio = 2.50m, Activo = true },
+                new ProductoDto { Id = polloId, Nombre = "Pollo a la Brasa Familiar", CategoriaId = categoriaPlatos.Id, CategoriaNombre = "Platos Fuertes", Precio = 18.75m, Activo = true }
+            ]
+        };
+
+        var page = new IndexModel(servicio, CreateFakeEnv())
+        {
+            Buscar = "Agua",
+            Estado = "todos",
+            ProductoGuardadoId = polloId
+        };
+
+        await page.OnGetAsync();
+
+        Assert.Single(page.Vm.Productos);
+        Assert.False(page.Vm.ProductoGuardadoVisible);
+        Assert.True(page.Vm.ProductoGuardadoOcultoPorFiltros);
+    }
+
+    [Fact]
+    public async Task OnPostGuardarAsync_new_product_redirects_to_saved_product_search_and_success_marker()
+    {
+        var categoriaBebidas = new CategoriaProductoDto { Id = Guid.NewGuid(), Nombre = "Bebidas", Activo = true };
+        var categoriaPlatos = new CategoriaProductoDto { Id = Guid.NewGuid(), Nombre = "Platos Fuertes", Activo = true };
+        var createdId = Guid.Parse("33333333-3333-3333-3333-333333333333");
+
+        var servicio = new FakeCatalogoProductosServicio
+        {
+            NextCreatedProductId = createdId,
+            Categorias = [categoriaBebidas, categoriaPlatos],
+            Productos =
+            [
+                new ProductoDto { Id = Guid.NewGuid(), Nombre = "Agua Mineral", CategoriaId = categoriaBebidas.Id, CategoriaNombre = "Bebidas", Precio = 2.50m, Activo = true }
+            ]
+        };
+
+        var page = new IndexModel(servicio, CreateFakeEnv())
+        {
+            Buscar = "Agua",
+            CategoriaId = categoriaBebidas.Id,
+            Estado = "inactivos",
+            Vm = new ProductosPageVm
+            {
+                Form = new ProductoFormVm
+                {
+                    Nombre = "Pollo a la Brasa Familiar",
+                    Precio = 18.75m,
+                    CategoriaId = categoriaPlatos.Id,
+                    Descripcion = "Pollo entero con guarniciones",
+                    TiempoPreparacionMin = 25
+                }
+            }
+        };
+
+        var result = await page.OnPostGuardarAsync();
+
+        var redirect = Assert.IsType<Microsoft.AspNetCore.Mvc.RedirectToPageResult>(result);
+        Assert.Equal("Pollo a la Brasa Familiar", redirect.RouteValues?["Buscar"]);
+        Assert.Null(redirect.RouteValues?["CategoriaId"]);
+        Assert.Equal("todos", redirect.RouteValues?["Estado"]);
+        Assert.Equal(createdId, redirect.RouteValues?["ProductoGuardadoId"]);
+        Assert.Contains("Pollo a la Brasa Familiar", page.ToastSuccess, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(servicio.Productos, p => p.Id == createdId && p.Nombre == "Pollo a la Brasa Familiar");
+    }
+
+    [Fact]
+    public void ProductosMarkup_exposes_actionable_empty_state_and_saved_marker()
+    {
+        var source = File.ReadAllText(Path.Combine(
+            ProjectPaths.RepoRoot,
+            "src",
+            "LaMesaDelDuque.Web",
+            "Pages",
+            "Operaciones",
+            "Productos",
+            "Index.cshtml"));
+
+        Assert.Contains("ProductoGuardadoVisible", source);
+        Assert.Contains("Recién guardado", source);
+        Assert.Contains("Limpia filtros", source);
+        Assert.Contains("data-lmd-new-product", source);
+        Assert.Contains("TotalVisibles", source);
+        Assert.Contains("value=\"Vm.Form.Precio\"", source);
+        Assert.Contains("type=\"hidden\" asp-for=\"Estado\"", source);
     }
 
     [Fact]
@@ -198,6 +331,7 @@ internal sealed class FakeCatalogoProductosServicio : ICatalogoProductosServicio
     public List<CategoriaProductoDto> Categorias { get; set; } = [];
     public Exception? ThrowOnGuardar { get; set; }
     public string? LastImagenUrl { get; set; }
+    public Guid? NextCreatedProductId { get; set; }
 
     public Task<List<CategoriaProductoDto>> ListarCategoriasAsync(CancellationToken cancelacion = default) => Task.FromResult(Categorias);
     public Task<CategoriaProductoDto> CrearCategoriaAsync(string nombre, CancellationToken cancelacion = default) => throw new NotImplementedException();
@@ -213,9 +347,9 @@ internal sealed class FakeCatalogoProductosServicio : ICatalogoProductosServicio
             throw ThrowOnGuardar;
         }
 
-        return Task.FromResult(new ProductoDto
+        var producto = new ProductoDto
         {
-            Id = Guid.NewGuid(),
+            Id = NextCreatedProductId ?? Guid.NewGuid(),
             Nombre = nombre,
             Precio = precio,
             CategoriaId = categoriaId,
@@ -224,7 +358,11 @@ internal sealed class FakeCatalogoProductosServicio : ICatalogoProductosServicio
             ImagenUrl = imagenUrl,
             TiempoPreparacionMin = tiempoPreparacionMin,
             Activo = true
-        });
+        };
+
+        Productos.Add(producto);
+
+        return Task.FromResult(producto);
     }
 
     public Task<ProductoDto> ActualizarProductoAsync(Guid productoId, string nombre, decimal precio, Guid categoriaId, string? descripcion, string? imagenUrl = null, int? tiempoPreparacionMin = null, CancellationToken cancelacion = default)

@@ -73,9 +73,11 @@ public class LoginModel : PageModel
         var destino = usuario.RolNombre switch
         {
             "Administrador" or "Encargado" => "/Admin/Dashboard/Dashboard",
+            "Gerente"                       => "/Admin/Dashboard/Gerente",
             "Cajero"                        => "/Operaciones/Pedidos/Index",
             "Mesero"                        => "/Operaciones/Mesero/Index",
             "Cocinero"                      => "/Cocina/KDS",
+            "Despacho"                      => "/Operaciones/Despacho/Index",
             _                               => "/Index"
         };
         return RedirectToPage(destino);

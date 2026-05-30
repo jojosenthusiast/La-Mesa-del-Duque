@@ -18,13 +18,15 @@ public static class InyeccionInfraestructura
         // persiste en sesiones de PowerShell y causa conexiones rotas a Supabase.
         var connectionString = configuracion.GetConnectionString("DefaultConnection");
 
-        Console.WriteLine($"[DBG] esDesarrollo={esDesarrollo} cs='{connectionString}' isEmpty={string.IsNullOrWhiteSpace(connectionString)}");
+        servicios.AddHttpContextAccessor();
+        servicios.AddScoped<AuditoriaInterceptor>();
 
-        servicios.AddDbContext<LaMesaDelDuqueDbContext>(opciones =>
+        servicios.AddDbContext<LaMesaDelDuqueDbContext>((sp, opciones) =>
         {
+            opciones.AddInterceptors(sp.GetRequiredService<AuditoriaInterceptor>());
+
             if (esDesarrollo && string.IsNullOrWhiteSpace(connectionString))
             {
-                Console.WriteLine("[DBG] USING SQLITE (desarrollo)");
                 var dbPath = Path.Combine(
                     AppContext.BaseDirectory, "..", "..", "..", "lmd-dev.db");
                 opciones.UseSqlite($"Data Source={dbPath}");
@@ -33,13 +35,11 @@ public static class InyeccionInfraestructura
 
             if (!string.IsNullOrWhiteSpace(connectionString))
             {
-                Console.WriteLine("[DBG] USING Npgsql");
                 connectionString = ConexionHelper.Normalizar(connectionString);
                 opciones.UseNpgsql(connectionString);
                 return;
             }
 
-            Console.WriteLine("[DBG] USING SQLITE (fallback)");
             var dbPath2 = Path.Combine(
                 AppContext.BaseDirectory, "..", "..", "..", "lmd-dev.db");
             opciones.UseSqlite($"Data Source={dbPath2}");
@@ -65,6 +65,11 @@ public static class InyeccionInfraestructura
         servicios.AddScoped<IAlergenoRepositorio, AlergenoRepositorio>();
         servicios.AddScoped<ZonaSalonRepositorio>();
         servicios.AddScoped<IMetricaRepositorio, MetricaRepositorio>();
+        servicios.AddScoped<TurnoCajaRepositorio>();
+        servicios.AddScoped<PromocionRepositorio>();
+        servicios.AddScoped<DescuentoRepositorio>();
+        servicios.AddScoped<MotivoDescuentoRepositorio>();
+        servicios.AddScoped<DevolucionRepositorio>();
 
         // Unidad de Trabajo
         servicios.AddScoped<IUnidadDeTrabajo, UnidadDeTrabajo>();

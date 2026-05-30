@@ -46,8 +46,16 @@ public class PedidosServicioTests : IDisposable
             new PagoRepositorio(_contexto),
             new ZonaSalonRepositorio(_contexto));
 
+        var rolCaja = new Rol("Cajero");
+        var usuarioCaja = new Usuario("cajero-operativo", "cajero-operativo@lmd.test", "hash-demo", "Cajero Operativo", rolCaja);
+        _contexto.Set<Rol>().Add(rolCaja);
+        _contexto.Set<Usuario>().Add(usuarioCaja);
+        _contexto.Set<CierreDia>().Add(new CierreDia(DateOnly.FromDateTime(DateTime.UtcNow), 0, 0, 0, 0, 0, 0, usuarioCaja));
+        _contexto.Set<TurnoCaja>().Add(new TurnoCaja(usuarioCaja.Id, 100m));
+        _contexto.SaveChanges();
+
         _notificadorSpy = new NotificadorPedidosSpy();
-        _servicio = new PedidosServicio(_uot, _notificadorSpy);
+        _servicio = new PedidosServicio(_uot, _notificadorSpy, httpContextAccessor: TestHttpContextAccessor.ConUsuarioAutenticado());
     }
 
     public void Dispose()
@@ -60,7 +68,7 @@ public class PedidosServicioTests : IDisposable
     {
         var mesa = new Mesa(numeroMesa, 4);
         var categoria = new CategoriaProducto($"Bebidas {numeroMesa}");
-        var producto = new Producto($"Café {numeroMesa}", 3.50m, categoria);
+        var producto = new Producto($"CafÃ© {numeroMesa}", 3.50m, categoria);
 
         await _uot.Mesas.AgregarAsync(mesa);
         await _uot.Categorias.AgregarAsync(categoria);
@@ -70,6 +78,17 @@ public class PedidosServicioTests : IDisposable
         return (mesa, producto);
     }
 
+    private async Task<Usuario> CrearMeseroAsync(string username = "mesero")
+    {
+        var rol = new Rol("Mesero", "Atiende mesas");
+        var usuario = new Usuario(username, $"{username}@lmd.test", "hash-demo", "Mesero Demo", rol);
+
+        _contexto.Set<Rol>().Add(rol);
+        _contexto.Set<Usuario>().Add(usuario);
+        await _contexto.SaveChangesAsync();
+
+        return usuario;
+    }
     private async Task<Usuario> CrearUsuarioAuditoriaAsync()
     {
         var rol = new Rol("admin", "Administrador");
@@ -80,6 +99,42 @@ public class PedidosServicioTests : IDisposable
         await _contexto.SaveChangesAsync();
 
         return usuario;
+    }
+
+    [Fact]
+    public async Task ListarListosParaDespachoAsync_DebeUsarHoraListoDeCocinaComoReferenciaDespacho()
+    {
+        var (mesa, producto) = await CrearMesaYProductoAsync(80);
+        var pedido = new Pedido(TipoServicio.ComerAqui, mesa);
+        pedido.AgregarDetalle(new DetallePedido(producto, 1, 3.50m, null, null));
+        pedido.MarcarEnPreparacion();
+        pedido.MarcarListo();
+
+        typeof(Pedido).GetProperty(nameof(Pedido.CreatedAt))!
+            .SetValue(pedido, DateTime.UtcNow.AddHours(-6));
+
+        var orden = new OrdenCocina(
+            pedido.Id,
+            pedido.Detalles.Single().Id,
+            producto.Nombre,
+            1,
+            EstacionCocina.Bar,
+            mesa.Numero,
+            pedido.TipoServicio.ToString(),
+            productoId: producto.Id);
+        orden.MarcarComoListo();
+        var horaLista = orden.HoraListo!.Value;
+
+        await _uot.Pedidos.AgregarAsync(pedido);
+        await _uot.OrdenesCocina.AgregarAsync(orden);
+        await _uot.GuardarCambiosAsync();
+
+        var listos = await _servicio.ListarListosParaDespachoAsync();
+
+        var dto = Assert.Single(listos, p => p.Id == pedido.Id);
+        Assert.NotNull(dto.FechaListoDespacho);
+        Assert.True((dto.FechaListoDespacho!.Value - horaLista).Duration() < TimeSpan.FromSeconds(2));
+        Assert.True((dto.FechaListoDespacho.Value - dto.FechaCreacion).Duration() > TimeSpan.FromHours(5));
     }
 
     [Fact]
@@ -118,6 +173,28 @@ public class PedidosServicioTests : IDisposable
         Assert.Equal(EstadoMesa.Ocupada, mesaActualizada!.Estado);
     }
 
+    [Fact]
+    public async Task CrearPedido_ComerAqui_ComoMesero_DebeAsignarMeseroActual()
+    {
+        var mesero = await CrearMeseroAsync("mesero-asignado");
+        var (mesa, producto) = await CrearMesaYProductoAsync(19);
+        var servicioMesero = new PedidosServicio(
+            _uot,
+            _notificadorSpy,
+            httpContextAccessor: TestHttpContextAccessor.ConUsuarioAutenticado(mesero.Id, "Mesero"));
+
+        var pedido = await servicioMesero.CrearPedidoAsync(TipoServicio.ComerAqui, mesa.Id, new List<DetalleCreacionDto>
+        {
+            new() { ProductoId = producto.Id, Cantidad = 1, PrecioUnitario = 3.50m }
+        });
+
+        var persistido = await _contexto.Set<Pedido>()
+            .AsNoTracking()
+            .SingleAsync(p => p.Id == pedido.Id);
+
+        Assert.Equal(mesero.Id, pedido.MeseroAsignadoId);
+        Assert.Equal(mesero.Id, persistido.MeseroAsignadoId);
+    }
     [Fact]
     public async Task CrearPedido_ParaLlevar_ConMesa_DebeLanzarExcepcion()
     {
@@ -240,7 +317,7 @@ public class PedidosServicioTests : IDisposable
     }
 
     [Fact]
-    public async Task PagarPedido_UnicoPedidoEnMesa_DebeLiberarMesa()
+    public async Task PagarPedido_UnicoPedidoEnMesa_DebeMantenerMesaOcupadaHastaDespacho()
     {
         var (mesa, producto) = await CrearMesaYProductoAsync(30);
 
@@ -253,7 +330,8 @@ public class PedidosServicioTests : IDisposable
 
         var mesaActualizada = await _uot.Mesas.ObtenerPorIdAsync(mesa.Id);
         Assert.NotNull(mesaActualizada);
-        Assert.Equal(EstadoMesa.Disponible, mesaActualizada!.Estado);
+        Assert.Equal(EstadoMesa.Ocupada, mesaActualizada!.Estado);
+        Assert.Null(mesaActualizada.GraciaHasta);
     }
 
     [Fact]

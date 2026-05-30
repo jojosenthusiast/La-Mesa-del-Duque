@@ -6,7 +6,7 @@
 (function () {
     // ── Lucide SVG helper ──────────────────────────────
     function icon(name, cls) {
-        return '<svg class="lmd-icon ' + (cls || '') + '" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="https://cdn.jsdelivr.net/npm/lucide-static@latest/icons/' + name + '.svg#icon"/></svg>';
+        return '<svg class="lmd-icon ' + (cls || '') + '" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="/lib/lucide-static/icons/' + name + '.svg#icon"/></svg>';
     }
 
     // ── Helpers ─────────────────────────────────────────
@@ -16,6 +16,28 @@
     function totalLineas(lineas) {
         return lineas.reduce(function (s, l) { return s + (l.precioUnitario || 0) * (l.cantidad || 0); }, 0);
     }
+
+    function escapeHtml(value) {
+        return String(value ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    function escapeJsString(value) {
+        return String(value ?? '')
+            .replace(/\\/g, '\\\\')
+            .replace(/'/g, "\\'")
+            .replace(/\r/g, '\\r')
+            .replace(/\n/g, '\\n')
+            .replace(/</g, '\\x3C')
+            .replace(/>/g, '\\x3E')
+            .replace(/&/g, '\\x26')
+            .replace(/"/g, '&quot;');
+    }
+
 
     // ── State ──────────────────────────────────────────
     const state = {
@@ -126,7 +148,7 @@
                     '<span class="lmd-pos-mesa-card__numero">' + m.numero + '</span>' +
                     '<span class="lmd-pos-mesa-card__capacidad">' + m.capacidad + ' pax</span>' +
                     badgeHtml +
-                    (m.zona ? '<span class="lmd-pos-mesa-card__zona">' + m.zona + '</span>' : '') +
+                    (m.zona ? '<span class="lmd-pos-mesa-card__zona">' + escapeHtml(m.zona) + '</span>' : '') +
                 '</div>';
             });
         });
@@ -251,8 +273,8 @@
         cats.sort(function (a, b) { return a === 'Todos' ? -1 : b === 'Todos' ? 1 : a.localeCompare(b); });
 
         var catHtml = cats.map(function (c) {
-            return '<button class="lmd-pos-cat-btn' + (c === 'Todos' ? ' lmd-pos-cat-btn--activa' : '') + '" data-cat="' + c + '" onclick="pos.filtrarCategoria(\'' + c.replace(/'/g, "\\'") + '\')">' +
-                icon(c === 'Todos' ? 'layers' : c === 'Bebidas' ? 'wine' : c === 'Postres' ? 'cake-slice' : 'utensils') + '<span>' + c + '</span>' +
+            return '<button class="lmd-pos-cat-btn' + (c === 'Todos' ? ' lmd-pos-cat-btn--activa' : '') + '" data-cat="' + escapeHtml(c) + '" onclick="pos.filtrarCategoria(\'' + escapeJsString(c) + '\')">' +
+                icon(c === 'Todos' ? 'layers' : c === 'Bebidas' ? 'wine' : c === 'Postres' ? 'cake-slice' : 'utensils') + '<span>' + escapeHtml(c) + '</span>' +
             '</button>';
         }).join('');
 
@@ -265,7 +287,7 @@
             : state.lineas.map(function (l, i) {
                 return '<div class="lmd-pos-cart-item">' +
                     '<div class="lmd-pos-cart-item__info">' +
-                        '<span class="lmd-pos-cart-item__nombre">' + (l.productoNombre || l.nombre || '') + (l.tieneModificaciones ? '<span class="lmd-pos-mod-dot" title="Tiene modificaciones"></span>' : '') + '</span>' +
+                        '<span class="lmd-pos-cart-item__nombre">' + escapeHtml(l.productoNombre || l.nombre || '') + (l.tieneModificaciones ? '<span class="lmd-pos-mod-dot" title="Tiene modificaciones"></span>' : '') + '</span>' +
                         '<span class="lmd-pos-cart-item__precio">' + fmt((l.precioUnitario || 0) * (l.cantidad || 0)) + '</span>' +
                     '</div>' +
                     '<div class="lmd-pos-cart-item__controles">' +
@@ -320,11 +342,24 @@
         return filtered.map(function (p) {
             var agotado = p.agotado === true;
             var ico = p.categoriaNombre === 'Bebidas' ? 'wine' : p.categoriaNombre === 'Postres' ? 'cake-slice' : 'utensils';
-            return '<div class="lmd-pos-producto-card' + (agotado ? ' lmd-pos-producto-card--agotado' : '') + '">' +
-                '<div class="lmd-pos-producto-card__body" onclick="' + (agotado || state.pagado ? '' : 'pos.agregarAlCarrito(\'' + p.id + '\',\'' + (p.nombre || '').replace(/'/g, "\\'") + '\',' + (p.precio || 0) + ')') + '">' +
+            var tienePromo = !!p.promoNombre;
+            var precioConDescuento = tienePromo
+                ? (p.promoTipo === 'porcentaje'
+                    ? p.precio - Math.round(p.precio * p.promoDescuento / 100 * 100) / 100
+                    : p.precio - p.promoDescuento)
+                : p.precio;
+            var precioHtml = tienePromo
+                ? '<span class="lmd-pos-producto-card__precio lmd-pos-producto-card__precio--promo">' +
+                      '<s class="lmd-pos-producto-card__precio-original">' + fmt(p.precio || 0) + '</s> ' +
+                      fmt(Math.max(0, precioConDescuento)) +
+                  '</span>'
+                : '<span class="lmd-pos-producto-card__precio">' + fmt(p.precio || 0) + '</span>';
+            return '<div class="lmd-pos-producto-card' + (agotado ? ' lmd-pos-producto-card--agotado' : '') + (tienePromo ? ' lmd-pos-producto-card--promo' : '') + '">' +
+                '<div class="lmd-pos-producto-card__body" onclick="' + (agotado || state.pagado ? '' : 'pos.agregarAlCarrito(\'' + escapeJsString(p.id) + '\',\'' + escapeJsString(p.nombre || '') + '\',' + (p.precio || 0) + ')') + '">' +
                     '<div class="lmd-pos-producto-card__ico">' + icon(ico) + '</div>' +
-                    '<span class="lmd-pos-producto-card__nombre">' + (p.nombre || '') + '</span>' +
-                    '<span class="lmd-pos-producto-card__precio">' + fmt(p.precio || 0) + '</span>' +
+                    '<span class="lmd-pos-producto-card__nombre">' + escapeHtml(p.nombre || '') + '</span>' +
+                    precioHtml +
+                    (tienePromo ? '<span class="lmd-pos-producto-card__promo-badge">' + icon('tag') + ' ' + escapeHtml(p.promoNombre || 'PROMO') + '</span>' : '') +
                     (p.tiempoPreparacionMin ? '<span class="lmd-pos-producto-card__tiempo">' + p.tiempoPreparacionMin + ' min</span>' : '') +
                     (agotado ? '<span class="lmd-pos-producto-card__agotado-badge">Agotado</span>' : '') +
                 '</div>' +
@@ -710,20 +745,38 @@
                     '<span class="lmd-pos-tarjeta-chip">Amex</span>' +
                     '<span class="lmd-pos-tarjeta-chip">Débito</span>' +
                 '</div>' +
+                '<div class="lmd-pos-tarjeta-ref-group">' +
+                    '<label class="lmd-pos-tarjeta-ref-label" for="pos-tarjeta-ref">' + icon('hash') + ' N.° de autorización (voucher)</label>' +
+                    '<input id="pos-tarjeta-ref" class="lmd-pos-tarjeta-ref-input" type="text" placeholder="Ej. 123456 / AUTH-ABC" autocomplete="off" />' +
+                    '<p id="pos-tarjeta-ref-error" class="lmd-pos-tarjeta-ref-error" style="display:none">El número de autorización es obligatorio.</p>' +
+                '</div>' +
                 '<div class="lmd-pos-tarjeta-actions">' +
                     '<button class="lmd-pos-ov-btn" onclick="pos.volverAMetodos()">' + icon('arrow-left') + ' Volver</button>' +
-                    '<button class="lmd-pos-ov-btn lmd-pos-ov-btn--danger" onclick="pos.simularRechazo(\'tarjeta\')">' + icon('x-circle') + ' Simular rechazo</button>' +
-                    '<button class="lmd-pos-ov-btn lmd-pos-ov-btn--primary" onclick="pos.simularTarjeta(' + total.toFixed(2) + ')">' + icon('check-circle') + ' Confirmar pago</button>' +
+                    '<button class="lmd-pos-ov-btn lmd-pos-ov-btn--danger" onclick="pos.simularRechazo(\'tarjeta\')">' + icon('x-circle') + ' Rechazada</button>' +
+                    '<button class="lmd-pos-ov-btn lmd-pos-ov-btn--primary" onclick="pos.confirmarTarjeta(' + total.toFixed(2) + ')">' + icon('check-circle') + ' Confirmar pago</button>' +
                 '</div>' +
             '</div>';
 
         cerrarOverlay('pago');
         abrirOverlay('tarjeta', html, { closeOnBackdrop: false });
+        setTimeout(function () { var el = document.getElementById('pos-tarjeta-ref'); if (el) el.focus(); }, 100);
+    }
+
+    function confirmarTarjeta(total) {
+        var input = document.getElementById('pos-tarjeta-ref');
+        var ref = input ? input.value.trim() : '';
+        var errEl = document.getElementById('pos-tarjeta-ref-error');
+        if (!ref) {
+            if (errEl) errEl.style.display = '';
+            if (input) input.focus();
+            return;
+        }
+        cerrarOverlay('tarjeta');
+        finalizarPago('tarjeta', total, ref);
     }
 
     function simularTarjeta(total) {
         cerrarOverlay('tarjeta');
-        lmdToast('Tarjeta procesada correctamente', 'success');
         finalizarPago('tarjeta', total, 'TARJ-' + Date.now().toString(36).toUpperCase());
     }
 
@@ -973,7 +1026,7 @@
             }
             var pendiente = !esMixto && item.persona < 0;
             return '<tr' + (pendiente ? ' class="lmd-pos-split-asig-row--pendiente"' : '') + '>' +
-                '<td class="lmd-pos-split-asig-nombre">' + (item.cantidad > 1 ? item.cantidad + 'x ' : '') + item.nombre + '<span class="lmd-pos-split-asig-precio">' + fmt(item.precio) + '</span></td>' +
+                '<td class="lmd-pos-split-asig-nombre">' + (item.cantidad > 1 ? item.cantidad + 'x ' : '') + escapeHtml(item.nombre) + '<span class="lmd-pos-split-asig-precio">' + fmt(item.precio) + '</span></td>' +
                 celdas + '</tr>';
         }).join('');
 
@@ -1086,7 +1139,7 @@
         var persona = personas[idx];
         var html =
             '<div class="lmd-pos-ov-header">' +
-                '<span class="lmd-pos-ov-title">' + icon('user') + ' ' + persona.nombre + '</span>' +
+                '<span class="lmd-pos-ov-title">' + icon('user') + ' ' + escapeHtml(persona.nombre) + '</span>' +
                 '<div class="lmd-pos-ov-total">' + fmt(persona.monto) + '</div>' +
             '</div>' +
             '<div class="lmd-pos-pm-grid">' +
@@ -1101,7 +1154,7 @@
             '<div class="lmd-pos-split-progress">' +
                 personas.map(function (p, i) {
                     return '<div class="lmd-pos-split-progress__item' + (p.pagado ? ' pagado' : '') + (i === idx ? ' activo' : '') + '">' +
-                        '<span>' + p.nombre + '</span><span>' + (p.pagado ? icon('check') : fmt(p.monto)) + '</span>' +
+                        '<span>' + escapeHtml(p.nombre) + '</span><span>' + (p.pagado ? icon('check') : fmt(p.monto)) + '</span>' +
                     '</div>';
                 }).join('') +
             '</div>';
@@ -1133,7 +1186,7 @@
         var html =
             '<div class="lmd-pos-ov-header">' +
                 '<button class="lmd-pos-ov-back" onclick="pos.cobrarSiguientePersona()">' + icon('arrow-left') + '</button>' +
-                '<span class="lmd-pos-ov-title">' + icon('banknote') + ' Efectivo — ' + state.split.personas[idx].nombre + '</span>' +
+                '<span class="lmd-pos-ov-title">' + icon('banknote') + ' Efectivo — ' + escapeHtml(state.split.personas[idx].nombre) + '</span>' +
                 '<div class="lmd-pos-ov-total">' + fmt(total) + '</div>' +
             '</div>' +
             '<div class="lmd-pos-efectivo-body">' +
@@ -1213,6 +1266,15 @@
                     return;
                 }
                 if (data && data.mensaje) lmdToast(data.mensaje, 'success');
+                if (data && data.ticketHtml) {
+                    await refrescarMesas();
+                    state.pagado = true;
+                    cerrarTodasOverlaysPago();
+                    renderProductos();
+                    mostrarPantalla('productos');
+                    mostrarTicketModal(data.ticketHtml);
+                    return;
+                }
             } catch (e) { lmdToast('Error de conexión', 'error'); return; }
         }
 
@@ -1222,6 +1284,23 @@
         renderProductos();
         mostrarPantalla('productos');
         lmdToast('Pago registrado. Presiona Finalizar para el comprobante.', 'success');
+    }
+
+    function mostrarTicketModal(html) {
+        var overlay = document.createElement('div');
+        overlay.className = 'lmd-ticket-modal-backdrop';
+        overlay.innerHTML =
+            '<div class="lmd-ticket-modal">' +
+                '<div class="lmd-ticket-modal-header">' +
+                    '<span>' + icon('receipt') + ' Ticket de compra</span>' +
+                    '<div class="lmd-ticket-modal-actions">' +
+                        '<button class="lmd-pos-ov-btn lmd-pos-ov-btn--primary" onclick="this.closest(\'.lmd-ticket-modal\').querySelector(\'iframe\').contentWindow.print()">' + icon('printer') + ' Imprimir</button>' +
+                        '<button class="lmd-pos-ov-btn" onclick="this.closest(\'.lmd-ticket-modal-backdrop\').remove(); pos.nuevaOrden();">' + icon('check') + ' Listo</button>' +
+                    '</div>' +
+                '</div>' +
+                '<iframe class="lmd-ticket-modal-frame" srcdoc="' + html.replace(/"/g, '&quot;') + '" sandbox="allow-same-origin allow-scripts"></iframe>' +
+            '</div>';
+        document.body.appendChild(overlay);
     }
 
     // ═══════════════════════════════════════════════════
@@ -1344,7 +1423,7 @@
         var alergenosHtml = _mod.alergenosProducto.length > 0
             ? _mod.alergenosProducto.map(function (a) {
                 var activo = _mod.alergias.indexOf(a.nombre.toLowerCase()) >= 0;
-                return '<button class="lmd-mod-alergia-btn' + (activo ? ' activo' : '') + '" onclick="pos.toggleAlergia(\'' + a.nombre.toLowerCase() + '\')">' + a.nombre + '</button>';
+                return '<button class="lmd-mod-alergia-btn' + (activo ? ' activo' : '') + '" onclick="pos.toggleAlergia(\'' + escapeJsString(a.nombre.toLowerCase()) + '\')">' + escapeHtml(a.nombre) + '</button>';
               }).join('')
             : '<span class="lmd-mod-empty">Sin alérgenos registrados</span>';
 
@@ -1353,18 +1432,18 @@
                 var est = ing.estado || 'normal';
                 var otros = _mod.ingredientes.filter(function (o) { return o.id !== ing.id; });
                 var reemplazoSel = est === 'quitado' && otros.length > 0
-                    ? '<select class="lmd-mod-ing-reemplazo" onchange="pos.cambiarReemplazo(\'' + ing.id + '\', this.value)">' +
+                    ? '<select class="lmd-mod-ing-reemplazo" onchange="pos.cambiarReemplazo(\'' + escapeJsString(ing.id) + '\', this.value)">' +
                           '<option value="">— Sin reemplazo</option>' +
                           otros.map(function (o) {
-                              return '<option value="' + o.id + '"' + (ing.reemplazoId === o.id ? ' selected' : '') + '>' + o.nombre + '</option>';
+                              return '<option value="' + escapeHtml(o.id) + '"' + (ing.reemplazoId === o.id ? ' selected' : '') + '>' + escapeHtml(o.nombre) + '</option>';
                           }).join('') +
                       '</select>'
                     : '';
                 return '<div class="lmd-mod-ing-row lmd-mod-ing-row--' + est + '">' +
-                    '<span class="lmd-mod-ing-nombre">' + ing.nombre + ' <small>(' + ing.cantidad + ')</small></span>' +
+                    '<span class="lmd-mod-ing-nombre">' + escapeHtml(ing.nombre) + ' <small>(' + escapeHtml(ing.cantidad) + ')</small></span>' +
                     '<div class="lmd-mod-ing-acciones">' +
-                        '<button class="lmd-mod-ing-btn lmd-mod-ing-btn--extra' + (est === 'extra' ? ' activo' : '') + '" onclick="pos.toggleEstadoIngrediente(\'' + ing.id + '\', \'extra\')" title="Extra">' + icon('plus-circle') + '</button>' +
-                        '<button class="lmd-mod-ing-btn lmd-mod-ing-btn--quitar' + (est === 'quitado' ? ' activo' : '') + '" onclick="pos.toggleEstadoIngrediente(\'' + ing.id + '\', \'quitado\')" title="Quitar">' + icon('minus-circle') + '</button>' +
+                        '<button class="lmd-mod-ing-btn lmd-mod-ing-btn--extra' + (est === 'extra' ? ' activo' : '') + '" onclick="pos.toggleEstadoIngrediente(\'' + escapeJsString(ing.id) + '\', \'extra\')" title="Extra">' + icon('plus-circle') + '</button>' +
+                        '<button class="lmd-mod-ing-btn lmd-mod-ing-btn--quitar' + (est === 'quitado' ? ' activo' : '') + '" onclick="pos.toggleEstadoIngrediente(\'' + escapeJsString(ing.id) + '\', \'quitado\')" title="Quitar">' + icon('minus-circle') + '</button>' +
                     '</div>' +
                     reemplazoSel +
                 '</div>';
@@ -1373,7 +1452,7 @@
 
         var html =
             '<div class="lmd-pos-ov-header">' +
-                '<span class="lmd-pos-ov-title">' + icon('edit-3') + ' ' + _mod.productoNombre + '</span>' +
+                '<span class="lmd-pos-ov-title">' + icon('edit-3') + ' ' + escapeHtml(_mod.productoNombre) + '</span>' +
                 '<button class="lmd-pos-ov-close" onclick="pos.cerrarModificadores()">' + icon('x') + '</button>' +
             '</div>' +
             '<div class="lmd-mod-body">' +
@@ -1387,7 +1466,7 @@
                 '</div>' +
                 '<div class="lmd-mod-section">' +
                     '<div class="lmd-mod-section__title">' + icon('message-square') + ' Nota para cocina</div>' +
-                    '<textarea class="lmd-mod-nota" rows="2" placeholder="Ej: sin sal, bien cocido..." oninput="pos._setNotaCustom(this.value)">' + (_mod.notaCustom || '') + '</textarea>' +
+                    '<textarea class="lmd-mod-nota" rows="2" placeholder="Ej: sin sal, bien cocido..." oninput="pos._setNotaCustom(this.value)">' + escapeHtml(_mod.notaCustom || '') + '</textarea>' +
                 '</div>' +
                 '<button class="lmd-mod-confirmar" onclick="pos.confirmarModificadores()">' + icon('check-circle') + ' Confirmar cambios</button>' +
             '</div>';
@@ -1546,7 +1625,7 @@
             '</div>' +
             '<div class="lmd-pos-error-pago-body">' +
                 '<div class="lmd-pos-error-pago-icon">' + icon('x-circle') + '</div>' +
-                '<p class="lmd-pos-error-pago-mensaje">' + mensaje + '</p>' +
+                '<p class="lmd-pos-error-pago-mensaje">' + escapeHtml(mensaje) + '</p>' +
                 '<div class="lmd-pos-error-pago-actions">' +
                     '<button class="lmd-pos-ov-btn lmd-pos-ov-btn--primary" onclick="pos.reintentarPago(\'' + metodo + '\')">' + icon('refresh-cw') + ' Reintentar</button>' +
                     '<button class="lmd-pos-ov-btn" onclick="pos.volverAMetodos()">' + icon('credit-card') + ' Otro método</button>' +
@@ -1584,13 +1663,46 @@
                 }
             });
             connection.on('ProductoAgotado', function (productoId) {
+                marcarProductoAgotadoEnUI(productoId, '');
+            });
+            connection.on('productoAgotado', function (productoId, nombreProducto) {
+                marcarProductoAgotadoEnUI(productoId, nombreProducto);
+            });
+            connection.on('productoReactivado', function (productoId) {
                 var prods = window.__lmdProductosDisponibles || [];
-                var marcado = false;
-                prods.forEach(function (p) { if (p.id === productoId) { p.agotado = true; marcado = true; } });
-                if (marcado) { renderProductos(); lmdToast('Un producto fue marcado como agotado', 'warn'); }
+                prods.forEach(function (p) { if (String(p.id) === String(productoId)) { p.agotado = false; } });
+                document.querySelectorAll('[data-producto-id="' + productoId + '"]').forEach(function (el) {
+                    el.classList.remove('lmd-producto-agotado');
+                    var badge = el.querySelector('.lmd-badge-agotado');
+                    if (badge) badge.remove();
+                    el.style.pointerEvents = '';
+                });
+                renderProductos && renderProductos();
             });
             await connection.start();
         } catch (e) {}
+    }
+
+    function marcarProductoAgotadoEnUI(productoId, nombre) {
+        var prods = window.__lmdProductosDisponibles || [];
+        var marcado = false;
+        prods.forEach(function (p) {
+            if (String(p.id) === String(productoId)) { p.agotado = true; marcado = true; }
+        });
+        document.querySelectorAll('[data-producto-id="' + productoId + '"]').forEach(function (el) {
+            el.classList.add('lmd-producto-agotado');
+            el.style.pointerEvents = 'none';
+            if (!el.querySelector('.lmd-badge-agotado')) {
+                var badge = document.createElement('span');
+                badge.className = 'lmd-badge-agotado';
+                badge.textContent = 'AGOTADO';
+                el.appendChild(badge);
+            }
+        });
+        if (marcado) {
+            renderProductos();
+            lmdToast((nombre ? nombre + ': ' : '') + 'producto marcado como agotado (86)', 'warn');
+        }
     }
 
     async function refrescarMesas() {
@@ -1610,14 +1722,14 @@
         cancelarOrden, confirmarListo, irAPago,
         cerrarPago, procesarPago,
         seleccionarBillete, keypadInput, keypadConfirmar,
-        volverAMetodos, simularTarjeta, simularQR, confirmarOtro,
+        volverAMetodos, simularTarjeta, confirmarTarjeta, simularQR, confirmarOtro,
         abrirSplit, volverAPago, splitIgualitario, splitPorPersona, splitMixto,
         toggleEstadoIngrediente, cambiarReemplazo,
         iniciarAsignacionSplit, asignarItemSplit, confirmarAsignacionSplit, _renderSplitNPicker, _renderSplitAsignacion,
         confirmarAnulacion,
         ajustarSplitN, iniciarSplitIgualitario, cobrarSiguientePersona,
         pagarPersonaSplit, seleccionarBilleteSplit, confirmarEfectivoSplit,
-        emitirDocumento, nuevaOrden,
+        emitirDocumento, nuevaOrden, mostrarTicketModal,
         confirmarPropina,
         abrirModificadores, toggleAlergia, _setNotaCustom,
         cerrarModificadores, confirmarModificadores,

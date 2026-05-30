@@ -12,7 +12,7 @@ public interface IPedidosServicio
     Task<PedidoDto> ActualizarCantidadDetalleAsync(Guid pedidoId, Guid detalleId, int nuevaCantidad, CancellationToken cancelacion = default);
     Task MarcarEnPreparacionAsync(Guid pedidoId, CancellationToken cancelacion = default);
     Task MarcarListoAsync(Guid pedidoId, CancellationToken cancelacion = default);
-    Task PagarPedidoAsync(Guid pedidoId, CancellationToken cancelacion = default);
+    Task PagarPedidoAsync(Guid pedidoId, MetodoPago metodoPago = MetodoPago.Efectivo, string? referenciaPos = null, CancellationToken cancelacion = default);
     Task CancelarPedidoAsync(Guid pedidoId, CancellationToken cancelacion = default);
 
     Task AnularPagoAsync(Guid pedidoId, CancellationToken cancelacion = default);
@@ -23,6 +23,6 @@ public interface IPedidosServicio
     Task MarcarEnCobroAsync(Guid pedidoId, CancellationToken cancelacion = default);
     Task<List<CuentaDto>> CrearCuentasAsync(Guid pedidoId, int cantidad, CancellationToken cancelacion = default);
     Task<List<CuentaDto>> CrearCuentasConItemsAsync(Guid pedidoId, Dictionary<int, List<(Guid detalleId, int cantidad)>> asignaciones, CancellationToken cancelacion = default);
-    Task<CuentaDto> PagarCuentaAsync(Guid cuentaId, MetodoPago metodoPago, decimal propinaMonto = 0, CancellationToken cancelacion = default);
+    Task<CuentaDto> PagarCuentaAsync(Guid cuentaId, MetodoPago metodoPago, decimal propinaMonto = 0, string? referenciaPos = null, CancellationToken cancelacion = default);
     Task<List<CuentaDto>> ObtenerCuentasAsync(Guid pedidoId, CancellationToken cancelacion = default);
 }

@@ -6,8 +6,10 @@ public class PedidoDto
     public string TipoServicio { get; set; } = string.Empty;
     public Guid? MesaId { get; set; }
     public int? MesaNumero { get; set; }
+    public Guid? MeseroAsignadoId { get; set; }
     public string Estado { get; set; } = string.Empty;
     public decimal Total { get; set; }
     public DateTime FechaCreacion { get; set; }
+    public DateTime? FechaListoDespacho { get; set; }
     public List<DetallePedidoDto> Detalles { get; set; } = [];
 }

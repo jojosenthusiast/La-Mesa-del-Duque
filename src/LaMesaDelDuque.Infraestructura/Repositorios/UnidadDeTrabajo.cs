@@ -1,4 +1,5 @@
 using LaMesaDelDuque.Dominio.Entidades;
+using LaMesaDelDuque.Dominio.Excepciones;
 using LaMesaDelDuque.Dominio.Repositorios;
 using LaMesaDelDuque.Infraestructura.Persistencia;
 using Microsoft.EntityFrameworkCore;
@@ -23,6 +24,11 @@ internal class UnidadDeTrabajo : IUnidadDeTrabajo
         OrdenCocinaRepositorio ordenCocinaRepositorio,
         CuentaRepositorio cuentaRepositorio,
         PagoRepositorio pagoRepositorio,
+        PromocionRepositorio promocionRepositorio,
+        TurnoCajaRepositorio turnoCajaRepositorio,
+        DescuentoRepositorio descuentoRepositorio,
+        MotivoDescuentoRepositorio motivoDescuentoRepositorio,
+        DevolucionRepositorio devolucionRepositorio,
         ProveedorRepositorio? proveedorRepositorio = null,
         MermaRepositorio? mermaRepositorio = null,
         CierreDiaRepositorio? cierreDiaRepositorio = null,
@@ -41,6 +47,11 @@ internal class UnidadDeTrabajo : IUnidadDeTrabajo
         OrdenesCocina = ordenCocinaRepositorio;
         Cuentas = cuentaRepositorio;
         Pagos = pagoRepositorio;
+        Promociones = promocionRepositorio;
+        TurnosCaja = turnoCajaRepositorio;
+        Descuentos = descuentoRepositorio;
+        MotivosDescuento = motivoDescuentoRepositorio;
+        Devoluciones = devolucionRepositorio;
         Proveedores = proveedorRepositorio;
         Mermas = mermaRepositorio!;
         CierresDia = cierreDiaRepositorio!;
@@ -77,7 +88,15 @@ internal class UnidadDeTrabajo : IUnidadDeTrabajo
         OrdenesCocina = ordenCocinaRepositorio;
         Cuentas = cuentaRepositorio;
         Pagos = pagoRepositorio;
+        Proveedores = new ProveedorRepositorio(contexto);
+        Mermas = new MermaRepositorio(contexto);
+        CierresDia = new CierreDiaRepositorio(contexto);
         ZonasSalon = zonaSalonRepositorio;
+        Promociones = new PromocionRepositorio(contexto);
+        TurnosCaja = new TurnoCajaRepositorio(contexto);
+        Descuentos = new DescuentoRepositorio(contexto);
+        MotivosDescuento = new MotivoDescuentoRepositorio(contexto);
+        Devoluciones = new DevolucionRepositorio(contexto);
     }
 
     public ICategoriaProductoRepositorio Categorias { get; }
@@ -96,10 +115,22 @@ internal class UnidadDeTrabajo : IUnidadDeTrabajo
     public IMermaRepositorio Mermas { get; } = null!;
     public ICierreDiaRepositorio CierresDia { get; } = null!;
     public IZonaSalonRepositorio ZonasSalon { get; } = null!;
+    public IPromocionRepositorio Promociones { get; } = null!;
+    public ITurnoCajaRepositorio TurnosCaja { get; } = null!;
+    public IDescuentoRepositorio Descuentos { get; } = null!;
+    public IMotivoDescuentoRepositorio MotivosDescuento { get; } = null!;
+    public IDevolucionRepositorio Devoluciones { get; } = null!;
 
     public async Task<int> GuardarCambiosAsync(CancellationToken cancelacion = default)
     {
-        return await _contexto.SaveChangesAsync(cancelacion);
+        try
+        {
+            return await _contexto.SaveChangesAsync(cancelacion);
+        }
+        catch (DbUpdateConcurrencyException ex)
+        {
+            throw new ConcurrenciaException("La información fue modificada por otra operación. Vuelva a intentarlo.", ex);
+        }
     }
 
     public async Task<int> ObtenerPeriodoGraciaMinutosAsync(CancellationToken cancelacion = default)

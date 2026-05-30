@@ -3,23 +3,32 @@ using LaMesaDelDuque.Aplicacion.Notificaciones;
 using LaMesaDelDuque.Dominio.Entidades;
 using LaMesaDelDuque.Infraestructura;
 using LaMesaDelDuque.Infraestructura.Persistencia;
+using LaMesaDelDuque.Web.Filtros;
 using LaMesaDelDuque.Web.Hubs;
+using LaMesaDelDuque.Web.Seguridad;
 using LaMesaDelDuque.Web.Servicios;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using QuestPDF.Infrastructure;
 
 // Requerido por Npgsql 6+ con Supabase: sin esto los DateTime fallan al leer/escribir
 AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 
+// QuestPDF Community License
+QuestPDF.Settings.License = LicenseType.Community;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
+builder.Services.AddScoped<ManejadorExcepcionesJsonFilter>();
 builder.Services.AddRazorPages(options =>
 {
     options.Conventions.AuthorizePage("/Index");
     options.Conventions.AuthorizeFolder("/Operaciones");
     options.Conventions.AuthorizeFolder("/Admin");
+    options.Conventions.ConfigureFilter(new TypeFilterAttribute(typeof(ManejadorExcepcionesJsonFilter)));
 });
 
 // Autenticación por cookies
@@ -45,6 +54,7 @@ builder.Services.AgregarAplicacion();
 builder.Services.AddScoped<INotificadorPedidos, SignalRNotificadorPedidos>();
 builder.Services.AddScoped<INotificadorSalon, SignalRNotificadorSalon>();
 builder.Services.AddScoped<INotificadorDashboard, SignalRNotificadorDashboard>();
+builder.Services.AddScoped<INotificadorProductos, SignalRNotificadorProductos>();
 
 // Persistencia con fail-fast si no hay connection string
 builder.Services.AgregarPersistencia(builder.Configuration, builder.Environment.IsDevelopment());
@@ -58,6 +68,7 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 
+app.UseLaMesaSecurityHeaders();
 app.UseHttpsRedirection();
 app.UseStaticFiles();
 
@@ -85,8 +96,10 @@ if (app.Environment.IsDevelopment())
         var meseroRol = new Rol("Mesero", "Captura de pedidos y consulta de salón");
         var encargadoRol = new Rol("Encargado", "Gestión de catálogo, mesas y reportes");
         var cocineroRol = new Rol("Cocinero", "Visualización de pedidos en preparación");
-        var cajeroRol = new Rol("Cajero", "Cobro en caja, despacho y cierre de turno");
-        db.Set<Rol>().AddRange(adminRol, meseroRol, encargadoRol, cocineroRol, cajeroRol);
+        var cajeroRol = new Rol("Cajero", "Cobro en caja y cierre de turno");
+        var gerenteRol = new Rol("Gerente", "Acceso a reportes, dashboard y auditoría sin módulos operativos");
+        var despachoRol = new Rol("Despacho", "Entrega pedidos listos y libera mesas");
+        db.Set<Rol>().AddRange(adminRol, meseroRol, encargadoRol, cocineroRol, cajeroRol, gerenteRol, despachoRol);
         await db.SaveChangesAsync();
 
         var adminHash = BCrypt.Net.BCrypt.HashPassword("Admin123!", 12);
@@ -94,12 +107,16 @@ if (app.Environment.IsDevelopment())
         var encargadoHash = BCrypt.Net.BCrypt.HashPassword("Encargado321!", 12);
         var cocineroHash = BCrypt.Net.BCrypt.HashPassword("Cocina456!", 12);
         var cajeroHash = BCrypt.Net.BCrypt.HashPassword("Cajero567!", 12);
+        var gerenteHash = BCrypt.Net.BCrypt.HashPassword("Gerente890!", 12);
+        var despachoHash = BCrypt.Net.BCrypt.HashPassword("Despacho901!", 12);
         db.Set<Usuario>().AddRange(
             new Usuario("admin", "admin@mesadelduque.com", adminHash, "Administrador", adminRol),
             new Usuario("maria", "maria@mesadelduque.com", meseroHash, "María Mesera", meseroRol),
             new Usuario("carlos", "carlos@mesadelduque.com", encargadoHash, "Carlos Encargado", encargadoRol),
             new Usuario("pedro", "pedro@mesadelduque.com", cocineroHash, "Pedro Cocinero", cocineroRol),
-            new Usuario("sofia", "sofia@mesadelduque.com", cajeroHash, "Sofía Cajera", cajeroRol)
+            new Usuario("sofia", "sofia@mesadelduque.com", cajeroHash, "Sofía Cajera", cajeroRol),
+            new Usuario("luciana", "luciana@mesadelduque.com", gerenteHash, "Luciana Gerente", gerenteRol),
+            new Usuario("ana", "ana@mesadelduque.com", despachoHash, "Ana Despacho", despachoRol)
         );
         await db.SaveChangesAsync();
 
@@ -272,6 +289,35 @@ if (app.Environment.IsDevelopment())
         }
     }
 
+    // Repair incremental development seeds added after the original bootstrap.
+    var despachoRolPersistente = await db.Set<Rol>().FirstOrDefaultAsync(r => r.Nombre == "Despacho");
+    if (despachoRolPersistente is null)
+    {
+        despachoRolPersistente = new Rol("Despacho", "Entrega pedidos listos y libera mesas");
+        db.Set<Rol>().Add(despachoRolPersistente);
+        await db.SaveChangesAsync();
+        Console.WriteLine("[DEV] Despacho role created.");
+    }
+
+    var despachoUsuario = await db.Set<Usuario>().FirstOrDefaultAsync(u => u.Username == "ana");
+    if (despachoUsuario is null)
+    {
+        db.Set<Usuario>().Add(new Usuario(
+            "ana",
+            "ana@mesadelduque.com",
+            BCrypt.Net.BCrypt.HashPassword("Despacho901!", 12),
+            "Ana Despacho",
+            despachoRolPersistente));
+        await db.SaveChangesAsync();
+        Console.WriteLine("[DEV] ana despacho user created.");
+    }
+    else if (despachoUsuario.RolId != despachoRolPersistente.Id)
+    {
+        despachoUsuario.CambiarRol(despachoRolPersistente);
+        await db.SaveChangesAsync();
+        Console.WriteLine("[DEV] ana assigned to Despacho role.");
+    }
+
     if (!await db.Set<RestauranteConfig>().AnyAsync())
     {
         db.Set<RestauranteConfig>().Add(new RestauranteConfig(
@@ -284,6 +330,19 @@ if (app.Environment.IsDevelopment())
         await db.SaveChangesAsync();
     }
 
+    // ── Seed: Motivos de descuento ──────────────────────────
+    if (!await db.Set<MotivoDescuento>().AnyAsync())
+    {
+        db.Set<MotivoDescuento>().AddRange(
+            new MotivoDescuento("Error de cocina", "Producto llegó frío, incorrecto o tarde."),
+            new MotivoDescuento("Cliente VIP", "Cliente frecuente o de alto valor."),
+            new MotivoDescuento("Aniversario o celebración", "Descuento por ocasión especial del cliente."),
+            new MotivoDescuento("Cortesía de la casa", "Obsequio discrecional del establecimiento."),
+            new MotivoDescuento("Inconveniencia al cliente", "Compensación por demora o problema de servicio.")
+        );
+        await db.SaveChangesAsync();
+    }
+
     // Repair stale seed hashes — no-op when already correct
     var seedCredentials = new Dictionary<string, string>
     {
@@ -291,7 +350,9 @@ if (app.Environment.IsDevelopment())
         ["maria"]   = "Mesero789!",
         ["carlos"]  = "Encargado321!",
         ["pedro"]   = "Cocina456!",
-        ["sofia"]   = "Cajero567!"
+        ["sofia"]   = "Cajero567!",
+        ["luciana"] = "Gerente890!",
+        ["ana"]     = "Despacho901!"
     };
     var seedUsernames = seedCredentials.Keys.ToList();
     var seedUsers = await db.Set<Usuario>().Where(u => seedUsernames.Contains(u.Username)).ToListAsync();

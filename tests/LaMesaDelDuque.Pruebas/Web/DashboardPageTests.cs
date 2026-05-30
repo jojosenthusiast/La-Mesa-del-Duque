@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace LaMesaDelDuque.Pruebas.Web;
 
@@ -36,7 +37,7 @@ public class DashboardPageTests : IDisposable
 
         _metricaRepo = new MetricaRepositorio(_contexto);
         _metricaServicio = new MetricaServicio(_metricaRepo);
-        _pageModel = new DashboardModel(_metricaServicio);
+        _pageModel = new DashboardModel(_metricaServicio, NullLogger<DashboardModel>.Instance);
     }
 
     public void Dispose()
@@ -98,13 +99,20 @@ public class DashboardPageTests : IDisposable
 
         var pedido = new Pedido(TipoServicio.ComerAqui, mesa);
         pedido.AgregarDetalle(new DetallePedido(producto, 2, 3.50m));
+        pedido.MarcarEnPreparacion();
+        pedido.MarcarEnCobro();
+        var cuenta = pedido.CrearCuentas(1).Single();
+        var usuarioId = Guid.NewGuid();
+        cuenta.Pagar(MetodoPago.Efectivo, usuarioId: usuarioId);
+        pedido.MarcarComoPagado();
         _contexto.Set<Pedido>().Add(pedido);
+        _contexto.Set<Pago>().Add(new Pago(cuenta.Id, cuenta.Total, MetodoPago.Efectivo, usuarioId: usuarioId));
         await _contexto.SaveChangesAsync();
 
         await _pageModel.OnGetAsync();
 
         Assert.Equal(7.00m, _pageModel.Metricas.VentasHoy);
-        Assert.Equal(1, _pageModel.Metricas.MesasActivas);
+        Assert.Equal(0, _pageModel.Metricas.MesasActivas);
     }
 
     [Fact]
@@ -115,7 +123,7 @@ public class DashboardPageTests : IDisposable
             .FirstOrDefault();
 
         Assert.NotNull(attribute);
-        Assert.Equal("Administrador,Encargado", attribute.Roles);
+        Assert.Equal("Administrador,Encargado,Gerente", attribute.Roles);
     }
 
 }

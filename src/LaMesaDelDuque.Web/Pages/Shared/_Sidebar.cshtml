@@ -1,97 +1,55 @@
+@using LaMesaDelDuque.Web.Navegacion
 @{
-    var activeTab  = ViewData["ActiveTab"]?.ToString() ?? "";
-    var esAdmin    = User.IsInRole("Administrador");
-    var rolLabel   = esAdmin ? "Administrador" : "Encargado";
+    var activeTab   = ViewData["ActiveTab"]?.ToString() ?? "";
+    var esAdmin     = User.IsInRole("Administrador");
+    var esEncargado = User.IsInRole("Encargado");
+    var esGerente   = User.IsInRole("Gerente");
+    var rolLabel    = esAdmin ? "Administrador" : esGerente ? "Gerente" : "Encargado";
+    var sidebarSections = GestionSidebarNavigation.Construir(esAdmin, esEncargado, esGerente);
 }
 
 <aside class="lmd-sidebar" id="lmdSidebar" role="navigation" aria-label="Menú principal">
 
     <div class="lmd-sidebar__header">
-        <img src="~/img/marca/logo-simbolo.png" alt="La Mesa del Duque" class="lmd-sidebar__logo" />
-        <span class="lmd-sidebar__brand">La Mesa del Duque</span>
-        <button class="lmd-sidebar__toggle-btn" id="lmdSidebarToggle" aria-label="Colapsar menú">
-            <i class="bi bi-layout-sidebar-reverse"></i>
+        <a asp-page="/Index"
+           class="lmd-sidebar__brand-link"
+           id="lmdSidebarBrandLink"
+           aria-label="Ir al inicio">
+            <img src="~/img/marca/logo-simbolo.png" alt="La Mesa del Duque" class="lmd-sidebar__logo" />
+            <span class="lmd-sidebar__brand">La Mesa del Duque</span>
+        </a>
+        <button class="lmd-sidebar__toggle-btn"
+                id="lmdSidebarToggle"
+                type="button"
+                aria-controls="lmdSidebar"
+                aria-expanded="true"
+                aria-label="Colapsar menú principal"
+                title="Colapsar menú principal">
+            <i class="bi bi-layout-sidebar-reverse" aria-hidden="true"></i>
         </button>
     </div>
 
     <nav class="lmd-sidebar__nav">
-
-        <div class="lmd-sidebar__section">
-            <span class="lmd-sidebar__section-label">Panel</span>
-            <a asp-page="/Admin/Dashboard/Dashboard"
-               class="lmd-sidebar__item @(activeTab == "Dashboard" ? "lmd-sidebar__item--active" : "")"
-               title="Dashboard">
-                <i class="bi bi-speedometer2"></i>
-                <span>Dashboard</span>
-            </a>
-        </div>
-
-        <div class="lmd-sidebar__section">
-            <span class="lmd-sidebar__section-label">Catálogo</span>
-            <a asp-page="/Operaciones/Productos/Index"
-               class="lmd-sidebar__item @(activeTab == "Productos" ? "lmd-sidebar__item--active" : "")"
-               title="Productos">
-                <i class="bi bi-box-seam"></i>
-                <span>Productos</span>
-            </a>
-            <a asp-page="/Operaciones/Inventario/Index"
-               class="lmd-sidebar__item @(activeTab == "Inventario" ? "lmd-sidebar__item--active" : "")"
-               title="Inventario">
-                <i class="bi bi-archive"></i>
-                <span>Inventario</span>
-            </a>
-        </div>
-
-        <div class="lmd-sidebar__section">
-            <span class="lmd-sidebar__section-label">Salón</span>
-            <a asp-page="/Operaciones/Mesas/Index"
-               class="lmd-sidebar__item @(activeTab == "Mesas" ? "lmd-sidebar__item--active" : "")"
-               title="Mesas">
-                <i class="bi bi-grid"></i>
-                <span>Mesas</span>
-            </a>
-            <a asp-page="/Operaciones/Salon/Mapa"
-               class="lmd-sidebar__item @(activeTab == "Mapa" ? "lmd-sidebar__item--active" : "")"
-               title="Mapa del salón">
-                <i class="bi bi-map"></i>
-                <span>Mapa del salón</span>
-            </a>
-        </div>
-
-        <div class="lmd-sidebar__section">
-            <span class="lmd-sidebar__section-label">Turno</span>
-            <a asp-page="/Cocina/KDS"
-               class="lmd-sidebar__item @(activeTab == "Cocina" ? "lmd-sidebar__item--active" : "")"
-               title="KDS Cocina">
-                <i class="bi bi-display"></i>
-                <span>KDS Cocina</span>
-            </a>
-            <a asp-page="/Operaciones/Cierre/Index"
-               class="lmd-sidebar__item @(activeTab == "Cierre" ? "lmd-sidebar__item--active" : "")"
-               title="Cierre de caja">
-                <i class="bi bi-cash-stack"></i>
-                <span>Cierre de caja</span>
-            </a>
-        </div>
-
-        @if (esAdmin)
+        @foreach (var section in sidebarSections)
         {
         <div class="lmd-sidebar__section">
-            <span class="lmd-sidebar__section-label">Sistema</span>
-            <a asp-page="/Admin/Usuarios/Index"
-               class="lmd-sidebar__item @(activeTab == "Usuarios" ? "lmd-sidebar__item--active" : "")"
-               title="Usuarios">
-                <i class="bi bi-people"></i>
-                <span>Usuarios</span>
+            <span class="lmd-sidebar__section-label">@(section.Label)</span>
+            @foreach (var item in section.Items)
+            {
+            <a asp-page="@(item.Page)"
+               class="lmd-sidebar__item @(activeTab == item.ActiveTab ? "lmd-sidebar__item--active" : "")"
+               title="@(item.Title)">
+                <i class="@(item.IconCss)" aria-hidden="true"></i>
+                <span>@(item.Label)</span>
             </a>
+            }
         </div>
         }
-
     </nav>
 
     <div class="lmd-sidebar__footer">
-        <div class="lmd-sidebar__user">
-            <i class="bi bi-person-circle"></i>
+        <div class="lmd-sidebar__user" aria-label="Sesión actual">
+            <i class="bi bi-person-circle" aria-hidden="true"></i>
             <div class="lmd-sidebar__user-info">
                 <span class="lmd-sidebar__username">@User.Identity?.Name</span>
                 <span class="lmd-sidebar__userrole">@rolLabel</span>
@@ -99,8 +57,8 @@
         </div>
         <form method="post" asp-page="/Auth/Logout">
             @Html.AntiForgeryToken()
-            <button type="submit" class="lmd-sidebar__logout" title="Cerrar sesión">
-                <i class="bi bi-box-arrow-right"></i>
+            <button type="submit" class="lmd-sidebar__logout" title="Cerrar sesión" aria-label="Cerrar sesión">
+                <i class="bi bi-box-arrow-right" aria-hidden="true"></i>
                 <span>Cerrar sesión</span>
             </button>
         </form>
@@ -113,17 +71,40 @@
     var sidebar = document.getElementById('lmdSidebar');
     var toggle  = document.getElementById('lmdSidebarToggle');
     var shell   = document.getElementById('lmdShellMain');
+    var brand   = document.getElementById('lmdSidebarBrandLink');
     var KEY     = 'lmd-sidebar-col';
 
+    function setCollapsed(collapsed) {
+        sidebar?.classList.toggle('lmd-sidebar--collapsed', collapsed);
+        shell?.classList.toggle('lmd-shell-with-sidebar--collapsed', collapsed);
+        localStorage.setItem(KEY, collapsed ? '1' : '0');
+
+        if (toggle) {
+            toggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+            toggle.setAttribute('aria-label', collapsed ? 'Expandir menú principal' : 'Colapsar menú principal');
+            toggle.setAttribute('title', collapsed ? 'Expandir menú principal' : 'Colapsar menú principal');
+        }
+
+        if (brand) {
+            brand.setAttribute('aria-label', collapsed ? 'Expandir menú principal' : 'Ir al inicio');
+        }
+    }
+
     if (localStorage.getItem(KEY) === '1') {
-        sidebar?.classList.add('lmd-sidebar--collapsed');
-        shell?.classList.add('lmd-shell-with-sidebar--collapsed');
+        setCollapsed(true);
+    } else {
+        setCollapsed(false);
     }
 
     toggle?.addEventListener('click', function () {
-        var col = sidebar.classList.toggle('lmd-sidebar--collapsed');
-        shell?.classList.toggle('lmd-shell-with-sidebar--collapsed', col);
-        localStorage.setItem(KEY, col ? '1' : '0');
+        setCollapsed(!sidebar?.classList.contains('lmd-sidebar--collapsed'));
+    });
+
+    brand?.addEventListener('click', function (event) {
+        if (sidebar?.classList.contains('lmd-sidebar--collapsed')) {
+            event.preventDefault();
+            setCollapsed(false);
+        }
     });
 })();
 </script>

@@ -5,76 +5,170 @@
     ViewData["ActiveTab"] = "Despacho";
 }
 
-<section class="lmd-page-header rounded-top"><h1>Despacho</h1></section>
+<section class="lmd-page-header rounded-top">
+    <div>
+        <h1>Despacho</h1>
+        <p class="lmd-page-subtitle">Pedidos listos para entregar al cliente.</p>
+    </div>
+    <span id="lmd-despacho-contador" class="lmd-status-badge lmd-status-badge--active">
+        @Model.PedidosListos.Count listos
+    </span>
+</section>
 
-<section class="bg-white p-0 rounded-bottom">
-    <div class="lmd-toast-zone px-3 pt-3">
+<section class="bg-white p-3 rounded-bottom">
+    @Html.AntiForgeryToken()
+    <div class="lmd-toast-zone mb-3">
         @if (!string.IsNullOrWhiteSpace(Model.ToastSuccess))
         {
-            <div class="alert alert-success alert-dismissible fade show py-2 mb-2" role="status">@Model.ToastSuccess<button type="button" class="btn-close" aria-label="Cerrar"></button></div>
+            <div class="alert alert-success alert-dismissible fade show py-2 mb-2" data-lmd-toast="true" role="status">
+                @Model.ToastSuccess
+                <button type="button" class="btn-close" aria-label="Cerrar"></button>
+            </div>
         }
         @if (!string.IsNullOrWhiteSpace(Model.ToastError))
         {
-            <div class="alert alert-danger alert-dismissible fade show py-2 mb-2" role="alert">@Model.ToastError<button type="button" class="btn-close" aria-label="Cerrar"></button></div>
+            <div class="alert alert-danger alert-dismissible fade show py-2 mb-2" data-lmd-toast="true" role="alert">
+                @Model.ToastError
+                <button type="button" class="btn-close" aria-label="Cerrar"></button>
+            </div>
         }
     </div>
 
-    @if (Model.PedidosListos.Count == 0)
-    {
-        <div class="text-center py-5 text-muted">
-            <i class="bi bi-check-circle" style="font-size:3rem"></i>
-            <p class="mt-3 fs-5">No hay pedidos listos para despachar.</p>
-            <p class="small">Los pedidos aparecerán aquí cuando la cocina los marque como listos.</p>
-        </div>
-    }
-    else
-    {
-        <div class="table-responsive">
-            <table class="table table-striped mb-0">
-                <thead>
-                    <tr>
-                        <th>Mesa</th>
-                        <th>Tipo</th>
-                        <th>Items</th>
-                        <th class="text-end">Total</th>
-                        <th class="text-end">Acción</th>
-                    </tr>
-                </thead>
-                <tbody>
-                @foreach (var pedido in Model.PedidosListos)
+    <div id="lmd-despacho-lista">
+        @if (Model.PedidosListos.Count == 0)
+        {
+            <div class="text-center py-5 text-muted" id="lmd-despacho-vacio">
+                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="mb-3 d-block mx-auto" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>
+                <p class="fs-5 mb-1">Sin pedidos pendientes de despacho.</p>
+                <p class="small">Los pedidos marcados como "Listo" por cocina aparecerán aquí.</p>
+            </div>
+        }
+        else
+        {
+            <div class="row g-3" id="lmd-despacho-cards">
+                @foreach (var pedido in Model.PedidosListos.OrderBy(p => p.FechaCreacion))
                 {
-                    <tr>
-                        <td>
-                            @if (pedido.MesaNumero.HasValue)
-                            {
-                                <span class="badge bg-primary fs-6">Mesa @pedido.MesaNumero</span>
-                            }
-                            else
-                            {
-                                <span class="badge bg-info fs-6">Para llevar</span>
-                            }
-                        </td>
-                        <td>@pedido.TipoServicio</td>
-                        <td>
-                            @foreach (var d in pedido.Detalles)
-                            {
-                                <div>@d.Cantidad× @d.ProductoNombre</div>
-                            }
-                        </td>
-                        <td class="text-end fw-bold">@pedido.Total.ToString("C")</td>
-                        <td class="text-end">
-                            <form method="post" asp-page-handler="Despachar">
-                                @Html.AntiForgeryToken()
-                                <input type="hidden" name="pedidoId" value="@pedido.Id" />
-                                <button type="submit" class="btn btn-sm lmd-action-success">
-                                    <i class="bi bi-check-lg"></i> Despachar
+                    var referenciaDespacho = pedido.FechaListoDespacho ?? pedido.FechaCreacion;
+                    var minutos = IndexModel.CalcularMinutosEsperaDespacho(referenciaDespacho, DateTime.UtcNow);
+                    var urgente = minutos > 20;
+                    <div class="col-sm-6 col-lg-4">
+                        <article class="card h-100 border @(urgente ? "border-danger" : "border-success")" data-pedido-id="@pedido.Id">
+                            <div class="card-header d-flex justify-content-between align-items-center py-2">
+                                @if (pedido.MesaNumero.HasValue)
+                                {
+                                    <strong class="fs-5">Mesa @pedido.MesaNumero</strong>
+                                }
+                                else
+                                {
+                                    <strong class="fs-5">Para llevar</strong>
+                                }
+                                <span class="lmd-status-badge @(urgente ? "lmd-status-badge--danger" : "lmd-status-badge--active")" title="Tiempo desde que cocina dejó el pedido listo para despacho">
+                                    @(minutos == 0 ? "Ahora" : $"{minutos} min")
+                                </span>
+                            </div>
+                            <div class="card-body py-2">
+                                <ul class="list-unstyled mb-0 small">
+                                    @foreach (var d in pedido.Detalles)
+                                    {
+                                        <li>@d.Cantidad× @d.ProductoNombre</li>
+                                    }
+                                </ul>
+                            </div>
+                            <div class="card-footer d-flex justify-content-between align-items-center py-2">
+                                <span class="fw-bold">@pedido.Total.ToString("C")</span>
+                                <button type="button"
+                                        class="btn btn-sm lmd-action-success lmd-btn-despachar"
+                                        data-pedido-id="@pedido.Id">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>
+                                    Despachar
                                 </button>
-                            </form>
-                        </td>
-                    </tr>
+                            </div>
+                        </article>
+                    </div>
                 }
-                </tbody>
-            </table>
-        </div>
-    }
+            </div>
+        }
+    </div>
 </section>
+
+@section Scripts {
+<script src="~/lib/microsoft/signalr/dist/browser/signalr.min.js"></script>
+<script>
+(function () {
+    const connection = new signalR.HubConnectionBuilder()
+        .withUrl("/hubs/pedidos")
+        .withAutomaticReconnect()
+        .build();
+
+    connection.on("RecibirNotificacionPedido", function (payload) {
+        if (payload.tipo === "EstadoCambiado" || payload.tipo === "PedidoCreado") {
+            recargarLista();
+        }
+        if (payload.tipo === "PedidoCancelado") {
+            eliminarCard(payload.pedidoId);
+        }
+    });
+
+    connection.start().catch(err => console.warn("SignalR Despacho:", err));
+
+    function recargarLista() {
+        fetch(location.href, { headers: { "X-Requested-With": "XMLHttpRequest" } })
+            .then(() => location.reload())
+            .catch(() => {});
+    }
+
+    function eliminarCard(pedidoId) {
+        const card = document.querySelector(`[data-pedido-id="${pedidoId}"]`);
+        if (card) card.closest(".col").remove();
+        actualizarContador();
+    }
+
+    function actualizarContador() {
+        const cards = document.querySelectorAll("[data-pedido-id]");
+        const contador = document.getElementById("lmd-despacho-contador");
+        if (contador) contador.textContent = cards.length + " listos";
+        if (cards.length === 0) {
+            const lista = document.getElementById("lmd-despacho-cards");
+            if (lista) {
+                lista.outerHTML = '<div class="text-center py-5 text-muted"><p class="fs-5">Sin pedidos pendientes de despacho.</p></div>';
+            }
+        }
+    }
+
+    document.addEventListener("click", async function (e) {
+        const btn = e.target.closest(".lmd-btn-despachar");
+        if (!btn) return;
+        e.preventDefault();
+        const pedidoId = btn.dataset.pedidoId;
+        btn.disabled = true;
+        btn.textContent = "Despachando…";
+
+        try {
+            const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value ?? "";
+            const resp = await fetch("?handler=DespacharJson", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "RequestVerificationToken": token,
+                    "X-XSRF-TOKEN": token
+                },
+                body: JSON.stringify({ pedidoId })
+            });
+            const data = await resp.json();
+            if (data.ok) {
+                const card = btn.closest("[data-pedido-id]");
+                if (card) card.closest(".col").remove();
+                actualizarContador();
+            } else {
+                alert(data.error ?? "Error al despachar.");
+                btn.disabled = false;
+                btn.textContent = "Despachar";
+            }
+        } catch {
+            btn.disabled = false;
+            btn.textContent = "Despachar";
+        }
+    });
+}());
+</script>
+}

@@ -11,4 +11,7 @@ public class ProductoDto
     public string? Descripcion { get; set; }
     public string? ImagenUrl { get; set; }
     public int TiempoPreparacionMin { get; set; }
+    public string? PromoNombre { get; set; }
+    public decimal? PromoDescuento { get; set; }
+    public string? PromoTipo { get; set; }
 }

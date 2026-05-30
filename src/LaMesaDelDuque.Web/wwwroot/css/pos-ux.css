@@ -1129,10 +1129,87 @@ html:has(#lmd-pos-contenido) .lmd-main-surface {
     color: #5dade2;
     font-weight: 600;
 }
+.lmd-pos-tarjeta-ref-group {
+    margin: 0 auto 1.25rem;
+    max-width: 320px;
+    text-align: left;
+}
+.lmd-pos-tarjeta-ref-label {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: rgba(247,244,236,0.75);
+    margin-bottom: 0.4rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+.lmd-pos-tarjeta-ref-label svg { width: 14px; height: 14px; }
+.lmd-pos-tarjeta-ref-input {
+    width: 100%;
+    padding: 0.65rem 0.85rem;
+    background: rgba(255,255,255,0.08);
+    border: 1.5px solid rgba(52,152,219,0.5);
+    border-radius: 8px;
+    color: #f7f4ec;
+    font-size: 1rem;
+    font-family: 'Courier New', monospace;
+    letter-spacing: 0.08em;
+    outline: none;
+    transition: border-color 0.2s;
+}
+.lmd-pos-tarjeta-ref-input:focus { border-color: #3498db; }
+.lmd-pos-tarjeta-ref-error {
+    margin-top: 0.35rem;
+    font-size: 0.8rem;
+    color: #e74c3c;
+}
 .lmd-pos-tarjeta-actions {
     display: flex;
     gap: 0.75rem;
     justify-content: center;
+}
+
+/* ═══════════════════════════════════════════════════════
+   TICKET modal post-pago
+   ═══════════════════════════════════════════════════════ */
+.lmd-ticket-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.75);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.lmd-ticket-modal {
+    background: #1a2435;
+    border: 1px solid rgba(201,162,78,0.3);
+    border-radius: 12px;
+    width: min(480px, 96vw);
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+.lmd-ticket-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.85rem 1rem;
+    border-bottom: 1px solid rgba(201,162,78,0.2);
+    font-weight: 600;
+    color: #C9A24E;
+    gap: 0.5rem;
+}
+.lmd-ticket-modal-header svg { width: 18px; height: 18px; }
+.lmd-ticket-modal-actions { display: flex; gap: 0.5rem; }
+.lmd-ticket-modal-frame {
+    flex: 1;
+    border: none;
+    background: #fff;
+    min-height: 400px;
 }
 
 /* ═══════════════════════════════════════════════════════
@@ -1572,6 +1649,39 @@ html:has(#lmd-pos-contenido) .lmd-main-surface {
     text-transform: uppercase;
     letter-spacing: 0.06em;
 }
+.lmd-pos-producto-card--promo {
+    border-color: rgba(46,204,113,0.35);
+}
+.lmd-pos-producto-card__precio--promo {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.05rem;
+}
+.lmd-pos-producto-card__precio-original {
+    font-size: 0.7rem;
+    font-weight: 400;
+    color: rgba(247,244,236,0.4);
+    text-decoration: line-through;
+}
+.lmd-pos-producto-card__promo-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
+    font-size: 0.6rem;
+    font-weight: 700;
+    color: #2ecc71;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    background: rgba(46,204,113,0.12);
+    border: 1px solid rgba(46,204,113,0.3);
+    border-radius: 0.25rem;
+    padding: 0.1rem 0.3rem;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
 .lmd-pos-producto-card__editar {
     position: absolute;
     top: 0.4rem;
@@ -1767,4 +1877,23 @@ html:has(#lmd-pos-contenido) .lmd-main-surface {
 }
 .lmd-pos-propina-hint {
     margin: 0; color: var(--lmd-text-muted, #888); font-size: 0.9rem; text-align: center;
+}
+
+/* Producto 86 / agotado */
+.lmd-producto-agotado {
+    opacity: 0.45;
+    position: relative;
+    cursor: not-allowed !important;
+}
+.lmd-badge-agotado {
+    position: absolute;
+    top: 4px; right: 4px;
+    background: #e74c3c;
+    color: #fff;
+    font-size: 0.6rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    padding: 2px 5px;
+    border-radius: 3px;
+    pointer-events: none;
 }

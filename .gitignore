@@ -109,3 +109,4 @@ AGENTS.md
 CLAUDE.md
 lmd-migrations.db
 qa-output/
+.codex-runtime/

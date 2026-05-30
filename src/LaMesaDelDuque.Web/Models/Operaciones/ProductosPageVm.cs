@@ -12,6 +12,15 @@ public class ProductosPageVm
     public Guid? CategoriaId { get; set; }
     public string Estado { get; set; } = "todos";
     public ProductoFormVm Form { get; set; } = new();
+    public int TotalProductos { get; set; }
+    public int TotalVisibles { get; set; }
+    public Guid? ProductoGuardadoId { get; set; }
+    public bool ProductoGuardadoVisible { get; set; }
+    public bool ProductoGuardadoOcultoPorFiltros => ProductoGuardadoId.HasValue && !ProductoGuardadoVisible;
+    public bool TieneProductos => TotalProductos > 0;
+    public bool TieneCategorias => Categorias.Count > 0;
+    public bool FiltrosAplicados => !string.IsNullOrWhiteSpace(Buscar) || CategoriaId.HasValue || !string.Equals(Estado, "todos", StringComparison.OrdinalIgnoreCase);
+    public string DescripcionFiltros { get; set; } = "Sin filtros aplicados.";
 }
 
 public class ProductoFormVm

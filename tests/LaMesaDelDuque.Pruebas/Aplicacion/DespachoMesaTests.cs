@@ -29,6 +29,14 @@ public sealed class DespachoMesaTests : IDisposable
 
         _contexto = new LaMesaDelDuqueDbContext(opciones);
         _contexto.Database.EnsureCreated();
+        _contexto.Set<RestauranteConfig>().Add(new RestauranteConfig(
+            "La Mesa del Duque",
+            "Dirección test",
+            new TimeOnly(8, 0),
+            new TimeOnly(23, 0),
+            10,
+            periodoGraciaMinutos: 5));
+        _contexto.SaveChanges();
 
         _uot = new UnidadDeTrabajo(_contexto,
             new CategoriaProductoRepositorio(_contexto),
@@ -42,7 +50,12 @@ public sealed class DespachoMesaTests : IDisposable
             new RecetaProductoRepositorio(_contexto),
             new OrdenCocinaRepositorio(_contexto),
             new CuentaRepositorio(_contexto),
-            new PagoRepositorio(_contexto));
+            new PagoRepositorio(_contexto),
+            new PromocionRepositorio(_contexto),
+            new TurnoCajaRepositorio(_contexto),
+            new DescuentoRepositorio(_contexto),
+            new MotivoDescuentoRepositorio(_contexto),
+            new DevolucionRepositorio(_contexto));
 
         _despacho = new DespachoServicio(_uot);
     }
@@ -118,6 +131,8 @@ public sealed class DespachoMesaTests : IDisposable
         Assert.Equal(EstadoPedido.Despachado, pedidoActualizado!.Estado);
         Assert.NotNull(mesaActualizada);
         Assert.Equal(EstadoMesa.Disponible, mesaActualizada!.Estado);
+        Assert.NotNull(mesaActualizada.GraciaHasta);
+        Assert.True(mesaActualizada.GraciaHasta > DateTime.UtcNow);
     }
 
     [Fact]
@@ -157,5 +172,34 @@ public sealed class DespachoMesaTests : IDisposable
         Assert.NotNull(pedidoActualizado);
         Assert.Equal(EstadoPedido.Despachado, pedidoActualizado!.Estado);
         Assert.Equal(EstadoMesa.Disponible, mesaActualizada!.Estado);
+        Assert.NotNull(mesaActualizada.GraciaHasta);
+    }
+
+    [Fact]
+    public async Task DespacharPedido_ConOtroPedidoActivoEnMesa_NoLiberaMesa()
+    {
+        var (mesa, producto) = await CrearMesaYProductoAsync(54);
+        mesa.Ocupar();
+
+        var pedidoListo = new Pedido(TipoServicio.ComerAqui, mesa);
+        pedidoListo.AgregarDetalle(new DetallePedido(producto, 1, 3.50m, null, null));
+        pedidoListo.MarcarEnPreparacion();
+        pedidoListo.MarcarComoPagado();
+
+        var pedidoActivo = new Pedido(TipoServicio.ComerAqui, mesa);
+        pedidoActivo.AgregarDetalle(new DetallePedido(producto, 1, 3.50m, null, null));
+        pedidoActivo.MarcarEnPreparacion();
+
+        await _uot.Pedidos.AgregarAsync(pedidoListo);
+        await _uot.Pedidos.AgregarAsync(pedidoActivo);
+        await _uot.GuardarCambiosAsync();
+
+        await _despacho.DespacharPedidoAsync(pedidoListo.Id);
+
+        var mesaActualizada = await _uot.Mesas.ObtenerPorIdAsync(mesa.Id);
+
+        Assert.NotNull(mesaActualizada);
+        Assert.Equal(EstadoMesa.Ocupada, mesaActualizada!.Estado);
+        Assert.Null(mesaActualizada.GraciaHasta);
     }
 }

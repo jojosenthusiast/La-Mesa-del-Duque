@@ -7,12 +7,34 @@
 
     // ── Helpers ────────────────────────────────────────
     function icon(name, cls) {
-        return '<svg class="lmd-icon ' + (cls || '') + '" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="https://cdn.jsdelivr.net/npm/lucide-static@latest/icons/' + name + '.svg#icon"/></svg>';
+        return '<svg class="lmd-icon ' + (cls || '') + '" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="/lib/lucide-static/icons/' + name + '.svg#icon"/></svg>';
     }
 
     function fmt(n) {
         return new Intl.NumberFormat('es-SV', { style: 'currency', currency: 'USD' }).format(n || 0);
     }
+
+    function escapeHtml(value) {
+        return String(value ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    function escapeJsString(value) {
+        return String(value ?? '')
+            .replace(/\\/g, '\\\\')
+            .replace(/'/g, "\\'")
+            .replace(/\r/g, '\\r')
+            .replace(/\n/g, '\\n')
+            .replace(/</g, '\\x3C')
+            .replace(/>/g, '\\x3E')
+            .replace(/&/g, '\\x26')
+            .replace(/"/g, '&quot;');
+    }
+
 
     // ── State ──────────────────────────────────────────
     var state = {
@@ -128,7 +150,7 @@
                     '<span class="lmd-pos-mesa-card__numero">' + m.numero + '</span>' +
                     '<span class="lmd-pos-mesa-card__capacidad">' + m.capacidad + ' pax</span>' +
                     badgeHtml +
-                    (m.zona ? '<span class="lmd-pos-mesa-card__zona">' + m.zona + '</span>' : '') +
+                    (m.zona ? '<span class="lmd-pos-mesa-card__zona">' + escapeHtml(m.zona) + '</span>' : '') +
                 '</div>';
             });
         });
@@ -189,7 +211,7 @@
         var estadoLabel = _ESTADO_LABEL[state.pedidoEstado] || state.pedidoEstado || '';
         var estadoBadge = estadoLabel
             ? '<span class="lmd-mesero-estado-badge lmd-mesero-estado-badge--' +
-              (state.pedidoEstado || '').toLowerCase() + '">' + estadoLabel + '</span>'
+              escapeHtml((state.pedidoEstado || '').toLowerCase()) + '">' + escapeHtml(estadoLabel) + '</span>'
             : '';
 
         var itemsHtml = state.pedidoDetalles.length === 0
@@ -198,18 +220,18 @@
                 var qtyHtml = enCobro
                     ? '<span class="lmd-mesero-item__cant">× ' + d.cantidad + '</span>'
                     : '<div class="lmd-mesero-item__qty-ctrl">' +
-                        '<button onclick="mesero.ajustarCantidad(\'' + m.pedidoActualId + '\',\'' + d.id + '\',-1)">' + icon('minus') + '</button>' +
+                        '<button onclick="mesero.ajustarCantidad(\'' + escapeJsString(m.pedidoActualId) + '\',\'' + escapeJsString(d.id) + '\',-1)">' + icon('minus') + '</button>' +
                         '<span>' + d.cantidad + '</span>' +
-                        '<button onclick="mesero.ajustarCantidad(\'' + m.pedidoActualId + '\',\'' + d.id + '\',1)">' + icon('plus') + '</button>' +
+                        '<button onclick="mesero.ajustarCantidad(\'' + escapeJsString(m.pedidoActualId) + '\',\'' + escapeJsString(d.id) + '\',1)">' + icon('plus') + '</button>' +
                       '</div>';
                 var voidBtn = !enCobro
                     ? '<button class="lmd-mesero-item__void" title="Anular" ' +
-                      'onclick="mesero.voidItem(\'' + m.pedidoActualId + '\',\'' + d.id + '\',\'' + d.productoNombre.replace(/'/g, "\\'") + '\')">' +
+                      'onclick="mesero.voidItem(\'' + escapeJsString(m.pedidoActualId) + '\',\'' + escapeJsString(d.id) + '\',\'' + escapeJsString(d.productoNombre) + '\')">' +
                       icon('trash-2') + '</button>'
                     : '';
                 return '<div class="lmd-mesero-item">' +
                     '<div class="lmd-mesero-item__info">' +
-                        '<span class="lmd-mesero-item__nombre">' + d.productoNombre + '</span>' +
+                        '<span class="lmd-mesero-item__nombre">' + escapeHtml(d.productoNombre) + '</span>' +
                         qtyHtml +
                     '</div>' +
                     '<div class="lmd-mesero-item__right">' +
@@ -228,7 +250,7 @@
         var html =
             '<div class="lmd-pos-ov-header">' +
                 '<button class="lmd-pos-ov-back" onclick="mesero.cerrarDetalle()">' + icon('arrow-left') + '</button>' +
-                '<span class="lmd-pos-ov-title">' + icon('armchair') + ' Mesa ' + m.numero + estadoBadge + '</span>' +
+                '<span class="lmd-pos-ov-title">' + icon('armchair') + ' Mesa ' + escapeHtml(m.numero) + estadoBadge + '</span>' +
                 '<div class="lmd-pos-ov-total">' + fmt(state.pedidoTotal) + '</div>' +
             '</div>' +
             '<div class="lmd-mesero-detalle-body">' +
@@ -350,9 +372,9 @@
 
         var catHtml = cats.map(function (c) {
             return '<button class="lmd-pos-cat-btn' + (c === state.catFiltro ? ' lmd-pos-cat-btn--activa' : '') + '" ' +
-                'onclick="mesero.filtrarCat(\'' + c.replace(/'/g, "\\'") + '\')">' +
+                'onclick="mesero.filtrarCat(\'' + escapeJsString(c) + '\')">' +
                 icon(c === 'Todos' ? 'layers' : c === 'Bebidas' ? 'wine' : c === 'Postres' ? 'cake-slice' : 'utensils') +
-                '<span>' + c + '</span>' +
+                '<span>' + escapeHtml(c) + '</span>' +
             '</button>';
         }).join('');
 
@@ -364,8 +386,8 @@
         });
 
         var prodHtml = filtrados.map(function (p) {
-            return '<div class="lmd-pos-product-card" onclick="mesero.addToCart(\'' + p.id + '\')">' +
-                '<span class="lmd-pos-product-card__nombre">' + p.nombre + '</span>' +
+            return '<div class="lmd-pos-product-card" onclick="mesero.addToCart(\'' + escapeJsString(p.id) + '\')">' +
+                '<span class="lmd-pos-product-card__nombre">' + escapeHtml(p.nombre) + '</span>' +
                 '<span class="lmd-pos-product-card__precio">' + fmt(p.precio) + '</span>' +
             '</div>';
         }).join('');
@@ -375,7 +397,7 @@
             ? '<div class="lmd-pos-cart__empty">' + icon('shopping-cart') + '<span>Sin ítems</span></div>'
             : state.carrito.map(function (item) {
                 return '<div class="lmd-mesero-cart-item">' +
-                    '<span class="lmd-mesero-cart-item__nombre">' + item.nombre + '</span>' +
+                    '<span class="lmd-mesero-cart-item__nombre">' + escapeHtml(item.nombre) + '</span>' +
                     '<div class="lmd-mesero-cart-item__qty">' +
                         '<button onclick="mesero.decCart(\'' + item.id + '\')">' + icon('minus') + '</button>' +
                         '<span>' + item.cantidad + '</span>' +
@@ -506,12 +528,12 @@
                     '<span class="lmd-pos-pm-btn__label">Efectivo</span>' +
                     '<span class="lmd-pos-pm-btn__sub">Billetes y monedas</span>' +
                 '</button>' +
-                '<button class="lmd-pos-pm-btn" onclick="mesero.pagarDirecto(\'tarjeta\',' + total.toFixed(2) + ')">' +
+                '<button class="lmd-pos-pm-btn" onclick="mesero.abrirReferenciaPago(\'tarjeta\',' + total.toFixed(2) + ')">' +
                     '<span class="lmd-pos-pm-btn__icon">' + icon('credit-card') + '</span>' +
                     '<span class="lmd-pos-pm-btn__label">Tarjeta</span>' +
                     '<span class="lmd-pos-pm-btn__sub">Débito / Crédito</span>' +
                 '</button>' +
-                '<button class="lmd-pos-pm-btn" onclick="mesero.pagarDirecto(\'qr\',' + total.toFixed(2) + ')">' +
+                '<button class="lmd-pos-pm-btn" onclick="mesero.abrirReferenciaPago(\'qr\',' + total.toFixed(2) + ')">' +
                     '<span class="lmd-pos-pm-btn__icon">' + icon('qr-code') + '</span>' +
                     '<span class="lmd-pos-pm-btn__label">QR / Transferencia</span>' +
                     '<span class="lmd-pos-pm-btn__sub">Wompi, BAC, Niu</span>' +
@@ -520,7 +542,7 @@
         abrirOverlay('pago', html, { closeOnBackdrop: false });
     }
 
-    function cerrarPago() { cerrarOverlay('pago'); cerrarOverlay('efectivo'); }
+    function cerrarPago() { cerrarOverlay('pago'); cerrarOverlay('efectivo'); cerrarOverlay('pago-ref'); }
 
     function abrirEfectivo(total) {
         var html =
@@ -543,7 +565,7 @@
         abrirOverlay('efectivo', html, { closeOnBackdrop: false });
     }
 
-    function volverMetodos() { cerrarOverlay('efectivo'); abrirPago(); }
+    function volverMetodos() { cerrarOverlay('efectivo'); cerrarOverlay('pago-ref'); abrirPago(); }
 
     function confirmarEfectivo(total) {
         var input = document.getElementById('lmd-mesero-cash');
@@ -552,23 +574,58 @@
         pagarDirecto('efectivo', monto);
     }
 
-    async function pagarDirecto(metodo, monto) {
+    function abrirReferenciaPago(metodo, total) {
+        var esTarjeta = metodo === 'tarjeta';
+        var titulo = esTarjeta ? 'Referencia de tarjeta' : 'Referencia QR / transferencia';
+        var ayuda = esTarjeta ? 'Ingresa el número de autorización del voucher.' : 'Ingresa la referencia visible de la transferencia.';
+        var html =
+            '<div class="lmd-pos-ov-header">' +
+                '<button class="lmd-pos-ov-back" onclick="mesero.volverMetodos()">' + icon('arrow-left') + '</button>' +
+                '<span class="lmd-pos-ov-title">' + icon(esTarjeta ? 'credit-card' : 'qr-code') + ' ' + titulo + '</span>' +
+                '<div class="lmd-pos-ov-total">' + fmt(total) + '</div>' +
+            '</div>' +
+            '<div class="lmd-pos-efectivo-body">' +
+                '<label class="lmd-pos-efectivo-label" for="lmd-mesero-payment-ref">Referencia</label>' +
+                '<input id="lmd-mesero-payment-ref" class="lmd-pos-efectivo-input" type="text" autocomplete="off" placeholder="Ej. AUTH-123456" />' +
+                '<p class="text-muted small mb-0">' + ayuda + '</p>' +
+                '<div class="lmd-pos-qr-actions">' +
+                    '<button class="lmd-pos-ov-btn" onclick="mesero.volverMetodos()">' + icon('arrow-left') + ' Volver</button>' +
+                    '<button class="lmd-pos-ov-btn lmd-pos-ov-btn--primary" onclick="mesero.confirmarReferenciaPago(\'' + metodo + '\',' + total.toFixed(2) + ')">' +
+                        icon('check-circle') + ' Confirmar</button>' +
+                '</div>' +
+            '</div>';
+        cerrarOverlay('pago');
+        abrirOverlay('pago-ref', html, { closeOnBackdrop: false });
+        setTimeout(function () { var input = document.getElementById('lmd-mesero-payment-ref'); if (input) input.focus(); }, 50);
+    }
+
+    function confirmarReferenciaPago(metodo, total) {
+        var input = document.getElementById('lmd-mesero-payment-ref');
+        var referencia = (input && input.value ? input.value : '').trim();
+        if (!referencia) {
+            window.lmdToast('La referencia del pago es obligatoria', 'error');
+            if (input) input.focus();
+            return;
+        }
+        pagarDirecto(metodo, total, referencia);
+    }
+
+    async function pagarDirecto(metodo, monto, referencia) {
         var m = state.mesaActual;
         if (!m) return;
         try {
-            var res  = await postJson('PagarJson', { pedidoId: m.pedidoActualId, metodoPago: metodo, monto: monto });
+            var res  = await postJson('PagarJson', { pedidoId: m.pedidoActualId, metodoPago: metodo, monto: monto, referencia: referencia });
             var data = await res.json().catch(function () { return {}; });
             if (!res.ok) { window.lmdToast(data.error || 'Error al registrar pago', 'error'); return; }
             cerrarOverlay('efectivo');
             cerrarOverlay('pago');
+            cerrarOverlay('pago-ref');
             cerrarOverlay('detalle');
             await refrescarMesas();
             renderGrid();
             window.lmdToast(data.mensaje || 'Pago registrado', 'success');
         } catch (e) { window.lmdToast('Error de conexión', 'error'); }
     }
-
-    // ═══════════════════════════════════════════════════
     // SIGNALR
     // ═══════════════════════════════════════════════════
     async function sincronizarDetalle() {
@@ -637,7 +694,7 @@
         abrirDetalle, cerrarDetalle, voidItem, ajustarCantidad, pedirCuenta,
         abrirNuevoPedido,
         abrirAgregar, cerrarAgregar, filtrarCat, buscarProd, addToCart, incCart, decCart, enviarItems,
-        abrirPago, cerrarPago, abrirEfectivo, volverMetodos, confirmarEfectivo, pagarDirecto
+        abrirPago, cerrarPago, abrirEfectivo, volverMetodos, confirmarEfectivo, abrirReferenciaPago, confirmarReferenciaPago, pagarDirecto
     };
 
     document.addEventListener('DOMContentLoaded', async function () {

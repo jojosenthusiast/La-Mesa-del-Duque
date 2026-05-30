@@ -12,6 +12,7 @@ public class Pedido
     public DateTime FechaCreacion { get; private set; } = DateTime.UtcNow;
     public TipoServicio TipoServicio { get; private set; }
     public Mesa? Mesa { get; private set; }
+    public Guid? MeseroAsignadoId { get; private set; }
     public EstadoPedido Estado { get; private set; }
     public DateTime CreatedAt { get; private set; }
     public IReadOnlyList<DetallePedido> Detalles => _detalles.AsReadOnly();
@@ -33,6 +34,17 @@ public class Pedido
         Mesa = mesa;
         Estado = EstadoPedido.Pendiente;
         CreatedAt = DateTime.UtcNow;
+    }
+
+    public void AsignarMesero(Guid meseroId)
+    {
+        if (meseroId == Guid.Empty)
+            throw new ReglaDominioException("El mesero asignado es obligatorio.");
+
+        if (Mesa is null || TipoServicio != TipoServicio.ComerAqui)
+            throw new ReglaDominioException("Solo un pedido de mesa puede tener mesero asignado.");
+
+        MeseroAsignadoId = meseroId;
     }
 
     public void MarcarEnPreparacion()

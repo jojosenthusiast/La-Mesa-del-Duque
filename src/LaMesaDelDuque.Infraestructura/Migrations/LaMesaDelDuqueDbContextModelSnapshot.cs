@@ -354,6 +354,68 @@ namespace LaMesaDelDuque.Infraestructura.Migrations
                     b.ToTable("CuentaDetalle");
                 });
 
+            modelBuilder.Entity("LaMesaDelDuque.Dominio.Entidades.DescuentoAplicado", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("DetallePedidoId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Estado")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<DateTime?>("FechaResolucion")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("FechaSolicitud")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<decimal>("MontoAplicado")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<Guid>("MotivoId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("NotaAutorizador")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<Guid>("PedidoId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("TipoDescuento")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<Guid?>("UsuarioAutorizaId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("UsuarioSolicitaId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("Valor")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Estado")
+                        .HasDatabaseName("IX_DescuentosAplicados_Estado");
+
+                    b.HasIndex("MotivoId");
+
+                    b.HasIndex("PedidoId")
+                        .HasDatabaseName("IX_DescuentosAplicados_PedidoId");
+
+                    b.ToTable("DescuentosAplicados", (string)null);
+                });
+
             modelBuilder.Entity("LaMesaDelDuque.Dominio.Entidades.DetallePedido", b =>
                 {
                     b.Property<Guid>("Id")
@@ -362,6 +424,12 @@ namespace LaMesaDelDuque.Infraestructura.Migrations
 
                     b.Property<int>("Cantidad")
                         .HasColumnType("integer");
+
+                    b.Property<decimal>("DescuentoAplicado")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(10, 2)
+                        .HasColumnType("numeric(10,2)")
+                        .HasDefaultValue(0m);
 
                     b.Property<string>("ModificacionesJson")
                         .HasColumnType("text");
@@ -373,12 +441,20 @@ namespace LaMesaDelDuque.Infraestructura.Migrations
                     b.Property<Guid?>("PedidoId")
                         .HasColumnType("uuid");
 
+                    b.Property<decimal>("PrecioOriginal")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("numeric(10,2)");
+
                     b.Property<decimal>("PrecioUnitario")
                         .HasPrecision(10, 2)
                         .HasColumnType("numeric(10,2)");
 
                     b.Property<Guid>("ProductoId")
                         .HasColumnType("uuid");
+
+                    b.Property<string>("PromocionNombre")
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)");
 
                     b.HasKey("Id");
 
@@ -387,6 +463,52 @@ namespace LaMesaDelDuque.Infraestructura.Migrations
                     b.HasIndex("ProductoId");
 
                     b.ToTable("DetallePedido");
+                });
+
+            modelBuilder.Entity("LaMesaDelDuque.Dominio.Entidades.DevolucionPago", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("FechaHora")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("MetodoDevolucion")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<decimal>("MontoDevuelto")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<string>("MotivoDevolucion")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<Guid>("PagoOriginalId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("StockReintegrado")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("UsuarioAutorizaId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("UsuarioSolicitaId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FechaHora")
+                        .HasDatabaseName("IX_DevolucionesPago_FechaHora");
+
+                    b.HasIndex("PagoOriginalId")
+                        .HasDatabaseName("IX_DevolucionesPago_PagoOriginalId");
+
+                    b.ToTable("DevolucionesPago", (string)null);
                 });
 
             modelBuilder.Entity("LaMesaDelDuque.Dominio.Entidades.Ingrediente", b =>
@@ -416,6 +538,7 @@ namespace LaMesaDelDuque.Infraestructura.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<decimal>("StockActual")
+                        .IsConcurrencyToken()
                         .HasPrecision(10, 3)
                         .HasColumnType("numeric(10,3)");
 
@@ -440,7 +563,10 @@ namespace LaMesaDelDuque.Infraestructura.Migrations
 
                     b.HasIndex("ProveedorDefaultId");
 
-                    b.ToTable("Ingrediente");
+                    b.ToTable("Ingrediente", t =>
+                        {
+                            t.HasCheckConstraint("CK_Ingrediente_StockActual_NoNegativo", "\"StockActual\" >= 0");
+                        });
                 });
 
             modelBuilder.Entity("LaMesaDelDuque.Dominio.Entidades.MermaDiaria", b =>
@@ -554,6 +680,72 @@ namespace LaMesaDelDuque.Infraestructura.Migrations
                     b.HasIndex("ZonaId");
 
                     b.ToTable("Mesa");
+                });
+
+            modelBuilder.Entity("LaMesaDelDuque.Dominio.Entidades.MotivoDescuento", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("Activo")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Descripcion")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Nombre")
+                        .HasDatabaseName("IX_MotivosDescuento_Nombre");
+
+                    b.ToTable("MotivosDescuento", (string)null);
+                });
+
+            modelBuilder.Entity("LaMesaDelDuque.Dominio.Entidades.MovimientoCaja", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("FechaHora")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<decimal>("Monto")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)");
+
+                    b.Property<string>("Motivo")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<string>("Tipo")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<Guid>("TurnoCajaId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("UsuarioId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TurnoCajaId")
+                        .HasDatabaseName("IX_MovimientosCaja_TurnoCajaId");
+
+                    b.ToTable("MovimientosCaja", (string)null);
                 });
 
             modelBuilder.Entity("LaMesaDelDuque.Dominio.Entidades.OrdenCocina", b =>
@@ -755,6 +947,10 @@ namespace LaMesaDelDuque.Infraestructura.Migrations
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)");
 
+                    b.Property<string>("ReferenciaPos")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
                     b.Property<Guid>("UsuarioId")
                         .HasColumnType("uuid");
 
@@ -788,6 +984,9 @@ namespace LaMesaDelDuque.Infraestructura.Migrations
                     b.Property<Guid?>("MesaId")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("MeseroAsignadoId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("TipoServicio")
                         .IsRequired()
                         .HasMaxLength(20)
@@ -796,6 +995,8 @@ namespace LaMesaDelDuque.Infraestructura.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("MesaId");
+
+                    b.HasIndex("MeseroAsignadoId");
 
                     b.ToTable("Pedido");
                 });
@@ -1262,6 +1463,59 @@ namespace LaMesaDelDuque.Infraestructura.Migrations
                     b.ToTable("RolesPermisos");
                 });
 
+            modelBuilder.Entity("LaMesaDelDuque.Dominio.Entidades.TurnoCaja", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CajeroId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("Cerrado")
+                        .HasColumnType("boolean");
+
+                    b.Property<decimal?>("Diferencia")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)");
+
+                    b.Property<decimal?>("EfectivoContado")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)");
+
+                    b.Property<decimal?>("EfectivoEsperado")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)");
+
+                    b.Property<DateTime>("FechaApertura")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("FechaCierre")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("FirmaDigital")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<decimal>("FondoInicial")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)");
+
+                    b.Property<string>("ObservacionCierre")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CajeroId")
+                        .HasDatabaseName("IX_TurnosCaja_CajeroId");
+
+                    b.HasIndex("Cerrado")
+                        .HasDatabaseName("IX_TurnosCaja_Cerrado");
+
+                    b.ToTable("TurnosCaja", (string)null);
+                });
+
             modelBuilder.Entity("LaMesaDelDuque.Dominio.Entidades.Usuario", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1410,6 +1664,23 @@ namespace LaMesaDelDuque.Infraestructura.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("LaMesaDelDuque.Dominio.Entidades.DescuentoAplicado", b =>
+                {
+                    b.HasOne("LaMesaDelDuque.Dominio.Entidades.MotivoDescuento", "Motivo")
+                        .WithMany()
+                        .HasForeignKey("MotivoId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("LaMesaDelDuque.Dominio.Entidades.Pedido", null)
+                        .WithMany()
+                        .HasForeignKey("PedidoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Motivo");
+                });
+
             modelBuilder.Entity("LaMesaDelDuque.Dominio.Entidades.DetallePedido", b =>
                 {
                     b.HasOne("LaMesaDelDuque.Dominio.Entidades.Pedido", null)
@@ -1424,6 +1695,17 @@ namespace LaMesaDelDuque.Infraestructura.Migrations
                         .IsRequired();
 
                     b.Navigation("Producto");
+                });
+
+            modelBuilder.Entity("LaMesaDelDuque.Dominio.Entidades.DevolucionPago", b =>
+                {
+                    b.HasOne("LaMesaDelDuque.Dominio.Entidades.Pago", "PagoOriginal")
+                        .WithMany()
+                        .HasForeignKey("PagoOriginalId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("PagoOriginal");
                 });
 
             modelBuilder.Entity("LaMesaDelDuque.Dominio.Entidades.Ingrediente", b =>
@@ -1471,6 +1753,15 @@ namespace LaMesaDelDuque.Infraestructura.Migrations
                         .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("Zona");
+                });
+
+            modelBuilder.Entity("LaMesaDelDuque.Dominio.Entidades.MovimientoCaja", b =>
+                {
+                    b.HasOne("LaMesaDelDuque.Dominio.Entidades.TurnoCaja", null)
+                        .WithMany("Movimientos")
+                        .HasForeignKey("TurnoCajaId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("LaMesaDelDuque.Dominio.Entidades.OrdenCompra", b =>
@@ -1526,6 +1817,11 @@ namespace LaMesaDelDuque.Infraestructura.Migrations
                         .WithMany()
                         .HasForeignKey("MesaId")
                         .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("LaMesaDelDuque.Dominio.Entidades.Usuario", null)
+                        .WithMany()
+                        .HasForeignKey("MeseroAsignadoId")
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("Mesa");
                 });
@@ -1681,6 +1977,17 @@ namespace LaMesaDelDuque.Infraestructura.Migrations
                     b.Navigation("Rol");
                 });
 
+            modelBuilder.Entity("LaMesaDelDuque.Dominio.Entidades.TurnoCaja", b =>
+                {
+                    b.HasOne("LaMesaDelDuque.Dominio.Entidades.Usuario", "Cajero")
+                        .WithMany()
+                        .HasForeignKey("CajeroId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Cajero");
+                });
+
             modelBuilder.Entity("LaMesaDelDuque.Dominio.Entidades.Usuario", b =>
                 {
                     b.HasOne("LaMesaDelDuque.Dominio.Entidades.Rol", "Rol")
@@ -1712,6 +2019,11 @@ namespace LaMesaDelDuque.Infraestructura.Migrations
             modelBuilder.Entity("LaMesaDelDuque.Dominio.Entidades.RecetaProducto", b =>
                 {
                     b.Navigation("Ingredientes");
+                });
+
+            modelBuilder.Entity("LaMesaDelDuque.Dominio.Entidades.TurnoCaja", b =>
+                {
+                    b.Navigation("Movimientos");
                 });
 #pragma warning restore 612, 618
         }

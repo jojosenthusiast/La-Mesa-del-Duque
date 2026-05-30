@@ -70,6 +70,29 @@ public class RestauranteConfig
         UpdatedAt = DateTime.UtcNow;
     }
 
+    public void ActualizarTelefono(string? telefono)
+    {
+        if (!string.IsNullOrWhiteSpace(telefono) && telefono.Trim().Length > LongitudMaximaTelefono)
+            throw new ReglaDominioException($"El teléfono no puede exceder {LongitudMaximaTelefono} caracteres.");
+        Telefono = string.IsNullOrWhiteSpace(telefono) ? null : telefono.Trim();
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void ActualizarHorario(TimeOnly apertura, TimeOnly cierre)
+    {
+        if (cierre <= apertura)
+            throw new ReglaDominioException("El horario de cierre debe ser posterior al horario de apertura.");
+        HorarioApertura = apertura;
+        HorarioCierre = cierre;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void ActualizarDatosTicket(string? datosJson)
+    {
+        DatosTicketJson = datosJson;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
     public void EstablecerGracia(int minutos)
     {
         if (minutos < 0 || minutos > 60)

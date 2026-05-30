@@ -15,15 +15,18 @@ public class TablesideModel : PageModel
     private readonly IPedidosServicio _pedidosServicio;
     private readonly ICatalogoProductosServicio _catalogoProductosServicio;
     private readonly IMesasServicio _mesasServicio;
+    private readonly ILogger<TablesideModel> _logger;
 
     public TablesideModel(
         IPedidosServicio pedidosServicio,
         ICatalogoProductosServicio catalogoProductosServicio,
-        IMesasServicio mesasServicio)
+        IMesasServicio mesasServicio,
+        ILogger<TablesideModel> logger)
     {
         _pedidosServicio = pedidosServicio;
         _catalogoProductosServicio = catalogoProductosServicio;
         _mesasServicio = mesasServicio;
+        _logger = logger;
     }
 
     [BindProperty]
@@ -56,7 +59,9 @@ public class TablesideModel : PageModel
             var pedido = await _pedidosServicio.CrearPedidoAsync(tipoServicio, mesaId, detalles);
             return new JsonResult(new { pedidoId = pedido.Id, estado = pedido.Estado, lineas = pedido.Detalles });
         }
-        catch (Exception ex) { return BadRequest(ErrorSeguro(ex)); }
+        catch (ReglaDominioException ex) { return StatusCode(422, new { ok = false, error = ex.Message }); }
+        catch (ArgumentException ex) { return BadRequest(new { ok = false, error = ex.Message }); }
+        catch (Exception ex) { _logger.LogError(ex, "Error en handler JSON"); return StatusCode(500, new { ok = false, error = "Ocurrió un error interno." }); }
     }
 
     public async Task<IActionResult> OnPostEnviarACocinaJsonAsync(Guid pedidoId)
@@ -69,7 +74,9 @@ public class TablesideModel : PageModel
             await _pedidosServicio.MarcarEnPreparacionAsync(pedidoId);
             return new JsonResult(new { ok = true, estado = "EnPreparacion" });
         }
-        catch (Exception ex) { return BadRequest(ErrorSeguro(ex)); }
+        catch (ReglaDominioException ex) { return StatusCode(422, new { ok = false, error = ex.Message }); }
+        catch (ArgumentException ex) { return BadRequest(new { ok = false, error = ex.Message }); }
+        catch (Exception ex) { _logger.LogError(ex, "Error en handler JSON"); return StatusCode(500, new { ok = false, error = "Ocurrió un error interno." }); }
     }
 
     public async Task<IActionResult> OnPostAgregarLineaJsonAsync(Guid pedidoId, Guid productoId, int cantidad, string? notas = null, string? modificacionesJson = null)
@@ -82,7 +89,9 @@ public class TablesideModel : PageModel
             await _pedidosServicio.AgregarDetalleAsync(pedidoId, productoId, cantidad, prod.Precio, notas, modificacionesJson);
             return new JsonResult(new { ok = true });
         }
-        catch (Exception ex) { return BadRequest(ErrorSeguro(ex)); }
+        catch (ReglaDominioException ex) { return StatusCode(422, new { ok = false, error = ex.Message }); }
+        catch (ArgumentException ex) { return BadRequest(new { ok = false, error = ex.Message }); }
+        catch (Exception ex) { _logger.LogError(ex, "Error en handler JSON"); return StatusCode(500, new { ok = false, error = "Ocurrió un error interno." }); }
     }
 
     private static object ErrorSeguro(Exception ex)

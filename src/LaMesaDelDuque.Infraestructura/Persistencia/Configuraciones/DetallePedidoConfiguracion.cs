@@ -17,6 +17,18 @@ internal class DetallePedidoConfiguracion : IEntityTypeConfiguration<DetallePedi
             .HasPrecision(10, 2)
             .IsRequired();
 
+        constructor.Property(d => d.PrecioOriginal)
+            .HasPrecision(10, 2)
+            .IsRequired();
+
+        constructor.Property(d => d.DescuentoAplicado)
+            .HasPrecision(10, 2)
+            .IsRequired()
+            .HasDefaultValue(0m);
+
+        constructor.Property(d => d.PromocionNombre)
+            .HasMaxLength(150);
+
         constructor.Property(d => d.Notas)
             .HasMaxLength(250);
 

@@ -63,7 +63,14 @@ public class MetricaRepositorioTests : IDisposable
 
         var pedido = new Pedido(TipoServicio.ComerAqui, mesa);
         pedido.AgregarDetalle(new DetallePedido(producto, 2, 3.50m));
+        pedido.MarcarEnPreparacion();
+        pedido.MarcarEnCobro();
+        var cuenta = pedido.CrearCuentas(1).Single();
+        var usuarioId = Guid.NewGuid();
+        cuenta.Pagar(MetodoPago.Efectivo, usuarioId: usuarioId);
+        pedido.MarcarComoPagado();
         _contexto.Set<Pedido>().Add(pedido);
+        _contexto.Set<Pago>().Add(new Pago(cuenta.Id, cuenta.Total, MetodoPago.Efectivo, usuarioId: usuarioId));
         await _contexto.SaveChangesAsync();
 
         var inicioTurno = DateTime.UtcNow.Date;
@@ -71,7 +78,7 @@ public class MetricaRepositorioTests : IDisposable
         var metricas = await _metricaRepo.ObtenerMetricasHoyAsync(inicioTurno);
 
         Assert.Equal(7.00m, metricas.VentasHoy);
-        Assert.Equal(1, metricas.MesasActivas);
+        Assert.Equal(0, metricas.MesasActivas);
         Assert.Equal(1, metricas.TotalMesas);
     }
 
@@ -117,8 +124,12 @@ public class MetricaRepositorioTests : IDisposable
         pedido.AgregarDetalle(new DetallePedido(producto, 1, 3.50m));
         pedido.MarcarEnPreparacion();
         pedido.MarcarEnCobro();
+        var cuenta = pedido.CrearCuentas(1).Single();
+        var usuarioId = Guid.NewGuid();
+        cuenta.Pagar(MetodoPago.Efectivo, usuarioId: usuarioId);
         pedido.MarcarComoPagado();
         _contexto.Set<Pedido>().Add(pedido);
+        _contexto.Set<Pago>().Add(new Pago(cuenta.Id, cuenta.Total, MetodoPago.Efectivo, usuarioId: usuarioId));
         await _contexto.SaveChangesAsync();
 
         var inicioTurno = DateTime.UtcNow.Date;

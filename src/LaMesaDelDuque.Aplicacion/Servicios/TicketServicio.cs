@@ -1,5 +1,6 @@
 using System.Text;
-using LaMesaDelDuque.Aplicacion.Dtos;
+using LaMesaDelDuque.Dominio.Enumeraciones;
+using LaMesaDelDuque.Dominio.Repositorios;
 
 namespace LaMesaDelDuque.Aplicacion.Servicios;
 
@@ -10,22 +11,33 @@ public interface ITicketServicio
 
 public class TicketServicio : ITicketServicio
 {
-    private readonly IPedidosServicio _pedidosServicio;
+    private readonly IUnidadDeTrabajo _uot;
 
-    public TicketServicio(IPedidosServicio pedidosServicio)
+    public TicketServicio(IUnidadDeTrabajo uot)
     {
-        _pedidosServicio = pedidosServicio;
+        _uot = uot;
     }
 
     public async Task<string> GenerarHtmlTicketAsync(Guid pedidoId, CancellationToken cancelacion = default)
     {
-        var pedidos = await _pedidosServicio.ListarPedidosActivosAsync();
-        var pedido = pedidos.FirstOrDefault(p => p.Id == pedidoId)
+        var pedido = await _uot.Pedidos.ObtenerConDetallesAsync(pedidoId, cancelacion)
             ?? throw new ArgumentException("Pedido no encontrado.");
 
+        // Obtener pago si existe (para mostrar método y referencia)
+        var pagos = await _uot.Pagos.ObtenerDelDiaAsync(DateOnly.FromDateTime(DateTime.UtcNow), cancelacion);
+        var cuentas = await _uot.Cuentas.ObtenerPorPedidoAsync(pedidoId, cancelacion);
+        var cuentaIds = cuentas.Select(c => c.Id).ToHashSet();
+        var pago = pagos.FirstOrDefault(p => cuentaIds.Contains(p.CuentaId));
+
         var ahora = DateTime.Now;
-        var ticketId = pedidoId.ToString("N")[..8];
-        var mesa = pedido.MesaNumero.HasValue ? pedido.MesaNumero.ToString() : "Para llevar";
+        var ticketId = pedidoId.ToString("N")[..8].ToUpper();
+        var mesa = pedido.Mesa != null ? pedido.Mesa.Numero.ToString() : "Para llevar";
+        var metodoPagoLabel = pago?.Metodo switch
+        {
+            MetodoPago.Tarjeta => "Tarjeta",
+            MetodoPago.Transferencia => "QR / Transf.",
+            _ => "Efectivo"
+        };
 
         var sb = new StringBuilder();
         sb.AppendLine("<!DOCTYPE html><html lang=\"es\"><head><meta charset=\"utf-8\">");
@@ -40,22 +52,33 @@ public class TicketServicio : ITicketServicio
         sb.AppendLine("table{width:100%;border-collapse:collapse;margin:6px 0}");
         sb.AppendLine("td{padding:4px 8px;border-bottom:1px dashed #ccc}");
         sb.AppendLine(".total{text-align:right;font-size:16px;font-weight:bold;border-top:2px solid #C9A24E;padding-top:6px;margin-top:6px}");
+        sb.AppendLine(".pago{font-size:11px;text-align:right;color:#555;margin-top:4px}");
         sb.AppendLine(".ftr{text-align:center;font-size:9px;color:#6B6F76;margin-top:12px;border-top:1px dashed #ccc;padding-top:6px}");
         sb.AppendLine("@media print{body{width:80mm}@page{size:80mm auto;margin:0}}");
         sb.AppendLine("</style></head><body>");
         sb.AppendLine("<div class=\"hdr\"><h1>La Mesa del Duque</h1><p>Ticket de compra</p></div>");
-        sb.AppendLine("<div class=\"info\"><span><b>Ticket:</b> " + ticketId + "</span>");
+        sb.AppendLine("<div class=\"info\">");
+        sb.AppendLine("<span><b>Ticket:</b> " + ticketId + "</span>");
         sb.AppendLine("<span><b>Fecha:</b> " + ahora.ToString("dd/MM/yyyy HH:mm") + "</span>");
-        sb.AppendLine("<span><b>Mesa:</b> " + mesa + "</span></div>");
+        sb.AppendLine("<span><b>Mesa:</b> " + mesa + "</span>");
+        sb.AppendLine("</div>");
         sb.AppendLine("<table>");
 
         foreach (var d in pedido.Detalles)
         {
-            sb.AppendLine("<tr><td>" + d.Cantidad + "x " + d.ProductoNombre + "</td><td style=\"text-align:right\">$" + d.Subtotal.ToString("F2") + "</td></tr>");
+            sb.AppendLine("<tr><td>" + d.Cantidad + "x " + d.Producto.Nombre + "</td><td style=\"text-align:right\">$" + d.Subtotal.ToString("F2") + "</td></tr>");
         }
 
         sb.AppendLine("</table>");
         sb.AppendLine("<div class=\"total\">Total: $" + pedido.Total.ToString("F2") + "</div>");
+
+        if (pago != null)
+        {
+            sb.AppendLine("<div class=\"pago\">Pago: " + metodoPagoLabel + "</div>");
+            if (!string.IsNullOrWhiteSpace(pago.ReferenciaPos))
+                sb.AppendLine("<div class=\"pago\">Auth: " + pago.ReferenciaPos + "</div>");
+        }
+
         sb.AppendLine("<div class=\"ftr\"><p>Gracias por su visita</p><p>Este ticket no es factura fiscal</p></div>");
         sb.AppendLine("</body></html>");
 

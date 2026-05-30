@@ -10,6 +10,9 @@ internal class IngredienteConfiguracion : IEntityTypeConfiguration<Ingrediente>
     {
         constructor.HasKey(i => i.Id);
 
+        constructor.ToTable(t =>
+            t.HasCheckConstraint("CK_Ingrediente_StockActual_NoNegativo", "\"StockActual\" >= 0"));
+
         constructor.Property(i => i.Nombre)
             .HasMaxLength(150)
             .IsRequired();
@@ -20,6 +23,7 @@ internal class IngredienteConfiguracion : IEntityTypeConfiguration<Ingrediente>
 
         constructor.Property(i => i.StockActual)
             .HasPrecision(10, 3)
+            .IsConcurrencyToken()
             .IsRequired();
 
         constructor.Property(i => i.StockMinimo)

@@ -8,16 +8,18 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 
 namespace LaMesaDelDuque.Web.Pages.Operaciones.Salon;
 
-[Authorize(Roles = "Administrador,Encargado")]
+[Authorize(Roles = "Administrador,Encargado,Mesero")]
 public class MapaModel : PageModel
 {
     private readonly IMesasServicio _mesasServicio;
     private readonly IZonasSalonServicio _zonasServicio;
+    private readonly ILogger<MapaModel> _logger;
 
-    public MapaModel(IMesasServicio mesasServicio, IZonasSalonServicio zonasServicio)
+    public MapaModel(IMesasServicio mesasServicio, IZonasSalonServicio zonasServicio, ILogger<MapaModel> logger)
     {
         _mesasServicio = mesasServicio;
         _zonasServicio = zonasServicio;
+        _logger = logger;
     }
 
     [BindProperty]
@@ -52,11 +54,15 @@ public class MapaModel : PageModel
         {
             return new JsonResult(new { exito = false, error = ex.Message });
         }
+        catch (Exception ex)
+        {
+            return ErrorInesperadoJson(ex, "actualizar posicion de mesa");
+        }
     }
 
     public async Task<IActionResult> OnPostCambiarEstadoAsync([FromBody] CambiarEstadoRequest request)
     {
-        if (User?.IsInRole("Administrador") != true && User?.IsInRole("Encargado") != true && User?.IsInRole("Mesero") != true)
+        if (User?.IsInRole("Administrador") != true && User?.IsInRole("Encargado") != true)
         {
             return new JsonResult(new { exito = false, error = "No autorizado." }) { StatusCode = 403 };
         }
@@ -74,6 +80,10 @@ public class MapaModel : PageModel
         {
             return new JsonResult(new { exito = false, error = ex.Message });
         }
+        catch (Exception ex)
+        {
+            return ErrorInesperadoJson(ex, "cambiar estado de mesa");
+        }
     }
 
     public async Task<IActionResult> OnGetObtenerDatosAsync()
@@ -83,35 +93,108 @@ public class MapaModel : PageModel
         {
             zonas = Vm.Zonas,
             mesas = Vm.Mesas,
-            puedeEditar = Vm.PuedeEditar
+            puedeEditar = Vm.PuedeEditar,
+            totalMesas = Vm.TotalMesas,
+            mesasPendientesUbicacion = Vm.MesasPendientesUbicacion,
+            usaZonaSugerida = Vm.UsaZonaSugerida
         });
     }
 
+    private JsonResult ErrorInesperadoJson(Exception ex, string accion)
+    {
+        _logger.LogError(ex, "Error inesperado al {Accion} en mapa de salon.", accion);
+        return new JsonResult(new { exito = false, error = "Ocurrio un error interno." }) { StatusCode = 500 };
+    }
+
+    private static readonly Guid ZonaSalonPrincipalSugeridaId = Guid.Parse("eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee");
+
     private async Task CargarDatosAsync()
     {
-        var zonas = await _zonasServicio.ListarActivasAsync();
-        var mesas = await _mesasServicio.ListarMesasAsync();
-
-        Vm.Zonas = zonas;
-        Vm.Mesas = mesas
-            .Where(m => m.PosicionX.HasValue && m.PosicionY.HasValue && m.ZonaId.HasValue)
-            .Select(m => new MesaMapaItemVm
-            {
-                Id = m.Id,
-                Numero = m.Numero,
-                Capacidad = m.Capacidad,
-                Estado = m.Estado,
-                Activa = m.Activa,
-                PosicionX = m.PosicionX,
-                PosicionY = m.PosicionY,
-                ZonaId = m.ZonaId,
-                Forma = m.Forma,
-                Rotacion = m.Rotacion,
-                OcupadaDesde = m.OcupadaDesde
-            })
+        var zonas = (await _zonasServicio.ListarActivasAsync())
+            .OrderBy(z => z.Orden)
+            .ThenBy(z => z.Nombre)
+            .ToList();
+        var mesas = (await _mesasServicio.ListarMesasAsync())
+            .OrderBy(m => m.Numero)
             .ToList();
 
-        Vm.PuedeEditar = User.IsInRole("Administrador") || User.IsInRole("Encargado");
+        var usaZonaSugerida = zonas.Count == 0 && mesas.Count > 0;
+        if (usaZonaSugerida)
+        {
+            zonas.Add(new ZonaSalonDto
+            {
+                Id = ZonaSalonPrincipalSugeridaId,
+                Nombre = "Salón principal",
+                Orden = 0,
+                Activa = true
+            });
+        }
+
+        var zonaIds = zonas.Select(z => z.Id).ToHashSet();
+        var zonaPorDefectoId = zonas.FirstOrDefault()?.Id;
+        var mesasMapa = new List<MesaMapaItemVm>(mesas.Count);
+        var pendientesUbicacion = 0;
+
+        for (var i = 0; i < mesas.Count; i++)
+        {
+            var mesa = mesas[i];
+            var tieneUbicacionValida = TieneUbicacionValida(mesa, zonaIds);
+            if (!tieneUbicacionValida)
+            {
+                pendientesUbicacion++;
+            }
+
+            var (posicionX, posicionY) = tieneUbicacionValida
+                ? (mesa.PosicionX!.Value, mesa.PosicionY!.Value)
+                : CalcularPosicionSugerida(i);
+
+            mesasMapa.Add(new MesaMapaItemVm
+            {
+                Id = mesa.Id,
+                Numero = mesa.Numero,
+                Capacidad = mesa.Capacidad,
+                Estado = mesa.Estado,
+                Activa = mesa.Activa,
+                PosicionX = posicionX,
+                PosicionY = posicionY,
+                ZonaId = tieneUbicacionValida ? mesa.ZonaId : zonaPorDefectoId,
+                Forma = string.IsNullOrWhiteSpace(mesa.Forma) ? "Redonda" : mesa.Forma,
+                Rotacion = mesa.Rotacion ?? 0,
+                OcupadaDesde = mesa.OcupadaDesde,
+                EsUbicacionSugerida = !tieneUbicacionValida
+            });
+        }
+
+        Vm.Zonas = zonas;
+        Vm.Mesas = mesasMapa;
+        Vm.TotalMesas = mesas.Count;
+        Vm.MesasPendientesUbicacion = pendientesUbicacion;
+        Vm.UsaZonaSugerida = usaZonaSugerida;
+        Vm.PuedeEditar = (User.IsInRole("Administrador") || User.IsInRole("Encargado")) && !usaZonaSugerida;
+    }
+
+    private static bool TieneUbicacionValida(MesaDto mesa, HashSet<Guid> zonasActivas)
+    {
+        return mesa.PosicionX.HasValue
+            && mesa.PosicionY.HasValue
+            && mesa.ZonaId.HasValue
+            && zonasActivas.Contains(mesa.ZonaId.Value);
+    }
+
+    private static (int X, int Y) CalcularPosicionSugerida(int indice)
+    {
+        const int columnas = 5;
+        const int inicioX = 13;
+        const int inicioY = 15;
+        const int separacionX = 19;
+        const int separacionY = 28;
+
+        var columna = indice % columnas;
+        var fila = indice / columnas;
+
+        var x = Math.Min(88, inicioX + columna * separacionX);
+        var y = Math.Min(72, inicioY + fila * separacionY);
+        return (x, y);
     }
 
     private void SetUiContext()

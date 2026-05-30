@@ -18,6 +18,11 @@ public interface IUnidadDeTrabajo
     IMermaRepositorio Mermas { get; }
     ICierreDiaRepositorio CierresDia { get; }
     IZonaSalonRepositorio ZonasSalon { get; }
+    IPromocionRepositorio Promociones { get; }
+    ITurnoCajaRepositorio TurnosCaja { get; }
+    IDescuentoRepositorio Descuentos { get; }
+    IMotivoDescuentoRepositorio MotivosDescuento { get; }
+    IDevolucionRepositorio Devoluciones { get; }
 
     Task<int> GuardarCambiosAsync(CancellationToken cancelacion = default);
     Task<int> ObtenerPeriodoGraciaMinutosAsync(CancellationToken cancelacion = default);
