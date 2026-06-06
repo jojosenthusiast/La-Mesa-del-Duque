@@ -1,0 +1,116 @@
+@page
+@model LaMesaDelDuque.Web.Pages.Admin.Usuarios.IndexModel
+@{
+    ViewData["Title"] = "Usuarios";
+}
+
+<section class="lmd-page-header rounded-top">
+    <div>
+        <h1>Usuarios</h1>
+        <p class="lmd-page-subtitle">Administración de acceso interno y control de estado.</p>
+    </div>
+</section>
+
+<section class="bg-white border-top-0 p-4 rounded-bottom">
+    <div class="lmd-toast-zone mb-3">
+        @if (!string.IsNullOrWhiteSpace(Model.ToastSuccess))
+        {
+            <div class="alert alert-success alert-dismissible fade show py-2 mb-2" data-lmd-toast="true" role="status">@Model.ToastSuccess<button type="button" class="btn-close" aria-label="Cerrar"></button></div>
+        }
+        @if (!string.IsNullOrWhiteSpace(Model.ToastError))
+        {
+            <div class="alert alert-danger alert-dismissible fade show py-2 mb-2" data-lmd-toast="true" role="alert">@Model.ToastError<button type="button" class="btn-close" aria-label="Cerrar"></button></div>
+        }
+    </div>
+
+    <form method="post" asp-page-handler="Crear" class="border rounded p-3 mb-3">
+        @Html.AntiForgeryToken()
+        <div asp-validation-summary="ModelOnly" class="text-danger mb-2"></div>
+        <div class="row g-2">
+            <div class="col-md-3">
+                <label class="form-label" asp-for="Vm.Form.Username">Usuario</label>
+                <input class="form-control form-control-sm" asp-for="Vm.Form.Username" />
+                <span class="text-danger" asp-validation-for="Vm.Form.Username"></span>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label" asp-for="Vm.Form.NombreCompleto">Nombre completo</label>
+                <input class="form-control form-control-sm" asp-for="Vm.Form.NombreCompleto" />
+                <span class="text-danger" asp-validation-for="Vm.Form.NombreCompleto"></span>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label" asp-for="Vm.Form.Email">Email</label>
+                <input class="form-control form-control-sm" asp-for="Vm.Form.Email" />
+                <span class="text-danger" asp-validation-for="Vm.Form.Email"></span>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label" asp-for="Vm.Form.Password">Contraseña</label>
+                <input type="password" class="form-control form-control-sm" asp-for="Vm.Form.Password" />
+                <span class="text-danger" asp-validation-for="Vm.Form.Password"></span>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label" asp-for="Vm.Form.RolId">Rol</label>
+                <select class="form-select form-select-sm" asp-for="Vm.Form.RolId">
+                    <option value="">— Seleccionar —</option>
+                    @foreach (var rol in Model.Vm.Roles)
+                    {
+                        <option value="@rol.Id">@rol.Nombre</option>
+                    }
+                </select>
+                <span class="text-danger" asp-validation-for="Vm.Form.RolId"></span>
+            </div>
+        </div>
+        <div class="mt-3">
+            <button class="btn btn-sm lmd-action-success" type="submit">Crear usuario</button>
+        </div>
+    </form>
+
+    @if (Model.Vm.Usuarios.Count == 0)
+    {
+        <div class="lmd-empty-state">No hay usuarios cargados.</div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="lmd-ops-table">
+                <thead>
+                    <tr>
+                        <th>Usuario</th>
+                        <th>Nombre</th>
+                        <th>Rol</th>
+                        <th>Estado</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var usuario in Model.Vm.Usuarios)
+                    {
+                        <tr>
+                            <td>@usuario.Username</td>
+                            <td>@usuario.NombreCompleto</td>
+                            <td>@usuario.RolNombre</td>
+                            <td>
+                                <span class="lmd-status-badge @(usuario.Activo ? "lmd-status-badge--active" : "lmd-status-badge--neutral")">
+                                    @(usuario.Activo ? "Activo" : "Inactivo")
+                                </span>
+                            </td>
+                            <td>
+                                @if (usuario.Activo)
+                                {
+                                    <form method="post" asp-page-handler="Desactivar" class="d-inline lmd-confirm-destructive" data-confirm-message="¿Desactivar este usuario?">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="id" value="@usuario.Id" />
+                                        <button type="submit" class="btn btn-sm lmd-action-danger">Desactivar</button>
+                                    </form>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</section>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

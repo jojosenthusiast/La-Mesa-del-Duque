@@ -1,0 +1,186 @@
+@page
+@model LaMesaDelDuque.Web.Pages.Admin.Dashboard.DashboardModel
+@{
+    ViewData["Title"] = "Dashboard";
+}
+
+<section class="lmd-page-header rounded-top">
+    <div>
+        <h1>Dashboard Operativo</h1>
+        <p class="lmd-page-subtitle">Visión en tiempo real del servicio.</p>
+    </div>
+</section>
+
+<section class="bg-white border-top-0 p-4 rounded-bottom">
+    <!-- KPI Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card lmd-kpi-card lmd-kpi-card--ventas">
+                <div class="card-body text-center">
+                    <div class="lmd-kpi-label">Ventas del d&iacute;a</div>
+                    <div class="lmd-kpi-value" id="kpi-ventas">$@Model.Metricas.VentasHoy.ToString("N2")</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card lmd-kpi-card lmd-kpi-card--mesas">
+                <div class="card-body text-center">
+                    <div class="lmd-kpi-label">Mesas activas</div>
+                    <div class="lmd-kpi-value" id="kpi-mesas">@Model.Metricas.MesasActivas / @Model.Metricas.TotalMesas</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card lmd-kpi-card lmd-kpi-card--rotacion">
+                <div class="card-body text-center">
+                    <div class="lmd-kpi-label">Rotaci&oacute;n</div>
+                    <div class="lmd-kpi-value" id="kpi-rotacion">@Model.Metricas.TurnoverRate.ToString("N2")x</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card lmd-kpi-card @(Model.Metricas.PedidosExcedenSLA > 0 ? "lmd-kpi-card--alerta" : "lmd-kpi-card--ok")">
+                <div class="card-body text-center">
+                    <div class="lmd-kpi-label">SLA Cocina &gt;30min</div>
+                    <div class="lmd-kpi-value" id="kpi-sla">@Model.Metricas.PedidosExcedenSLA</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLA Warning -->
+    @if (Model.Metricas.PedidosExcedenSLA > 0)
+    {
+        <div class="alert alert-warning d-flex align-items-center mb-4" role="alert">
+            <span class="me-2">&#9888;</span>
+            <strong>Atenci&oacute;n:</strong> @Model.Metricas.PedidosExcedenSLA pedido(s) exceden el tiempo de preparaci&oacute;n de 30 minutos.
+        </div>
+    }
+
+    <!-- Chart -->
+    <div class="card mb-4">
+        <div class="card-header lmd-chart-header">
+            <h5 class="mb-0">Ventas por hora</h5>
+        </div>
+        <div class="card-body">
+            <canvas id="ventasPorHoraChart" height="80"></canvas>
+        </div>
+    </div>
+
+    <!-- Last Updated -->
+    <div class="text-end text-muted small">
+        <span id="last-updated">Actualizado: @DateTime.Now.ToString("HH:mm:ss")</span>
+        <span id="connection-status" class="ms-2 badge bg-secondary">Conectando...</span>
+    </div>
+</section>
+
+@section Scripts {
+    <script src="~/lib/chart.js/chart.umd.min.js"></script>
+    <script src="~/lib/microsoft/signalr/dist/browser/signalr.min.js"></script>
+    <script>
+        (function () {
+            // --- Chart.js setup ---
+            const ctx = document.getElementById('ventasPorHoraChart').getContext('2d');
+            const rawData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+                Model.VentasPorHora.Select(v => new { v.Hora, v.Total }),
+                new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase }));
+
+            const labels = rawData.map(d => `${d.hora.toString().padStart(2, '0')}:00`);
+            const dataValues = rawData.map(d => d.total);
+
+            const chart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Ventas ($)',
+                        data: dataValues,
+                        backgroundColor: 'rgba(201, 162, 78, 0.7)',
+                        borderColor: '#C9A24E',
+                        borderWidth: 1,
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) { return '$' + value.toFixed(0); }
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false }
+                    }
+                }
+            });
+
+            // --- SignalR real-time refresh ---
+            const connection = new signalR.HubConnectionBuilder()
+                .withUrl('/hubs/pedidos')
+                .withAutomaticReconnect()
+                .build();
+
+            const statusBadge = document.getElementById('connection-status');
+            const lastUpdated = document.getElementById('last-updated');
+
+            function setStatus(text, cls) {
+                statusBadge.textContent = text;
+                statusBadge.className = 'ms-2 badge ' + cls;
+            }
+
+            connection.onreconnecting(() => setStatus('Reconectando...', 'bg-warning'));
+            connection.onreconnected(() => setStatus('En vivo', 'bg-success'));
+            connection.onclose(() => setStatus('Desconectado', 'bg-danger'));
+
+            connection.on('MetricsInvalidated', async () => {
+                try {
+                    const resp = await fetch('?handler=MetricasJson');
+                    if (!resp.ok) return;
+                    const metricas = await resp.json();
+
+                    document.getElementById('kpi-ventas').textContent = '$' + metricas.ventasHoy.toFixed(2);
+                    document.getElementById('kpi-mesas').textContent = metricas.mesasActivas + ' / ' + metricas.totalMesas;
+                    document.getElementById('kpi-rotacion').textContent = metricas.turnoverRate.toFixed(2) + 'x';
+                    document.getElementById('kpi-sla').textContent = metricas.pedidosExcedenSLA;
+
+                    lastUpdated.textContent = 'Actualizado: ' + new Date().toLocaleTimeString('es-ES');
+
+                    // Refresh chart data too
+                    const chartResp = await fetch('?handler=VentasPorHoraJson');
+                    if (chartResp.ok) {
+                        const horaData = await chartResp.json();
+                        chart.data.datasets[0].data = horaData.map(d => d.total);
+                        chart.update();
+                    }
+                } catch (e) {
+                    console.warn('Dashboard refresh failed:', e);
+                }
+            });
+
+            async function start() {
+                try {
+                    await connection.start();
+                    await connection.invoke('UnirseADashboard');
+                    setStatus('En vivo', 'bg-success');
+                } catch (err) {
+                    console.error('SignalR connection failed:', err);
+                    setStatus('Error', 'bg-danger');
+                }
+            }
+
+            start();
+
+            // Cleanup on page unload
+            window.addEventListener('beforeunload', async () => {
+                try {
+                    await connection.invoke('SalirDeDashboard');
+                } catch (e) { /* ignore */ }
+                await connection.stop();
+            });
+        })();
+    </script>
+}

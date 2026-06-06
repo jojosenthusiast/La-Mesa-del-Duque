@@ -1,0 +1,97 @@
+@page
+@model LaMesaDelDuque.Web.Pages.Admin.Configuracion.IndexModel
+@{
+    ViewData["Title"] = "Configuración";
+    ViewData["ActiveTab"] = "Configuración";
+}
+
+<section class="lmd-page-header rounded-top">
+    <div>
+        <h1>Configuración</h1>
+        <p class="lmd-page-subtitle">Parámetros operativos y datos del restaurante.</p>
+    </div>
+</section>
+
+<section class="bg-white p-4 rounded-bottom">
+    <div class="lmd-toast-zone mb-3">
+        @if (!string.IsNullOrWhiteSpace(Model.ToastSuccess))
+        {
+            <div class="alert alert-success alert-dismissible fade show py-2 mb-2" data-lmd-toast="true" role="status">
+                @Model.ToastSuccess
+                <button type="button" class="btn-close" aria-label="Cerrar"></button>
+            </div>
+        }
+        @if (!string.IsNullOrWhiteSpace(Model.ToastError))
+        {
+            <div class="alert alert-danger alert-dismissible fade show py-2 mb-2" data-lmd-toast="true" role="alert">
+                @Model.ToastError
+                <button type="button" class="btn-close" aria-label="Cerrar"></button>
+            </div>
+        }
+    </div>
+
+    <form method="post">
+        @Html.AntiForgeryToken()
+        <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+        <h6 class="fw-bold mb-3 border-bottom pb-2">Datos del establecimiento</h6>
+        <div class="row g-3 mb-4">
+            <div class="col-md-6">
+                <label class="form-label" asp-for="Form.Nombre">Nombre comercial</label>
+                <input class="form-control" asp-for="Form.Nombre" />
+                <span class="text-danger" asp-validation-for="Form.Nombre"></span>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label" asp-for="Form.Telefono">Teléfono</label>
+                <input class="form-control" asp-for="Form.Telefono" placeholder="Ej. 2288-0000" />
+                <span class="text-danger" asp-validation-for="Form.Telefono"></span>
+            </div>
+            <div class="col-12">
+                <label class="form-label" asp-for="Form.Direccion">Dirección</label>
+                <input class="form-control" asp-for="Form.Direccion" />
+                <span class="text-danger" asp-validation-for="Form.Direccion"></span>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label" asp-for="Form.HorarioApertura">Hora apertura</label>
+                <input class="form-control" asp-for="Form.HorarioApertura" type="time" />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label" asp-for="Form.HorarioCierre">Hora cierre</label>
+                <input class="form-control" asp-for="Form.HorarioCierre" type="time" />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label" asp-for="Form.PeriodoGraciaMinutos">Período de gracia (min)</label>
+                <input class="form-control" asp-for="Form.PeriodoGraciaMinutos" type="number" min="0" max="60" />
+                <small class="text-muted">Tiempo tras el pago antes de liberar la mesa.</small>
+            </div>
+        </div>
+
+        <h6 class="fw-bold mb-3 border-bottom pb-2">Datos fiscales y ticket</h6>
+        <div class="row g-3 mb-4">
+            <div class="col-md-4">
+                <label class="form-label" asp-for="Form.Nit">NIT / RUC</label>
+                <input class="form-control" asp-for="Form.Nit" placeholder="Ej. 0614-123456-101-1" />
+            </div>
+            <div class="col-md-2">
+                <label class="form-label" asp-for="Form.IvaPorcentaje">IVA (%)</label>
+                <input class="form-control" asp-for="Form.IvaPorcentaje" type="number" min="0" max="30" />
+            </div>
+            <div class="col-md-2">
+                <label class="form-label" asp-for="Form.PropinaPorcentaje">Propina sugerida (%)</label>
+                <input class="form-control" asp-for="Form.PropinaPorcentaje" type="number" min="0" max="30" />
+            </div>
+            <div class="col-md-6">
+                <label class="form-label" asp-for="Form.MensajeTicket">Mensaje en ticket</label>
+                <input class="form-control" asp-for="Form.MensajeTicket" placeholder="Ej. ¡Gracias por su visita!" maxlength="120" />
+            </div>
+        </div>
+
+        <div class="d-flex gap-2">
+            <button type="submit" class="btn lmd-action-success">Guardar cambios</button>
+        </div>
+    </form>
+</section>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

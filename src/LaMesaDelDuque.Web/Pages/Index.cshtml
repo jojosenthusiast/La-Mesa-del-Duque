@@ -1,0 +1,26 @@
+﻿@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Operaciones";
+}
+
+<section class="lmd-page-header rounded-top">
+    <div>
+        <h1>Operaciones</h1>
+        <p class="lmd-page-subtitle">Acceso rápido a los tres flujos críticos del Sprint 1.</p>
+    </div>
+</section>
+
+<section class="p-4 bg-white rounded-bottom border-top-0">
+    <div class="row g-3">
+        @foreach (var module in Model.ModuleLinks)
+        {
+            <div class="col-lg-4">
+                <a class="lmd-tarjeta d-block text-decoration-none h-100" asp-page="@module.Page" asp-route-soloOcupadas="@(module.SoloOcupadas ? "true" : null)">
+                    <h3>@module.Label</h3>
+                    <p>@module.Description</p>
+                </a>
+            </div>
+        }
+    </div>
+</section>

@@ -1,0 +1,47 @@
+@page
+@model LaMesaDelDuque.Web.Pages.Operaciones.Pedidos.TablesideModel
+@{
+    Layout = null;
+    ViewData["Title"] = "Tableside";
+}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>@ViewData["Title"] — La Mesa del Duque</title>
+    <link rel="icon" type="image/png" href="~/img/marca/logo-simbolo.png" />
+    <link rel="stylesheet" href="~/css/marca.css" asp-append-version="true" />
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    @Html.AntiForgeryToken()
+</head>
+<body class="lmd-tableside-body">
+    <header class="lmd-tableside-header">
+        <h1 class="lmd-tableside-header__titulo">Tableside</h1>
+        <div class="lmd-tableside-mesa-info" id="tableside-mesa-info">Seleccione mesa</div>
+    </header>
+
+    <div class="lmd-tableside-cat-tabs" id="tableside-cat-tabs"></div>
+
+    <div class="lmd-tableside-grid" id="tableside-grid"></div>
+
+    <div class="lmd-tableside-bottom">
+        <button class="lmd-tableside-btn-volver" onclick="tableside.irAMesas()"><svg class="lmd-icon" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="/lib/lucide-static/icons/arrow-left.svg#icon"/></svg> Mesas</button>
+        <div class="lmd-tableside-pedido-info" id="tableside-pedido-info">0 items — $0.00</div>
+        <button class="lmd-tableside-btn-enviar" id="tableside-btn-enviar" onclick="tableside.enviarACocina()" disabled>Enviar a Cocina</button>
+    </div>
+
+    @{
+        var jsonOptsTableside = new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase };
+    }
+    <script>
+        window.__lmdMesasDisponibles = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+            Model.Vm.MesasDisponibles.Select(m => new { m.Id, m.Numero, m.Capacidad, m.Estado }), jsonOptsTableside));
+
+        window.__lmdProductosDisponibles = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+            Model.Vm.ProductosDisponibles.Select(p => new { p.Id, p.Nombre, p.Precio, p.CategoriaNombre, p.TiempoPreparacionMin, p.ImagenUrl }), jsonOptsTableside));
+    </script>
+    <script src="~/lib/microsoft/signalr/dist/browser/signalr.min.js"></script>
+    <script src="~/js/tableside.js" asp-append-version="true"></script>
+</body>
+</html>

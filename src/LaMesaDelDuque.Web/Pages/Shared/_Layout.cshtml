@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="La Mesa del Duque — Operaciones" />
+    <title>@ViewData["Title"] — La Mesa del Duque</title>
+    <link rel="icon" type="image/png" href="~/img/marca/logo-simbolo.png" />
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/lib/bootstrap-icons/font/bootstrap-icons.css" />
+    <link rel="stylesheet" href="~/css/marca.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/sidebar.css" asp-append-version="true" />
+    @RenderSection("Styles", required: false)
+    <link rel="stylesheet" href="~/LaMesaDelDuque.Web.styles.css" asp-append-version="true" />
+    <link rel="manifest" href="~/manifest.json" />
+</head>
+<body>
+@{
+    var isAuth      = User.Identity?.IsAuthenticated == true;
+    var esAdmin     = isAuth && User.IsInRole("Administrador");
+    var esEncargado = isAuth && User.IsInRole("Encargado");
+    var esMesero    = isAuth && User.IsInRole("Mesero");
+    var esCocinero  = isAuth && User.IsInRole("Cocinero");
+    var esCajero    = isAuth && User.IsInRole("Cajero");
+    var esDespacho  = isAuth && User.IsInRole("Despacho");
+    var esGerente   = isAuth && User.IsInRole("Gerente");
+    var esGestion   = esAdmin || esEncargado || esGerente;
+    var rolStrip    = esDespacho ? "Despacho" : esCajero ? "Caja" : esMesero ? "Mesero" : esCocinero ? "Cocina" : esGerente ? "Gerente" : "";
+}
+
+    <div id="lmd-offline-banner" class="lmd-offline-banner" style="display:none;">
+        <span id="lmd-offline-texto">Modo offline</span>
+        <span id="lmd-offline-pendientes" class="lmd-offline-pendientes-badge" style="display:none;"></span>
+    </div>
+
+    @if (isAuth && esGestion)
+    {
+        <div class="lmd-app-shell">
+            <partial name="_Sidebar" />
+            <div class="lmd-shell-with-sidebar" id="lmdShellMain">
+                <main role="main" class="lmd-main-surface lmd-main-surface--sidebar">
+                    @RenderBody()
+                </main>
+            </div>
+        </div>
+    }
+    else if (isAuth)
+    {
+        <header class="lmd-ops-strip">
+            <a asp-page="/Index" class="lmd-ops-strip__brand" aria-label="Inicio">
+                <img src="~/img/marca/logo-simbolo.png" alt="La Mesa del Duque" />
+            </a>
+            <span class="lmd-ops-strip__role">@rolStrip</span>
+            <div class="lmd-ops-strip__user">
+                <span class="lmd-ops-strip__username">@User.Identity!.Name</span>
+                <a asp-page="/Auth/Logout" class="lmd-ops-strip__logout" title="Cerrar sesión">
+                    <i class="bi bi-box-arrow-right"></i>
+                    <span class="lmd-ops-strip__logout-text">Cerrar sesión</span>
+                </a>
+            </div>
+        </header>
+        <main role="main" class="lmd-ops-fullscreen">
+            @RenderBody()
+        </main>
+    }
+    else
+    {
+        @RenderBody()
+    }
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/js/sw.js').catch(function(err) {
+                console.warn('SW registration failed:', err);
+            });
+        }
+    </script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

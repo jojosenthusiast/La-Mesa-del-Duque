@@ -1,0 +1,17 @@
+{
+  "Logging": {
+    "LogLevel": {
+      "Default": "Debug",
+      "Microsoft.AspNetCore": "Warning",
+      "Microsoft.EntityFrameworkCore": "Information"
+    }
+  },
+  "DetailedErrors": true,
+  "ConnectionStrings": {
+    "DefaultConnection": "Host=aws-0-region.pooler.supabase.com;Port=6543;Database=postgres;Username=postgres.TU_PROJECT_REF;Password=TU_CONTRASENA_AQUI;No Reset On Close=true"
+  },
+  "Supabase": {
+    "Url": "https://TU_PROYECTO.supabase.co",
+    "Key": "TU_CLAVE_ANONIMA"
+  }
+}

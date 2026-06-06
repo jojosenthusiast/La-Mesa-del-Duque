@@ -1,0 +1,72 @@
+# ============================================================================
+# La Mesa del Duque — .dockerignore
+# ============================================================================
+
+# Dependencias y builds
+**/bin/
+**/obj/
+**/node_modules/
+.nuget/
+
+# SQLite local (no incluir en imagen, se crea en runtime)
+*.db
+*.db-shm
+*.db-wal
+
+# Artefactos de desarrollo
+.atl/
+openspec/
+.sdd/
+.claude/
+.worktrees/
+AGENTS.md
+CLAUDE.md
+.cursorrules
+
+# IDE y herramientas
+.vs/
+.vscode/
+.idea/
+*.DotSettings.user
+*.suo
+*.user
+
+# Secretos y configuración local
+appsettings.Development.json
+appsettings.*.local.json
+*.local.json
+.env
+.env.*
+secrets.json
+credentials.json
+*.pfx
+*.pem
+*.key
+*.crt
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Pruebas y calidad
+TestResults/
+artifacts/
+*.coverage
+*.coveragexml
+coveragereport/
+
+# Documentación (no necesaria en runtime)
+docs/
+scripts/
+*.md
+!README.md
+
+# Docker
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Sistema operativo
+.DS_Store
+Thumbs.db

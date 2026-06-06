@@ -1,0 +1,213 @@
+/* ═══════════════════════════════════════════════════════
+   KDS UX Overhaul — Sprint 3
+   Mismo tratamiento que POS: cada elemento su espacio.
+   ═══════════════════════════════════════════════════════ */
+
+/* Shell — fullscreen como el POS */
+.lmd-kds-shell {
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh - var(--lmd-nav-alto, 72px) - 80px);
+    overflow: hidden;
+    background: #0a0a14;
+    color: #fff;
+}
+
+/* Station tabs — barra horizontal completa */
+.lmd-kds-stations {
+    display: flex;
+    background: #111122;
+    border-bottom: 2px solid #1a1a2e;
+    overflow-x: auto;
+    flex-shrink: 0;
+}
+.lmd-kds-station-btn {
+    appearance: none; border: none; background: transparent;
+    color: #777; font-family: var(--lmd-fuente-cuerpo);
+    font-weight: 700; font-size: var(--lmd-texto-sm);
+    padding: 0.8rem 1.5rem; cursor: pointer;
+    min-height: 50px; white-space: nowrap;
+    border-bottom: 3px solid transparent;
+    transition: color var(--lmd-transicion), border var(--lmd-transicion);
+}
+.lmd-kds-station-btn:hover { color: #aaa; }
+.lmd-kds-station-btn--active { color: var(--lmd-dorado-real); border-bottom-color: var(--lmd-dorado-real); }
+
+/* Orders grid — 2-3 columnas flexibles */
+.lmd-kds-orders {
+    flex: 1; overflow-y: auto; padding: 0.6rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 0.5rem; align-content: start;
+}
+.lmd-kds-orders--todas {
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+}
+
+/* Order card — estructura clara, cada sección separada */
+.lmd-kds-card {
+    background: #16162a;
+    border-radius: var(--lmd-radio-md);
+    border-left: 5px solid #2a2a4a;
+    display: flex; flex-direction: column;
+    overflow: hidden;
+    min-height: 140px;
+    transition: border-left-color 0.3s, background 0.3s;
+}
+.lmd-kds-card--fresh  { border-left-color: #27ae60; }
+.lmd-kds-card--warn   { border-left-color: #f1c40f; }
+.lmd-kds-card--alert  { border-left-color: #e74c3c; animation: kds-pulse 1.5s ease-in-out infinite; }
+.lmd-kds-card--completing { opacity: 0.35; pointer-events: none; transition: opacity 0.3s; }
+.lmd-kds-card--recuperada { border-left-color: #3498db !important; animation: kds-recover 0.5s ease-out; }
+.lmd-kds-card--escalado { border-left-color: #fff !important; box-shadow: 0 0 0 4px rgba(231,76,60,0.6); }
+.lmd-kds-card--escalado .lmd-kds-card__timer { color: #fff; animation: kds-blink 0.6s ease-in-out infinite; }
+@keyframes kds-recover { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes kds-blink { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+@keyframes kds-pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(231,76,60,0.4); } 50% { box-shadow: 0 0 0 12px rgba(231,76,60,0); } }
+
+/* Mesa group separator */
+.lmd-kds-mesa-group {
+    display: contents;
+}
+.lmd-kds-mesa-group-header {
+    grid-column: 1 / -1;
+    background: rgba(201,162,78,0.12);
+    color: var(--lmd-dorado-real);
+    font-size: 0.8rem; font-weight: 700; text-transform: uppercase;
+    padding: 0.3rem 0.75rem; letter-spacing: 0.06em;
+    border-radius: 4px; margin-top: 0.3rem;
+}
+.lmd-kds-mesa-group-count {
+    font-weight: 400; opacity: 0.7; font-size: 0.7rem;
+}
+
+/* Undo button */
+.lmd-kds-undo-btn {
+    appearance: none; border: 1px solid #555; background: transparent;
+    color: #aaa; font-size: 0.7rem; padding: 0.3rem 0.7rem; cursor: pointer;
+    border-radius: 4px; margin-right: 0.5rem;
+}
+.lmd-kds-undo-btn:hover { background: #333; color: #fff; }
+
+/* Visual separators between sections */
+.lmd-kds-card__header + .lmd-kds-card__dish-row,
+.lmd-kds-card__dish-row + .lmd-kds-card__modificaciones,
+.lmd-kds-card__modificaciones + .lmd-kds-card__notas-block,
+.lmd-kds-card__notas-block + .lmd-kds-card__footer {
+    border-top: 1px solid rgba(255,255,255,0.05);
+    padding-top: 0.4rem;
+}
+
+/* Allergy banner — full width top, rojo sólido */
+.lmd-kds-alergeno-banner {
+    background: #c0392b; color: #fff;
+    font-size: 0.95rem; font-weight: 800; text-align: center;
+    padding: 0.45rem; letter-spacing: 0.04em;
+    display: flex; align-items: center; justify-content: center; gap: 0.3rem;
+}
+
+/* Header — mesa + timer */
+.lmd-kds-card__header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 0.5rem 0.75rem; background: rgba(255,255,255,0.04);
+}
+.lmd-kds-card__mesa { font-size: 0.85rem; font-weight: 700; opacity: 0.85; display: flex; align-items: center; gap: 0.3rem; }
+.lmd-kds-card__timer { font-size: 1.1rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+.lmd-kds-card--fresh  .lmd-kds-card__timer { color: #27ae60; }
+.lmd-kds-card--warn   .lmd-kds-card__timer { color: #f1c40f; }
+.lmd-kds-card--alert  .lmd-kds-card__timer { color: #e74c3c; }
+
+/* Body — producto + cantidad */
+.lmd-kds-card__dish-row {
+    display: flex; justify-content: space-between; align-items: flex-start;
+    padding: 0.5rem 0.75rem;
+}
+.lmd-kds-card__producto {
+    font-size: 1.15rem; font-weight: 700; line-height: 1.3; flex: 1;
+    color: #fff;
+}
+.lmd-kds-card__cantidad {
+    font-size: 1.6rem; font-weight: 900; color: var(--lmd-dorado-real);
+    margin-left: 0.5rem; min-width: 2rem; text-align: right;
+}
+
+/* Modifications — bien grandes, bien claras */
+.lmd-kds-card__modificaciones { padding: 0.2rem 0.75rem 0.4rem; }
+.lmd-kds-mods-list { margin: 0; padding: 0; list-style: none; }
+.lmd-kds-mod { padding: 0.2rem 0; font-size: 1rem; font-weight: 700; line-height: 1.4; }
+.lmd-kds-mod--quitar { color: #e74c3c; }
+.lmd-kds-mod--extra { color: #2ecc71; }
+
+/* Notes — bloque amarillo IMPOSIBLE de ignorar */
+.lmd-kds-card__notas-block {
+    margin: 0.2rem 0.75rem 0.5rem; background: rgba(241,196,15,0.2);
+    border-left: 5px solid #f1c40f; border-radius: 0 4px 4px 0;
+    padding: 0.6rem 0.7rem; font-size: 1.05rem; font-weight: 600; line-height: 1.5;
+    color: #ffe082;
+}
+.lmd-kds-notas-label {
+    font-weight: 900; font-size: 0.8rem; letter-spacing: 0.06em;
+    background: #f1c40f; color: #0a0a14; padding: 0.15rem 0.5rem;
+    border-radius: 3px; margin-right: 0.5rem;
+}
+
+/* Allergy banner — más grande aún */
+.lmd-kds-alergeno-banner {
+    background: #c0392b; color: #fff;
+    font-size: 1rem; font-weight: 900; text-align: center;
+    padding: 0.55rem; letter-spacing: 0.05em;
+    display: flex; align-items: center; justify-content: center; gap: 0.4rem;
+}
+
+/* Timer — bien prominente */
+.lmd-kds-card__timer {
+    font-size: 1.2rem; font-weight: 900; font-variant-numeric: tabular-nums;
+}
+
+/* Card minimum height para que todo respire */
+.lmd-kds-card {
+    min-height: 140px;
+}
+
+/* Footer — LISTO button */
+.lmd-kds-card__footer { padding: 0.5rem 0.75rem 0.75rem; margin-top: auto; display: flex; gap: 0.4rem; }
+.lmd-kds-btn-listo {
+    flex: 1; padding: 0.8rem; border: none; border-radius: 0.4rem;
+    background: #27ae60; color: #fff; font-size: 1rem; font-weight: 800;
+    text-transform: uppercase; letter-spacing: 0.05em; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 0.3rem;
+    transition: background 0.12s, transform 0.1s;
+}
+.lmd-kds-btn-listo:hover { background: #2ecc71; }
+.lmd-kds-btn-listo:active { transform: scale(0.97); }
+.lmd-kds-btn-86 {
+    padding: 0.8rem 1rem; border: none; border-radius: 0.4rem;
+    background: #444; color: #ccc; font-weight: 700; cursor: pointer;
+}
+
+/* Legend */
+.lmd-kds-legend {
+    display: flex; gap: 1rem; padding: 0.4rem 0.75rem;
+    background: #111122; border-top: 1px solid #1a1a2e;
+    font-size: 0.7rem; flex-shrink: 0;
+}
+.lmd-kds-legend-item { display: flex; align-items: center; gap: 0.3rem; }
+.lmd-kds-legend-dot { width: 10px; height: 10px; border-radius: 50%; }
+.lmd-kds-legend-dot--fresh { background: #27ae60; }
+.lmd-kds-legend-dot--warn { background: #f1c40f; }
+.lmd-kds-legend-dot--alert { background: #e74c3c; }
+
+/* Toast */
+.lmd-kds-toast {
+    position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%);
+    background: #2c3e50; color: #fff; padding: 0.7rem 1.5rem;
+    border-radius: 99px; font-weight: 600; font-size: 0.9rem;
+    z-index: 3000; animation: kds-toast-in 0.25s ease-out;
+}
+@keyframes kds-toast-in { from { opacity:0; transform:translateX(-50%) translateY(1rem); } to { opacity:1; transform:translateX(-50%) translateY(0); } }
+
+/* Responsive */
+@media (max-width: 768px) {
+    .lmd-kds-orders { grid-template-columns: 1fr; }
+    .lmd-kds-card__producto { font-size: 1rem; }
+}

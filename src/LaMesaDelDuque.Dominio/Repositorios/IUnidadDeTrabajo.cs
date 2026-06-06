@@ -1,0 +1,29 @@
+namespace LaMesaDelDuque.Dominio.Repositorios;
+
+public interface IUnidadDeTrabajo
+{
+    ICategoriaProductoRepositorio Categorias { get; }
+    IProductoRepositorio Productos { get; }
+    IIngredienteRepositorio Ingredientes { get; }
+    IMesaRepositorio Mesas { get; }
+    IPedidoRepositorio Pedidos { get; }
+    IRecetaProductoRepositorio RecetasProductos { get; }
+    IRolRepositorio Roles { get; }
+    IUsuarioRepositorio Usuarios { get; }
+    IAuditoriaRepositorio Auditorias { get; }
+    IOrdenCocinaRepositorio OrdenesCocina { get; }
+    ICuentaRepositorio Cuentas { get; }
+    IPagoRepositorio Pagos { get; }
+    IProveedorRepositorio? Proveedores { get; }
+    IMermaRepositorio Mermas { get; }
+    ICierreDiaRepositorio CierresDia { get; }
+    IZonaSalonRepositorio ZonasSalon { get; }
+    IPromocionRepositorio Promociones { get; }
+    ITurnoCajaRepositorio TurnosCaja { get; }
+    IDescuentoRepositorio Descuentos { get; }
+    IMotivoDescuentoRepositorio MotivosDescuento { get; }
+    IDevolucionRepositorio Devoluciones { get; }
+
+    Task<int> GuardarCambiosAsync(CancellationToken cancelacion = default);
+    Task<int> ObtenerPeriodoGraciaMinutosAsync(CancellationToken cancelacion = default);
+}

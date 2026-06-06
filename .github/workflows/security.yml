@@ -1,0 +1,75 @@
+name: Análisis de Seguridad
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+jobs:
+  codeql:
+    name: CodeQL — C#
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      actions: read
+    steps:
+      - name: Obtener código fuente
+        uses: actions/checkout@v4
+
+      - name: Configurar .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Inicializar CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: csharp
+
+      - name: Compilar solución
+        run: dotnet build --configuration Release
+
+      - name: Ejecutar análisis CodeQL
+        uses: github/codeql-action/analyze@v3
+
+  gitleaks:
+    name: Detección de secretos (Gitleaks)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Obtener código fuente
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Ejecutar Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  paquetes-vulnerables:
+    name: Verificar paquetes vulnerables
+    runs-on: ubuntu-latest
+    steps:
+      - name: Obtener código fuente
+        uses: actions/checkout@v4
+
+      - name: Configurar .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restaurar dependencias
+        run: dotnet restore
+
+      - name: Listar paquetes con vulnerabilidades conocidas
+        run: dotnet list package --vulnerable --include-transitive 2>&1 | tee salida-vulnerabilidades.txt
+
+      - name: Fallar si hay vulnerabilidades
+        run: |
+          if grep -q "has the following vulnerable packages" salida-vulnerabilidades.txt; then
+            echo "::error::Se detectaron paquetes con vulnerabilidades conocidas. Revisa la salida anterior."
+            exit 1
+          fi

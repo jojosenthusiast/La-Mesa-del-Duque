@@ -1,0 +1,497 @@
+/* ═══════════════════════════════════════════════════════
+   Mapa Visual del Salón — La Mesa del Duque
+   Optimizado para tablet: touch targets grandes, baja
+   carga cognitiva, colores de estado claros.
+   ═══════════════════════════════════════════════════════ */
+
+/* ── Layout principal ──────────────────────────────────── */
+.lmd-mapa-section {
+    display: flex;
+    flex-direction: column;
+    min-height: calc(100vh - var(--lmd-nav-alto, 72px) - 120px);
+}
+
+.lmd-mapa-canvas-wrapper {
+    flex: 1 1 auto;
+    position: relative;
+    background: #f4f2ec;
+    border: 1px solid var(--lmd-marfil-oscuro, #ebe6d8);
+    border-radius: var(--lmd-radio-md, 0.5rem);
+    margin: 0.75rem;
+    overflow: hidden;
+}
+
+/* ── Zonas tabs ───────────────────────────────────────── */
+
+/* ?? Resumen operativo ????????????????????????????????????? */
+.lmd-mapa-resumen {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.85rem 0.95rem 0;
+    color: var(--lmd-azul-duque, #0F1B2D);
+    font-size: var(--lmd-texto-sm, 0.875rem);
+}
+
+.lmd-mapa-resumen span {
+    display: inline-flex;
+    align-items: center;
+    min-height: 32px;
+    padding: 0.35rem 0.65rem;
+    border: 1px solid var(--lmd-marfil-oscuro, #ebe6d8);
+    border-radius: 999px;
+    background: var(--lmd-marfil, #F7F4EC);
+}
+
+.lmd-mapa-resumen strong {
+    margin-right: 0.2rem;
+}
+
+.lmd-mapa-resumen-alerta {
+    color: var(--lmd-azul-duque, #0F1B2D);
+    background: rgba(201, 162, 78, 0.18) !important;
+    border-color: rgba(201, 162, 78, 0.55) !important;
+}
+
+.lmd-mapa-resumen-ok {
+    color: var(--lmd-verde-salvia, #4E6B58);
+    background: rgba(78, 107, 88, 0.12) !important;
+    border-color: rgba(78, 107, 88, 0.28) !important;
+}
+
+.lmd-mapa-zonas-tabs {
+    display: flex;
+    gap: 0.25rem;
+    padding: 0.75rem 0.75rem 0;
+    border-bottom: 2px solid var(--lmd-marfil-oscuro, #ebe6d8);
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.lmd-mapa-zona-tab {
+    appearance: none;
+    border: none;
+    background: transparent;
+    color: var(--lmd-gris-piedra, #6B6F76);
+    font-family: var(--lmd-fuente-cuerpo, 'Montserrat', sans-serif);
+    font-weight: 600;
+    font-size: var(--lmd-texto-sm, 0.875rem);
+    padding: 0.75rem 1.25rem;
+    border-radius: var(--lmd-radio-md, 0.5rem) var(--lmd-radio-md, 0.5rem) 0 0;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background var(--lmd-transicion, 0.2s ease), color var(--lmd-transicion, 0.2s ease);
+    min-height: 48px;
+    touch-action: manipulation;
+}
+
+.lmd-mapa-zona-tab:hover,
+.lmd-mapa-zona-tab:focus-visible {
+    background: rgba(201, 162, 78, 0.12);
+    color: var(--lmd-azul-duque, #0F1B2D);
+}
+
+.lmd-mapa-zona-tab--activa {
+    background: var(--lmd-azul-duque, #0F1B2D);
+    color: var(--lmd-marfil, #F7F4EC);
+}
+
+/* ── Canvas de zona ───────────────────────────────────── */
+.lmd-mapa-zona-canvas {
+    position: absolute;
+    inset: 0;
+    display: none;
+}
+
+.lmd-mapa-zona-canvas--activa {
+    display: block;
+}
+
+.lmd-mapa-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    height: 100%;
+    padding: 2rem;
+    color: var(--lmd-gris-piedra, #6B6F76);
+    font-size: var(--lmd-texto-lg, 1.125rem);
+    text-align: center;
+}
+
+.lmd-mapa-empty--global strong {
+    color: var(--lmd-azul-duque, #0F1B2D);
+    font-family: var(--lmd-fuente-titulo, 'Cinzel', serif);
+    font-size: clamp(1.25rem, 2vw, 1.75rem);
+}
+
+.lmd-mapa-empty-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    padding: 0.65rem 1rem;
+    border-radius: 999px;
+    background: var(--lmd-azul-duque, #0F1B2D);
+    color: var(--lmd-marfil, #F7F4EC);
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.lmd-mapa-empty-link:hover,
+.lmd-mapa-empty-link:focus-visible {
+    color: var(--lmd-marfil, #F7F4EC);
+    background: #172844;
+}
+
+/* ── Mesas ────────────────────────────────────────────── */
+.lmd-mapa-mesa {
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 64px;
+    height: 64px;
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: none;
+    border: 3px solid transparent;
+    box-shadow: var(--lmd-sombra-md, 0 4px 12px rgba(15,27,45,0.10));
+    transition: transform 0.1s ease, box-shadow 0.2s ease;
+    z-index: 10;
+}
+
+.lmd-mapa-mesa:active {
+    transform: scale(0.96);
+}
+
+.lmd-mapa-mesa--redonda {
+    border-radius: 50%;
+}
+
+.lmd-mapa-mesa--cuadrada {
+    border-radius: var(--lmd-radio-md, 0.5rem);
+}
+
+.lmd-mapa-mesa--bar {
+    border-radius: 999px;
+    width: 96px;
+    height: 48px;
+}
+
+.lmd-mapa-mesa-numero {
+    font-family: var(--lmd-fuente-titulo, 'Cinzel', serif);
+    font-weight: 700;
+    font-size: var(--lmd-texto-lg, 1.125rem);
+    line-height: 1;
+    color: #fff;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+}
+
+.lmd-mapa-mesa-timer {
+    font-size: 0.65rem;
+    font-weight: 600;
+    color: rgba(255,255,255,0.9);
+    margin-top: 2px;
+    line-height: 1;
+}
+
+.lmd-mapa-mesa-capacidad {
+    display: block;
+    margin-top: 0.15rem;
+    color: rgba(255,255,255,0.92);
+    font-size: 0.62rem;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+}
+
+.lmd-mapa-mesa-sugerida {
+    position: absolute;
+    bottom: -0.8rem;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 0.12rem 0.35rem;
+    border: 1px solid rgba(201, 162, 78, 0.85);
+    border-radius: 999px;
+    background: var(--lmd-marfil, #F7F4EC);
+    color: var(--lmd-azul-duque, #0F1B2D);
+    font-size: 0.55rem;
+    font-weight: 800;
+    line-height: 1;
+    white-space: nowrap;
+}
+
+.lmd-mapa-mesa--sugerida {
+    outline: 2px dashed rgba(201, 162, 78, 0.9);
+    outline-offset: 4px;
+}
+
+/* ── Estados / urgencia ───────────────────────────────── */
+.lmd-mapa--disponible {
+    background: var(--lmd-verde-salvia, #4E6B58);
+    border-color: #3a5544;
+}
+
+.lmd-mapa--ocupada-verde {
+    background: #27ae60;
+    border-color: #1e8449;
+}
+
+.lmd-mapa--ocupada-amarillo {
+    background: #f1c40f;
+    border-color: #d4ac0d;
+}
+
+.lmd-mapa--ocupada-amarillo .lmd-mapa-mesa-numero,
+.lmd-mapa--ocupada-amarillo .lmd-mapa-mesa-timer {
+    color: var(--lmd-azul-duque, #0F1B2D);
+    text-shadow: none;
+}
+
+.lmd-mapa--ocupada-rojo {
+    background: var(--lmd-terracota, #C75A3C);
+    border-color: #a94426;
+    animation: lmd-mapa-pulse 1.5s ease-in-out infinite;
+}
+
+.lmd-mapa--reservada {
+    background: #9b59b6;
+    border-color: #7d3c98;
+}
+
+.lmd-mapa--mantenimiento {
+    background: var(--lmd-gris-piedra, #6B6F76);
+    border-color: #55595f;
+}
+
+.lmd-mapa--inactiva {
+    background: #8b8f96;
+    border-color: #666b72;
+    opacity: 0.76;
+}
+
+.lmd-mapa--sugerida {
+    background: var(--lmd-dorado-real, #C9A24E);
+    border-color: rgba(15, 27, 45, 0.35);
+}
+
+.lmd-mapa--neutral {
+    background: #bdc3c7;
+    border-color: #95a5a6;
+}
+
+@keyframes lmd-mapa-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(199, 90, 60, 0.45); }
+    50% { box-shadow: 0 0 0 10px rgba(199, 90, 60, 0); }
+}
+
+/* ── Panel tap-to-act ─────────────────────────────────── */
+.lmd-mapa-panel {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: #fff;
+    border-top: 3px solid var(--lmd-dorado-real, #C9A24E);
+    box-shadow: 0 -6px 24px rgba(15, 27, 45, 0.15);
+    z-index: 2000;
+    padding: 1rem;
+    animation: lmd-panel-slide-up 0.2s ease-out;
+}
+
+@keyframes lmd-panel-slide-up {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+}
+
+.lmd-mapa-panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+}
+
+.lmd-mapa-panel-header strong {
+    font-family: var(--lmd-fuente-titulo, 'Cinzel', serif);
+    font-size: var(--lmd-texto-xl, 1.25rem);
+    color: var(--lmd-azul-duque, #0F1B2D);
+}
+
+.lmd-mapa-panel-cerrar {
+    appearance: none;
+    border: none;
+    background: none;
+    font-size: 1.75rem;
+    line-height: 1;
+    color: var(--lmd-gris-piedra, #6B6F76);
+    cursor: pointer;
+    padding: 0.25rem 0.5rem;
+    min-width: 48px;
+    min-height: 48px;
+    touch-action: manipulation;
+}
+
+.lmd-mapa-panel-info {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.lmd-mapa-panel-estado {
+    font-weight: 600;
+    font-size: var(--lmd-texto-sm, 0.875rem);
+    padding: 0.35rem 0.75rem;
+    border-radius: var(--lmd-radio-redondo, 50%);
+    color: #fff;
+    background: var(--lmd-gris-piedra, #6B6F76);
+}
+
+.lmd-mapa-panel-timer {
+    font-size: var(--lmd-texto-sm, 0.875rem);
+    color: var(--lmd-gris-piedra, #6B6F76);
+    font-variant-numeric: tabular-nums;
+}
+
+.lmd-mapa-panel-acciones {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+}
+
+.lmd-mapa-btn {
+    appearance: none;
+    border: none;
+    padding: 1rem;
+    border-radius: var(--lmd-radio-md, 0.5rem);
+    font-family: var(--lmd-fuente-cuerpo, 'Montserrat', sans-serif);
+    font-weight: 600;
+    font-size: var(--lmd-texto-base, 1rem);
+    color: #fff;
+    cursor: pointer;
+    text-align: center;
+    min-height: 56px;
+    touch-action: manipulation;
+    transition: transform 0.1s ease, opacity 0.2s ease;
+}
+
+.lmd-mapa-btn:active {
+    transform: scale(0.97);
+}
+
+.lmd-mapa-btn--disponible { background: var(--lmd-verde-salvia, #4E6B58); }
+.lmd-mapa-btn--ocupada { background: var(--lmd-terracota, #C75A3C); }
+.lmd-mapa-btn--reservada { background: #9b59b6; }
+.lmd-mapa-btn--mantenimiento { background: var(--lmd-gris-piedra, #6B6F76); }
+
+.lmd-mapa-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* ── Leyenda ──────────────────────────────────────────── */
+.lmd-mapa-leyenda {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    background: #faf9f6;
+    border-top: 1px solid var(--lmd-marfil-oscuro, #ebe6d8);
+}
+
+.lmd-mapa-leyenda-item {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: var(--lmd-texto-xs, 0.75rem);
+    font-weight: 500;
+    color: var(--lmd-gris-piedra, #6B6F76);
+}
+
+.lmd-mapa-leyenda-color {
+    width: 16px;
+    height: 16px;
+    border-radius: 4px;
+    flex-shrink: 0;
+}
+
+/* ── Badges de conexión ───────────────────────────────── */
+.lmd-mapa-badge {
+    font-size: var(--lmd-texto-xs, 0.75rem);
+    font-weight: 600;
+    padding: 0.35rem 0.75rem;
+    border-radius: var(--lmd-radio-redondo, 50%);
+    color: #fff;
+}
+
+.lmd-mapa-badge--conectado { background: #27ae60; }
+.lmd-mapa-badge--offline { background: var(--lmd-gris-piedra, #6B6F76); }
+
+/* ── Responsive tablet ────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+    .lmd-mapa-mesa,
+    .lmd-mapa-zona-tab,
+    .lmd-mapa-panel,
+    .lmd-mapa-btn {
+        transition: none;
+        animation: none;
+    }
+}
+
+@media (max-width: 768px) {
+    .lmd-mapa-mesa {
+        width: 56px;
+        height: 56px;
+    }
+    .lmd-mapa-mesa--bar {
+        width: 80px;
+        height: 40px;
+    }
+    .lmd-mapa-mesa-numero {
+        font-size: var(--lmd-texto-base, 1rem);
+    }
+    .lmd-mapa-panel-acciones {
+        grid-template-columns: 1fr;
+    }
+    .lmd-mapa-leyenda {
+        gap: 0.5rem;
+    }
+}
+
+/* ── Acciones superiores del mapa ── */
+.lmd-mapa-header-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.65rem;
+    flex-wrap: wrap;
+}
+
+.lmd-mapa-login-btn {
+    appearance: none;
+    min-height: 36px;
+    padding: 0.42rem 0.75rem;
+    border-radius: 999px;
+    border: 1px solid rgba(199, 90, 60, 0.42);
+    background: rgba(199, 90, 60, 0.12);
+    color: var(--lmd-azul-duque, #0F1B2D);
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 0.78rem;
+    cursor: pointer;
+}
+
+.lmd-mapa-login-btn:hover,
+.lmd-mapa-login-btn:focus-visible {
+    background: rgba(199, 90, 60, 0.2);
+    border-color: var(--lmd-terracota, #C75A3C);
+}

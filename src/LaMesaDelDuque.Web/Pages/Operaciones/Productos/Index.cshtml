@@ -1,0 +1,265 @@
+@page
+@model LaMesaDelDuque.Web.Pages.Operaciones.Productos.IndexModel
+@{
+    ViewData["Title"] = "Productos";
+}
+
+<section class="lmd-page-header rounded-top">
+    <div>
+        <h1>Productos</h1>
+        <p class="lmd-page-subtitle">Catálogo operativo con confirmación visible, filtros claros y control de disponibilidad.</p>
+    </div>
+    <button class="btn lmd-action-primary" type="button" data-lmd-new-product aria-controls="producto-form">
+        Nuevo producto
+    </button>
+</section>
+
+<section class="bg-white border-top-0 p-4 rounded-bottom">
+    <div class="lmd-toast-zone mb-3" aria-live="polite">
+        @if (!string.IsNullOrWhiteSpace(Model.ToastSuccess))
+        {
+            <div class="alert alert-success alert-dismissible fade show py-2 mb-2" data-lmd-toast="true" role="status">@Model.ToastSuccess<button type="button" class="btn-close" aria-label="Cerrar"></button></div>
+        }
+        @if (!string.IsNullOrWhiteSpace(Model.ToastError))
+        {
+            <div class="alert alert-danger alert-dismissible fade show py-2 mb-2" data-lmd-toast="true" role="alert">@Model.ToastError<button type="button" class="btn-close" aria-label="Cerrar"></button></div>
+        }
+    </div>
+
+    @if (Model.Vm.ProductoGuardadoOcultoPorFiltros)
+    {
+        <div class="alert alert-info lmd-productos-saved-filter-hint" role="status">
+            El producto se guardó, pero los filtros actuales no lo muestran. <a asp-page="./Index" asp-route-ProductoGuardadoId="@Model.Vm.ProductoGuardadoId">Limpia filtros</a> para verlo en la lista.
+        </div>
+    }
+
+    <div class="lmd-productos-summary mb-3" aria-label="Resumen del catálogo de productos">
+        <span><strong>@Model.Vm.TotalProductos</strong> @(Model.Vm.TotalProductos == 1 ? "producto total" : "productos totales")</span>
+        <span><strong>@Model.Vm.TotalVisibles</strong> @(Model.Vm.TotalVisibles == 1 ? "producto visible" : "productos visibles")</span>
+        @if (Model.Vm.FiltrosAplicados)
+        {
+            <span class="lmd-productos-summary__filters">@Model.Vm.DescripcionFiltros</span>
+        }
+        else
+        {
+            <span class="lmd-productos-summary__filters">Sin filtros activos.</span>
+        }
+    </div>
+
+    <form method="get" class="row g-2 align-items-end mb-3">
+        <div class="col-md-4">
+            <label class="form-label" asp-for="Buscar">Buscar</label>
+            <input class="form-control form-control-sm" asp-for="Buscar" placeholder="Nombre del producto" />
+        </div>
+        <div class="col-md-4">
+            <label class="form-label" asp-for="CategoriaId">Categoría</label>
+            <select class="form-select form-select-sm" asp-for="CategoriaId">
+                <option value="">Todas</option>
+                @foreach (var categoria in Model.Vm.Categorias)
+                {
+                    <option value="@categoria.Id">@categoria.Nombre</option>
+                }
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label class="form-label" asp-for="Estado">Estado</label>
+            <select class="form-select form-select-sm" asp-for="Estado">
+                <option value="todos">Todos</option>
+                <option value="activos">Activos</option>
+                <option value="inactivos">Inactivos</option>
+            </select>
+        </div>
+        <div class="col-md-2 d-grid">
+            <button class="btn btn-sm lmd-action-neutral" type="submit">Filtrar</button>
+        </div>
+    </form>
+
+    <div class="collapse mb-3 @(Model.ModelState.ErrorCount > 0 ? "show" : string.Empty)" id="producto-form">
+        <form method="post" asp-page-handler="Guardar" class="border rounded p-3 lmd-productos-form" enctype="multipart/form-data">
+            @Html.AntiForgeryToken()
+            <input type="hidden" asp-for="Vm.Form.Id" />
+            <input type="hidden" asp-for="Vm.Form.ImagenUrl" />
+            <input type="hidden" asp-for="Buscar" />
+            <input type="hidden" asp-for="CategoriaId" />
+            <input type="hidden" asp-for="Estado" />
+            <div class="lmd-productos-form__heading">
+                <div>
+                    <h2 id="producto-form-mode">Nuevo producto</h2>
+                    <p>Guarda el menú real de la operación: precio, estación/categoría, tiempo de preparación y foto.</p>
+                </div>
+                <span class="lmd-productos-form__hint">El producto creado quedará visible al guardar.</span>
+            </div>
+            @if (!Model.Vm.TieneCategorias)
+            {
+                <div class="alert alert-warning" role="alert">
+                    Necesitas al menos una categoría activa antes de crear productos. Sin categoría, cocina y reportes no pueden clasificar el plato.
+                </div>
+            }
+            <div asp-validation-summary="ModelOnly" class="text-danger mb-2"></div>
+            <div class="row g-2">
+                <div class="col-md-4">
+                    <label class="form-label" asp-for="Vm.Form.Nombre">Nombre</label>
+                    <input class="form-control form-control-sm" asp-for="Vm.Form.Nombre" autocomplete="off" />
+                    <span class="text-danger" asp-validation-for="Vm.Form.Nombre"></span>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label" asp-for="Vm.Form.Precio">Precio</label>
+                    <input class="form-control form-control-sm" asp-for="Vm.Form.Precio" inputmode="decimal" placeholder="18.75" />
+                    <input name="__Invariant" type="hidden" value="Vm.Form.Precio" />
+                    <span class="text-danger" asp-validation-for="Vm.Form.Precio"></span>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label" asp-for="Vm.Form.CategoriaId">Categoría</label>
+                    <select class="form-select form-select-sm" asp-for="Vm.Form.CategoriaId">
+                        <option value="">Seleccionar categoría</option>
+                        @foreach (var categoria in Model.Vm.Categorias)
+                        {
+                            <option value="@categoria.Id">@categoria.Nombre</option>
+                        }
+                    </select>
+                    <span class="text-danger" asp-validation-for="Vm.Form.CategoriaId"></span>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label" asp-for="Vm.Form.TiempoPreparacionMin">Prep. (min)</label>
+                    <input class="form-control form-control-sm" asp-for="Vm.Form.TiempoPreparacionMin" inputmode="numeric" min="1" placeholder="25" />
+                    <span class="text-danger" asp-validation-for="Vm.Form.TiempoPreparacionMin"></span>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label" asp-for="Vm.Form.Descripcion">Descripción</label>
+                    <input class="form-control form-control-sm" asp-for="Vm.Form.Descripcion" autocomplete="off" />
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label" asp-for="Vm.Form.ImagenFile">Foto del producto</label>
+                    <input class="form-control form-control-sm" asp-for="Vm.Form.ImagenFile" type="file" accept=".jpg,.jpeg,.png,.webp" />
+                    <span class="text-danger" asp-validation-for="Vm.Form.ImagenFile"></span>
+                    @if (!string.IsNullOrWhiteSpace(Model.Vm.Form.ImagenUrl))
+                    {
+                        <div class="mt-2 d-flex align-items-center gap-2">
+                            <img src="@Model.Vm.Form.ImagenUrl" alt="Vista previa" class="lmd-productos-thumb" />
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" asp-for="Vm.Form.EliminarImagen" />
+                                <label class="form-check-label" asp-for="Vm.Form.EliminarImagen">Eliminar foto actual</label>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+            <div class="mt-3 d-flex flex-wrap gap-2 align-items-center">
+                <button class="btn btn-sm lmd-action-success" type="submit" disabled="@(!Model.Vm.TieneCategorias)">Guardar producto</button>
+                <button class="btn btn-sm lmd-action-neutral" type="button" data-lmd-new-product>Limpiar formulario</button>
+            </div>
+        </form>
+    </div>
+
+    @if (Model.Vm.Productos.Count == 0)
+    {
+        <div class="lmd-empty-state lmd-productos-empty">
+            @if (!Model.Vm.TieneProductos)
+            {
+                <h2>Catálogo sin productos</h2>
+                <p>Empieza creando los platos y bebidas que el POS, cocina y reportes van a usar durante el turno.</p>
+            }
+            else
+            {
+                <h2>No hay productos para estos filtros</h2>
+                <p>@Model.Vm.DescripcionFiltros</p>
+            }
+            <div class="lmd-productos-empty__actions">
+                @if (Model.Vm.FiltrosAplicados)
+                {
+                    <a class="btn btn-sm lmd-action-neutral" asp-page="./Index">Limpia filtros</a>
+                }
+                <button class="btn btn-sm lmd-action-primary" type="button" data-lmd-new-product>Crear producto</button>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="lmd-ops-table lmd-productos-table">
+                <thead>
+                    <tr>
+                        <th>Foto</th>
+                        <th>Nombre</th>
+                        <th>Categoría</th>
+                        <th>Precio</th>
+                        <th>Estado</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var producto in Model.Vm.Productos)
+                    {
+                        var esProductoGuardado = Model.Vm.ProductoGuardadoId == producto.Id;
+                        <tr class="@(esProductoGuardado ? "lmd-row-highlight" : string.Empty)">
+                            <td>
+                                @if (!string.IsNullOrWhiteSpace(producto.ImagenUrl))
+                                {
+                                    <img src="@producto.ImagenUrl" alt="@producto.Nombre" class="lmd-productos-thumb" />
+                                }
+                                else
+                                {
+                                    <span class="text-muted small">Sin imagen</span>
+                                }
+                            </td>
+                            <td>
+                                <div class="lmd-productos-name-cell">
+                                    <span>@producto.Nombre</span>
+                                    @if (esProductoGuardado && Model.Vm.ProductoGuardadoVisible)
+                                    {
+                                        <span class="lmd-status-badge lmd-status-badge--active">Recién guardado</span>
+                                    }
+                                    @if (!string.IsNullOrWhiteSpace(producto.Descripcion))
+                                    {
+                                        <small>@producto.Descripcion</small>
+                                    }
+                                    <small>Prep: @producto.TiempoPreparacionMin min</small>
+                                </div>
+                            </td>
+                            <td>@producto.CategoriaNombre</td>
+                            <td class="lmd-money">@producto.Precio.ToString("C")</td>
+                            <td>
+                                <span class="lmd-status-badge @(producto.Activo ? "lmd-status-badge--active" : "lmd-status-badge--neutral")">
+                                    @(producto.Activo ? "Activo" : "Inactivo")
+                                </span>
+                            </td>
+                            <td class="d-flex flex-wrap gap-1">
+                                <button type="button" class="btn btn-sm lmd-action-neutral" data-lmd-edit-product
+                                        aria-label="Editar @producto.Nombre"
+                                        data-producto-id="@producto.Id"
+                                        data-producto-nombre="@producto.Nombre"
+                                        data-producto-precio="@producto.Precio"
+                                        data-producto-categoria-id="@producto.CategoriaId"
+                                        data-producto-descripcion="@(producto.Descripcion ?? string.Empty)"
+                                        data-producto-imagen-url="@(producto.ImagenUrl ?? string.Empty)"
+                                        data-producto-tiempo-preparacion="@producto.TiempoPreparacionMin">
+                                    Editar
+                                </button>
+                                @if (!string.IsNullOrWhiteSpace(producto.ImagenUrl))
+                                {
+                                    <form method="post" asp-page-handler="EliminarFoto" class="d-inline lmd-confirm-destructive" data-confirm-message="¿Eliminar la foto de este producto?">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="id" value="@producto.Id" />
+                                        <button type="submit" class="btn btn-sm lmd-action-neutral" aria-label="Quitar foto de @producto.Nombre">Quitar foto</button>
+                                    </form>
+                                }
+                                @if (producto.Activo)
+                                {
+                                    <form method="post" asp-page-handler="Desactivar" class="d-inline lmd-confirm-destructive" data-confirm-message="¿Desactivar este producto?">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="id" value="@producto.Id" />
+                                        <button type="submit" class="btn btn-sm lmd-action-danger" aria-label="Desactivar @producto.Nombre">Desactivar</button>
+                                    </form>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</section>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

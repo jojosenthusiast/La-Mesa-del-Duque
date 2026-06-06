@@ -1,0 +1,71 @@
+@page
+@model LaMesaDelDuque.Web.Pages.Operaciones.Pedidos.IndexModel
+@{
+    ViewData["Title"] = "Pedidos";
+
+    var pedidosPorMesa = Model.Vm.PedidosActivos
+        .Where(p => p.MesaId.HasValue)
+        .GroupBy(p => p.MesaId!.Value)
+        .ToDictionary(g => g.Key, g => g.OrderByDescending(p => p.FechaCreacion).First());
+
+    var mesasDisponiblesJs = Model.Vm.MesasDisponibles.Select(m =>
+    {
+        pedidosPorMesa.TryGetValue(m.Id, out var tab);
+        return new
+        {
+            m.Id,
+            m.Numero,
+            m.Capacidad,
+            m.Estado,
+            Zona = m.Capacidad <= 2 ? "Pequeña" : m.Capacidad <= 4 ? "Mediana" : "Grande",
+            PedidoActualId = tab?.Id,
+            PedidoTotal = tab?.Total,
+            PedidoEstado = tab?.Estado,
+            PedidoFechaCreacion = tab?.FechaCreacion,
+            m.GraciaHasta
+        };
+    }).ToList();
+
+    var pedidoActualJs = Model.Vm.PedidoActual is null
+        ? null
+        : new
+        {
+            Id = Model.Vm.PedidoActual.Id,
+            TipoServicio = Model.Vm.PedidoActual.TipoServicio,
+            MesaId = Model.Vm.PedidoActual.MesaId,
+            MesaNumero = Model.Vm.PedidoActual.MesaNumero,
+            Estado = Model.Vm.PedidoActual.Estado,
+            Total = Model.Vm.PedidoActual.Total,
+            FechaCreacion = Model.Vm.PedidoActual.FechaCreacion
+        };
+}
+@Html.AntiForgeryToken()
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/pos-ux.css" asp-append-version="true" />
+}
+
+<section id="lmd-pos-contenido">
+    <div class="text-center py-5 text-muted" style="color:#f7f4ec;">Cargando...</div>
+</section>
+
+<script>
+    window.__lmdSoloOcupadas = @(Model.SoloOcupadas.ToString().ToLowerInvariant());
+    window.__lmdPedidoActualId = '@(Model.PedidoActualId?.ToString() ?? string.Empty)';
+    window.__lmdPedidoActual = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+        pedidoActualJs,
+        new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase }));
+
+    window.__lmdMesasDisponibles = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+        mesasDisponiblesJs,
+        new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase }));
+
+    window.__lmdProductosDisponibles = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+        Model.Vm.ProductosDisponibles.Select(p => new { p.Id, p.Nombre, p.Precio, p.CategoriaNombre, p.TiempoPreparacionMin, p.ImagenUrl }),
+        new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase }));
+</script>
+
+@section Scripts {
+    <script src="~/lib/microsoft/signalr/dist/browser/signalr.min.js"></script>
+    <script src="~/js/pos.js" asp-append-version="true"></script>
+}

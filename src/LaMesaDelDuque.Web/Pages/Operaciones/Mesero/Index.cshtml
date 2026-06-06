@@ -1,0 +1,34 @@
+@page
+@model LaMesaDelDuque.Web.Pages.Operaciones.Mesero.IndexModel
+@{
+    ViewData["Title"] = "Mesero";
+}
+@Html.AntiForgeryToken()
+
+<nav class="lmd-mesero-topbar" aria-label="Acciones del mesero">
+    <a class="lmd-mesero-topbar__btn" asp-page="/Operaciones/Mesero/Handoff">Transferir mesas / cambio de turno</a>
+    <a class="lmd-mesero-topbar__logout" asp-page="/Index">Volver a operaciones</a>
+</nav>
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/pos-ux.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/mesero.css" asp-append-version="true" />
+}
+
+<div id="lmd-toast-zone" class="lmd-toast-zone lmd-mesero-toast-zone" aria-live="polite"></div>
+
+<section id="lmd-mesero-contenido">
+    <div class="text-center py-5" style="color:#f7f4ec;">Cargando...</div>
+</section>
+
+<script>
+    window.__lmdSoloOcupadasMesero = @(Model.SoloOcupadas.ToString().ToLowerInvariant());
+    window.__lmdProductosMesero = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+        Model.ProductosDisponibles.Select(p => new { p.Id, p.Nombre, p.Precio, p.CategoriaNombre, p.TiempoPreparacionMin, p.ImagenUrl }),
+        new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase }));
+</script>
+
+@section Scripts {
+    <script src="~/lib/microsoft/signalr/dist/browser/signalr.min.js"></script>
+    <script src="~/js/mesero.js" asp-append-version="true"></script>
+}

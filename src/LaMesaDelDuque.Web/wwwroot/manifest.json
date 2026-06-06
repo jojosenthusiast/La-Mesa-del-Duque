@@ -1,0 +1,11 @@
+{
+  "name": "La Mesa del Duque",
+  "short_name": "LMDD",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1a1a2e",
+  "theme_color": "#c9a76b",
+  "icons": [
+    { "src": "/favicon.ico", "sizes": "48x48", "type": "image/x-icon" }
+  ]
+}

@@ -1,0 +1,154 @@
+@page
+@model LaMesaDelDuque.Web.Pages.Operaciones.Salon.MapaModel
+@{
+    ViewData["Title"] = "Mapa del Salón";
+    var puedeEditar = Model.Vm.PuedeEditar;
+    var puedeCambiarEstado = User.IsInRole("Administrador") || User.IsInRole("Encargado") || User.IsInRole("Mesero");
+    var primeraZonaId = Model.Vm.Zonas.FirstOrDefault()?.Id;
+}
+
+<section class="lmd-page-header rounded-top d-flex justify-content-between align-items-center">
+    <div>
+        <h1>Mapa del Salón</h1>
+        <p class="lmd-page-subtitle">Visualización del piso conectada al catálogo real de mesas.</p>
+    </div>
+    <div class="lmd-mapa-header-actions">
+        <a class="lmd-mapa-login-btn" asp-page="/Index">Volver a operaciones</a>
+        <span id="lmd-mapa-conexion" class="lmd-mapa-badge lmd-mapa-badge--conectado">En vivo</span>
+        <span id="lmd-mapa-offline" class="lmd-mapa-badge lmd-mapa-badge--offline" style="display:none;">Offline</span>
+    </div>
+</section>
+
+<section class="bg-white border-top-0 p-0 rounded-bottom lmd-mapa-section">
+    @Html.AntiForgeryToken()
+
+    <div class="lmd-mapa-resumen" aria-live="polite">
+        <span><strong>@Model.Vm.TotalMesas</strong> mesas del catálogo</span>
+        @if (Model.Vm.TieneMesasPendientesUbicacion)
+        {
+            <span class="lmd-mapa-resumen-alerta"><strong>@Model.Vm.MesasPendientesUbicacion</strong>&nbsp;pendientes de ubicar</span>
+        }
+        else if (Model.Vm.TieneMesas)
+        {
+            <span class="lmd-mapa-resumen-ok">Distribución configurada</span>
+        }
+        @if (Model.Vm.UsaZonaSugerida)
+        {
+            <span class="lmd-mapa-resumen-alerta">Crea una zona real para guardar posiciones.</span>
+        }
+    </div>
+
+    @if (Model.Vm.Zonas.Count > 0)
+    {
+        <nav class="lmd-mapa-zonas-tabs" id="lmd-mapa-zonas-tabs" aria-label="Zonas del salón">
+            @foreach (var zona in Model.Vm.Zonas)
+            {
+                var zonaActiva = zona.Id == primeraZonaId;
+                <button type="button"
+                        class="lmd-mapa-zona-tab @(zonaActiva ? "lmd-mapa-zona-tab--activa" : string.Empty)"
+                        data-zona-id="@zona.Id"
+                        data-zona-nombre="@zona.Nombre">
+                    @zona.Nombre
+                </button>
+            }
+        </nav>
+    }
+
+    <div class="lmd-mapa-canvas-wrapper">
+        @if (!Model.Vm.TieneMesas)
+        {
+            <div class="lmd-mapa-empty lmd-mapa-empty--global">
+                <strong>No hay mesas configuradas.</strong>
+                @if (User.IsInRole("Administrador") || User.IsInRole("Encargado"))
+                {
+                    <a class="lmd-mapa-empty-link" asp-page="/Operaciones/Mesas/Index">Crear mesas</a>
+                }
+            </div>
+        }
+        else
+        {
+            @foreach (var zona in Model.Vm.Zonas)
+            {
+                var zonaActiva = zona.Id == primeraZonaId;
+                var mesasZona = Model.Vm.Mesas.Where(m => m.ZonaId == zona.Id).ToList();
+                <div class="lmd-mapa-zona-canvas @(zonaActiva ? "lmd-mapa-zona-canvas--activa" : string.Empty)"
+                     data-zona-id="@zona.Id"
+                     id="lmd-mapa-canvas-@zona.Id">
+                    @if (mesasZona.Count == 0)
+                    {
+                        <div class="lmd-mapa-empty">No hay mesas asignadas a @zona.Nombre.</div>
+                    }
+                    else
+                    {
+                        foreach (var mesa in mesasZona)
+                        {
+                            var formaCss = mesa.FormaVisual.ToLowerInvariant();
+                            var etiquetaMesa = $"Mesa {mesa.Numero}, {mesa.EstadoVisual}, capacidad {mesa.Capacidad} personas" + (mesa.EsUbicacionSugerida ? ", ubicación sugerida" : string.Empty);
+                            <div class="lmd-mapa-mesa lmd-mapa-mesa--@formaCss @mesa.ClaseUrgencia @(mesa.EsUbicacionSugerida ? "lmd-mapa-mesa--sugerida" : string.Empty)"
+                                 style="left:@(mesa.PosicionX)%; top:@(mesa.PosicionY)%; transform: rotate(@(mesa.Rotacion ?? 0)deg);"
+                                 data-mesa-id="@mesa.Id"
+                                 data-mesa-numero="@mesa.Numero"
+                                 data-mesa-estado="@mesa.EstadoVisual"
+                                 data-mesa-capacidad="@mesa.Capacidad"
+                                 data-mesa-activa="@(mesa.Activa ? "true" : "false")"
+                                 data-mesa-ocupada-desde="@(mesa.OcupadaDesde?.ToString("o") ?? string.Empty)"
+                                 data-ubicacion-sugerida="@(mesa.EsUbicacionSugerida ? "true" : "false")"
+                                 data-puede-editar="@(puedeEditar ? "true" : "false")"
+                                 data-puede-cambiar-estado="@(puedeCambiarEstado ? "true" : "false")"
+                                 role="button"
+                                 tabindex="0"
+                                 aria-label="@etiquetaMesa">
+                                <span class="lmd-mapa-mesa-numero">@mesa.Numero</span>
+                                <span class="lmd-mapa-mesa-capacidad">@mesa.Capacidad pax</span>
+                                <span class="lmd-mapa-mesa-timer" id="timer-@mesa.Id"></span>
+                                @if (mesa.EsUbicacionSugerida)
+                                {
+                                    <span class="lmd-mapa-mesa-sugerida">Ubicar</span>
+                                }
+                            </div>
+                        }
+                    }
+                </div>
+            }
+        }
+    </div>
+
+    <div id="lmd-mapa-panel" class="lmd-mapa-panel" style="display:none;">
+        <div class="lmd-mapa-panel-header">
+            <strong id="lmd-mapa-panel-titulo">Mesa</strong>
+            <button type="button" class="lmd-mapa-panel-cerrar" id="lmd-mapa-panel-cerrar" aria-label="Cerrar panel">&times;</button>
+        </div>
+        <div class="lmd-mapa-panel-body">
+            <div class="lmd-mapa-panel-info">
+                <span id="lmd-mapa-panel-estado" class="lmd-mapa-panel-estado"></span>
+                <span id="lmd-mapa-panel-timer" class="lmd-mapa-panel-timer"></span>
+            </div>
+            <div class="lmd-mapa-panel-acciones" id="lmd-mapa-panel-acciones">
+                <button type="button" class="lmd-mapa-btn lmd-mapa-btn--disponible" data-estado="Disponible">Disponible</button>
+                <button type="button" class="lmd-mapa-btn lmd-mapa-btn--ocupada" data-estado="Ocupada">Ocupada</button>
+                <button type="button" class="lmd-mapa-btn lmd-mapa-btn--reservada" data-estado="Reservada">Reservada</button>
+                <button type="button" class="lmd-mapa-btn lmd-mapa-btn--mantenimiento" data-estado="EnMantenimiento">Mantenimiento</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="lmd-mapa-leyenda" aria-label="Leyenda de estados de mesa">
+        <div class="lmd-mapa-leyenda-item"><span class="lmd-mapa-leyenda-color lmd-mapa--disponible"></span> Disponible</div>
+        <div class="lmd-mapa-leyenda-item"><span class="lmd-mapa-leyenda-color lmd-mapa--ocupada-verde"></span> Ocupada &lt;15min</div>
+        <div class="lmd-mapa-leyenda-item"><span class="lmd-mapa-leyenda-color lmd-mapa--ocupada-amarillo"></span> Ocupada 15-30min</div>
+        <div class="lmd-mapa-leyenda-item"><span class="lmd-mapa-leyenda-color lmd-mapa--ocupada-rojo"></span> Ocupada &gt;30min</div>
+        <div class="lmd-mapa-leyenda-item"><span class="lmd-mapa-leyenda-color lmd-mapa--reservada"></span> Reservada</div>
+        <div class="lmd-mapa-leyenda-item"><span class="lmd-mapa-leyenda-color lmd-mapa--mantenimiento"></span> Mantenimiento</div>
+        <div class="lmd-mapa-leyenda-item"><span class="lmd-mapa-leyenda-color lmd-mapa--inactiva"></span> Inactiva</div>
+        <div class="lmd-mapa-leyenda-item"><span class="lmd-mapa-leyenda-color lmd-mapa--sugerida"></span> Ubicación sugerida</div>
+    </div>
+</section>
+
+@section Scripts {
+    <script src="~/lib/microsoft/signalr/dist/browser/signalr.min.js"></script>
+    <script src="~/js/mapa-salon.js" asp-append-version="true"></script>
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/mapa-salon.css" asp-append-version="true" />
+}
