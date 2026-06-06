@@ -5,8 +5,65 @@
 
 (function () {
     // ── Lucide SVG helper ──────────────────────────────
+    // Íconos lucide embebidos (mismo origen, sin CORS). lucide-static v1.x — ISC.
+    var LMD_ICONOS = {
+        'alert-circle': '<circle cx="12" cy="12" r="10" /><line x1="12" x2="12" y1="8" y2="12" /><line x1="12" x2="12.01" y1="16" y2="16" />',
+        'alert-triangle': '<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3" /><path d="M12 9v4" /><path d="M12 17h.01" />',
+        'arrow-left': '<path d="m12 19-7-7 7-7" /><path d="M19 12H5" />',
+        'arrow-right': '<path d="M5 12h14" /><path d="m12 5 7 7-7 7" />',
+        'banknote': '<rect width="20" height="12" x="2" y="6" rx="2" /><circle cx="12" cy="12" r="2" /><path d="M6 12h.01M18 12h.01" />',
+        'building-2': '<path d="M10 12h4" /><path d="M10 8h4" /><path d="M14 21v-3a2 2 0 0 0-4 0v3" /><path d="M6 10H4a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-2" /><path d="M6 21V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v16" />',
+        'cake-slice': '<path d="M16 13H3" /><path d="M16 17H3" /><path d="m7.2 7.9-3.388 2.5A2 2 0 0 0 3 12.01V20a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1v-8.654c0-2-2.44-6.026-6.44-8.026a1 1 0 0 0-1.082.057L10.4 5.6" /><circle cx="9" cy="7" r="2" />',
+        'check': '<path d="M20 6 9 17l-5-5" />',
+        'check-circle': '<path d="M21.801 10A10 10 0 1 1 17 3.335" /><path d="m9 11 3 3L22 4" />',
+        'clock': '<circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" />',
+        'credit-card': '<rect width="20" height="14" x="2" y="5" rx="2" /><line x1="2" x2="22" y1="10" y2="10" />',
+        'delete': '<path d="M10 5a2 2 0 0 0-1.344.519l-6.328 5.74a1 1 0 0 0 0 1.481l6.328 5.741A2 2 0 0 0 10 19h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2z" /><path d="m12 9 6 6" /><path d="m18 9-6 6" />',
+        'edit-3': '<path d="M13 21h8" /><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z" />',
+        'equal': '<line x1="5" x2="19" y1="9" y2="9" /><line x1="5" x2="19" y1="15" y2="15" />',
+        'file-check': '<path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z" /><path d="M14 2v5a1 1 0 0 0 1 1h5" /><path d="m9 15 2 2 4-4" />',
+        'file-minus': '<path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z" /><path d="M14 2v5a1 1 0 0 0 1 1h5" /><path d="M9 15h6" />',
+        'file-text': '<path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z" /><path d="M14 2v5a1 1 0 0 0 1 1h5" /><path d="M10 9H8" /><path d="M16 13H8" /><path d="M16 17H8" />',
+        'gift': '<path d="M12 7v14" /><path d="M20 11v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-8" /><path d="M7.5 7a1 1 0 0 1 0-5A4.8 8 0 0 1 12 7a4.8 8 0 0 1 4.5-5 1 1 0 0 1 0 5" /><rect x="3" y="7" width="18" height="4" rx="1" />',
+        'git-branch': '<path d="M15 6a9 9 0 0 0-9 9V3" /><circle cx="18" cy="6" r="3" /><circle cx="6" cy="18" r="3" />',
+        'git-merge': '<circle cx="18" cy="18" r="3" /><circle cx="6" cy="6" r="3" /><path d="M6 21V9a9 9 0 0 0 9 9" />',
+        'hash': '<line x1="4" x2="20" y1="9" y2="9" /><line x1="4" x2="20" y1="15" y2="15" /><line x1="10" x2="8" y1="3" y2="21" /><line x1="16" x2="14" y1="3" y2="21" />',
+        'heart': '<path d="M2 9.5a5.5 5.5 0 0 1 9.591-3.676.56.56 0 0 0 .818 0A5.49 5.49 0 0 1 22 9.5c0 2.29-1.5 4-3 5.5l-5.492 5.313a2 2 0 0 1-3 .019L5 15c-1.5-1.5-3-3.2-3-5.5" />',
+        'layers': '<path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83z" /><path d="M2 12a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 12" /><path d="M2 17a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 17" />',
+        'list': '<path d="M3 5h.01" /><path d="M3 12h.01" /><path d="M3 19h.01" /><path d="M8 5h13" /><path d="M8 12h13" /><path d="M8 19h13" />',
+        'mail': '<path d="m22 7-8.991 5.727a2 2 0 0 1-2.009 0L2 7" /><rect x="2" y="4" width="20" height="16" rx="2" />',
+        'message-square': '<path d="M22 17a2 2 0 0 1-2 2H6.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 2 21.286V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2z" />',
+        'minus': '<path d="M5 12h14" />',
+        'minus-circle': '<circle cx="12" cy="12" r="10" /><path d="M8 12h8" />',
+        'package': '<path d="M11 21.73a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73z" /><path d="M12 22V12" /><polyline points="3.29 7 12 12 20.71 7" /><path d="m7.5 4.27 9 5.15" />',
+        'plus': '<path d="M5 12h14" /><path d="M12 5v14" />',
+        'plus-circle': '<circle cx="12" cy="12" r="10" /><path d="M8 12h8" /><path d="M12 8v8" />',
+        'printer': '<path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" /><path d="M6 9V3a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v6" /><rect x="6" y="14" width="12" height="8" rx="1" />',
+        'qr-code': '<rect width="5" height="5" x="3" y="3" rx="1" /><rect width="5" height="5" x="16" y="3" rx="1" /><rect width="5" height="5" x="3" y="16" rx="1" /><path d="M21 16h-3a2 2 0 0 0-2 2v3" /><path d="M21 21v.01" /><path d="M12 7v3a2 2 0 0 1-2 2H7" /><path d="M3 12h.01" /><path d="M12 3h.01" /><path d="M12 16v.01" /><path d="M16 12h1" /><path d="M21 12v.01" /><path d="M12 21v-1" />',
+        'receipt': '<path d="M12 17V7" /><path d="M16 8h-6a2 2 0 0 0 0 4h4a2 2 0 0 1 0 4H8" /><path d="M4 3a1 1 0 0 1 1-1 1.3 1.3 0 0 1 .7.2l.933.6a1.3 1.3 0 0 0 1.4 0l.934-.6a1.3 1.3 0 0 1 1.4 0l.933.6a1.3 1.3 0 0 0 1.4 0l.933-.6a1.3 1.3 0 0 1 1.4 0l.934.6a1.3 1.3 0 0 0 1.4 0l.933-.6A1.3 1.3 0 0 1 19 2a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1 1.3 1.3 0 0 1-.7-.2l-.933-.6a1.3 1.3 0 0 0-1.4 0l-.934.6a1.3 1.3 0 0 1-1.4 0l-.933-.6a1.3 1.3 0 0 0-1.4 0l-.933.6a1.3 1.3 0 0 1-1.4 0l-.934-.6a1.3 1.3 0 0 0-1.4 0l-.933.6a1.3 1.3 0 0 1-.7.2 1 1 0 0 1-1-1z" />',
+        'refresh-cw': '<path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" /><path d="M21 3v5h-5" /><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" /><path d="M8 16H3v5" />',
+        'rotate-ccw': '<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" /><path d="M3 3v5h5" />',
+        'send': '<path d="M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z" /><path d="m21.854 2.147-10.94 10.939" />',
+        'share-2': '<circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" /><line x1="8.59" x2="15.42" y1="13.51" y2="17.49" /><line x1="15.41" x2="8.59" y1="6.51" y2="10.49" />',
+        'shopping-bag': '<path d="M16 10a4 4 0 0 1-8 0" /><path d="M3.103 6.034h17.794" /><path d="M3.4 5.467a2 2 0 0 0-.4 1.2V20a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6.667a2 2 0 0 0-.4-1.2l-2-2.667A2 2 0 0 0 17 2H7a2 2 0 0 0-1.6.8z" />',
+        'shopping-cart': '<circle cx="8" cy="21" r="1" /><circle cx="19" cy="21" r="1" /><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12" />',
+        'shuffle': '<path d="m18 14 4 4-4 4" /><path d="m18 2 4 4-4 4" /><path d="M2 18h1.973a4 4 0 0 0 3.3-1.7l5.454-8.6a4 4 0 0 1 3.3-1.7H22" /><path d="M2 6h1.972a4 4 0 0 1 3.6 2.2" /><path d="M22 18h-6.041a4 4 0 0 1-3.3-1.8l-.359-.45" />',
+        'tag': '<path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z" /><circle cx="7.5" cy="7.5" r=".5" fill="currentColor" />',
+        'ticket': '<path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z" /><path d="M13 5v2" /><path d="M13 17v2" /><path d="M13 11v2" />',
+        'timer': '<line x1="10" x2="14" y1="2" y2="2" /><line x1="12" x2="15" y1="14" y2="11" /><circle cx="12" cy="14" r="8" />',
+        'user': '<path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" />',
+        'user-check': '<path d="m16 11 2 2 4-4" /><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" />',
+        'users': '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><path d="M16 3.128a4 4 0 0 1 0 7.744" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><circle cx="9" cy="7" r="4" />',
+        'utensils': '<path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2" /><path d="M7 2v20" /><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7" />',
+        'utensils-crossed': '<path d="m16 2-2.3 2.3a3 3 0 0 0 0 4.2l1.8 1.8a3 3 0 0 0 4.2 0L22 8" /><path d="M15 15 3.3 3.3a4.2 4.2 0 0 0 0 6l7.3 7.3c.7.7 2 .7 2.8 0L15 15Zm0 0 7 7" /><path d="m2.1 21.8 6.4-6.3" /><path d="m19 5-7 7" />',
+        'wine': '<path d="M8 22h8" /><path d="M7 10h10" /><path d="M12 15v7" /><path d="M12 15a5 5 0 0 0 5-5c0-2-.5-4-2-8H9c-1.5 4-2 6-2 8a5 5 0 0 0 5 5Z" />',
+        'x': '<path d="M18 6 6 18" /><path d="m6 6 12 12" />',
+        'x-circle': '<circle cx="12" cy="12" r="10" /><path d="m15 9-6 6" /><path d="m9 9 6 6" />'
+    };
+
     function icon(name, cls) {
-        return '<svg class="lmd-icon ' + (cls || '') + '" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="https://cdn.jsdelivr.net/npm/lucide-static@latest/icons/' + name + '.svg#icon"/></svg>';
+        var inner = LMD_ICONOS[name] || '';
+        return '<svg class="lmd-icon ' + (cls || '') + '" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + inner + '</svg>';
     }
 
     // ── Helpers ─────────────────────────────────────────
@@ -15,6 +72,34 @@
     }
     function totalLineas(lineas) {
         return lineas.reduce(function (s, l) { return s + (l.precioUnitario || 0) * (l.cantidad || 0); }, 0);
+    }
+
+    function productoPorId(id) {
+        return (window.__lmdProductosDisponibles || []).find(function (p) { return p.id === id; });
+    }
+    function productoRequiereConfirmacion(p) { return !!(p && (p.tieneReceta || p.TieneReceta)); }
+    function crearConfirmacionOriginal() {
+        return JSON.stringify([{
+            ingredienteId: '00000000-0000-0000-0000-000000000000',
+            ingredienteNombre: 'Original confirmado',
+            accion: 'confirmado',
+            motivo: 'original',
+            ingredienteReemplazoId: null,
+            ingredienteReemplazoNombre: null
+        }]);
+    }
+    function lineaConfirmada(linea) {
+        if (!linea) return false;
+        var producto = productoPorId(linea.productoId);
+        if (!productoRequiereConfirmacion(producto)) return true;
+        return !!(linea.ingredientesConfirmados || linea.modificacionesJson);
+    }
+    function validarLineasConfirmadas() {
+        var pendientes = state.lineas.filter(function (l) { return !lineaConfirmada(l); });
+        if (pendientes.length === 0) return true;
+        lmdToast('Confirma los ingredientes de: ' + pendientes.map(function (l) { return l.productoNombre; }).join(', '), 'error');
+        abrirModificadores(pendientes[0].productoId);
+        return false;
     }
 
     // ── State ──────────────────────────────────────────
@@ -41,6 +126,7 @@
     let connection = null;
     let keypadValue = '0';
     let _creandoPedido = false;
+    let _pagoEnProceso = false;
 
     // ── Screen machine ──────────────────────────────────
     function mostrarPantalla(nombre) {
@@ -79,7 +165,15 @@
     }
 
     function cerrarTodasOverlaysPago() {
-        ['pago', 'efectivo', 'tarjeta', 'qr', 'otro', 'split', 'splitdetalle'].forEach(cerrarOverlay);
+        ['pago', 'efectivo', 'tarjeta', 'qr', 'otro', 'errorpago', 'documentos', 'split', 'splitdetalle'].forEach(cerrarOverlay);
+    }
+
+    // Quita cualquier capa de pantalla completa que pueda quedar huérfana
+    // bloqueando los clics (ticket post-pago o diálogo de confirmación).
+    function limpiarCapasHuerfanas() {
+        document.querySelectorAll('.lmd-ticket-modal-backdrop, .lmd-modal-overlay').forEach(function (el) {
+            el.remove();
+        });
     }
 
     // ═══════════════════════════════════════════════════
@@ -102,7 +196,7 @@
                 var disponible = m.estado === 'Disponible';
                 var enGracia = disponible && m.graciaHasta && new Date(m.graciaHasta) > Date.now();
                 var hayTab = !disponible && m.pedidoActualId;
-                var enCobro = hayTab && m.pedidoEstado === 'EnCobro';
+                var enCobro = hayTab && (m.pedidoEstado === 'EnCobro' || m.pedidoEstado === 'Listo');
                 var cls = enGracia ? 'lmd-pos-mesa-card--en-gracia'
                     : disponible ? 'lmd-pos-mesa-card--disponible'
                     : enCobro ? 'lmd-pos-mesa-card--en-cobro'
@@ -131,17 +225,35 @@
             });
         });
 
+        var paraLlevarLista = window.__lmdParaLlevar || [];
+        var paraLlevarCards = paraLlevarLista.map(function (p) {
+            var listo = p.pedidoEstado === 'Listo';
+            var fechaAttr = p.pedidoFechaCreacion ? ' data-pedido-fecha="' + p.pedidoFechaCreacion + '"' : '';
+            var min = p.pedidoFechaCreacion ? Math.floor((Date.now() - new Date(p.pedidoFechaCreacion).getTime()) / 60000) : 0;
+            var tiempo = listo ? 'Listo' : (min > 0 ? min + ' min' : 'En cocina');
+            return '<div class="lmd-pos-mesa-card ' + (listo ? 'lmd-pos-mesa-card--en-cobro' : 'lmd-pos-mesa-card--ocupada') + '" ' +
+                'onclick="pos.cobrarParaLlevar(\'' + p.pedidoActualId + '\',' + (p.pedidoTotal || 0) + ')">' +
+                '<span class="lmd-pos-mesa-card__numero">#' + p.numero + '</span>' +
+                '<span class="lmd-pos-mesa-card__capacidad">Para llevar</span>' +
+                '<span class="lmd-pos-mesa-card__cobrar-badge"' + fechaAttr + '>' + icon(listo ? 'receipt' : 'clock') + ' ' + tiempo + '</span>' +
+                '<span class="lmd-pos-mesa-card__zona">' + fmt(p.pedidoTotal || 0) + '</span>' +
+            '</div>';
+        }).join('');
+
         var html = '<div class="lmd-pos-seleccion">' +
             '<div class="lmd-pos-seleccion__mitad lmd-pos-seleccion__comer-aqui">' +
                 '<div class="lmd-pos-seleccion__header">' + icon('utensils-crossed') + ' Comer aquí</div>' +
                 '<div class="lmd-pos-mesas-grid">' + (mesasHtml || '<div class="lmd-pos-empty">Sin mesas disponibles</div>') + '</div>' +
             '</div>' +
-            '<div class="lmd-pos-seleccion__mitad lmd-pos-seleccion__para-llevar" onclick="pos.seleccionarParaLlevar()">' +
+            '<div class="lmd-pos-seleccion__mitad lmd-pos-seleccion__para-llevar">' +
                 '<div class="lmd-pos-seleccion__header">' + icon('package') + ' Para llevar</div>' +
-                '<div class="lmd-pos-para-llevar-card">' +
-                    '<div class="lmd-pos-para-llevar-card__icon">' + icon('shopping-bag') + '</div>' +
-                    '<div class="lmd-pos-para-llevar-card__titulo">Para llevar</div>' +
-                    '<div class="lmd-pos-para-llevar-card__sub">Toca para iniciar sin mesa</div>' +
+                '<div class="lmd-pos-mesas-grid">' +
+                    '<div class="lmd-pos-mesa-card lmd-pos-mesa-card--disponible" onclick="pos.seleccionarParaLlevar()">' +
+                        '<div class="lmd-pos-para-llevar-card__icon">' + icon('shopping-bag') + '</div>' +
+                        '<span class="lmd-pos-mesa-card__numero" style="font-size:1rem">Nuevo</span>' +
+                        '<span class="lmd-pos-mesa-card__capacidad">Iniciar sin mesa</span>' +
+                    '</div>' +
+                    paraLlevarCards +
                 '</div>' +
             '</div>' +
         '</div>';
@@ -157,11 +269,10 @@
         var m = mesas.find(function (x) { return x.id === mesaId; });
         if (m && m.estado !== 'Disponible') {
             if (m.pedidoActualId) {
-                if (m.pedidoEstado === 'EnCobro') {
-                    cobrarMesaDirecto(mesaId, numero, m.pedidoActualId, m.pedidoTotal || 0);
-                } else {
-                    retomarTab(mesaId, numero, m.pedidoActualId, m.pedidoTotal || 0);
-                }
+                // Cualquier tab activo (pendiente, en preparación, listo o en cobro)
+                // va DIRECTO al pago en un solo toque. Si se necesita agregar más
+                // items, se cierra el overlay de pago (X) y queda la pantalla de productos.
+                cobrarMesaDirecto(mesaId, numero, m.pedidoActualId, m.pedidoTotal || 0);
             } else { lmdToast('Mesa ocupada — selecciona otra', 'error'); }
             return;
         }
@@ -196,6 +307,24 @@
         renderProductos();
         mostrarPantalla('productos');
         lmdToast('Tab retomado — Mesa ' + mesaNumero, 'success');
+    }
+
+    function cobrarParaLlevar(pedidoId, tabTotal) {
+        state.tipoServicio = 'ParaLlevar';
+        state.mesaId = null;
+        state.mesaNumero = null;
+        state.lineas = [];
+        state.pedidoActual = { id: pedidoId, total: tabTotal, detalles: [] };
+        state.pagado = false;
+        state.pagoMetodo = null;
+        state.pagoMonto = null;
+        state.pagoReferencia = null;
+        state.propinaMonto = 0;
+        state.split = { activo: false, personas: [], personaActual: 0 };
+        keypadValue = '0';
+        renderProductos();
+        mostrarPantalla('productos');
+        abrirOverlayPago();
     }
 
     function cobrarMesaDirecto(mesaId, mesaNumero, pedidoId, tabTotal) {
@@ -301,7 +430,7 @@
                 '<div class="lmd-pos-cart__items" id="lmd-pos-cart-items">' + cartItemsHtml + '</div>' +
                 '<div class="lmd-pos-cart__total">' + fmt(total) + '</div>' +
                 '<div class="lmd-pos-cart__acciones">' +
-                    '<button class="lmd-pos-cart-btn lmd-pos-cart-btn--listo" onclick="pos.confirmarListo()"' + (!hayItems ? ' disabled' : '') + '>' + listoLabel + '</button>' +
+                    '<button class="lmd-pos-cart-btn lmd-pos-cart-btn--listo" onclick="pos.confirmarListo()"' + (!state.pagado && !hayItems ? ' disabled' : '') + '>' + listoLabel + '</button>' +
                     '<button class="lmd-pos-cart-btn lmd-pos-cart-btn--cancelar" onclick="pos.cancelarOrden()">' + icon('x-circle') + ' Cancelar</button>' +
                     '<button class="lmd-pos-cart-btn lmd-pos-cart-btn--pagar' + (state.pagado ? ' lmd-pos-cart-btn--pagado' : '') + '" onclick="pos.irAPago()"' + ((!hayItems && !state.pedidoActual) || state.pagado ? ' disabled' : '') + '>' + pagarLabel + '</button>' +
                     (state.pagado ? '<button class="lmd-pos-cart-btn lmd-pos-cart-btn--anular" onclick="pos.confirmarAnulacion()">' + icon('rotate-ccw') + ' Anular pago</button>' : '') +
@@ -332,16 +461,28 @@
                       fmt(Math.max(0, precioConDescuento)) +
                   '</span>'
                 : '<span class="lmd-pos-producto-card__precio">' + fmt(p.precio || 0) + '</span>';
-            return '<div class="lmd-pos-producto-card' + (agotado ? ' lmd-pos-producto-card--agotado' : '') + (tienePromo ? ' lmd-pos-producto-card--promo' : '') + '">' +
-                '<div class="lmd-pos-producto-card__body" onclick="' + (agotado || state.pagado ? '' : 'pos.agregarAlCarrito(\'' + p.id + '\',\'' + (p.nombre || '').replace(/'/g, "\\'") + '\',' + (p.precio || 0) + ')') + '">' +
+            // Badge cantidad en carrito
+            var lineaEnCarrito = state.lineas.find(function (l) { return l.productoId === p.id; });
+            var cartBadge = lineaEnCarrito ? '<span class="lmd-pos-producto-card__cart-badge">×' + lineaEnCarrito.cantidad + '</span>' : '';
+
+            var requiereConfirmacion = productoRequiereConfirmacion(p);
+            var nombreSeguro = (p.nombre || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+            var accionClick = agotado || state.pagado ? ''
+                : requiereConfirmacion
+                    ? 'pos.abrirModificadores(\'' + p.id + '\')'
+                    : 'pos.agregarAlCarrito(\'' + p.id + '\',\'' + nombreSeguro + '\',' + (p.precio || 0) + ')';
+
+            return '<div class="lmd-pos-producto-card' + (agotado ? ' lmd-pos-producto-card--agotado' : '') + (tienePromo ? ' lmd-pos-producto-card--promo' : '') + (lineaEnCarrito ? ' lmd-pos-producto-card--en-carrito' : '') + (requiereConfirmacion ? ' lmd-pos-producto-card--requiere-confirmacion' : '') + '">' +
+                cartBadge + '<div class="lmd-pos-producto-card__body" onclick="' + accionClick + '">' +
                     '<div class="lmd-pos-producto-card__ico">' + icon(ico) + '</div>' +
                     '<span class="lmd-pos-producto-card__nombre">' + (p.nombre || '') + '</span>' +
                     precioHtml +
+                    (requiereConfirmacion ? '<span class="lmd-pos-producto-card__confirm-badge">Confirmar ingredientes</span>' : '') +
                     (tienePromo ? '<span class="lmd-pos-producto-card__promo-badge">' + icon('tag') + ' ' + (p.promoNombre || 'PROMO') + '</span>' : '') +
                     (p.tiempoPreparacionMin ? '<span class="lmd-pos-producto-card__tiempo">' + p.tiempoPreparacionMin + ' min</span>' : '') +
                     (agotado ? '<span class="lmd-pos-producto-card__agotado-badge">Agotado</span>' : '') +
                 '</div>' +
-                '<button class="lmd-pos-producto-card__editar" onclick="pos.abrirModificadores(\'' + p.id + '\')" title="Editar ingredientes">' + icon('edit-3') + '</button>' +
+                (requiereConfirmacion ? '<button class="lmd-pos-producto-card__editar" onclick="pos.abrirModificadores(\'' + p.id + '\')" title="Editar ingredientes">' + icon('edit-3') + '</button>' : '') +
             '</div>';
         }).join('');
     }
@@ -420,9 +561,9 @@
     // LISTO — enviar a cocina (+ docs si está pagado)
     // ═══════════════════════════════════════════════════
     async function confirmarListo() {
-        if (state.lineas.length === 0) { lmdToast('Agrega productos primero', 'error'); return; }
-
         if (state.pagado) { abrirOverlayDocumentos(); return; }
+        if (state.lineas.length === 0) { lmdToast('Agrega productos primero', 'error'); return; }
+        if (!validarLineasConfirmadas()) return;
 
         if (_creandoPedido) return;
         _creandoPedido = true;
@@ -474,15 +615,11 @@
             var data = await res.json();
             if (data.pedidoId) {
                 lmdToast('Pedido enviado a cocina', 'success');
-                if (state.tipoServicio === 'ParaLlevar') {
-                    _creandoPedido = false;
-                    nuevaOrden();
-                } else {
-                    state.pedidoActual = { id: data.pedidoId, total: data.total || totalLineas(state.lineas), detalles: data.detalles || [] };
-                    state.lineas = [];
-                    _creandoPedido = false;
-                    renderProductos();
-                }
+                state.pedidoActual = { id: data.pedidoId, total: data.total || totalLineas(state.lineas), detalles: data.detalles || [] };
+                state.lineas = [];
+                _creandoPedido = false;
+                await refrescarMesas();
+                renderProductos();
                 return;
             }
         } catch (e) { lmdToast('Error al enviar pedido', 'error'); }
@@ -496,6 +633,7 @@
     async function irAPago() {
         if (state.pagado) return;
         if (_creandoPedido) return;
+        if (state.lineas.length > 0 && !validarLineasConfirmadas()) return;
 
         // Tab abierto con items pendientes: enviarlos a cocina primero, luego cobrar
         if (state.pedidoActual && state.lineas.length > 0) {
@@ -543,6 +681,7 @@
     ];
 
     function abrirOverlayPago() {
+        limpiarCapasHuerfanas();
         var total = (state.pedidoActual && state.pedidoActual.total)
             ? state.pedidoActual.total + totalLineas(state.lineas)
             : totalLineas(state.lineas);
@@ -1222,49 +1361,70 @@
     // FINALIZAR PAGO
     // ═══════════════════════════════════════════════════
     async function finalizarPago(metodo, monto, referencia) {
+        if (_pagoEnProceso) return;
+        _pagoEnProceso = true;
         state.pagoMetodo = metodo;
         state.pagoMonto = monto;
         state.pagoReferencia = referencia;
 
-        if (state.pedidoActual && state.pedidoActual.id) {
-            var csrf = document.querySelector('input[name="__RequestVerificationToken"]');
-            var form = new FormData();
-            form.append('__RequestVerificationToken', csrf ? csrf.value : '');
-            form.append('pedidoId', state.pedidoActual.id);
-            form.append('metodoPago', metodo || 'efectivo');
-            if (monto != null) form.append('monto', monto.toString());
-            if (referencia) form.append('referencia', referencia);
-            if (state.propinaMonto) form.append('propinaMonto', state.propinaMonto.toString());
-            try {
-                var res = await fetch('?handler=PagarJson', { method: 'POST', body: form, headers: { 'X-Requested-With': 'XMLHttpRequest' } });
-                var data = await res.json().catch(function () { return null; });
-                if (!res.ok) {
-                    lmdToast(data && data.error ? data.error : 'Error al registrar pago', 'error');
-                    abrirOverlayPago();
-                    return;
-                }
-                if (data && data.mensaje) lmdToast(data.mensaje, 'success');
-                if (data && data.ticketHtml) {
+        try {
+            if (state.pedidoActual && state.pedidoActual.id) {
+                var csrf = document.querySelector('input[name="__RequestVerificationToken"]');
+                var form = new FormData();
+                form.append('__RequestVerificationToken', csrf ? csrf.value : '');
+                form.append('pedidoId', state.pedidoActual.id);
+                form.append('metodoPago', metodo || 'efectivo');
+                if (monto != null) form.append('monto', monto.toString());
+                if (referencia) form.append('referencia', referencia);
+                if (state.propinaMonto) form.append('propinaMonto', state.propinaMonto.toString());
+                try {
+                    var res = await fetch('?handler=PagarJson', { method: 'POST', body: form, headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+                    var data = await res.json().catch(function () { return null; });
+                    if (!res.ok) {
+                        var errMsg = data && data.error ? data.error : 'Error al registrar pago';
+                        lmdToast(errMsg, 'error');
+                        // Si el pedido ya fue pagado no reabrir el overlay de pago (evita bucle)
+                        var yaFinalizado = errMsg && (errMsg.toLowerCase().includes('pagado') || errMsg.toLowerCase().includes('cancelado') || errMsg.toLowerCase().includes('despachado'));
+                        if (yaFinalizado) {
+                            cerrarTodasOverlaysPago();
+                            await refrescarMesas();
+                            state.pagado = true;
+                            renderProductos();
+                        } else {
+                            abrirOverlayPago();
+                        }
+                        return;
+                    }
+                    // Éxito: SIEMPRE cerrar overlays y marcar como pagado
                     await refrescarMesas();
                     state.pagado = true;
                     cerrarTodasOverlaysPago();
                     renderProductos();
                     mostrarPantalla('productos');
-                    mostrarTicketModal(data.ticketHtml);
+                    if (data && data.mensaje) lmdToast(data.mensaje, 'success');
+                    if (data && data.ticketHtml) {
+                        mostrarTicketModal(data.ticketHtml);
+                    } else {
+                        lmdToast('Pago registrado. Presiona Finalizar para el comprobante.', 'success');
+                    }
                     return;
-                }
-            } catch (e) { lmdToast('Error de conexión', 'error'); return; }
-        }
+                } catch (e) { lmdToast('Error de conexión', 'error'); cerrarTodasOverlaysPago(); return; }
+            }
 
-        await refrescarMesas();
-        state.pagado = true;
-        cerrarTodasOverlaysPago();
-        renderProductos();
-        mostrarPantalla('productos');
-        lmdToast('Pago registrado. Presiona Finalizar para el comprobante.', 'success');
+            await refrescarMesas();
+            state.pagado = true;
+            cerrarTodasOverlaysPago();
+            renderProductos();
+            mostrarPantalla('productos');
+            lmdToast('Pago registrado. Presiona Finalizar para el comprobante.', 'success');
+        } finally {
+            _pagoEnProceso = false;
+        }
     }
 
     function mostrarTicketModal(html) {
+        // Nunca dejar tickets previos apilados que bloqueen la pantalla.
+        limpiarCapasHuerfanas();
         var overlay = document.createElement('div');
         overlay.className = 'lmd-ticket-modal-backdrop';
         overlay.innerHTML =
@@ -1279,6 +1439,15 @@
                 '<iframe class="lmd-ticket-modal-frame" srcdoc="' + html.replace(/"/g, '&quot;') + '" sandbox="allow-same-origin allow-scripts"></iframe>' +
             '</div>';
         document.body.appendChild(overlay);
+
+        function cerrar() {
+            overlay.remove();
+            document.removeEventListener('keydown', onKey);
+            nuevaOrden();
+        }
+        function onKey(e) { if (e.key === 'Escape') cerrar(); }
+        overlay.addEventListener('click', function (e) { if (e.target === overlay) cerrar(); });
+        document.addEventListener('keydown', onKey);
     }
 
     // ═══════════════════════════════════════════════════
@@ -1371,26 +1540,45 @@
     var _mod = { productoId: null, productoNombre: '', ingredientes: [], alergias: [], alergenosProducto: [], notaCustom: '' };
 
     async function abrirModificadores(productoId) {
-        var prod = (window.__lmdProductosDisponibles || []).find(function (p) { return p.id === productoId; });
+        var prod = productoPorId(productoId);
         if (!prod) return;
         _mod.productoId = productoId;
         _mod.productoNombre = prod.nombre;
         _mod.ingredientes = [];
         _mod.alergias = [];
+        _mod.alergenosProducto = [];
         _mod.notaCustom = '';
 
         try {
-            var r1 = await fetch('?handler=IngredientesProductoJson&productoId=' + productoId);
+            var r1 = await fetch('?handler=IngredientesProductoJson&productoId=' + encodeURIComponent(productoId));
             var d1 = await r1.json();
             _mod.ingredientes = (d1.ingredientes || []).map(function (ing) {
-                return { id: ing.id, nombre: ing.nombre, cantidad: ing.cantidad, estado: 'normal', reemplazoId: null, reemplazoNombre: '' };
+                return { id: ing.id, nombre: ing.nombre, cantidad: ing.cantidad, estado: 'normal' };
             });
         } catch (e) {}
 
         try {
-            var r2 = await fetch('?handler=AlergenosProductoJson&productoId=' + productoId);
+            var r2 = await fetch('?handler=AlergenosProductoJson&productoId=' + encodeURIComponent(productoId));
             _mod.alergenosProducto = await r2.json() || [];
         } catch (e) { _mod.alergenosProducto = []; }
+
+        var lineaExistente = state.lineas.find(function (l) { return l.productoId === productoId; });
+        if (lineaExistente && lineaExistente.modificacionesJson) {
+            try {
+                var modsExistentes = JSON.parse(lineaExistente.modificacionesJson);
+                modsExistentes.forEach(function (m) {
+                    if (m.accion === 'confirmado') return;
+                    if (m.accion === 'alergia') {
+                        var alergia = String(m.ingredienteNombre || '').toLowerCase();
+                        if (alergia && _mod.alergias.indexOf(alergia) < 0) _mod.alergias.push(alergia);
+                        return;
+                    }
+                    var ing = _mod.ingredientes.find(function (i) { return i.id === m.ingredienteId; });
+                    if (ing && (m.accion === 'quitar' || m.accion === 'extra')) ing.estado = m.accion === 'quitar' ? 'quitado' : 'extra';
+                });
+            } catch (e) {}
+        }
+        if (lineaExistente && lineaExistente.notas) _mod.notaCustom = lineaExistente.notas;
 
         renderModificadorModal();
     }
@@ -1400,40 +1588,32 @@
 
         var alergenosHtml = _mod.alergenosProducto.length > 0
             ? _mod.alergenosProducto.map(function (a) {
-                var activo = _mod.alergias.indexOf(a.nombre.toLowerCase()) >= 0;
-                return '<button class="lmd-mod-alergia-btn' + (activo ? ' activo' : '') + '" onclick="pos.toggleAlergia(\'' + a.nombre.toLowerCase() + '\')">' + a.nombre + '</button>';
+                var activo = _mod.alergias.indexOf(String(a.nombre || '').toLowerCase()) >= 0;
+                return '<button class="lmd-mod-alergia-btn' + (activo ? ' activo' : '') + '" onclick="pos.toggleAlergia(\'' + String(a.nombre || '').toLowerCase().replace(/'/g, "\\'") + '\')">' + a.nombre + '</button>';
               }).join('')
             : '<span class="lmd-mod-empty">Sin alérgenos registrados</span>';
 
         var ingsHtml = _mod.ingredientes.length > 0
             ? _mod.ingredientes.map(function (ing) {
                 var est = ing.estado || 'normal';
-                var otros = _mod.ingredientes.filter(function (o) { return o.id !== ing.id; });
-                var reemplazoSel = est === 'quitado' && otros.length > 0
-                    ? '<select class="lmd-mod-ing-reemplazo" onchange="pos.cambiarReemplazo(\'' + ing.id + '\', this.value)">' +
-                          '<option value="">— Sin reemplazo</option>' +
-                          otros.map(function (o) {
-                              return '<option value="' + o.id + '"' + (ing.reemplazoId === o.id ? ' selected' : '') + '>' + o.nombre + '</option>';
-                          }).join('') +
-                      '</select>'
-                    : '';
                 return '<div class="lmd-mod-ing-row lmd-mod-ing-row--' + est + '">' +
                     '<span class="lmd-mod-ing-nombre">' + ing.nombre + ' <small>(' + ing.cantidad + ')</small></span>' +
                     '<div class="lmd-mod-ing-acciones">' +
                         '<button class="lmd-mod-ing-btn lmd-mod-ing-btn--extra' + (est === 'extra' ? ' activo' : '') + '" onclick="pos.toggleEstadoIngrediente(\'' + ing.id + '\', \'extra\')" title="Extra">' + icon('plus-circle') + '</button>' +
                         '<button class="lmd-mod-ing-btn lmd-mod-ing-btn--quitar' + (est === 'quitado' ? ' activo' : '') + '" onclick="pos.toggleEstadoIngrediente(\'' + ing.id + '\', \'quitado\')" title="Quitar">' + icon('minus-circle') + '</button>' +
                     '</div>' +
-                    reemplazoSel +
                 '</div>';
               }).join('')
             : '<span class="lmd-mod-empty">Sin ingredientes registrados</span>';
 
         var html =
             '<div class="lmd-pos-ov-header">' +
+                '<button class="lmd-pos-ov-back" onclick="pos.cerrarModificadores()" title="Volver sin agregar">' + icon('arrow-left') + '</button>' +
                 '<span class="lmd-pos-ov-title">' + icon('edit-3') + ' ' + _mod.productoNombre + '</span>' +
                 '<button class="lmd-pos-ov-close" onclick="pos.cerrarModificadores()">' + icon('x') + '</button>' +
             '</div>' +
             '<div class="lmd-mod-body">' +
+                '<div class="lmd-mod-alerta">Debes confirmar ingredientes antes de enviar este producto a cocina.</div>' +
                 '<div class="lmd-mod-section">' +
                     '<div class="lmd-mod-section__title">' + icon('alert-triangle') + ' Alergias / restricciones</div>' +
                     '<div class="lmd-mod-alergias">' + alergenosHtml + '</div>' +
@@ -1446,7 +1626,10 @@
                     '<div class="lmd-mod-section__title">' + icon('message-square') + ' Nota para cocina</div>' +
                     '<textarea class="lmd-mod-nota" rows="2" placeholder="Ej: sin sal, bien cocido..." oninput="pos._setNotaCustom(this.value)">' + (_mod.notaCustom || '') + '</textarea>' +
                 '</div>' +
-                '<button class="lmd-mod-confirmar" onclick="pos.confirmarModificadores()">' + icon('check-circle') + ' Confirmar cambios</button>' +
+                '<div class="lmd-mod-actions">' +
+                    '<button class="lmd-mod-confirmar lmd-mod-confirmar--ghost" onclick="pos.confirmarModificadores(true)">' + icon('check') + ' Agregar original</button>' +
+                    '<button class="lmd-mod-confirmar" onclick="pos.confirmarModificadores(false)">' + icon('check-circle') + ' Confirmar cambios</button>' +
+                '</div>' +
             '</div>';
 
         abrirOverlay('modificador', html, { bottom: true });
@@ -1456,25 +1639,18 @@
         var ing = _mod.ingredientes.find(function (i) { return i.id === id; });
         if (!ing) return;
         ing.estado = ing.estado === estado ? 'normal' : estado;
-        if (ing.estado !== 'quitado') { ing.reemplazoId = null; ing.reemplazoNombre = ''; }
         renderModificadorModal();
     }
 
-    function cambiarReemplazo(ingId, reemplazoId) {
-        var ing = _mod.ingredientes.find(function (i) { return i.id === ingId; });
-        if (!ing) return;
-        if (!reemplazoId) { ing.reemplazoId = null; ing.reemplazoNombre = ''; }
-        else {
-            var r = _mod.ingredientes.find(function (i) { return i.id === reemplazoId; });
-            ing.reemplazoId = reemplazoId;
-            ing.reemplazoNombre = r ? r.nombre : '';
-        }
+    function cambiarReemplazo() {
+        lmdToast('Los reemplazos se deshabilitaron para evitar ingredientes duplicados.', 'info');
     }
 
     function toggleAlergia(alergia) {
-        var idx = _mod.alergias.indexOf(alergia);
+        var key = String(alergia || '').toLowerCase();
+        var idx = _mod.alergias.indexOf(key);
         if (idx >= 0) _mod.alergias.splice(idx, 1);
-        else _mod.alergias.push(alergia);
+        else _mod.alergias.push(key);
         renderModificadorModal();
     }
 
@@ -1482,42 +1658,50 @@
 
     function cerrarModificadores() { cerrarOverlay('modificador'); }
 
-    function confirmarModificadores() {
-        cerrarModificadores();
-
+    function confirmarModificadores(original) {
+        var prod = productoPorId(_mod.productoId);
         var mods = [];
-        _mod.ingredientes.forEach(function (ing) {
-            var est = ing.estado || 'normal';
-            if (est === 'quitado') {
-                if (ing.reemplazoId) {
-                    mods.push({ ingredienteId: ing.id, ingredienteNombre: ing.nombre, accion: 'intercambiar', motivo: 'preferencia', ingredienteReemplazoId: ing.reemplazoId, ingredienteReemplazoNombre: ing.reemplazoNombre });
-                } else {
+        var notas = _mod.notaCustom && _mod.notaCustom.trim() ? _mod.notaCustom.trim() : null;
+
+        if (original === true) {
+            mods = JSON.parse(crearConfirmacionOriginal());
+        } else {
+            _mod.ingredientes.forEach(function (ing) {
+                var est = ing.estado || 'normal';
+                if (est === 'quitado') {
                     mods.push({ ingredienteId: ing.id, ingredienteNombre: ing.nombre, accion: 'quitar', motivo: 'preferencia', ingredienteReemplazoId: null, ingredienteReemplazoNombre: null });
+                } else if (est === 'extra') {
+                    mods.push({ ingredienteId: ing.id, ingredienteNombre: ing.nombre, accion: 'extra', motivo: 'preferencia', ingredienteReemplazoId: null, ingredienteReemplazoNombre: null });
                 }
-            } else if (est === 'extra') {
-                mods.push({ ingredienteId: ing.id, ingredienteNombre: ing.nombre, accion: 'extra', motivo: 'preferencia', ingredienteReemplazoId: null, ingredienteReemplazoNombre: null });
+            });
+            _mod.alergias.forEach(function (alergia) {
+                mods.push({ ingredienteId: '00000000-0000-0000-0000-000000000000', ingredienteNombre: alergia, accion: 'alergia', motivo: 'alergia', ingredienteReemplazoId: null, ingredienteReemplazoNombre: null });
+            });
+
+            if (mods.length === 0 && !notas) {
+                lmdToast('Elige un cambio o usa Agregar original.', 'error');
+                return;
             }
-        });
-
-        // Alergias como ModificacionIngrediente de primera clase (motivo:'alergia')
-        _mod.alergias.forEach(function (alergia) {
-            mods.push({ ingredienteId: '00000000-0000-0000-0000-000000000000', ingredienteNombre: alergia, accion: 'alergia', motivo: 'alergia', ingredienteReemplazoId: null, ingredienteReemplazoNombre: null });
-        });
-
-        var notasArr = [];
-        if (_mod.notaCustom && _mod.notaCustom.trim()) notasArr.push(_mod.notaCustom.trim());
-        var notas = notasArr.length > 0 ? notasArr.join(' | ') : null;
-
-        var linea = state.lineas.find(function (l) { return l.productoId === _mod.productoId; });
-        if (linea) {
-            linea.modificacionesJson = mods.length > 0 ? JSON.stringify(mods) : null;
-            linea.notas = notas;
-            linea.tieneModificaciones = mods.length > 0 || !!notas;
-            renderProductos();
+            if (mods.length === 0 && notas) {
+                mods = JSON.parse(crearConfirmacionOriginal());
+            }
         }
 
-        var total = mods.length + (notas ? 1 : 0);
-        lmdToast(total > 0 ? 'Modificaciones aplicadas (' + total + ')' : 'Sin cambios', total > 0 ? 'success' : 'info');
+        var linea = state.lineas.find(function (l) { return l.productoId === _mod.productoId; });
+        if (!linea && prod) {
+            state.lineas.push({ productoId: _mod.productoId, productoNombre: _mod.productoNombre, cantidad: 1, precioUnitario: prod.precio || 0 });
+            linea = state.lineas[state.lineas.length - 1];
+        }
+
+        if (linea) {
+            linea.modificacionesJson = JSON.stringify(mods);
+            linea.notas = notas;
+            linea.tieneModificaciones = original !== true || !!notas;
+            linea.ingredientesConfirmados = true;
+            cerrarModificadores();
+            renderProductos();
+            lmdToast(original === true ? 'Producto original confirmado' : 'Modificaciones aplicadas', 'success');
+        }
     }
 
     // ═══════════════════════════════════════════════════
@@ -1689,13 +1873,14 @@
             if (res.ok) {
                 var data = await res.json();
                 if (data && data.mesas) window.__lmdMesasDisponibles = data.mesas;
+                window.__lmdParaLlevar = (data && data.paraLlevar) ? data.paraLlevar : [];
             }
         } catch (e) {}
     }
 
     // ── Public API ──────────────────────────────────────
     window.pos = {
-        seleccionarMesa, seleccionarParaLlevar,
+        seleccionarMesa, seleccionarParaLlevar, cobrarParaLlevar,
         filtrarCategoria, agregarAlCarrito, incrementarItem, decrementarItem, eliminarDelCarrito,
         cancelarOrden, confirmarListo, irAPago,
         cerrarPago, procesarPago,

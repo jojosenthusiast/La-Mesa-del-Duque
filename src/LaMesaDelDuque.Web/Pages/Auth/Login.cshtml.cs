@@ -27,6 +27,9 @@ public class LoginModel : PageModel
 
     public string? MensajeError { get; set; }
 
+    [TempData]
+    public string? RegistroExitoso { get; set; }
+
     public void OnGet() { }
 
     public async Task<IActionResult> OnPostAsync()

@@ -16,7 +16,7 @@
 
 <script>
     window.__lmdProductosMesero = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
-        Model.ProductosDisponibles.Select(p => new { p.Id, p.Nombre, p.Precio, p.CategoriaNombre, p.TiempoPreparacionMin, p.ImagenUrl }),
+        Model.ProductosDisponibles.Select(p => new { p.Id, p.Nombre, p.Precio, p.CategoriaNombre, p.TiempoPreparacionMin, p.ImagenUrl, TieneReceta = Model.ProductosConReceta.Contains(p.Id) }),
         new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase }));
 </script>
 

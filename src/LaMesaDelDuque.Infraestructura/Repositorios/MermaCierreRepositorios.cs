@@ -23,6 +23,14 @@ internal class MermaRepositorio : IMermaRepositorio
             .AsNoTracking()
             .ToListAsync(ct);
     }
+
+    public async Task<List<MermaDiaria>> ObtenerPorRangoAsync(DateTime desde, DateTime hasta, CancellationToken ct = default) =>
+        await _c.Set<MermaDiaria>()
+            .Include(m => m.Ingrediente)
+            .Include(m => m.Usuario)
+            .Where(m => m.CreatedAt >= desde && m.CreatedAt <= hasta)
+            .AsNoTracking()
+            .ToListAsync(ct);
 }
 
 internal class CierreDiaRepositorio : ICierreDiaRepositorio
@@ -32,6 +40,9 @@ internal class CierreDiaRepositorio : ICierreDiaRepositorio
 
     public async Task<CierreDia?> ObtenerAbiertoAsync(DateOnly fecha, CancellationToken ct = default) =>
         await _c.Set<CierreDia>().FirstOrDefaultAsync(c => c.Fecha == fecha && !c.EsCerrado, ct);
+
+    public async Task<CierreDia?> ObtenerPorFechaAsync(DateOnly fecha, CancellationToken ct = default) =>
+        await _c.Set<CierreDia>().FirstOrDefaultAsync(c => c.Fecha == fecha, ct);
 
     public async Task AgregarAsync(CierreDia cierre, CancellationToken ct = default) =>
         await _c.Set<CierreDia>().AddAsync(cierre, ct);

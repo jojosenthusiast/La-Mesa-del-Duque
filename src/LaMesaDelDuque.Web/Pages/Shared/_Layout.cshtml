@@ -38,8 +38,15 @@
     @if (isAuth && esGestion)
     {
         <div class="lmd-app-shell">
+            <div class="lmd-sidebar-backdrop" id="lmdSidebarBackdrop"></div>
             <partial name="_Sidebar" />
             <div class="lmd-shell-with-sidebar" id="lmdShellMain">
+                <div class="lmd-mobile-topbar">
+                    <button class="lmd-mobile-topbar__hamburger" id="lmdMobileMenuBtn" aria-label="Abrir menú">
+                        <i class="bi bi-list"></i>
+                    </button>
+                    <span class="lmd-mobile-topbar__title">La Mesa del Duque</span>
+                </div>
                 <main role="main" class="lmd-main-surface lmd-main-surface--sidebar">
                     @RenderBody()
                 </main>

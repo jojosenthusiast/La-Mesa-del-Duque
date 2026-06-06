@@ -19,7 +19,7 @@ public class MesasPageTests
             ]
         };
 
-        var page = new IndexModel(servicio);
+        var page = new IndexModel(servicio, new FakePedidosServicio());
 
         await page.OnGetAsync();
 

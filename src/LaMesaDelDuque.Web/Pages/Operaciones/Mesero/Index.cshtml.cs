@@ -17,6 +17,7 @@ public class IndexModel : PageModel
     private readonly IPedidosServicio _pedidosServicio;
     private readonly ICatalogoProductosServicio _catalogoProductosServicio;
     private readonly IMesasServicio _mesasServicio;
+    private readonly IRecetasProductosServicio _recetasServicio;
     private readonly IHubContext<PedidosHub> _hubContext;
     private readonly ILogger<IndexModel> _logger;
 
@@ -24,17 +25,20 @@ public class IndexModel : PageModel
         IPedidosServicio pedidosServicio,
         ICatalogoProductosServicio catalogoProductosServicio,
         IMesasServicio mesasServicio,
+        IRecetasProductosServicio recetasServicio,
         IHubContext<PedidosHub> hubContext,
         ILogger<IndexModel> logger)
     {
         _pedidosServicio = pedidosServicio;
         _catalogoProductosServicio = catalogoProductosServicio;
         _mesasServicio = mesasServicio;
+        _recetasServicio = recetasServicio;
         _hubContext = hubContext;
         _logger = logger;
     }
 
     public List<ProductoDto> ProductosDisponibles { get; set; } = [];
+    public HashSet<Guid> ProductosConReceta { get; private set; } = [];
 
     public async Task OnGetAsync()
     {
@@ -44,8 +48,15 @@ public class IndexModel : PageModel
             var productos = await _catalogoProductosServicio.ListarProductosAsync();
             ProductosDisponibles = productos.Where(p => p.Activo)
                 .OrderBy(p => p.CategoriaNombre).ThenBy(p => p.Nombre).ToList();
+            ProductosConReceta = [];
+            foreach (var producto in ProductosDisponibles)
+            {
+                var receta = await _recetasServicio.ObtenerPorProductoIdAsync(producto.Id);
+                if (receta is not null && receta.Ingredientes.Count > 0)
+                    ProductosConReceta.Add(producto.Id);
+            }
         }
-        catch { ProductosDisponibles = []; }
+        catch { ProductosDisponibles = []; ProductosConReceta = []; }
     }
 
     // ── Mesas ─────────────────────────────────────────────────────────────────
@@ -216,7 +227,9 @@ public class IndexModel : PageModel
                 {
                     ProductoId     = item.ProductoId,
                     Cantidad       = item.Cantidad,
-                    PrecioUnitario = prod.Precio
+                    PrecioUnitario = prod.Precio,
+                    Notas = item.Notas,
+                    ModificacionesJson = item.ModificacionesJson
                 });
             }
 
@@ -240,16 +253,26 @@ public class IndexModel : PageModel
             var pedido = await _pedidosServicio.ObtenerPedidoAsync(pedidoId)
                 ?? throw new ArgumentException("Pedido no encontrado.");
 
-            if (pedido.Estado is "Cancelado" or "Pagado" or "Despachado")
+            if (pedido.Estado == "Pagado")
+                return new JsonResult(new { ok = true, mensaje = "Pedido ya estaba pagado.", yaPagado = true });
+
+            if (pedido.Estado is "Cancelado" or "Despachado")
                 return BadRequest(ErrorSeguro(new InvalidOperationException($"El pedido ya fue {pedido.Estado.ToLower()}.")));
 
             var metodo = metodoPago?.ToLower() ?? "efectivo";
-            if (metodo == "efectivo" && monto.HasValue && monto.Value < pedido.Total)
+            var metodoEnum = metodo switch
+            {
+                "tarjeta" => MetodoPago.Tarjeta,
+                "qr" or "transferencia" => MetodoPago.Transferencia,
+                _ => MetodoPago.Efectivo
+            };
+
+            if (metodoEnum == MetodoPago.Efectivo && monto.HasValue && monto.Value < pedido.Total)
                 return BadRequest(ErrorSeguro(new ArgumentException($"Faltan ${pedido.Total - monto.Value:F2}")));
 
-            await _pedidosServicio.PagarPedidoAsync(pedidoId);
+            await _pedidosServicio.PagarPedidoAsync(pedidoId, metodoEnum, referencia);
 
-            var cambio = monto.HasValue && metodo == "efectivo" ? monto.Value - pedido.Total : 0;
+            var cambio = monto.HasValue && metodoEnum == MetodoPago.Efectivo ? monto.Value - pedido.Total : 0;
             return new JsonResult(new
             {
                 ok = true,
@@ -261,7 +284,23 @@ public class IndexModel : PageModel
         catch (Exception ex) { _logger.LogError(ex, "Error en handler JSON"); return StatusCode(500, new { ok = false, error = "Ocurrió un error interno." }); }
     }
 
-    private sealed record ItemCarritoDto(Guid ProductoId, int Cantidad);
+
+    public async Task<IActionResult> OnPostCambiarEstadoMesaJsonAsync(Guid mesaId, string estado = "Disponible")
+    {
+        try
+        {
+            if (mesaId == Guid.Empty)
+                return BadRequest(ErrorSeguro(new ArgumentException("Mesa inválida.")));
+
+            await _mesasServicio.CambiarEstadoMesaAsync(mesaId, estado);
+            return new JsonResult(new { ok = true });
+        }
+        catch (ReglaDominioException ex) { return StatusCode(422, new { ok = false, error = ex.Message }); }
+        catch (ArgumentException ex) { return BadRequest(new { ok = false, error = ex.Message }); }
+        catch (Exception ex) { _logger.LogError(ex, "Error en handler JSON"); return StatusCode(500, new { ok = false, error = "Ocurrió un error interno." }); }
+    }
+
+    private sealed record ItemCarritoDto(Guid ProductoId, int Cantidad, string? Notas, string? ModificacionesJson);
 
     // ── Helper ────────────────────────────────────────────────────────────────
     private static object ErrorSeguro(Exception ex)

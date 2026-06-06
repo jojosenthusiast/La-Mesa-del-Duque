@@ -98,8 +98,9 @@
             grupos[cap].forEach(function (m) {
                 var disponible = m.estado === 'Disponible';
                 var enGracia   = disponible && m.graciaHasta && new Date(m.graciaHasta) > Date.now();
-                var hayTab     = !disponible && m.pedidoActualId;
+                var hayTab     = !!m.pedidoActualId;
                 var enCobro    = hayTab && m.pedidoEstado === 'EnCobro';
+                var ocupadaSinPedido = !disponible && !hayTab && !enGracia;
                 var cls = enGracia  ? 'lmd-pos-mesa-card--en-gracia'
                     : disponible    ? 'lmd-pos-mesa-card--disponible'
                     : enCobro       ? 'lmd-pos-mesa-card--en-cobro'
@@ -107,6 +108,7 @@
                 var onclick = enGracia   ? ''
                     : hayTab     ? ' onclick="mesero.abrirDetalle(\'' + m.id + '\')"'
                     : disponible ? ' onclick="mesero.abrirNuevoPedido(\'' + m.id + '\')"'
+                    : ocupadaSinPedido ? ' onclick="mesero.liberarMesaManual(\'' + m.id + '\')"'
                     : '';
 
                 var badgeHtml = '';
@@ -122,6 +124,8 @@
                         ? Math.floor((Date.now() - new Date(m.pedidoFechaCreacion).getTime()) / 60000) : 0;
                     badgeHtml = '<span class="lmd-pos-mesa-card__tab-badge" data-pedido-fecha="' + (m.pedidoFechaCreacion || '') + '">' +
                         icon('clock') + ' <span class="lmd-tab-tiempo">' + (minTab > 0 ? minTab + ' min' : 'Tab') + '</span></span>';
+                } else if (ocupadaSinPedido) {
+                    badgeHtml = '<span class="lmd-pos-mesa-card__tab-badge">' + icon('unlock') + ' Tocar para liberar</span>';
                 }
 
                 mesasHtml += '<div class="lmd-pos-mesa-card ' + cls + '"' + onclick + '>' +
@@ -302,9 +306,34 @@
         _renderAgregar();
     }
 
+    async function liberarMesaManual(mesaId) {
+        var m = state.mesas.find(function (x) { return x.id === mesaId; });
+        if (!m) return;
+        var ok = await window.lmdConfirm('¿Marcar Mesa ' + m.numero + ' como disponible?');
+        if (!ok) return;
+        try {
+            var res = await postJson('CambiarEstadoMesaJson', { mesaId: m.id, estado: 'Disponible' });
+            var data = await res.json().catch(function () { return {}; });
+            if (!res.ok) {
+                window.lmdToast(data.error || 'No se pudo liberar la mesa', 'error');
+                return;
+            }
+            await refrescarMesas();
+            renderGrid();
+            window.lmdToast('Mesa ' + m.numero + ' disponible', 'success');
+        } catch (e) {
+            window.lmdToast('Error de conexión', 'error');
+        }
+    }
+
     async function _crearPedidoConItems(m) {
         var itemsJson = JSON.stringify(state.carrito.map(function (i) {
-            return { productoId: i.id, cantidad: i.cantidad };
+            return {
+                productoId: i.id,
+                cantidad: i.cantidad,
+                notas: i.notas || null,
+                modificacionesJson: i.modificacionesJson || null
+            };
         }));
         try {
             var res  = await postJson('CrearConItemsJson', { mesaId: m.id, itemsJson: itemsJson });
@@ -364,9 +393,11 @@
         });
 
         var prodHtml = filtrados.map(function (p) {
-            return '<div class="lmd-pos-product-card" onclick="mesero.addToCart(\'' + p.id + '\')">' +
+            var requiere = productoRequiereConfirmacion(p);
+            return '<div class="lmd-pos-product-card' + (requiere ? ' lmd-pos-product-card--requiere-confirmacion' : '') + '" onclick="mesero.addToCart(\'' + p.id + '\')">' +
                 '<span class="lmd-pos-product-card__nombre">' + p.nombre + '</span>' +
                 '<span class="lmd-pos-product-card__precio">' + fmt(p.precio) + '</span>' +
+                (requiere ? '<small class="lmd-pos-product-card__sub">Ingredientes confirmados al agregar</small>' : '') +
             '</div>';
         }).join('');
 
@@ -375,7 +406,8 @@
             ? '<div class="lmd-pos-cart__empty">' + icon('shopping-cart') + '<span>Sin ítems</span></div>'
             : state.carrito.map(function (item) {
                 return '<div class="lmd-mesero-cart-item">' +
-                    '<span class="lmd-mesero-cart-item__nombre">' + item.nombre + '</span>' +
+                    '<span class="lmd-mesero-cart-item__nombre">' + item.nombre +
+                        (item.ingredientesConfirmados ? ' <small class="lmd-pos-product-card__sub">✓ ingredientes</small>' : '') + '</span>' +
                     '<div class="lmd-mesero-cart-item__qty">' +
                         '<button onclick="mesero.decCart(\'' + item.id + '\')">' + icon('minus') + '</button>' +
                         '<span>' + item.cantidad + '</span>' +
@@ -425,12 +457,19 @@
     function cerrarAgregar() { cerrarOverlay('agregar'); }
 
     function addToCart(productoId) {
-        var prods = window.__lmdProductosMesero || [];
-        var prod  = prods.find(function (p) { return p.id === productoId; });
+        var prod = productoPorId(productoId);
         if (!prod) return;
         var ex = state.carrito.find(function (i) { return i.id === productoId; });
-        if (ex) ex.cantidad++;
-        else state.carrito.push({ id: prod.id, nombre: prod.nombre, precio: prod.precio, cantidad: 1 });
+        if (ex) {
+            ex.cantidad++;
+        } else {
+            var item = { id: prod.id, nombre: prod.nombre, precio: prod.precio, cantidad: 1 };
+            if (productoRequiereConfirmacion(prod)) {
+                item.modificacionesJson = crearConfirmacionOriginal();
+                item.ingredientesConfirmados = true;
+            }
+            state.carrito.push(item);
+        }
         _renderAgregar();
     }
 
@@ -457,7 +496,11 @@
             for (var i = 0; i < state.carrito.length; i++) {
                 var item = state.carrito[i];
                 var res  = await postJson('AgregarLineaJson', {
-                    pedidoId: m.pedidoActualId, productoId: item.id, cantidad: item.cantidad
+                    pedidoId: m.pedidoActualId,
+                    productoId: item.id,
+                    cantidad: item.cantidad,
+                    notas: item.notas || '',
+                    modificacionesJson: item.modificacionesJson || ''
                 });
                 if (!res.ok) {
                     var d = await res.json().catch(function () { return {}; });
@@ -635,7 +678,7 @@
     window.mesero = {
         refrescarGrid,
         abrirDetalle, cerrarDetalle, voidItem, ajustarCantidad, pedirCuenta,
-        abrirNuevoPedido,
+        abrirNuevoPedido, liberarMesaManual,
         abrirAgregar, cerrarAgregar, filtrarCat, buscarProd, addToCart, incCart, decCart, enviarItems,
         abrirPago, cerrarPago, abrirEfectivo, volverMetodos, confirmarEfectivo, pagarDirecto
     };

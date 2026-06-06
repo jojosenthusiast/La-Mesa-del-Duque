@@ -140,7 +140,7 @@ if (app.Environment.IsDevelopment())
             new TimeOnly(11, 0),
             new TimeOnly(23, 0),
             cantidadMesas: 10,
-            periodoGraciaMinutos: 5));
+            periodoGraciaMinutos: 0));
         await db.SaveChangesAsync();
 
         // ── Seed: Alérgenos ──────────────────────────────────
@@ -292,7 +292,7 @@ if (app.Environment.IsDevelopment())
             new TimeOnly(11, 0),
             new TimeOnly(23, 0),
             cantidadMesas: 10,
-            periodoGraciaMinutos: 5));
+            periodoGraciaMinutos: 0));
         await db.SaveChangesAsync();
     }
 

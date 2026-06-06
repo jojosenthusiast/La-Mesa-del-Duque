@@ -1,8 +1,15 @@
 @{
-    var activeTab  = ViewData["ActiveTab"]?.ToString() ?? "";
-    var esAdmin    = User.IsInRole("Administrador");
-    var rolLabel   = esAdmin ? "Administrador" : "Encargado";
+    var activeTab = ViewData["ActiveTab"]?.ToString() ?? "";
+    var esAdmin = User.IsInRole("Administrador");
+    var rolLabel = esAdmin ? "Administrador"
+        : User.IsInRole("Encargado") ? "Encargado"
+        : User.IsInRole("Mesero") ? "Mesero"
+        : User.IsInRole("Cajero") ? "Cajero"
+        : User.IsInRole("Cocinero") ? "Cocinero"
+        : User.IsInRole("Gerente") ? "Gerente"
+        : "Usuario";
 }
+
 
 <aside class="lmd-sidebar" id="lmdSidebar" role="navigation" aria-label="Menú principal">
 
@@ -109,21 +116,69 @@
 </aside>
 
 <script>
-(function () {
-    var sidebar = document.getElementById('lmdSidebar');
-    var toggle  = document.getElementById('lmdSidebarToggle');
-    var shell   = document.getElementById('lmdShellMain');
-    var KEY     = 'lmd-sidebar-col';
+document.addEventListener('DOMContentLoaded', function () {
+    var sidebar  = document.getElementById('lmdSidebar');
+    var toggle   = document.getElementById('lmdSidebarToggle');
+    var shell    = document.getElementById('lmdShellMain');
+    var backdrop = document.getElementById('lmdSidebarBackdrop');
+    var mobileBtn = document.getElementById('lmdMobileMenuBtn');
+    var KEY = 'lmd-sidebar-col-v2';
+    var OLD_KEY = 'lmd-sidebar-col';
+    var isMobile = function () { return window.matchMedia('(max-width: 767.98px)').matches; };
 
-    if (localStorage.getItem(KEY) === '1') {
-        sidebar?.classList.add('lmd-sidebar--collapsed');
-        shell?.classList.add('lmd-shell-with-sidebar--collapsed');
+    try { localStorage.removeItem(OLD_KEY); localStorage.removeItem(KEY); } catch (e) {}
+
+    function abrirMobile() {
+        if (!sidebar) return;
+        sidebar.classList.remove('lmd-sidebar--collapsed');
+        shell?.classList.remove('lmd-shell-with-sidebar--collapsed');
+        sidebar.classList.add('lmd-sidebar--mobile-open');
+        backdrop?.classList.add('lmd-sidebar-backdrop--visible');
+        document.body.classList.add('lmd-sidebar-mobile-lock');
     }
 
+    function cerrarMobile() {
+        sidebar?.classList.remove('lmd-sidebar--mobile-open');
+        backdrop?.classList.remove('lmd-sidebar-backdrop--visible');
+        document.body.classList.remove('lmd-sidebar-mobile-lock');
+    }
+
+    function aplicarEstadoDesktop() {
+        if (!sidebar || !shell) return;
+        if (isMobile()) {
+            sidebar.classList.remove('lmd-sidebar--collapsed');
+            shell.classList.remove('lmd-shell-with-sidebar--collapsed');
+            cerrarMobile();
+            return;
+        }
+        var colapsado = false;
+        sidebar.classList.toggle('lmd-sidebar--collapsed', colapsado);
+        shell.classList.toggle('lmd-shell-with-sidebar--collapsed', colapsado);
+    }
+
+    aplicarEstadoDesktop();
+
     toggle?.addEventListener('click', function () {
-        var col = sidebar.classList.toggle('lmd-sidebar--collapsed');
-        shell?.classList.toggle('lmd-shell-with-sidebar--collapsed', col);
-        localStorage.setItem(KEY, col ? '1' : '0');
+        if (isMobile()) return;
+        var colapsado = !sidebar.classList.contains('lmd-sidebar--collapsed');
+        sidebar.classList.toggle('lmd-sidebar--collapsed', colapsado);
+        shell?.classList.toggle('lmd-shell-with-sidebar--collapsed', colapsado);
+        try { localStorage.setItem(KEY, '0'); } catch (e) {}
     });
-})();
+
+    mobileBtn?.addEventListener('click', function (event) {
+        event.preventDefault();
+        event.stopPropagation();
+        if (sidebar?.classList.contains('lmd-sidebar--mobile-open')) cerrarMobile();
+        else abrirMobile();
+    });
+
+    backdrop?.addEventListener('click', cerrarMobile);
+
+    sidebar?.querySelectorAll('.lmd-sidebar__item').forEach(function (item) {
+        item.addEventListener('click', function () { if (isMobile()) cerrarMobile(); });
+    });
+
+    window.addEventListener('resize', aplicarEstadoDesktop);
+});
 </script>

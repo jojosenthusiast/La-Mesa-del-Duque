@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using LaMesaDelDuque.Aplicacion.Dtos;
 using LaMesaDelDuque.Aplicacion.Servicios;
 using LaMesaDelDuque.Dominio.Entidades;
@@ -6,6 +7,7 @@ using LaMesaDelDuque.Dominio.Excepciones;
 using LaMesaDelDuque.Dominio.Repositorios;
 using LaMesaDelDuque.Infraestructura.Persistencia;
 using LaMesaDelDuque.Infraestructura.Repositorios;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 
@@ -18,6 +20,7 @@ public class PedidosServicioDashboardTests : IDisposable
     private readonly IUnidadDeTrabajo _uot;
     private readonly NotificadorPedidosSpy _notificadorPedidosSpy;
     private readonly NotificadorDashboardSpy _notificadorDashboardSpy;
+    private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IPedidosServicio _servicio;
 
     public PedidosServicioDashboardTests()
@@ -48,7 +51,16 @@ public class PedidosServicioDashboardTests : IDisposable
 
         _notificadorPedidosSpy = new NotificadorPedidosSpy();
         _notificadorDashboardSpy = new NotificadorDashboardSpy();
-        _servicio = new PedidosServicio(_uot, _notificadorPedidosSpy, null, null, _notificadorDashboardSpy);
+        var usuarioId = Guid.NewGuid().ToString();
+        var claims = new ClaimsPrincipal(new ClaimsIdentity(new[]
+        {
+            new Claim(ClaimTypes.NameIdentifier, usuarioId)
+        }, "TestAuth"));
+        _httpContextAccessor = new HttpContextAccessor
+        {
+            HttpContext = new DefaultHttpContext { User = claims }
+        };
+        _servicio = new PedidosServicio(_uot, _notificadorPedidosSpy, null, _httpContextAccessor, _notificadorDashboardSpy);
     }
 
     public void Dispose()
@@ -177,7 +189,7 @@ public class PedidosServicioDashboardTests : IDisposable
             new() { ProductoId = producto.Id, Cantidad = 1, PrecioUnitario = 3.50m }
         };
 
-        var servicioSinDashboard = new PedidosServicio(_uot, _notificadorPedidosSpy, null, null, null);
+        var servicioSinDashboard = new PedidosServicio(_uot, _notificadorPedidosSpy, null, _httpContextAccessor, null);
 
         var pedido = await servicioSinDashboard.CrearPedidoAsync(TipoServicio.ComerAqui, mesa.Id, detalles);
         await servicioSinDashboard.MarcarEnCobroAsync(pedido.Id);

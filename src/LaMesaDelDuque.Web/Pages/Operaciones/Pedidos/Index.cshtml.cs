@@ -49,6 +49,8 @@ public class IndexModel : PageModel
     [BindProperty]
     public PedidosPageVm Vm { get; set; } = new();
 
+    public HashSet<Guid> ProductosConReceta { get; private set; } = [];
+
     [TempData]
     public string? ToastSuccess { get; set; }
 
@@ -367,15 +369,17 @@ public class IndexModel : PageModel
     {
         try
         {
-            var pedidos = await _pedidosServicio.ListarPedidosActivosAsync();
-            var pedido = pedidos.FirstOrDefault(p => p.Id == pedidoId)
-                ?? throw new ArgumentException("Pedido no encontrado o no está activo.");
+            var pedido = await _pedidosServicio.ObtenerPedidoAsync(pedidoId)
+                ?? throw new ArgumentException("Pedido no encontrado.");
 
-            if (pedido.Estado is "Cancelado" or "Pagado" or "Despachado")
-                return BadRequest($"El pedido ya fue {pedido.Estado.ToLower()}.");
+            if (pedido.Estado == "Pagado")
+                return new JsonResult(new { ok = true, mensaje = "Pedido ya estaba pagado.", yaPagado = true });
+
+            if (pedido.Estado is "Cancelado" or "Despachado")
+                return BadRequest(new { ok = false, error = $"El pedido ya fue {pedido.Estado.ToLower()}." });
 
             if (efectivoRecibido < pedido.Total)
-                return BadRequest($"Faltan ${pedido.Total - efectivoRecibido:F2}");
+                return BadRequest(new { ok = false, error = $"Faltan ${pedido.Total - efectivoRecibido:F2}" });
 
             await _pedidosServicio.PagarPedidoAsync(pedidoId);
             var cambio = efectivoRecibido - pedido.Total;
@@ -393,11 +397,18 @@ public class IndexModel : PageModel
             if (pedidoId == Guid.Empty)
                 return BadRequest(ErrorSeguro(new ArgumentException("ID de pedido inválido.")));
 
-            var pedidos = await _pedidosServicio.ListarPedidosActivosAsync();
-            var pedido = pedidos.FirstOrDefault(p => p.Id == pedidoId)
-                ?? throw new ArgumentException("Pedido no encontrado o no está activo.");
+            var pedido = await _pedidosServicio.ObtenerPedidoAsync(pedidoId)
+                ?? throw new ArgumentException("Pedido no encontrado.");
 
-            if (pedido.Estado is "Cancelado" or "Pagado" or "Despachado")
+            if (pedido.Estado == "Pagado")
+            {
+                string? ticketPagado = null;
+                try { ticketPagado = await _ticketServicio.GenerarHtmlTicketAsync(pedidoId); }
+                catch { }
+                return new JsonResult(new { ok = true, mensaje = "Pedido ya estaba pagado.", yaPagado = true, ticketHtml = ticketPagado });
+            }
+
+            if (pedido.Estado is "Cancelado" or "Despachado")
                 return BadRequest(ErrorSeguro(new InvalidOperationException($"El pedido ya fue {pedido.Estado.ToLower()}.")));
 
             var metodoStr = metodoPago?.ToLower() ?? "efectivo";
@@ -579,7 +590,21 @@ public class IndexModel : PageModel
                     GraciaHasta = m.GraciaHasta
                 };
             });
-            return new JsonResult(new { mesas = data });
+
+            // Pedidos para llevar activos (sin mesa): la caja debe poder cobrarlos.
+            var paraLlevar = pedidos
+                .Where(p => !p.MesaId.HasValue)
+                .OrderBy(p => p.FechaCreacion)
+                .Select((p, idx) => new
+                {
+                    PedidoActualId = p.Id,
+                    Numero = idx + 1,
+                    PedidoTotal = p.Total,
+                    PedidoEstado = p.Estado,
+                    PedidoFechaCreacion = p.FechaCreacion
+                });
+
+            return new JsonResult(new { mesas = data, paraLlevar });
         }
         catch (ReglaDominioException ex) { return StatusCode(422, new { ok = false, error = ex.Message }); }
         catch (ArgumentException ex) { return BadRequest(new { ok = false, error = ex.Message }); }
@@ -672,6 +697,13 @@ public class IndexModel : PageModel
         {
             var productos = await _catalogoProductosServicio.ListarProductosAsync();
             Vm.ProductosDisponibles = productos.Where(p => p.Activo).OrderBy(p => p.CategoriaNombre).ThenBy(p => p.Nombre).ToList();
+            ProductosConReceta = [];
+            foreach (var producto in Vm.ProductosDisponibles)
+            {
+                var receta = await _recetasServicio.ObtenerPorProductoIdAsync(producto.Id);
+                if (receta is not null && receta.Ingredientes.Count > 0)
+                    ProductosConReceta.Add(producto.Id);
+            }
 
             var mesas = await _mesasServicio.ListarMesasAsync();
             Vm.MesasDisponibles = mesas.Where(m => m.Activa).OrderBy(m => m.Numero).ToList();
@@ -689,6 +721,7 @@ public class IndexModel : PageModel
         catch (Exception ex)
         {
             Vm.ProductosDisponibles = [];
+            ProductosConReceta = [];
             Vm.MesasDisponibles = [];
             Vm.PedidosActivos = [];
             ToastError = $"Error al cargar datos: {ex.Message}";

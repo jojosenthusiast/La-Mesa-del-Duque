@@ -1,3 +1,5 @@
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using LaMesaDelDuque.Aplicacion.Dtos;
 using LaMesaDelDuque.Aplicacion.Notificaciones;
 using LaMesaDelDuque.Aplicacion.Servicios;
@@ -63,7 +65,11 @@ public class KDSModel : PageModel
         }
 
         var ordenes = await _cocinaServicio.ListarPendientesAsync(filtro);
-        return new JsonResult(ordenes);
+        var opts = new System.Text.Json.JsonSerializerOptions
+        {
+            PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase
+        };
+        return new JsonResult(ordenes, opts);
     }
 
     public async Task<IActionResult> OnGetEstadoActualJsonAsync(string estacion)
@@ -75,6 +81,10 @@ public class KDSModel : PageModel
         }
 
         var ordenes = await _cocinaServicio.ListarPendientesAsync(filtro);
+        var optsEstado = new System.Text.Json.JsonSerializerOptions
+        {
+            PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase
+        };
         return new JsonResult(new {
             ordenesCocina = ordenes.Select(o => new {
                 o.Id,
@@ -97,7 +107,7 @@ public class KDSModel : PageModel
                 o.TiempoPreparacionMin
             }),
             timestamp = DateTime.UtcNow
-        });
+        }, optsEstado);
     }
 
     public async Task<IActionResult> OnPostMarcarListoJsonAsync(Guid ordenId)
@@ -114,6 +124,10 @@ public class KDSModel : PageModel
         catch (ReglaDominioException ex)
         {
             return StatusCode(422, new { ok = false, error = ex.Message });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { ok = false, error = ex.Message });
         }
         catch (Exception ex)
         {

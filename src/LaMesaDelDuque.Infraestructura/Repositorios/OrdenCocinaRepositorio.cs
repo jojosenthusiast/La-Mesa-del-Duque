@@ -32,7 +32,7 @@ internal class OrdenCocinaRepositorio : IOrdenCocinaRepositorio
     {
         var consulta = _contexto.Set<OrdenCocina>()
             .AsNoTracking()
-            .Where(o => o.Estado != EstadoLineaCocina.Listo)
+            .Where(o => o.Estado == EstadoLineaCocina.Pendiente || o.Estado == EstadoLineaCocina.EnPreparacion)
             .OrderBy(o => o.HoraRecibido);
 
         if (estacion.HasValue)
