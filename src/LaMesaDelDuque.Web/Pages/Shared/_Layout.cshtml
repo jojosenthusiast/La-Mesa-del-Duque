@@ -51,6 +51,9 @@
             <a asp-page="/Index" class="lmd-ops-strip__brand" aria-label="Inicio">
                 <img src="~/img/marca/logo-simbolo.png" alt="La Mesa del Duque" />
             </a>
+            <button type="button" class="lmd-ops-strip__back" onclick="history.length > 1 ? history.back() : window.location.href='@Url.Page("/Index")'">
+                Volver
+            </button>
             <span class="lmd-ops-strip__role">@rolStrip</span>
             <div class="lmd-ops-strip__user">
                 <span class="lmd-ops-strip__username">@User.Identity!.Name</span>

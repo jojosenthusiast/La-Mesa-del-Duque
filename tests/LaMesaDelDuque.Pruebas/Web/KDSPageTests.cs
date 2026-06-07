@@ -85,6 +85,23 @@ public class KDSPageTests
         Assert.IsType<BadRequestObjectResult>(result);
     }
 
+    [Fact]
+    public void KDS_DebePermitirIrAInicioYCerrarSesion()
+    {
+        var source = File.ReadAllText(Path.Combine(
+            Calidad.ProjectPaths.RepoRoot,
+            "src",
+            "LaMesaDelDuque.Web",
+            "Pages",
+            "Cocina",
+            "KDS.cshtml"));
+
+        Assert.Contains("asp-page=\"/Index\"", source);
+        Assert.Contains("asp-page=\"/Auth/Logout\"", source);
+        Assert.Contains("Volver", source);
+        Assert.Contains("Cerrar sesión", source);
+    }
+
     private static KDSModel CreatePage(ICocinaServicio servicio) =>
         new(servicio, new FakeKdsCatalogoProductosServicio(), new FakeNotificadorProductos(), NullLogger<KDSModel>.Instance);
 
