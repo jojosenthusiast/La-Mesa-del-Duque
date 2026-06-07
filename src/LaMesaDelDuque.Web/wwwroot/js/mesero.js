@@ -35,6 +35,23 @@
             .replace(/"/g, '&quot;');
     }
 
+<<<<<<< HEAD
+=======
+    async function confirmar(mensaje) {
+        if (typeof window.lmdConfirm === 'function') {
+            return await window.lmdConfirm(mensaje);
+        }
+        return window.confirm(mensaje);
+    }
+
+    function notificar(mensaje, tipo) {
+        if (typeof window.lmdToast === 'function') {
+            window.lmdToast(mensaje, tipo);
+        } else {
+            console.log(mensaje);
+        }
+    }
+>>>>>>> 03333f6 (Modificaciones apartado mesero, el boton de cerrar funcion no funciona bien lo demas mas o menos, y el para que funcione debe iniciar un dia , y sibre el de tranferir mesas me dicen que debo hacer con ello)
 
     // ── State ──────────────────────────────────────────
     var state = {
@@ -105,7 +122,17 @@
     }
 
     function renderGrid() {
+<<<<<<< HEAD
         var mesas = state.mesas;
+=======
+        var soloOcupadas = window.__lmdSoloOcupadasMesero === true || window.__lmdSoloOcupadasMesero === 'true';
+        var mesas = state.mesas.slice();
+        if (soloOcupadas) {
+            mesas = mesas.filter(function (m) {
+                return m.estado === 'Ocupada';
+            });
+        }
+>>>>>>> 03333f6 (Modificaciones apartado mesero, el boton de cerrar funcion no funciona bien lo demas mas o menos, y el para que funcione debe iniciar un dia , y sibre el de tranferir mesas me dicen que debo hacer con ello)
         var grupos = {};
         mesas.forEach(function (m) {
             var cap = m.capacidad || 0;
@@ -119,6 +146,7 @@
             mesasHtml += '<div class="lmd-pos-mesa-zona-separator">' + cap + ' personas</div>';
             grupos[cap].forEach(function (m) {
                 var disponible = m.estado === 'Disponible';
+<<<<<<< HEAD
                 var enGracia   = disponible && m.graciaHasta && new Date(m.graciaHasta) > Date.now();
                 var hayTab     = !disponible && m.pedidoActualId;
                 var enCobro    = hayTab && m.pedidoEstado === 'EnCobro';
@@ -129,6 +157,27 @@
                 var onclick = enGracia   ? ''
                     : hayTab     ? ' onclick="mesero.abrirDetalle(\'' + m.id + '\')"'
                     : disponible ? ' onclick="mesero.abrirNuevoPedido(\'' + m.id + '\')"'
+=======
+                var ocupada     = m.estado === 'Ocupada';
+                var reservada   = m.estado === 'Reservada';
+                var mantenimiento = m.estado === 'EnMantenimiento';
+                var enGracia   = disponible && m.graciaHasta && new Date(m.graciaHasta) > Date.now();
+                var hayTab     = !!m.pedidoActualId;
+                var enCobro    = hayTab && m.pedidoEstado === 'EnCobro';
+                var listo      = hayTab && m.pedidoEstado === 'Listo';
+                var cls = enGracia  ? 'lmd-pos-mesa-card--en-gracia'
+                    : disponible    ? 'lmd-pos-mesa-card--disponible'
+                    : enCobro       ? 'lmd-pos-mesa-card--en-cobro'
+                    : listo         ? 'lmd-pos-mesa-card--lista'
+                    : reservada     ? 'lmd-pos-mesa-card--reservada'
+                    : mantenimiento ? 'lmd-pos-mesa-card--mantenimiento'
+                    :                  'lmd-pos-mesa-card--ocupada';
+                var bloqueada = enGracia || reservada || mantenimiento;
+                var puedeCrearPedido = disponible || (ocupada && !hayTab);
+                var onclick = bloqueada ? ''
+                    : hayTab ? ' onclick="mesero.abrirDetalle(\'' + m.id + '\')"'
+                    : puedeCrearPedido ? ' onclick="mesero.abrirNuevoPedido(\'' + m.id + '\')"'
+>>>>>>> 03333f6 (Modificaciones apartado mesero, el boton de cerrar funcion no funciona bien lo demas mas o menos, y el para que funcione debe iniciar un dia , y sibre el de tranferir mesas me dicen que debo hacer con ello)
                     : '';
 
                 var badgeHtml = '';
@@ -139,6 +188,15 @@
                         icon('timer') + ' <span class="lmd-gracia-tiempo">' + mins + ':' + (secs < 10 ? '0' : '') + secs + '</span></span>';
                 } else if (enCobro) {
                     badgeHtml = '<span class="lmd-pos-mesa-card__cobrar-badge">' + icon('receipt') + ' Cobrar</span>';
+<<<<<<< HEAD
+=======
+                } else if (listo) {
+                    badgeHtml = '<span class="lmd-pos-mesa-card__listo-badge">' + icon('message-square') + ' Listo</span>';
+                } else if (reservada) {
+                    badgeHtml = '<span class="lmd-pos-mesa-card__estado-badge">Reservada</span>';
+                } else if (mantenimiento) {
+                    badgeHtml = '<span class="lmd-pos-mesa-card__estado-badge">Mantenimiento</span>';
+>>>>>>> 03333f6 (Modificaciones apartado mesero, el boton de cerrar funcion no funciona bien lo demas mas o menos, y el para que funcione debe iniciar un dia , y sibre el de tranferir mesas me dicen que debo hacer con ello)
                 } else if (hayTab) {
                     var minTab = m.pedidoFechaCreacion
                         ? Math.floor((Date.now() - new Date(m.pedidoFechaCreacion).getTime()) / 60000) : 0;
@@ -155,15 +213,35 @@
             });
         });
 
+<<<<<<< HEAD
+=======
+        var listasCount = mesas.filter(function (m) {
+            return m.estado === 'Ocupada' && m.pedidoActualId && m.pedidoEstado === 'Listo';
+        }).length;
+        var notifBtn = soloOcupadas
+            ? '<button class="lmd-mesero-notif-btn' + (listasCount > 0 ? ' lmd-mesero-notif-btn--activo' : '') + '" onclick="mesero.verNotificaciones()" title="Ver pedidos listos">' +
+                icon('bell') + '<span>Notificaciones</span><strong>' + listasCount + '</strong></button>'
+            : '';
+
+>>>>>>> 03333f6 (Modificaciones apartado mesero, el boton de cerrar funcion no funciona bien lo demas mas o menos, y el para que funcione debe iniciar un dia , y sibre el de tranferir mesas me dicen que debo hacer con ello)
         SHELL.innerHTML =
             '<div class="lmd-mesero-wrap">' +
                 '<div class="lmd-mesero-header">' +
                     icon('utensils-crossed') +
+<<<<<<< HEAD
                     '<span>Salón</span>' +
                     '<button class="lmd-mesero-refrescar" onclick="mesero.refrescarGrid()" title="Refrescar">' + icon('refresh-cw') + '</button>' +
                 '</div>' +
                 '<div class="lmd-pos-mesas-grid lmd-mesero-grid">' +
                     (mesasHtml || '<div class="lmd-pos-empty">Sin mesas configuradas</div>') +
+=======
+                    '<span>' + (soloOcupadas ? 'Mesas ocupadas' : 'Salón') + '</span>' +
+                    notifBtn +
+                    '<button class="lmd-mesero-refrescar" onclick="mesero.refrescarGrid()" title="Refrescar">' + icon('refresh-cw') + '</button>' +
+                '</div>' +
+                '<div class="lmd-pos-mesas-grid lmd-mesero-grid">' +
+                    (mesasHtml || '<div class="lmd-pos-empty">' + (soloOcupadas ? 'No hay mesas ocupadas' : 'Sin mesas configuradas') + '</div>') +
+>>>>>>> 03333f6 (Modificaciones apartado mesero, el boton de cerrar funcion no funciona bien lo demas mas o menos, y el para que funcione debe iniciar un dia , y sibre el de tranferir mesas me dicen que debo hacer con ello)
                 '</div>' +
             '</div>';
     }
@@ -173,6 +251,44 @@
         renderGrid();
     }
 
+<<<<<<< HEAD
+=======
+    function pedidosListos() {
+        return state.mesas.filter(function (m) {
+            return m.estado === 'Ocupada' && m.pedidoActualId && m.pedidoEstado === 'Listo';
+        }).sort(function (a, b) { return (a.numero || 0) - (b.numero || 0); });
+    }
+
+    function verNotificaciones() {
+        var listas = pedidosListos();
+        var cuerpo = listas.length === 0
+            ? '<div class="lmd-pos-empty" style="padding:1.5rem;">' + icon('bell-off') + ' No hay pedidos listos por el momento.</div>'
+            : listas.map(function (m) {
+                return '<button class="lmd-mesero-notif-item" onclick="mesero.abrirNotificacionMesa(\'' + escapeJsString(m.id) + '\')">' +
+                    '<span class="lmd-mesero-notif-item__mesa">Mesa ' + escapeHtml(m.numero) + '</span>' +
+                    '<span class="lmd-mesero-notif-item__texto">Pedido listo para retirar</span>' +
+                    '<span class="lmd-mesero-notif-item__total">' + fmt(m.pedidoTotal || 0) + '</span>' +
+                '</button>';
+            }).join('');
+
+        var html =
+            '<div class="lmd-pos-ov-header">' +
+                '<button class="lmd-pos-ov-back" onclick="mesero.cerrarNotificaciones()">' + icon('arrow-left') + '</button>' +
+                '<span class="lmd-pos-ov-title">' + icon('bell') + ' Notificaciones de pedidos</span>' +
+            '</div>' +
+            '<div class="lmd-mesero-notif-lista">' + cuerpo + '</div>';
+
+        abrirOverlay('notificaciones', html, { closeOnBackdrop: true });
+    }
+
+    function cerrarNotificaciones() { cerrarOverlay('notificaciones'); }
+
+    async function abrirNotificacionMesa(mesaId) {
+        cerrarNotificaciones();
+        await abrirDetalle(mesaId);
+    }
+
+>>>>>>> 03333f6 (Modificaciones apartado mesero, el boton de cerrar funcion no funciona bien lo demas mas o menos, y el para que funcione debe iniciar un dia , y sibre el de tranferir mesas me dicen que debo hacer con ello)
     // ═══════════════════════════════════════════════════
     // OVERLAY DETALLE DE MESA
     // ═══════════════════════════════════════════════════
@@ -184,12 +300,20 @@
         try {
             var res = await fetch('?handler=DetallesPedidoJson&pedidoId=' + m.pedidoActualId,
                 { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+<<<<<<< HEAD
             if (!res.ok) { window.lmdToast('Error al cargar detalle', 'error'); return; }
+=======
+            if (!res.ok) { notificar('Error al cargar detalle', 'error'); return; }
+>>>>>>> 03333f6 (Modificaciones apartado mesero, el boton de cerrar funcion no funciona bien lo demas mas o menos, y el para que funcione debe iniciar un dia , y sibre el de tranferir mesas me dicen que debo hacer con ello)
             var data = await res.json();
             state.pedidoDetalles = data.detalles || [];
             state.pedidoTotal    = data.total    || 0;
             state.pedidoEstado   = data.estado   || m.pedidoEstado;
+<<<<<<< HEAD
         } catch (e) { window.lmdToast('Error de conexión', 'error'); return; }
+=======
+        } catch (e) { notificar('Error de conexión', 'error'); return; }
+>>>>>>> 03333f6 (Modificaciones apartado mesero, el boton de cerrar funcion no funciona bien lo demas mas o menos, y el para que funcione debe iniciar un dia , y sibre el de tranferir mesas me dicen que debo hacer con ello)
 
         _renderDetalle();
     }
@@ -247,11 +371,23 @@
             : '<button class="lmd-mesero-btn" onclick="mesero.abrirAgregar()">' + icon('plus') + ' Agregar</button>' +
               '<button class="lmd-mesero-btn lmd-mesero-btn--cuenta" onclick="mesero.pedirCuenta()">' + icon('receipt') + ' Pedir cuenta</button>';
 
+<<<<<<< HEAD
+=======
+        var puedeCerrar = m && m.pedidoActualId && state.pedidoEstado !== 'Pagado' && state.pedidoEstado !== 'Despachado' && state.pedidoEstado !== 'Cancelado';
+        var cerrarBtn = puedeCerrar
+            ? '<button class="lmd-mesero-cerrar-cuenta" onclick="mesero.cerrarCuentaMesa()">' + icon('receipt') + ' Cerrar</button>'
+            : '';
+
+>>>>>>> 03333f6 (Modificaciones apartado mesero, el boton de cerrar funcion no funciona bien lo demas mas o menos, y el para que funcione debe iniciar un dia , y sibre el de tranferir mesas me dicen que debo hacer con ello)
         var html =
             '<div class="lmd-pos-ov-header">' +
                 '<button class="lmd-pos-ov-back" onclick="mesero.cerrarDetalle()">' + icon('arrow-left') + '</button>' +
                 '<span class="lmd-pos-ov-title">' + icon('armchair') + ' Mesa ' + escapeHtml(m.numero) + estadoBadge + '</span>' +
+<<<<<<< HEAD
                 '<div class="lmd-pos-ov-total">' + fmt(state.pedidoTotal) + '</div>' +
+=======
+                '<div class="lmd-mesero-ov-total-actions">' + cerrarBtn + '<div class="lmd-pos-ov-total">' + fmt(state.pedidoTotal) + '</div></div>' +
+>>>>>>> 03333f6 (Modificaciones apartado mesero, el boton de cerrar funcion no funciona bien lo demas mas o menos, y el para que funcione debe iniciar un dia , y sibre el de tranferir mesas me dicen que debo hacer con ello)
             '</div>' +
             '<div class="lmd-mesero-detalle-body">' +
                 '<div class="lmd-mesero-detalle-lista">' + itemsHtml + '</div>' +
@@ -269,17 +405,30 @@
     function cerrarDetalle() { cerrarOverlay('detalle'); }
 
     async function voidItem(pedidoId, detalleId, nombre) {
+<<<<<<< HEAD
         var ok = await window.lmdConfirm('¿Anular "' + nombre + '"?');
+=======
+        var ok = await confirmar('¿Anular "' + nombre + '"?');
+>>>>>>> 03333f6 (Modificaciones apartado mesero, el boton de cerrar funcion no funciona bien lo demas mas o menos, y el para que funcione debe iniciar un dia , y sibre el de tranferir mesas me dicen que debo hacer con ello)
         if (!ok) return;
         try {
             var res  = await postJson('EliminarLineaJson', { pedidoId: pedidoId, detalleId: detalleId });
             var data = await res.json().catch(function () { return {}; });
+<<<<<<< HEAD
             if (!res.ok) { window.lmdToast(data.error || 'Error al anular', 'error'); return; }
             state.pedidoDetalles = state.pedidoDetalles.filter(function (d) { return d.id !== detalleId; });
             state.pedidoTotal    = data.total || 0;
             _renderDetalle();
             window.lmdToast('Ítem anulado', 'success');
         } catch (e) { window.lmdToast('Error de conexión', 'error'); }
+=======
+            if (!res.ok) { notificar(data.error || 'Error al anular', 'error'); return; }
+            state.pedidoDetalles = state.pedidoDetalles.filter(function (d) { return d.id !== detalleId; });
+            state.pedidoTotal    = data.total || 0;
+            _renderDetalle();
+            notificar('Ítem anulado', 'success');
+        } catch (e) { notificar('Error de conexión', 'error'); }
+>>>>>>> 03333f6 (Modificaciones apartado mesero, el boton de cerrar funcion no funciona bien lo demas mas o menos, y el para que funcione debe iniciar un dia , y sibre el de tranferir mesas me dicen que debo hacer con ello)
     }
 
     async function ajustarCantidad(pedidoId, detalleId, delta) {
@@ -290,33 +439,164 @@
         try {
             var res  = await postJson('ActualizarCantidadJson', { pedidoId: pedidoId, detalleId: detalleId, cantidad: nuevaCantidad });
             var data = await res.json().catch(function () { return {}; });
+<<<<<<< HEAD
             if (!res.ok) { window.lmdToast(data.error || 'Error al actualizar', 'error'); return; }
             state.pedidoDetalles = data.detalles || [];
             state.pedidoTotal    = data.total    || 0;
             _renderDetalle();
         } catch (e) { window.lmdToast('Error de conexión', 'error'); }
+=======
+            if (!res.ok) { notificar(data.error || 'Error al actualizar', 'error'); return; }
+            state.pedidoDetalles = data.detalles || [];
+            state.pedidoTotal    = data.total    || 0;
+            _renderDetalle();
+        } catch (e) { notificar('Error de conexión', 'error'); }
+>>>>>>> 03333f6 (Modificaciones apartado mesero, el boton de cerrar funcion no funciona bien lo demas mas o menos, y el para que funcione debe iniciar un dia , y sibre el de tranferir mesas me dicen que debo hacer con ello)
     }
 
     async function pedirCuenta() {
         var m = state.mesaActual;
         if (!m) return;
+<<<<<<< HEAD
         var ok = await window.lmdConfirm('¿Solicitar cuenta para Mesa ' + m.numero + '?');
+=======
+        var ok = await confirmar('¿Solicitar cuenta para Mesa ' + m.numero + '?');
+>>>>>>> 03333f6 (Modificaciones apartado mesero, el boton de cerrar funcion no funciona bien lo demas mas o menos, y el para que funcione debe iniciar un dia , y sibre el de tranferir mesas me dicen que debo hacer con ello)
         if (!ok) return;
         try {
             var res  = await postJson('MarcarEnCobroJson', { pedidoId: m.pedidoActualId });
             var data = await res.json().catch(function () { return {}; });
+<<<<<<< HEAD
             if (!res.ok) { window.lmdToast(data.error || 'Error', 'error'); return; }
+=======
+            if (!res.ok) { notificar(data.error || 'Error', 'error'); return; }
+>>>>>>> 03333f6 (Modificaciones apartado mesero, el boton de cerrar funcion no funciona bien lo demas mas o menos, y el para que funcione debe iniciar un dia , y sibre el de tranferir mesas me dicen que debo hacer con ello)
             state.pedidoEstado = 'EnCobro';
             _renderDetalle();
             await refrescarMesas();
             renderGrid();
+<<<<<<< HEAD
             window.lmdToast('Cuenta solicitada — Mesa ' + m.numero, 'success');
         } catch (e) { window.lmdToast('Error de conexión', 'error'); }
+=======
+            notificar('Cuenta solicitada — Mesa ' + m.numero, 'success');
+        } catch (e) { notificar('Error de conexión', 'error'); }
+    }
+
+    async function cerrarCuentaMesa() {
+        var m = state.mesaActual;
+        if (!m || !m.pedidoActualId) return;
+
+        var ok = await confirmar(
+            '¿Cerrar la cuenta de Mesa ' + m.numero + ' y enviarla a caja? La mesa pasará a mantenimiento.'
+        );
+        if (!ok) return;
+
+        try {
+            var res = await postJson('CerrarMesaJson', { pedidoId: m.pedidoActualId, mesaId: m.id });
+            var data = await res.json().catch(function () { return {}; });
+            if (!res.ok) {
+                notificar(data.error || 'Error al cerrar la cuenta', 'error');
+                return;
+            }
+
+            state.pedidoEstado = 'EnCobro';
+            cerrarOverlay('detalle');
+            await refrescarMesas();
+            renderGrid();
+            notificar(data.mensaje || 'Cuenta cerrada y enviada a caja', 'success');
+
+            if (data.redirectUrl) {
+                setTimeout(function () { window.location.href = data.redirectUrl; }, 650);
+            }
+        } catch (e) {
+            notificar('Error de conexión', 'error');
+        }
+    }
+
+    async function _cerrarPedidoEnCaja(pedidoId, mesaId) {
+        var res = await postJson('CerrarMesaJson', { pedidoId: pedidoId, mesaId: mesaId });
+        var data = await res.json().catch(function () { return {}; });
+        if (!res.ok) {
+            notificar(data.error || 'Error al cerrar la cuenta', 'error');
+            return null;
+        }
+        return data;
+    }
+
+    async function cerrarCuentaDesdeAgregar() {
+        var m = state.mesaActual;
+        if (!m) return;
+
+        if (!m.pedidoActualId && state.carrito.length === 0) {
+            notificar('Agrega productos antes de cerrar la cuenta', 'error');
+            return;
+        }
+
+        var mensaje = m.pedidoActualId
+            ? (state.carrito.length > 0
+                ? '¿Enviar los productos pendientes a cocina y cerrar la cuenta de Mesa ' + m.numero + '? La mesa pasará a mantenimiento y la cuenta irá a caja.'
+                : '¿Cerrar la cuenta de Mesa ' + m.numero + ' y enviarla a caja? La mesa pasará a mantenimiento.')
+            : '¿Crear el pedido de Mesa ' + m.numero + ', enviarlo a cocina y mandar la cuenta a caja? La mesa pasará a mantenimiento.';
+
+        var ok = await confirmar(mensaje);
+        if (!ok) return;
+
+        try {
+            var data;
+            if (!m.pedidoActualId) {
+                var itemsJson = JSON.stringify(state.carrito.map(function (i) {
+                    return { productoId: i.id, cantidad: i.cantidad };
+                }));
+                var resCrear = await postJson('CrearYCerrarMesaJson', { mesaId: m.id, itemsJson: itemsJson });
+                data = await resCrear.json().catch(function () { return {}; });
+                if (!resCrear.ok) {
+                    notificar(data.error || 'Error al crear y cerrar la cuenta', 'error');
+                    return;
+                }
+            } else {
+                if (state.carrito.length > 0) {
+                    for (var i = 0; i < state.carrito.length; i++) {
+                        var item = state.carrito[i];
+                        var resItem = await postJson('AgregarLineaJson', {
+                            pedidoId: m.pedidoActualId,
+                            productoId: item.id,
+                            cantidad: item.cantidad
+                        });
+                        if (!resItem.ok) {
+                            var err = await resItem.json().catch(function () { return {}; });
+                            notificar(err.error || 'Error al enviar productos a cocina', 'error');
+                            return;
+                        }
+                    }
+                }
+                data = await _cerrarPedidoEnCaja(m.pedidoActualId, m.id);
+                if (!data) return;
+            }
+
+            state.carrito = [];
+            cerrarOverlay('agregar');
+            cerrarOverlay('detalle');
+            await refrescarMesas();
+            renderGrid();
+            notificar(data.mensaje || 'Cuenta enviada a caja', 'success');
+            if (data.redirectUrl) {
+                setTimeout(function () { window.location.href = data.redirectUrl; }, 650);
+            }
+        } catch (e) {
+            notificar('Error de conexión', 'error');
+        }
+>>>>>>> 03333f6 (Modificaciones apartado mesero, el boton de cerrar funcion no funciona bien lo demas mas o menos, y el para que funcione debe iniciar un dia , y sibre el de tranferir mesas me dicen que debo hacer con ello)
     }
 
     function abrirNuevoPedido(mesaId) {
         var m = state.mesas.find(function (x) { return x.id === mesaId; });
+<<<<<<< HEAD
         if (!m || m.estado !== 'Disponible') return;
+=======
+        if (!m || m.pedidoActualId) return;
+        if (m.estado !== 'Disponible' && m.estado !== 'Ocupada') return;
+>>>>>>> 03333f6 (Modificaciones apartado mesero, el boton de cerrar funcion no funciona bien lo demas mas o menos, y el para que funcione debe iniciar un dia , y sibre el de tranferir mesas me dicen que debo hacer con ello)
         state.mesaActual   = m;
         state.carrito      = [];
         state.catFiltro    = 'Todos';
@@ -331,7 +611,11 @@
         try {
             var res  = await postJson('CrearConItemsJson', { mesaId: m.id, itemsJson: itemsJson });
             var data = await res.json().catch(function () { return {}; });
+<<<<<<< HEAD
             if (!res.ok) { window.lmdToast(data.error || 'Error al crear pedido', 'error'); return; }
+=======
+            if (!res.ok) { notificar(data.error || 'Error al crear pedido', 'error'); return; }
+>>>>>>> 03333f6 (Modificaciones apartado mesero, el boton de cerrar funcion no funciona bien lo demas mas o menos, y el para que funcione debe iniciar un dia , y sibre el de tranferir mesas me dicen que debo hacer con ello)
             state.mesaActual = Object.assign({}, m, { pedidoActualId: data.pedidoId });
             var r   = await fetch('?handler=DetallesPedidoJson&pedidoId=' + data.pedidoId,
                 { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
@@ -344,8 +628,13 @@
             await refrescarMesas();
             renderGrid();
             _renderDetalle();
+<<<<<<< HEAD
             window.lmdToast('Mesa ' + m.numero + ' — Pedido creado', 'success');
         } catch (e) { window.lmdToast('Error de conexión', 'error'); }
+=======
+            notificar('Pedido enviado a cocina', 'success');
+        } catch (e) { notificar('Error de conexión', 'error'); }
+>>>>>>> 03333f6 (Modificaciones apartado mesero, el boton de cerrar funcion no funciona bien lo demas mas o menos, y el para que funcione debe iniciar un dia , y sibre el de tranferir mesas me dicen que debo hacer con ello)
     }
 
     // ═══════════════════════════════════════════════════
@@ -373,7 +662,11 @@
         var catHtml = cats.map(function (c) {
             return '<button class="lmd-pos-cat-btn' + (c === state.catFiltro ? ' lmd-pos-cat-btn--activa' : '') + '" ' +
                 'onclick="mesero.filtrarCat(\'' + escapeJsString(c) + '\')">' +
+<<<<<<< HEAD
                 icon(c === 'Todos' ? 'layers' : c === 'Bebidas' ? 'wine' : c === 'Postres' ? 'cake-slice' : 'utensils') +
+=======
+                icon(c === 'Todos' ? 'list' : 'utensils-crossed') +
+>>>>>>> 03333f6 (Modificaciones apartado mesero, el boton de cerrar funcion no funciona bien lo demas mas o menos, y el para que funcione debe iniciar un dia , y sibre el de tranferir mesas me dicen que debo hacer con ello)
                 '<span>' + escapeHtml(c) + '</span>' +
             '</button>';
         }).join('');
@@ -386,9 +679,15 @@
         });
 
         var prodHtml = filtrados.map(function (p) {
+<<<<<<< HEAD
             return '<div class="lmd-pos-product-card" onclick="mesero.addToCart(\'' + escapeJsString(p.id) + '\')">' +
                 '<span class="lmd-pos-product-card__nombre">' + escapeHtml(p.nombre) + '</span>' +
                 '<span class="lmd-pos-product-card__precio">' + fmt(p.precio) + '</span>' +
+=======
+            return '<div class="lmd-pos-producto-card lmd-mesero-producto-card" onclick="mesero.addToCart(\'' + escapeJsString(p.id) + '\')">' +
+                '<span class="lmd-pos-producto-card__nombre">' + escapeHtml(p.nombre) + '</span>' +
+                '<span class="lmd-pos-producto-card__precio">' + fmt(p.precio) + '</span>' +
+>>>>>>> 03333f6 (Modificaciones apartado mesero, el boton de cerrar funcion no funciona bien lo demas mas o menos, y el para que funcione debe iniciar un dia , y sibre el de tranferir mesas me dicen que debo hacer con ello)
             '</div>';
         }).join('');
 
@@ -412,11 +711,22 @@
             ? 'Nueva orden — Mesa ' + (state.mesaActual ? state.mesaActual.numero : '')
             : 'Agregar ítems';
         var sendDisabled = state.carrito.length === 0 ? ' disabled' : '';
+<<<<<<< HEAD
+=======
+        var cerrarAgregarBtn = state.mesaActual
+            ? '<button class="lmd-mesero-cerrar-cuenta" onclick="mesero.cerrarCuentaDesdeAgregar()">' + icon('receipt') + ' Cerrar</button>'
+            : '';
+
+>>>>>>> 03333f6 (Modificaciones apartado mesero, el boton de cerrar funcion no funciona bien lo demas mas o menos, y el para que funcione debe iniciar un dia , y sibre el de tranferir mesas me dicen que debo hacer con ello)
         var html =
             '<div class="lmd-pos-ov-header">' +
                 '<button class="lmd-pos-ov-back" onclick="mesero.cerrarAgregar()">' + icon('arrow-left') + '</button>' +
                 '<span class="lmd-pos-ov-title">' + icon('plus-circle') + ' ' + titulo + '</span>' +
+<<<<<<< HEAD
                 '<div class="lmd-pos-ov-total">' + fmt(carritoTotal) + '</div>' +
+=======
+                '<div class="lmd-mesero-ov-total-actions">' + cerrarAgregarBtn + '<div class="lmd-pos-ov-total">' + fmt(carritoTotal) + '</div></div>' +
+>>>>>>> 03333f6 (Modificaciones apartado mesero, el boton de cerrar funcion no funciona bien lo demas mas o menos, y el para que funcione debe iniciar un dia , y sibre el de tranferir mesas me dicen que debo hacer con ello)
             '</div>' +
             '<div class="lmd-mesero-agregar-body">' +
                 '<div class="lmd-mesero-agregar-izq">' +
@@ -494,21 +804,36 @@
                 var data = await r.json();
                 state.pedidoDetalles = data.detalles || [];
                 state.pedidoTotal    = data.total    || 0;
+<<<<<<< HEAD
+=======
+                state.pedidoEstado   = data.estado   || state.pedidoEstado;
+>>>>>>> 03333f6 (Modificaciones apartado mesero, el boton de cerrar funcion no funciona bien lo demas mas o menos, y el para que funcione debe iniciar un dia , y sibre el de tranferir mesas me dicen que debo hacer con ello)
             }
             if (fallidos.length === 0) {
                 state.carrito = [];
                 cerrarOverlay('agregar');
                 _renderDetalle();
+<<<<<<< HEAD
                 window.lmdToast('Ítems enviados a cocina', 'success');
+=======
+                notificar('Pedido enviado a cocina', 'success');
+>>>>>>> 03333f6 (Modificaciones apartado mesero, el boton de cerrar funcion no funciona bien lo demas mas o menos, y el para que funcione debe iniciar un dia , y sibre el de tranferir mesas me dicen que debo hacer con ello)
             } else {
                 state.carrito = fallidos.map(function (f) { return f.item; });
                 var msg = enviados > 0
                     ? enviados + ' ítem(s) enviado(s). ' + fallidos.length + ' no pudo(n) enviarse.'
                     : fallidos[0].error;
+<<<<<<< HEAD
                 window.lmdToast(msg, 'error');
                 _renderAgregar();
             }
         } catch (e) { window.lmdToast('Error de conexión', 'error'); }
+=======
+                notificar(msg, 'error');
+                _renderAgregar();
+            }
+        } catch (e) { notificar('Error de conexión', 'error'); }
+>>>>>>> 03333f6 (Modificaciones apartado mesero, el boton de cerrar funcion no funciona bien lo demas mas o menos, y el para que funcione debe iniciar un dia , y sibre el de tranferir mesas me dicen que debo hacer con ello)
     }
 
     // ═══════════════════════════════════════════════════
@@ -570,7 +895,11 @@
     function confirmarEfectivo(total) {
         var input = document.getElementById('lmd-mesero-cash');
         var monto = parseFloat(input ? input.value : total);
+<<<<<<< HEAD
         if (isNaN(monto) || monto < total) { window.lmdToast('Monto insuficiente', 'error'); return; }
+=======
+        if (isNaN(monto) || monto < total) { notificar('Monto insuficiente', 'error'); return; }
+>>>>>>> 03333f6 (Modificaciones apartado mesero, el boton de cerrar funcion no funciona bien lo demas mas o menos, y el para que funcione debe iniciar un dia , y sibre el de tranferir mesas me dicen que debo hacer con ello)
         pagarDirecto('efectivo', monto);
     }
 
@@ -603,7 +932,11 @@
         var input = document.getElementById('lmd-mesero-payment-ref');
         var referencia = (input && input.value ? input.value : '').trim();
         if (!referencia) {
+<<<<<<< HEAD
             window.lmdToast('La referencia del pago es obligatoria', 'error');
+=======
+            notificar('La referencia del pago es obligatoria', 'error');
+>>>>>>> 03333f6 (Modificaciones apartado mesero, el boton de cerrar funcion no funciona bien lo demas mas o menos, y el para que funcione debe iniciar un dia , y sibre el de tranferir mesas me dicen que debo hacer con ello)
             if (input) input.focus();
             return;
         }
@@ -616,15 +949,24 @@
         try {
             var res  = await postJson('PagarJson', { pedidoId: m.pedidoActualId, metodoPago: metodo, monto: monto, referencia: referencia });
             var data = await res.json().catch(function () { return {}; });
+<<<<<<< HEAD
             if (!res.ok) { window.lmdToast(data.error || 'Error al registrar pago', 'error'); return; }
+=======
+            if (!res.ok) { notificar(data.error || 'Error al registrar pago', 'error'); return; }
+>>>>>>> 03333f6 (Modificaciones apartado mesero, el boton de cerrar funcion no funciona bien lo demas mas o menos, y el para que funcione debe iniciar un dia , y sibre el de tranferir mesas me dicen que debo hacer con ello)
             cerrarOverlay('efectivo');
             cerrarOverlay('pago');
             cerrarOverlay('pago-ref');
             cerrarOverlay('detalle');
             await refrescarMesas();
             renderGrid();
+<<<<<<< HEAD
             window.lmdToast(data.mensaje || 'Pago registrado', 'success');
         } catch (e) { window.lmdToast('Error de conexión', 'error'); }
+=======
+            notificar(data.mensaje || 'Pago registrado', 'success');
+        } catch (e) { notificar('Error de conexión', 'error'); }
+>>>>>>> 03333f6 (Modificaciones apartado mesero, el boton de cerrar funcion no funciona bien lo demas mas o menos, y el para que funcione debe iniciar un dia , y sibre el de tranferir mesas me dicen que debo hacer con ello)
     }
     // SIGNALR
     // ═══════════════════════════════════════════════════
@@ -652,7 +994,20 @@
                 .withAutomaticReconnect()
                 .build();
             connection.on('PedidoCambiado', async function () { await refrescarMesas(); renderGrid(); await sincronizarDetalle(); });
+<<<<<<< HEAD
             connection.on('EstadoCambiado', async function () { await refrescarMesas(); renderGrid(); await sincronizarDetalle(); });
+=======
+            connection.on('EstadoCambiado', async function (pedidoId, nuevoEstado) {
+                if (nuevoEstado === 'Listo') notificar('Pedido listo para retirar — revisa la mesa.', 'success');
+                await refrescarMesas(); renderGrid(); await sincronizarDetalle();
+            });
+            connection.on('RecibirNotificacionPedido', async function (payload) {
+                if (payload && payload.tipo === 'EstadoCambiado' && payload.estado === 'Listo') {
+                    notificar('Pedido listo para retirar — revisa la mesa.', 'success');
+                }
+                await refrescarMesas(); renderGrid(); await sincronizarDetalle();
+            });
+>>>>>>> 03333f6 (Modificaciones apartado mesero, el boton de cerrar funcion no funciona bien lo demas mas o menos, y el para que funcione debe iniciar un dia , y sibre el de tranferir mesas me dicen que debo hacer con ello)
             connection.on('MesaActualizada', async function () { await refrescarMesas(); renderGrid(); await sincronizarDetalle(); });
             connection.start().catch(function (e) { console.warn('SignalR mesero:', e); });
         } catch (e) {}
@@ -690,8 +1045,13 @@
 
     // ── Public API ─────────────────────────────────────
     window.mesero = {
+<<<<<<< HEAD
         refrescarGrid,
         abrirDetalle, cerrarDetalle, voidItem, ajustarCantidad, pedirCuenta,
+=======
+        refrescarGrid, verNotificaciones, cerrarNotificaciones, abrirNotificacionMesa,
+        abrirDetalle, cerrarDetalle, voidItem, ajustarCantidad, pedirCuenta, cerrarCuentaMesa, cerrarCuentaDesdeAgregar,
+>>>>>>> 03333f6 (Modificaciones apartado mesero, el boton de cerrar funcion no funciona bien lo demas mas o menos, y el para que funcione debe iniciar un dia , y sibre el de tranferir mesas me dicen que debo hacer con ello)
         abrirNuevoPedido,
         abrirAgregar, cerrarAgregar, filtrarCat, buscarProd, addToCart, incCart, decCart, enviarItems,
         abrirPago, cerrarPago, abrirEfectivo, volverMetodos, confirmarEfectivo, abrirReferenciaPago, confirmarReferenciaPago, pagarDirecto

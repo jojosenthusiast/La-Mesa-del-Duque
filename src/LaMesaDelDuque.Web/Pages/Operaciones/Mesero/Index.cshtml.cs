@@ -34,6 +34,12 @@ public class IndexModel : PageModel
         _logger = logger;
     }
 
+<<<<<<< HEAD
+=======
+    [BindProperty(SupportsGet = true)]
+    public bool SoloOcupadas { get; set; }
+
+>>>>>>> 03333f6 (Modificaciones apartado mesero, el boton de cerrar funcion no funciona bien lo demas mas o menos, y el para que funcione debe iniciar un dia , y sibre el de tranferir mesas me dicen que debo hacer con ello)
     public List<ProductoDto> ProductosDisponibles { get; set; } = [];
 
     public async Task OnGetAsync()
@@ -116,7 +122,12 @@ public class IndexModel : PageModel
                 ?? throw new ArgumentException("Producto no encontrado.");
             await _pedidosServicio.AgregarDetalleAsync(pedidoId, productoId, cantidad, prod.Precio, notas, modificacionesJson);
             var pedido = await _pedidosServicio.ObtenerPedidoAsync(pedidoId);
+<<<<<<< HEAD
             return new JsonResult(new { ok = true, total = pedido?.Total ?? 0 });
+=======
+            await _hubContext.Clients.All.SendAsync("PedidoCambiado", pedidoId);
+            return new JsonResult(new { ok = true, total = pedido?.Total ?? 0, estado = pedido?.Estado });
+>>>>>>> 03333f6 (Modificaciones apartado mesero, el boton de cerrar funcion no funciona bien lo demas mas o menos, y el para que funcione debe iniciar un dia , y sibre el de tranferir mesas me dicen que debo hacer con ello)
         }
         catch (ReglaDominioException ex) { return StatusCode(422, new { ok = false, error = ex.Message }); }
         catch (ArgumentException ex) { return BadRequest(new { ok = false, error = ex.Message }); }
@@ -148,7 +159,12 @@ public class IndexModel : PageModel
                 precioUnitario = d.PrecioUnitario,
                 subtotal       = d.Subtotal
             });
+<<<<<<< HEAD
             return new JsonResult(new { ok = true, total = pedido?.Total ?? 0, detalles });
+=======
+            await _hubContext.Clients.All.SendAsync("PedidoCambiado", pedidoId);
+            return new JsonResult(new { ok = true, total = pedido?.Total ?? 0, detalles, estado = pedido?.Estado });
+>>>>>>> 03333f6 (Modificaciones apartado mesero, el boton de cerrar funcion no funciona bien lo demas mas o menos, y el para que funcione debe iniciar un dia , y sibre el de tranferir mesas me dicen que debo hacer con ello)
         }
         catch (ReglaDominioException ex) { return StatusCode(422, new { ok = false, error = ex.Message }); }
         catch (ArgumentException ex) { return BadRequest(new { ok = false, error = ex.Message }); }
@@ -162,7 +178,12 @@ public class IndexModel : PageModel
         {
             await _pedidosServicio.EliminarDetalleAsync(pedidoId, detalleId);
             var pedido = await _pedidosServicio.ObtenerPedidoAsync(pedidoId);
+<<<<<<< HEAD
             return new JsonResult(new { ok = true, total = pedido?.Total ?? 0 });
+=======
+            await _hubContext.Clients.All.SendAsync("PedidoCambiado", pedidoId);
+            return new JsonResult(new { ok = true, total = pedido?.Total ?? 0, estado = pedido?.Estado });
+>>>>>>> 03333f6 (Modificaciones apartado mesero, el boton de cerrar funcion no funciona bien lo demas mas o menos, y el para que funcione debe iniciar un dia , y sibre el de tranferir mesas me dicen que debo hacer con ello)
         }
         catch (ReglaDominioException ex) { return StatusCode(422, new { ok = false, error = ex.Message }); }
         catch (ArgumentException ex) { return BadRequest(new { ok = false, error = ex.Message }); }
@@ -175,8 +196,13 @@ public class IndexModel : PageModel
         try
         {
             await _pedidosServicio.MarcarEnCobroAsync(pedidoId);
+<<<<<<< HEAD
             await _hubContext.Clients.Group($"pedido-{pedidoId}").SendAsync("EstadoCambiado", pedidoId, "EnCobro");
             return new JsonResult(new { ok = true });
+=======
+            await _hubContext.Clients.All.SendAsync("EstadoCambiado", pedidoId, "EnCobro");
+            return new JsonResult(new { ok = true, estado = "EnCobro" });
+>>>>>>> 03333f6 (Modificaciones apartado mesero, el boton de cerrar funcion no funciona bien lo demas mas o menos, y el para que funcione debe iniciar un dia , y sibre el de tranferir mesas me dicen que debo hacer con ello)
         }
         catch (ReglaDominioException ex) { return StatusCode(422, new { ok = false, error = ex.Message }); }
         catch (ArgumentException ex) { return BadRequest(new { ok = false, error = ex.Message }); }
@@ -221,13 +247,119 @@ public class IndexModel : PageModel
             }
 
             var pedido = await _pedidosServicio.CrearPedidoAsync(TipoServicio.ComerAqui, mesaId, detalles);
+<<<<<<< HEAD
             return new JsonResult(new { ok = true, pedidoId = pedido.Id, total = pedido.Total });
+=======
+            await _hubContext.Clients.All.SendAsync("PedidoCreado", pedido.Id);
+            await _hubContext.Clients.All.SendAsync("PedidoCambiado", pedido.Id);
+            return new JsonResult(new { ok = true, pedidoId = pedido.Id, total = pedido.Total, estado = pedido.Estado });
+>>>>>>> 03333f6 (Modificaciones apartado mesero, el boton de cerrar funcion no funciona bien lo demas mas o menos, y el para que funcione debe iniciar un dia , y sibre el de tranferir mesas me dicen que debo hacer con ello)
         }
         catch (ReglaDominioException ex) { return StatusCode(422, new { ok = false, error = ex.Message }); }
         catch (ArgumentException ex) { return BadRequest(new { ok = false, error = ex.Message }); }
         catch (Exception ex) { _logger.LogError(ex, "Error en handler JSON"); return StatusCode(500, new { ok = false, error = "Ocurrió un error interno." }); }
     }
 
+<<<<<<< HEAD
+=======
+    // ── Crear pedido, enviarlo a cocina y cerrarlo para caja ─────────────────
+    public async Task<IActionResult> OnPostCrearYCerrarMesaJsonAsync(Guid mesaId, string? itemsJson)
+    {
+        try
+        {
+            if (mesaId == Guid.Empty)
+                return BadRequest(ErrorSeguro(new ArgumentException("Mesa inválida.")));
+
+            List<ItemCarritoDto> items;
+            try
+            {
+                items = string.IsNullOrWhiteSpace(itemsJson)
+                    ? []
+                    : JsonSerializer.Deserialize<List<ItemCarritoDto>>(itemsJson,
+                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? [];
+            }
+            catch
+            {
+                return BadRequest(ErrorSeguro(new ArgumentException("Formato de ítems inválido.")));
+            }
+
+            if (items.Count == 0)
+                return BadRequest(ErrorSeguro(new ArgumentException("Debe incluir al menos un ítem.")));
+
+            var prods = await _catalogoProductosServicio.ListarProductosAsync();
+            var prodsDict = prods.Where(p => p.Activo).ToDictionary(p => p.Id);
+
+            var detalles = new List<DetalleCreacionDto>();
+            foreach (var item in items)
+            {
+                if (!prodsDict.TryGetValue(item.ProductoId, out var prod))
+                    return BadRequest(ErrorSeguro(new ArgumentException("Producto no encontrado.")));
+
+                detalles.Add(new DetalleCreacionDto
+                {
+                    ProductoId = item.ProductoId,
+                    Cantidad = item.Cantidad,
+                    PrecioUnitario = prod.Precio
+                });
+            }
+
+            var pedido = await _pedidosServicio.CrearPedidoAsync(TipoServicio.ComerAqui, mesaId, detalles);
+            await _pedidosServicio.MarcarEnCobroAsync(pedido.Id);
+            await _mesasServicio.CambiarEstadoMesaAsync(mesaId, "EnMantenimiento");
+
+            await _hubContext.Clients.All.SendAsync("PedidoCreado", pedido.Id);
+            await _hubContext.Clients.All.SendAsync("EstadoCambiado", pedido.Id, "EnCobro");
+            await _hubContext.Clients.All.SendAsync("MesaActualizada", new { mesaId, estado = "EnMantenimiento" });
+            await _hubContext.Clients.All.SendAsync("PedidoCambiado", pedido.Id);
+
+            return new JsonResult(new
+            {
+                ok = true,
+                pedidoId = pedido.Id,
+                estado = "EnCobro",
+                estadoMesa = "EnMantenimiento",
+                total = pedido.Total,
+                mensaje = "Pedido enviado a cocina y cuenta enviada a caja. La mesa quedó en mantenimiento.",
+                redirectUrl = Url.Page("/Operaciones/Pedidos/Index", new { PedidoActualId = pedido.Id, soloOcupadas = true })
+            });
+        }
+        catch (ReglaDominioException ex) { return StatusCode(422, new { ok = false, error = ex.Message }); }
+        catch (ArgumentException ex) { return BadRequest(new { ok = false, error = ex.Message }); }
+        catch (Exception ex) { _logger.LogError(ex, "Error al crear y cerrar mesa"); return StatusCode(500, new { ok = false, error = "Ocurrió un error interno." }); }
+    }
+
+    // ── Cerrar mesa y enviar a caja ───────────────────────────────────────────
+    public async Task<IActionResult> OnPostCerrarMesaJsonAsync(Guid pedidoId, Guid mesaId)
+    {
+        try
+        {
+            if (pedidoId == Guid.Empty)
+                return BadRequest(ErrorSeguro(new ArgumentException("ID de pedido inválido.")));
+            if (mesaId == Guid.Empty)
+                return BadRequest(ErrorSeguro(new ArgumentException("Mesa inválida.")));
+
+            await _pedidosServicio.MarcarEnCobroAsync(pedidoId);
+            await _mesasServicio.CambiarEstadoMesaAsync(mesaId, "EnMantenimiento");
+
+            await _hubContext.Clients.All.SendAsync("EstadoCambiado", pedidoId, "EnCobro");
+            await _hubContext.Clients.All.SendAsync("MesaActualizada", new { mesaId, estado = "EnMantenimiento" });
+            await _hubContext.Clients.All.SendAsync("PedidoCambiado", pedidoId);
+
+            return new JsonResult(new
+            {
+                ok = true,
+                estado = "EnCobro",
+                estadoMesa = "EnMantenimiento",
+                mensaje = "Cuenta cerrada y enviada a caja. La mesa quedó en mantenimiento.",
+                redirectUrl = Url.Page("/Operaciones/Pedidos/Index", new { PedidoActualId = pedidoId, soloOcupadas = true })
+            });
+        }
+        catch (ReglaDominioException ex) { return StatusCode(422, new { ok = false, error = ex.Message }); }
+        catch (ArgumentException ex) { return BadRequest(new { ok = false, error = ex.Message }); }
+        catch (Exception ex) { _logger.LogError(ex, "Error al cerrar mesa"); return StatusCode(500, new { ok = false, error = "Ocurrió un error interno." }); }
+    }
+
+>>>>>>> 03333f6 (Modificaciones apartado mesero, el boton de cerrar funcion no funciona bien lo demas mas o menos, y el para que funcione debe iniciar un dia , y sibre el de tranferir mesas me dicen que debo hacer con ello)
     // ── Cobrar en mesa ────────────────────────────────────────────────────────
     public async Task<IActionResult> OnPostPagarJsonAsync(
         Guid pedidoId, string? metodoPago = null, decimal? monto = null, string? referencia = null)

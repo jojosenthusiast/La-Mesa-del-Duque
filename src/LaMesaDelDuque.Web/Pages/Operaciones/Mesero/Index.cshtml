@@ -5,8 +5,14 @@
 }
 @Html.AntiForgeryToken()
 
+<<<<<<< HEAD
 <nav class="p-3 text-end">
     <a class="btn btn-outline-light btn-sm" asp-page="/Operaciones/Mesero/Handoff">Transferir mesas / cambio de turno</a>
+=======
+<nav class="lmd-mesero-topbar" aria-label="Acciones del mesero">
+    <a class="lmd-mesero-topbar__btn" asp-page="/Operaciones/Mesero/Handoff">Transferir mesas / cambio de turno</a>
+    <a class="lmd-mesero-topbar__logout" asp-page="/Index">Volver a operaciones</a>
+>>>>>>> 03333f6 (Modificaciones apartado mesero, el boton de cerrar funcion no funciona bien lo demas mas o menos, y el para que funcione debe iniciar un dia , y sibre el de tranferir mesas me dicen que debo hacer con ello)
 </nav>
 
 @section Styles {
@@ -14,11 +20,20 @@
     <link rel="stylesheet" href="~/css/mesero.css" asp-append-version="true" />
 }
 
+<<<<<<< HEAD
+=======
+<div id="lmd-toast-zone" class="lmd-toast-zone lmd-mesero-toast-zone" aria-live="polite"></div>
+
+>>>>>>> 03333f6 (Modificaciones apartado mesero, el boton de cerrar funcion no funciona bien lo demas mas o menos, y el para que funcione debe iniciar un dia , y sibre el de tranferir mesas me dicen que debo hacer con ello)
 <section id="lmd-mesero-contenido">
     <div class="text-center py-5" style="color:#f7f4ec;">Cargando...</div>
 </section>
 
 <script>
+<<<<<<< HEAD
+=======
+    window.__lmdSoloOcupadasMesero = @(Model.SoloOcupadas.ToString().ToLowerInvariant());
+>>>>>>> 03333f6 (Modificaciones apartado mesero, el boton de cerrar funcion no funciona bien lo demas mas o menos, y el para que funcione debe iniciar un dia , y sibre el de tranferir mesas me dicen que debo hacer con ello)
     window.__lmdProductosMesero = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
         Model.ProductosDisponibles.Select(p => new { p.Id, p.Nombre, p.Precio, p.CategoriaNombre, p.TiempoPreparacionMin, p.ImagenUrl }),
         new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase }));
