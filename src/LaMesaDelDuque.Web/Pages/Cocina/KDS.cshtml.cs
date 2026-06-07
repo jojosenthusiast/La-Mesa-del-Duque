@@ -6,6 +6,8 @@ using LaMesaDelDuque.Dominio.Excepciones;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
 
 namespace LaMesaDelDuque.Web.Pages.Cocina;
 
@@ -52,6 +54,12 @@ public class KDSModel : PageModel
     public async Task OnGetAsync()
     {
         Ordenes = await _cocinaServicio.ListarPendientesAsync();
+    }
+
+    public async Task<IActionResult> OnPostCerrarSesionAsync()
+    {
+        await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+        return RedirectToPage("/Auth/Login");
     }
 
     public async Task<IActionResult> OnGetOrdenesJsonAsync(string estacion)

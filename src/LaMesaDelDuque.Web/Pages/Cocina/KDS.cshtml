@@ -28,7 +28,17 @@
             <button class="lmd-kds-station-btn" data-estacion="Expo">Expo</button>
         </nav>
         <div class="lmd-kds-header__right">
-            <button class="lmd-kds-undo-btn" onclick="window.__lmdKdsUndo && window.__lmdKdsUndo()" title="Deshacer último listo">↩ Deshacer</button>
+            <button class="lmd-kds-undo-btn" onclick="window.__lmdKdsUndo && window.__lmdKdsUndo()" title="Deshacer último listo">
+                ↩ Deshacer
+            </button>
+
+            <form method="post" action="?handler=CerrarSesion" class="lmd-kds-logout-form">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="lmd-kds-logout-btn" title="Cerrar sesión">
+                    ⏻ Cerrar sesión
+                </button>
+            </form>
+
             <span id="lmd-kds-offline-badge" class="lmd-kds-offline-badge">OFFLINE</span>
             <span id="lmd-kds-contador" class="lmd-kds-contador">0 ordenes</span>
             <div id="lmd-kds-indicador-visual" class="lmd-kds-indicador"></div>
