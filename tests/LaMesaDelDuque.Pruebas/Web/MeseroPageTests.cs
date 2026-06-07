@@ -1,6 +1,7 @@
 using LaMesaDelDuque.Aplicacion.Dtos;
 using LaMesaDelDuque.Aplicacion.Servicios;
 using LaMesaDelDuque.Dominio.Enumeraciones;
+using LaMesaDelDuque.Pruebas.Calidad;
 using LaMesaDelDuque.Web.Hubs;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
@@ -102,6 +103,41 @@ public class MeseroPageTests
             recetas ?? new FakeMeseroRecetasServicio(),
             new FakeMeseroHubContext<PedidosHub>(),
             NullLogger<MeseroIndexModel>.Instance);
+
+    [Fact]
+    public void MeseroPage_DebeTenerZonaVisibleDeMensajes()
+    {
+        var source = ReadWebFile("Pages", "Operaciones", "Mesero", "Index.cshtml");
+
+        Assert.Contains("lmd-mesero-toast-zone", source);
+        Assert.Contains("aria-live=\"polite\"", source);
+    }
+
+    [Fact]
+    public void MeseroJs_PedirCuentaDebeTenerConfirmacionRobustaYNoEditarItemsEnviados()
+    {
+        var source = ReadWebFile("wwwroot", "js", "mesero.js");
+
+        Assert.Contains("confirmarAccion", source);
+        Assert.Contains("No hay pedido activo", source);
+        Assert.Contains("lmd-mesero-item__enviado", source);
+        Assert.DoesNotContain("onclick=\"mesero.ajustarCantidad", source);
+        Assert.DoesNotContain("onclick=\"mesero.voidItem", source);
+    }
+
+    [Fact]
+    public void MeseroCss_DebeMejorarContrasteDeProductosYPedidos()
+    {
+        var source = ReadWebFile("wwwroot", "css", "mesero.css");
+
+        Assert.Contains(".lmd-pos-product-card", source);
+        Assert.Contains("background: #f7f4ec", source);
+        Assert.Contains(".lmd-mesero-item__enviado", source);
+        Assert.Contains(".lmd-mesero-toast-zone", source);
+    }
+
+    private static string ReadWebFile(params string[] segments) =>
+        File.ReadAllText(Path.Combine([ProjectPaths.RepoRoot, "src", "LaMesaDelDuque.Web", .. segments]));
 
     private sealed class FakeMeseroPedidosServicio : IPedidosServicio
     {

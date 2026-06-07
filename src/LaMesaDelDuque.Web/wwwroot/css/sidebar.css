@@ -322,6 +322,26 @@
     letter-spacing: 0.07em;
 }
 
+.lmd-ops-strip__back {
+    appearance: none;
+    border: 1px solid rgba(201, 162, 78, 0.32);
+    background: rgba(247, 244, 236, 0.06);
+    color: rgba(247, 244, 236, 0.78);
+    border-radius: var(--lmd-radio-sm);
+    padding: 0.28rem 0.65rem;
+    font-family: var(--lmd-fuente-cuerpo);
+    font-size: 0.75rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.lmd-ops-strip__back:hover,
+.lmd-ops-strip__back:focus-visible {
+    color: var(--lmd-dorado-real);
+    border-color: rgba(201, 162, 78, 0.7);
+    outline: none;
+}
+
 .lmd-ops-strip__user {
     margin-left: auto;
     display: flex;
