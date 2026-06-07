@@ -96,6 +96,20 @@ public class CierreServicioTests : IDisposable
     }
 
     [Fact]
+    public async Task AbrirCierre_DiaYaCerrado_DebeMostrarErrorOperativo()
+    {
+        var usuario = await CrearUsuarioAsync();
+        await _servicio.AbrirCierreAsync(usuario.Id);
+        await _servicio.CerrarDiaAsync(new CierreCajaRequest { EfectivoReal = 0, TarjetaReal = 0 }, usuario.Id);
+
+        var ex = await Assert.ThrowsAsync<ReglaDominioException>(() =>
+            _servicio.AbrirCierreAsync(usuario.Id));
+
+        Assert.Contains("ya fue cerrado", ex.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(1, _contexto.Set<CierreDia>().Count());
+    }
+
+    [Fact]
     public async Task AbrirCierre_UsuarioInexistente_LanzaExcepcion()
     {
         await Assert.ThrowsAsync<ReglaDominioException>(() =>

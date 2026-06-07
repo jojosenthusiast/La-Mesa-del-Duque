@@ -34,8 +34,14 @@ public class CierreServicio : ICierreServicio
     public async Task<CierreDiaDto> AbrirCierreAsync(Guid usuarioId, CancellationToken ct = default)
     {
         var hoy = DateOnly.FromDateTime(DateTime.UtcNow);
-        var existente = await _uot.CierresDia.ObtenerAbiertoAsync(hoy, ct);
-        if (existente is not null) return await MapConTotalesEnVivoSiAbiertoAsync(existente, ct);
+        var existente = await _uot.CierresDia.ObtenerPorFechaAsync(hoy, ct);
+        if (existente is not null)
+        {
+            if (existente.EsCerrado)
+                throw new ReglaDominioException("El día operativo de hoy ya fue cerrado y no puede reabrirse.");
+
+            return await MapConTotalesEnVivoSiAbiertoAsync(existente, ct);
+        }
 
         var usuario = await _uot.Usuarios.ObtenerPorIdAsync(usuarioId, ct)
             ?? throw new ReglaDominioException("Usuario no encontrado para abrir el cierre.");

@@ -43,6 +43,11 @@ internal class CierreDiaRepositorio : ICierreDiaRepositorio
             .Include(c => c.Usuario)
             .FirstOrDefaultAsync(c => c.Fecha == fecha && !c.EsCerrado, ct);
 
+    public async Task<CierreDia?> ObtenerPorFechaAsync(DateOnly fecha, CancellationToken ct = default) =>
+        await _c.Set<CierreDia>()
+            .Include(c => c.Usuario)
+            .FirstOrDefaultAsync(c => c.Fecha == fecha, ct);
+
     public async Task AgregarAsync(CierreDia cierre, CancellationToken ct = default) =>
         await _c.Set<CierreDia>().AddAsync(cierre, ct);
 
