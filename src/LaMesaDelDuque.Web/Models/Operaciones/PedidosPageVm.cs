@@ -9,6 +9,7 @@ public class PedidosPageVm
     public List<ProductoDto> ProductosDisponibles { get; set; } = [];
     public PedidoDto? PedidoActual { get; set; }
     public List<PedidoDto> PedidosActivos { get; set; } = [];
+    public List<PedidoDto> PedidosPendientesDespacho { get; set; } = [];
     public CrearPedidoFormVm CrearPedido { get; set; } = new();
     public PagoFormVm Pago { get; set; } = new();
     public bool MostrarPago { get; set; }
@@ -20,6 +21,21 @@ public class CrearPedidoFormVm
     public string TipoServicio { get; set; } = "ComerAqui";
 
     public Guid? MesaId { get; set; }
+
+    [MaxLength(120)]
+    public string? ClienteDeliveryNombre { get; set; }
+
+    [MaxLength(40)]
+    public string? ClienteDeliveryTelefono { get; set; }
+
+    [MaxLength(300)]
+    public string? ClienteDeliveryDireccion { get; set; }
+
+    [MaxLength(200)]
+    public string? ClienteDeliveryReferencia { get; set; }
+
+    [MaxLength(300)]
+    public string? ClienteDeliveryNotas { get; set; }
 
     [MinLength(1, ErrorMessage = "Debe incluir al menos una línea en el pedido.")]
     public List<LineaPedidoFormVm> Lineas { get; set; } = [];

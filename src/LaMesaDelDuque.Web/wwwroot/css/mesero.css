@@ -62,9 +62,93 @@ html:has(#lmd-mesero-contenido) .lmd-ops-fullscreen {
 }
 .lmd-mesero-refrescar:hover { color: #c9a24e; }
 
-.lmd-mesero-grid {
+.lmd-mesero-header-action {
+    gap: 0.35rem;
+    border: 1px solid rgba(201, 162, 78, 0.32);
+    padding: 0.35rem 0.6rem;
+    color: #f7f4ec;
+    font-family: inherit;
+    font-size: 0.78rem;
+    font-weight: 800;
+}
+
+.lmd-mesero-header-action:hover {
+    background: rgba(201, 162, 78, 0.12);
+}
+
+.lmd-mesero-secciones {
     flex: 1;
     overflow-y: auto;
+    min-height: 0;
+    padding-bottom: 0.25rem;
+}
+
+.lmd-mesero-grid {
+    overflow: visible;
+}
+
+.lmd-mesero-mesa-section {
+    margin: 0.85rem 1rem 0;
+    border: 1px solid rgba(247, 244, 236, 0.08);
+    border-radius: 1rem;
+    background: rgba(247, 244, 236, 0.035);
+    padding: 0.8rem;
+}
+
+.lmd-mesero-mesa-section:last-child {
+    margin-bottom: 1rem;
+}
+
+.lmd-mesero-mesa-section__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 0.75rem;
+}
+
+.lmd-mesero-mesa-section__title {
+    display: block;
+    color: #f7f4ec;
+    font-size: 0.95rem;
+    font-weight: 900;
+}
+
+.lmd-mesero-mesa-section__help {
+    display: block;
+    color: rgba(247, 244, 236, 0.56);
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+.lmd-mesero-mesa-section__count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 2rem;
+    height: 2rem;
+    border-radius: 999px;
+    background: rgba(247, 244, 236, 0.08);
+    color: #f7f4ec;
+    font-weight: 900;
+}
+
+.lmd-mesero-mesa-section--enCaja {
+    border-color: rgba(96, 165, 250, 0.34);
+    background: rgba(37, 99, 235, 0.1);
+}
+
+.lmd-mesero-mesa-section--ocupadas {
+    border-color: rgba(201, 162, 78, 0.26);
+}
+
+.lmd-mesero-mesa-section--disponibles {
+    border-color: rgba(34, 197, 94, 0.28);
+}
+
+.lmd-mesero-mesa-section--noDisponibles {
+    border-color: rgba(148, 163, 184, 0.2);
+    opacity: 0.92;
 }
 
 .lmd-mesero-toast-zone {
@@ -155,6 +239,20 @@ html:has(#lmd-mesero-contenido) .lmd-ops-fullscreen {
     font-weight: 700;
     color: #c9a24e;
     font-variant-numeric: tabular-nums;
+}
+
+.lmd-mesero-cuenta-en-caja {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+    width: 100%;
+    border: 1px solid rgba(147, 197, 253, 0.45);
+    border-radius: 0.75rem;
+    background: rgba(37, 99, 235, 0.16);
+    color: #bfdbfe;
+    padding: 0.75rem 1rem;
+    font-weight: 900;
 }
 
 .lmd-pos-product-card {

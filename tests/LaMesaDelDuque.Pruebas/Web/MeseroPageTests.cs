@@ -3,7 +3,6 @@ using LaMesaDelDuque.Aplicacion.Servicios;
 using LaMesaDelDuque.Dominio.Enumeraciones;
 using LaMesaDelDuque.Pruebas.Calidad;
 using LaMesaDelDuque.Web.Hubs;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging.Abstractions;
 using MeseroIndexModel = LaMesaDelDuque.Web.Pages.Operaciones.Mesero.IndexModel;
@@ -13,56 +12,24 @@ namespace LaMesaDelDuque.Pruebas.Web;
 public class MeseroPageTests
 {
     [Fact]
-    public async Task OnPostPagarJsonAsync_Tarjeta_DebeEnviarMetodoYReferenciaAlServicio()
+    public void MeseroPageModel_NoDebeExponerHandlerDePago()
     {
-        var pedidos = new FakeMeseroPedidosServicio();
-        var page = CreatePage(pedidos);
+        var source = ReadWebFile("Pages", "Operaciones", "Mesero", "Index.cshtml.cs");
 
-        var result = await page.OnPostPagarJsonAsync(pedidos.Pedido.Id, "tarjeta", pedidos.Pedido.Total, " AUTH-123 ");
-
-        Assert.IsType<JsonResult>(result);
-        Assert.Equal(1, pedidos.PagarCalls);
-        Assert.Equal(pedidos.Pedido.Id, pedidos.LastPedidoId);
-        Assert.Equal(MetodoPago.Tarjeta, pedidos.LastMetodoPago);
-        Assert.Equal("AUTH-123", pedidos.LastReferenciaPos);
+        Assert.DoesNotContain("OnPostPagarJsonAsync", source);
+        Assert.DoesNotContain("Cobrar en mesa", source);
     }
 
     [Fact]
-    public async Task OnPostPagarJsonAsync_Qr_DebeEnviarTransferenciaYReferenciaAlServicio()
+    public void MeseroJs_NoDebePermitirCobrarDesdePantallaMesero()
     {
-        var pedidos = new FakeMeseroPedidosServicio();
-        var page = CreatePage(pedidos);
+        var source = ReadWebFile("wwwroot", "js", "mesero.js");
 
-        var result = await page.OnPostPagarJsonAsync(pedidos.Pedido.Id, "qr", pedidos.Pedido.Total, " QR-987 ");
-
-        Assert.IsType<JsonResult>(result);
-        Assert.Equal(1, pedidos.PagarCalls);
-        Assert.Equal(MetodoPago.Transferencia, pedidos.LastMetodoPago);
-        Assert.Equal("QR-987", pedidos.LastReferenciaPos);
-    }
-
-    [Fact]
-    public async Task OnPostPagarJsonAsync_TarjetaSinReferencia_DebeRechazarSinLlamarServicio()
-    {
-        var pedidos = new FakeMeseroPedidosServicio();
-        var page = CreatePage(pedidos);
-
-        var result = await page.OnPostPagarJsonAsync(pedidos.Pedido.Id, "tarjeta", pedidos.Pedido.Total, "   ");
-
-        Assert.IsType<BadRequestObjectResult>(result);
-        Assert.Equal(0, pedidos.PagarCalls);
-    }
-
-    [Fact]
-    public async Task OnPostPagarJsonAsync_EfectivoInsuficiente_DebeRechazarSinLlamarServicio()
-    {
-        var pedidos = new FakeMeseroPedidosServicio();
-        var page = CreatePage(pedidos);
-
-        var result = await page.OnPostPagarJsonAsync(pedidos.Pedido.Id, "efectivo", pedidos.Pedido.Total - 1m);
-
-        Assert.IsType<BadRequestObjectResult>(result);
-        Assert.Equal(0, pedidos.PagarCalls);
+        Assert.Contains("Cuenta enviada a caja", source);
+        Assert.Contains("lmd-mesero-cuenta-en-caja", source);
+        Assert.DoesNotContain("PagarJson", source);
+        Assert.DoesNotContain("abrirPago", source);
+        Assert.DoesNotContain("pagarDirecto", source);
     }
 
     [Fact]
@@ -81,9 +48,23 @@ public class MeseroPageTests
 
         Assert.Contains("confirmarAccion", source);
         Assert.Contains("No hay pedido activo", source);
+        Assert.Contains("Enviar cuenta a caja", source);
         Assert.Contains("lmd-mesero-item__enviado", source);
         Assert.DoesNotContain("onclick=\"mesero.ajustarCantidad", source);
         Assert.DoesNotContain("onclick=\"mesero.voidItem", source);
+    }
+
+    [Fact]
+    public void MeseroJs_DebeAgruparMesasPorEstadoOperativo()
+    {
+        var source = ReadWebFile("wwwroot", "js", "mesero.js");
+
+        Assert.Contains("En caja", source);
+        Assert.Contains("Ocupadas", source);
+        Assert.Contains("Disponibles", source);
+        Assert.Contains("No disponibles", source);
+        Assert.Contains("lmd-mesero-mesa-section", source);
+        Assert.DoesNotContain("CambiarEstado", source);
     }
 
     [Fact]
@@ -95,6 +76,9 @@ public class MeseroPageTests
         Assert.Contains("background: #f7f4ec", source);
         Assert.Contains(".lmd-mesero-item__enviado", source);
         Assert.Contains(".lmd-mesero-toast-zone", source);
+        Assert.Contains(".lmd-mesero-cuenta-en-caja", source);
+        Assert.Contains(".lmd-mesero-mesa-section", source);
+        Assert.Contains(".lmd-mesero-secciones", source);
     }
 
     private static MeseroIndexModel CreatePage(FakeMeseroPedidosServicio pedidos) =>
@@ -132,7 +116,7 @@ public class MeseroPageTests
         public Task<PedidoDto?> ObtenerPedidoAsync(Guid pedidoId, CancellationToken cancelacion = default) =>
             Task.FromResult<PedidoDto?>(pedidoId == Pedido.Id ? Pedido : null);
 
-        public Task<PedidoDto> CrearPedidoAsync(TipoServicio tipoServicio, Guid? mesaId, List<DetalleCreacionDto> detalles, CancellationToken cancelacion = default) => Task.FromResult(Pedido);
+        public Task<PedidoDto> CrearPedidoAsync(TipoServicio tipoServicio, Guid? mesaId, List<DetalleCreacionDto> detalles, CancellationToken cancelacion = default, DatosEntregaDto? datosEntrega = null) => Task.FromResult(Pedido);
         public Task<PedidoDto> AgregarDetalleAsync(Guid pedidoId, Guid productoId, int cantidad, decimal precioUnitario, string? notas = null, string? modificacionesJson = null, CancellationToken cancelacion = default) => Task.FromResult(Pedido);
         public Task AgregarItemsAsync(Guid pedidoId, List<DetalleCreacionDto> items, CancellationToken cancelacion = default) => Task.CompletedTask;
         public Task<PedidoDto> EliminarDetalleAsync(Guid pedidoId, Guid detalleId, CancellationToken cancelacion = default) => Task.FromResult(Pedido);

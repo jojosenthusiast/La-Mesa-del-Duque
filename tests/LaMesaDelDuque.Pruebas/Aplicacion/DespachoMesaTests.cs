@@ -152,6 +152,28 @@ public sealed class DespachoMesaTests : IDisposable
     }
 
     [Fact]
+    public async Task DespacharPedido_ListoSinPago_DebeLanzarExcepcionYNoLiberarMesa()
+    {
+        var (mesa, producto) = await CrearMesaYProductoAsync(55);
+        mesa.Ocupar();
+
+        var pedido = new Pedido(TipoServicio.ComerAqui, mesa);
+        pedido.AgregarDetalle(new DetallePedido(producto, 1, 3.50m, null, null));
+        pedido.MarcarEnPreparacion();
+        pedido.MarcarListo();
+
+        await _uot.Pedidos.AgregarAsync(pedido);
+        await _uot.GuardarCambiosAsync();
+
+        var ex = await Assert.ThrowsAsync<ReglaDominioException>(() => _despacho.DespacharPedidoAsync(pedido.Id));
+        var mesaActualizada = await _uot.Mesas.ObtenerPorIdAsync(mesa.Id);
+
+        Assert.Contains("pedido pagado", ex.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(EstadoMesa.Ocupada, mesaActualizada!.Estado);
+        Assert.Null(mesaActualizada.GraciaHasta);
+    }
+
+    [Fact]
     public async Task DespacharPedido_Pagado_LiberaMesa()
     {
         var (mesa, producto) = await CrearMesaYProductoAsync(53);

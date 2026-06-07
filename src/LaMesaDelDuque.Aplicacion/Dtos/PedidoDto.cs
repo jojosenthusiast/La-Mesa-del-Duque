@@ -7,6 +7,11 @@ public class PedidoDto
     public Guid? MesaId { get; set; }
     public int? MesaNumero { get; set; }
     public Guid? MeseroAsignadoId { get; set; }
+    public string? ClienteDeliveryNombre { get; set; }
+    public string? ClienteDeliveryTelefono { get; set; }
+    public string? ClienteDeliveryDireccion { get; set; }
+    public string? ClienteDeliveryReferencia { get; set; }
+    public string? ClienteDeliveryNotas { get; set; }
     public string Estado { get; set; } = string.Empty;
     public decimal Total { get; set; }
     public DateTime FechaCreacion { get; set; }

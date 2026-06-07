@@ -8,7 +8,7 @@
 <section class="lmd-page-header rounded-top">
     <div>
         <h1>Despacho</h1>
-        <p class="lmd-page-subtitle">Pedidos listos para entregar al cliente.</p>
+        <p class="lmd-page-subtitle">Pedidos pagados listos para entregar o liberar mesa.</p>
     </div>
     <span id="lmd-despacho-contador" class="lmd-status-badge lmd-status-badge--active">
         @Model.PedidosListos.Count listos
@@ -40,7 +40,7 @@
             <div class="text-center py-5 text-muted" id="lmd-despacho-vacio">
                 <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="mb-3 d-block mx-auto" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>
                 <p class="fs-5 mb-1">Sin pedidos pendientes de despacho.</p>
-                <p class="small">Los pedidos marcados como "Listo" por cocina aparecerán aquí.</p>
+                <p class="small">Los pedidos aparecerán aquí cuando caja confirme el pago.</p>
             </div>
         }
         else
@@ -58,6 +58,10 @@
                                 {
                                     <strong class="fs-5">Mesa @pedido.MesaNumero</strong>
                                 }
+                                else if (pedido.TipoServicio == "Delivery")
+                                {
+                                    <strong class="fs-5">Delivery</strong>
+                                }
                                 else
                                 {
                                     <strong class="fs-5">Para llevar</strong>
@@ -73,6 +77,22 @@
                                         <li>@d.Cantidad× @d.ProductoNombre</li>
                                     }
                                 </ul>
+                                @if (pedido.TipoServicio == "Delivery")
+                                {
+                                    <div class="alert alert-info py-2 px-2 mt-2 mb-0 small">
+                                        <strong>@pedido.ClienteDeliveryNombre</strong><br />
+                                        <span>@pedido.ClienteDeliveryTelefono</span><br />
+                                        <span>@pedido.ClienteDeliveryDireccion</span>
+                                        @if (!string.IsNullOrWhiteSpace(pedido.ClienteDeliveryReferencia))
+                                        {
+                                            <br /><span>Ref: @pedido.ClienteDeliveryReferencia</span>
+                                        }
+                                        @if (!string.IsNullOrWhiteSpace(pedido.ClienteDeliveryNotas))
+                                        {
+                                            <br /><span>Notas: @pedido.ClienteDeliveryNotas</span>
+                                        }
+                                    </div>
+                                }
                             </div>
                             <div class="card-footer d-flex justify-content-between align-items-center py-2">
                                 <span class="fw-bold">@pedido.Total.ToString("C")</span>
@@ -156,6 +176,7 @@
             });
             const data = await resp.json();
             if (data.ok) {
+                if (window.lmdToast) window.lmdToast(data.mensaje ?? "Pedido despachado.", "success");
                 const card = btn.closest("[data-pedido-id]");
                 if (card) card.closest(".col").remove();
                 actualizarContador();

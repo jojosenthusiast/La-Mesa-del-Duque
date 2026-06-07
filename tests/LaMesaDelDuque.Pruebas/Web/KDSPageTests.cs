@@ -102,6 +102,48 @@ public class KDSPageTests
         Assert.Contains("Cerrar sesión", source);
     }
 
+    [Fact]
+    public void KDS_JavascriptDebeIdentificarPedidosDelivery()
+    {
+        var source = File.ReadAllText(Path.Combine(
+            Calidad.ProjectPaths.RepoRoot,
+            "src",
+            "LaMesaDelDuque.Web",
+            "wwwroot",
+            "js",
+            "cocina-kds.js"));
+
+        Assert.Contains("orden.tipoServicio === 'Delivery'", source);
+        Assert.Contains("Delivery", source);
+        Assert.Contains("truck.svg", source);
+    }
+
+    [Fact]
+    public void KDS_DebeMostrarPrioridadYTiempoEstimado()
+    {
+        var pageSource = File.ReadAllText(Path.Combine(
+            Calidad.ProjectPaths.RepoRoot,
+            "src",
+            "LaMesaDelDuque.Web",
+            "Pages",
+            "Cocina",
+            "KDS.cshtml"));
+
+        var jsSource = File.ReadAllText(Path.Combine(
+            Calidad.ProjectPaths.RepoRoot,
+            "src",
+            "LaMesaDelDuque.Web",
+            "wwwroot",
+            "js",
+            "cocina-kds.js"));
+
+        Assert.Contains("Atrasados", pageSource);
+        Assert.Contains("Por vencer", pageSource);
+        Assert.Contains("calcularEstadoTiempo", jsSource);
+        Assert.Contains("tiempoPreparacionMin", jsSource);
+        Assert.Contains("lmd-kds-card__eta", jsSource);
+    }
+
     private static KDSModel CreatePage(ICocinaServicio servicio) =>
         new(servicio, new FakeKdsCatalogoProductosServicio(), new FakeNotificadorProductos(), NullLogger<KDSModel>.Instance);
 

@@ -6,6 +6,8 @@
 (function () {
     const ESTACIONES = ['Parrilla', 'Fria', 'Caliente', 'Bar', 'Expo', 'Todas'];
     let estacionActual = 'Todas';
+    let prioridadActual = 'Todas';
+    let servicioActual = 'Todos';
     let audioContext = null;
     let audioDesbloqueado = false;
     let ultimoListo = null;
@@ -32,6 +34,12 @@
         'PlatoFuerte': 'PLATOS FUERTES',
         'Postre': 'POSTRES',
         'Bebida': 'BEBIDAS'
+    };
+
+    const SERVICIO_LABELS = {
+        'ComerAqui': 'Mesa',
+        'ParaLlevar': 'Para llevar',
+        'Delivery': 'Delivery'
     };
 
     // ── Audio (Web Audio API) ───────────────────────────────
@@ -96,19 +104,58 @@
     }
 
     function calcularColor(orden) {
-        const elapsed = (Date.now() - new Date(orden.horaRecibido).getTime()) / 60000;
-        const maxTime = orden.tiempoPreparacionMin || 15;
-        if (elapsed > maxTime * 1.2) return 'lmd-kds-card--alert';
-        if (elapsed > maxTime * 0.8) return 'lmd-kds-card--warn';
-        return 'lmd-kds-card--fresh';
+        return calcularEstadoTiempo(orden).colorClass;
+    }
+
+    function minutosTranscurridos(orden) {
+        const ts = new Date(orden.horaRecibido).getTime();
+        if (Number.isNaN(ts)) return 0;
+        return Math.max(0, (Date.now() - ts) / 60000);
+    }
+
+    function calcularEstadoTiempo(orden) {
+        const elapsed = minutosTranscurridos(orden);
+        const estimado = Math.max(1, parseInt(orden.tiempoPreparacionMin, 10) || 15);
+        const ratio = elapsed / estimado;
+        const restante = estimado - elapsed;
+
+        if (ratio > 1.2) {
+            return {
+                prioridad: 'Atrasado',
+                columnaId: 1,
+                colorClass: 'lmd-kds-card--alert',
+                label: 'ATRASADO +' + Math.ceil(Math.abs(restante)) + ' min',
+                progreso: 100,
+                elapsed,
+                estimado
+            };
+        }
+
+        if (ratio > 0.8) {
+            return {
+                prioridad: 'PorVencer',
+                columnaId: 2,
+                colorClass: 'lmd-kds-card--warn',
+                label: 'Vence en ' + Math.max(0, Math.ceil(restante)) + ' min',
+                progreso: Math.min(100, Math.round(ratio * 100)),
+                elapsed,
+                estimado
+            };
+        }
+
+        return {
+            prioridad: 'EnTiempo',
+            columnaId: 3,
+            colorClass: 'lmd-kds-card--fresh',
+            label: 'A tiempo',
+            progreso: Math.min(100, Math.round(ratio * 100)),
+            elapsed,
+            estimado
+        };
     }
 
     function columnaParaOrden(orden) {
-        if (orden.cocineroId) {
-            return orden.cocineroId;
-        }
-        const estacion = orden.estacion || '';
-        return STATION_TO_COLUMN[estacion] || 1;
+        return calcularEstadoTiempo(orden).columnaId;
     }
 
     function cursoHeaderId(colId, curso) {
@@ -169,6 +216,7 @@
     }
 
     function renderOrden(orden) {
+        const estadoTiempo = calcularEstadoTiempo(orden);
         const colId = columnaParaOrden(orden);
         const container = document.getElementById(`kds-cards-${colId}`);
         if (!container) return;
@@ -176,7 +224,7 @@
         const curso = orden.curso || '';
         asegurarCursoHeader(colId, curso);
 
-        const colorClass = calcularColor(orden);
+        const colorClass = estadoTiempo.colorClass;
         const ordenId = escapeHtml(orden.id);
         const productoId = escapeHtml(orden.productoId);
         const productoNombre = escapeHtml(orden.productoNombre);
@@ -184,9 +232,18 @@
         const horaRecibido = escapeHtml(orden.horaRecibido);
         const notas = escapeHtml(orden.notas);
         const alergenos = escapeHtml(String(orden.alergenos ?? '').toUpperCase());
+        const estacion = escapeHtml(orden.estacion || 'Expo');
+        const cursoLabel = escapeHtml(CURSO_LABELS[orden.curso] || orden.curso || 'SIN CURSO');
+        const servicioLabel = escapeHtml(SERVICIO_LABELS[orden.tipoServicio] || orden.tipoServicio || 'Sin servicio');
+        const estadoLabel = escapeHtml(estadoTiempo.label);
+        const estimado = escapeHtml(estadoTiempo.estimado);
+        const progreso = Math.max(0, Math.min(100, estadoTiempo.progreso));
+        const pedidoCorto = escapeHtml(String(orden.pedidoId || '').slice(0, 8));
         const mesaTexto = orden.mesaNumero
             ? `Mesa ${escapeHtml(orden.mesaNumero)}`
-            : (orden.tipoServicio === 'ParaLlevar' ? '<svg class="lmd-kds-icon" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><use href="/lib/lucide-static/icons/package.svg#icon"/></svg> Para llevar' : 'Sin mesa');
+            : (orden.tipoServicio === 'Delivery'
+                ? '<svg class="lmd-kds-icon" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><use href="/lib/lucide-static/icons/truck.svg#icon"/></svg> Delivery'
+                : (orden.tipoServicio === 'ParaLlevar' ? '<svg class="lmd-kds-icon" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><use href="/lib/lucide-static/icons/package.svg#icon"/></svg> Para llevar' : 'Sin mesa'));
 
         const tieneModificaciones = orden.ingredientesQuitados || orden.ingredientesExtra;
         const tieneNotas = !!orden.notas;
@@ -199,13 +256,26 @@
         card.dataset.curso = curso;
         card.dataset.tiempoPreparacionMin = orden.tiempoPreparacionMin || 15;
         card.dataset.horaRecibido = orden.horaRecibido || '';
+        card.dataset.estacion = orden.estacion || '';
+        card.dataset.tipoServicio = orden.tipoServicio || '';
+        card.dataset.prioridad = estadoTiempo.prioridad;
 
         card.innerHTML = `
             ${tieneAlergenos ? `<div class="lmd-kds-alergeno-banner"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><use href="/lib/lucide-static/icons/alert-triangle.svg#icon"/></svg> ALÉRGENO: ${alergenos}</div>` : ''}
             <header class="lmd-kds-card__header">
                 <span class="lmd-kds-card__mesa">${mesaTexto}</span>
-                <span class="lmd-kds-card__timer" data-hora-recibido="${horaRecibido}">${formatearTiempo(orden.minutosTranscurridos || 0)}</span>
+                <span class="lmd-kds-card__timer" data-hora-recibido="${horaRecibido}">${formatearTiempo(estadoTiempo.elapsed)}</span>
             </header>
+            <div class="lmd-kds-card__meta-row">
+                <span>${estacion}</span>
+                <span>${cursoLabel}</span>
+                <span>${servicioLabel}</span>
+            </div>
+            <div class="lmd-kds-card__sla-row">
+                <span class="lmd-kds-card__sla-text">${estadoLabel}</span>
+                <span class="lmd-kds-card__eta"><span class="lmd-kds-card__elapsed">${formatearTiempo(estadoTiempo.elapsed)}</span> / ${estimado} min</span>
+            </div>
+            <div class="lmd-kds-card__progress" aria-hidden="true"><span style="width:${progreso}%"></span></div>
             <div class="lmd-kds-card__dish-row">
                 <span class="lmd-kds-card__producto">${productoNombre}</span>
                 <span class="lmd-kds-card__cantidad">${cantidad}</span>
@@ -213,6 +283,7 @@
             ${tieneModificaciones ? `<div class="lmd-kds-card__modificaciones">${renderModificaciones(orden)}</div>` : ''}
             ${tieneNotas ? `<div class="lmd-kds-card__notas-block"><span class="lmd-kds-notas-label">NOTA</span> ${notas}</div>` : ''}
             <footer class="lmd-kds-card__footer">
+                <span class="lmd-kds-card__pedido">Pedido ${pedidoCorto}</span>
                 <button class="lmd-kds-btn-listo" data-orden-id="${ordenId}"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5"><use href="/lib/lucide-static/icons/check.svg#icon"/></svg> LISTO</button>
                 ${orden.productoId ? `<button class="lmd-kds-btn-86" data-producto-id="${productoId}" title="86 — Agotado">86</button>` : ''}
             </footer>
@@ -243,25 +314,20 @@
                 }
             });
         }
-        container.appendChild(card);
+        insertarOrdenada(container, card);
+    }
 
-        // Add mesa group separator
-        const mesaGroup = agregarSeparadorMesa(container, orden);
-        if (mesaGroup) {
-            card.remove();
-            mesaGroup.appendChild(card);
-            const countEl = mesaGroup.querySelector('.lmd-kds-mesa-group-count');
-            const cardsInGroup = mesaGroup.querySelectorAll('.lmd-kds-card:not(.lmd-kds-card--completing)').length;
-            if (countEl) countEl.textContent = cardsInGroup + ' items';
-            else {
-                const header = mesaGroup.querySelector('.lmd-kds-mesa-group-header');
-                if (header) header.innerHTML = 'Mesa ' + escapeHtml(orden.mesaNumero) + ' <span class="lmd-kds-mesa-group-count">' + cardsInGroup + ' items</span>';
-            }
-        }
+    function insertarOrdenada(container, card) {
+        const cards = [...container.querySelectorAll('.lmd-kds-card:not(.lmd-kds-card--completing)')];
+        const ts = new Date(card.dataset.horaRecibido || '').getTime() || 0;
+        const siguiente = cards.find(c => (new Date(c.dataset.horaRecibido || '').getTime() || 0) > ts);
+        if (siguiente) container.insertBefore(card, siguiente);
+        else container.appendChild(card);
     }
 
     function agregarCard(orden) {
         renderOrden(orden);
+        aplicarFiltrosLocales();
         actualizarContadores();
     }
 
@@ -318,7 +384,7 @@
         COOKS.forEach(cook => {
             const container = document.getElementById(`kds-cards-${cook.id}`);
             const countEl = document.getElementById(`kds-count-${cook.id}`);
-            const count = container ? container.querySelectorAll('.lmd-kds-card:not(.lmd-kds-card--completing)').length : 0;
+            const count = container ? container.querySelectorAll('.lmd-kds-card:not(.lmd-kds-card--completing):not([hidden])').length : 0;
             total += count;
             if (countEl) countEl.textContent = count + ' ordenes';
         });
@@ -378,24 +444,48 @@
 
     function actualizarTimers() {
         document.querySelectorAll('.lmd-kds-card__timer').forEach(el => {
-            const horaRecibido = new Date(el.dataset.horaRecibido);
-            const minutos = (Date.now() - horaRecibido.getTime()) / 60000;
-            el.textContent = formatearTiempo(minutos);
-
             const card = el.closest('.lmd-kds-card');
             if (card) {
-                const ordenId = card.dataset.id;
-                const orden = { horaRecibido: el.dataset.horaRecibido, tiempoPreparacionMin: 15 };
-                // Try to read tiempoPreparacionMin from card data if available
-                const maxTime = parseInt(card.dataset.tiempoPreparacionMin) || 15;
-                const elapsed = minutos;
-                let colorClass = 'lmd-kds-card--fresh';
-                if (elapsed > maxTime * 1.2) colorClass = 'lmd-kds-card--alert';
-                else if (elapsed > maxTime * 0.8) colorClass = 'lmd-kds-card--warn';
+                const orden = {
+                    horaRecibido: el.dataset.horaRecibido,
+                    tiempoPreparacionMin: parseInt(card.dataset.tiempoPreparacionMin, 10) || 15
+                };
+                const estado = calcularEstadoTiempo(orden);
+                el.textContent = formatearTiempo(estado.elapsed);
 
                 card.classList.remove('lmd-kds-card--fresh', 'lmd-kds-card--warn', 'lmd-kds-card--alert');
-                card.classList.add(colorClass);
+                card.classList.add(estado.colorClass);
+                card.dataset.prioridad = estado.prioridad;
+
+                const elapsedEl = card.querySelector('.lmd-kds-card__elapsed');
+                if (elapsedEl) elapsedEl.textContent = formatearTiempo(estado.elapsed);
+
+                const statusEl = card.querySelector('.lmd-kds-card__sla-text');
+                if (statusEl) statusEl.textContent = estado.label;
+
+                const progressEl = card.querySelector('.lmd-kds-card__progress span');
+                if (progressEl) progressEl.style.width = Math.max(0, Math.min(100, estado.progreso)) + '%';
+
+                const destino = document.getElementById(`kds-cards-${estado.columnaId}`);
+                if (destino && card.parentElement !== destino) {
+                    card.remove();
+                    insertarOrdenada(destino, card);
+                }
             }
+        });
+        aplicarFiltrosLocales();
+        actualizarContadores();
+    }
+
+    function debeMostrarCard(card) {
+        if (prioridadActual !== 'Todas' && card.dataset.prioridad !== prioridadActual) return false;
+        if (servicioActual !== 'Todos' && card.dataset.tipoServicio !== servicioActual) return false;
+        return true;
+    }
+
+    function aplicarFiltrosLocales() {
+        document.querySelectorAll('.lmd-kds-card').forEach(card => {
+            card.hidden = !debeMostrarCard(card);
         });
     }
 
@@ -459,6 +549,7 @@
         connection.on('NuevaOrden', orden => {
             if (estacionActual !== 'Todas' && orden.estacion !== estacionActual) return;
             renderOrden(orden);
+            aplicarFiltrosLocales();
             actualizarContadores();
             reproducirAlerta();
         });
@@ -470,6 +561,7 @@
         connection.on('ItemRecuperado', orden => {
             if (estacionActual !== 'Todas' && orden.estacion !== estacionActual) return;
             renderOrden(orden);
+            aplicarFiltrosLocales();
             actualizarContadores();
         });
 
@@ -548,12 +640,29 @@
             if (!existingIds.has(orden.id)) {
                 agregarCard(orden);
             } else {
-                // Update timer color only (don't re-render)
-                actualizarColorCard(orden.id, calcularColor(orden));
+                actualizarCardExistente(orden);
             }
         }
 
+        aplicarFiltrosLocales();
         actualizarContadores();
+    }
+
+    function actualizarCardExistente(orden) {
+        const card = document.querySelector(`.lmd-kds-card[data-id="${orden.id}"]`);
+        if (!card) return;
+        const estado = calcularEstadoTiempo(orden);
+        card.classList.remove('lmd-kds-card--fresh', 'lmd-kds-card--warn', 'lmd-kds-card--alert');
+        card.classList.add(estado.colorClass);
+        card.dataset.prioridad = estado.prioridad;
+        card.dataset.tipoServicio = orden.tipoServicio || card.dataset.tipoServicio || '';
+        card.dataset.tiempoPreparacionMin = orden.tiempoPreparacionMin || card.dataset.tiempoPreparacionMin || 15;
+
+        const destino = document.getElementById(`kds-cards-${estado.columnaId}`);
+        if (destino && card.parentElement !== destino) {
+            card.remove();
+            insertarOrdenada(destino, card);
+        }
     }
 
     async function conectarAEstacion(estacion) {
@@ -588,6 +697,25 @@
         conectarAEstacion(estacion);
     }
 
+    function cambiarFiltroRapido(btn) {
+        if (btn.dataset.prioridad) {
+            prioridadActual = btn.dataset.prioridad;
+            document.querySelectorAll('.lmd-kds-filter-btn[data-prioridad]').forEach(tab => {
+                tab.classList.toggle('lmd-kds-filter-btn--active', tab === btn);
+            });
+        }
+
+        if (btn.dataset.servicio) {
+            servicioActual = servicioActual === btn.dataset.servicio ? 'Todos' : btn.dataset.servicio;
+            document.querySelectorAll('.lmd-kds-filter-btn[data-servicio]').forEach(tab => {
+                tab.classList.toggle('lmd-kds-filter-btn--active', tab.dataset.servicio === servicioActual);
+            });
+        }
+
+        aplicarFiltrosLocales();
+        actualizarContadores();
+    }
+
     async function cargarOrdenesIniciales() {
         try {
             const res = await fetch(`?handler=OrdenesJson&estacion=${estacionActual}`, {
@@ -599,7 +727,10 @@
                 const container = document.getElementById(`kds-cards-${cook.id}`);
                 if (container) container.innerHTML = '';
             });
-            (ordenes || []).forEach(renderOrden);
+            (ordenes || [])
+                .sort((a, b) => new Date(a.horaRecibido).getTime() - new Date(b.horaRecibido).getTime())
+                .forEach(renderOrden);
+            aplicarFiltrosLocales();
             actualizarContadores();
         } catch (e) {
             console.error('Error cargando ordenes:', e);
@@ -668,6 +799,10 @@
         // Tabs de estación
         document.querySelectorAll('.lmd-kds-station-btn').forEach(tab => {
             tab.addEventListener('click', () => cambiarEstacion(tab.dataset.estacion));
+        });
+
+        document.querySelectorAll('.lmd-kds-filter-btn').forEach(btn => {
+            btn.addEventListener('click', () => cambiarFiltroRapido(btn));
         });
 
         // Tabs de columna para mobile
