@@ -12,6 +12,7 @@ public interface IMermaRepositorio
 public interface ICierreDiaRepositorio
 {
     Task<CierreDia?> ObtenerAbiertoAsync(DateOnly fecha, CancellationToken ct = default);
+    Task<CierreDia?> ObtenerPorFechaAsync(DateOnly fecha, CancellationToken ct = default);
     Task AgregarAsync(CierreDia cierre, CancellationToken ct = default);
     Task<List<CierreDia>> ObtenerTodosAsync(CancellationToken ct = default);
 }
