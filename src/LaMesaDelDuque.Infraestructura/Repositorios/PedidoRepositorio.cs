@@ -8,6 +8,15 @@ namespace LaMesaDelDuque.Infraestructura.Repositorios;
 
 internal class PedidoRepositorio : IPedidoRepositorio
 {
+    private static readonly EstadoPedido[] EstadosMesaActiva =
+    [
+        EstadoPedido.Pendiente,
+        EstadoPedido.EnPreparacion,
+        EstadoPedido.EnCobro,
+        EstadoPedido.Pagado,
+        EstadoPedido.Listo
+    ];
+
     private readonly LaMesaDelDuqueDbContext _contexto;
 
     public PedidoRepositorio(LaMesaDelDuqueDbContext contexto)
@@ -86,6 +95,35 @@ internal class PedidoRepositorio : IPedidoRepositorio
             .ToListAsync(cancelacion);
     }
 
+
+    public async Task<List<Pedido>> ObtenerActivosPorMeseroAsync(Guid meseroId, CancellationToken cancelacion = default)
+    {
+        return await _contexto.Set<Pedido>()
+            .AsNoTracking()
+            .Include(p => p.Mesa)
+            .Include(p => p.Detalles)
+                .ThenInclude(d => d.Producto)
+            .Where(p => p.MeseroAsignadoId == meseroId
+                     && p.Mesa != null
+                     && EstadosMesaActiva.Contains(p.Estado))
+            .OrderBy(p => p.Mesa!.Numero)
+            .ThenByDescending(p => p.CreatedAt)
+            .ToListAsync(cancelacion);
+    }
+
+    public async Task<Pedido?> ObtenerActivoPorMesaParaActualizarAsync(Guid mesaId, CancellationToken cancelacion = default)
+    {
+        return await _contexto.Set<Pedido>()
+            .Include(p => p.Mesa)
+            .Include(p => p.Detalles)
+                .ThenInclude(d => d.Producto)
+            .Where(p => p.Mesa != null
+                     && p.Mesa.Id == mesaId
+                     && EstadosMesaActiva.Contains(p.Estado))
+            .OrderByDescending(p => p.CreatedAt)
+            .FirstOrDefaultAsync(cancelacion);
+    }
+
     public async Task<Pedido?> ObtenerConCuentasParaActualizarAsync(Guid id, CancellationToken cancelacion = default)
     {
         return await _contexto.Set<Pedido>()
@@ -115,6 +153,21 @@ internal class PedidoRepositorio : IPedidoRepositorio
         var fin = inicio.AddDays(1);
         return await _contexto.Set<Pedido>()
             .Where(p => p.CreatedAt >= inicio && p.CreatedAt < fin)
+            .CountAsync(cancelacion);
+    }
+
+    public async Task<int> ContarPagadosDelDiaAsync(DateOnly fecha, CancellationToken cancelacion = default)
+    {
+        var inicio = fecha.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+        var fin = inicio.AddDays(1);
+
+        return await _contexto.Set<Pedido>()
+            .Where(p => p.Estado != EstadoPedido.Cancelado
+                     && p.Estado != EstadoPedido.AnuladoPago
+                     && p.Cuentas.Any(c => _contexto.Set<Pago>()
+                         .Any(pago => pago.CuentaId == c.Id
+                                   && pago.FechaPago >= inicio
+                                   && pago.FechaPago < fin)))
             .CountAsync(cancelacion);
     }
 }

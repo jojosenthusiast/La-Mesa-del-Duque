@@ -15,22 +15,27 @@ public class TablesideModel : PageModel
     private readonly IPedidosServicio _pedidosServicio;
     private readonly ICatalogoProductosServicio _catalogoProductosServicio;
     private readonly IMesasServicio _mesasServicio;
+    private readonly IRecetasProductosServicio _recetasServicio;
     private readonly ILogger<TablesideModel> _logger;
 
     public TablesideModel(
         IPedidosServicio pedidosServicio,
         ICatalogoProductosServicio catalogoProductosServicio,
         IMesasServicio mesasServicio,
+        IRecetasProductosServicio recetasServicio,
         ILogger<TablesideModel> logger)
     {
         _pedidosServicio = pedidosServicio;
         _catalogoProductosServicio = catalogoProductosServicio;
         _mesasServicio = mesasServicio;
+        _recetasServicio = recetasServicio;
         _logger = logger;
     }
 
     [BindProperty]
     public PedidosPageVm Vm { get; set; } = new();
+
+    public HashSet<Guid> ProductosConReceta { get; private set; } = [];
 
     public async Task OnGetAsync()
     {
@@ -40,9 +45,10 @@ public class TablesideModel : PageModel
     public async Task<IActionResult> OnPostCrearJsonAsync()
     {
         if (Vm.CrearPedido.Lineas.Count == 0 || Vm.CrearPedido.Lineas[0].ProductoId == Guid.Empty)
-            return BadRequest("Debe seleccionar un producto.");
+            return BadRequest(new { ok = false, error = "Debe seleccionar un producto." });
 
-        Enum.TryParse<TipoServicio>(Vm.CrearPedido.TipoServicio, true, out var tipoServicio);
+        if (!Enum.TryParse<TipoServicio>(Vm.CrearPedido.TipoServicio, true, out var tipoServicio))
+            tipoServicio = TipoServicio.ComerAqui;
         var mesaId = tipoServicio == TipoServicio.ComerAqui ? Vm.CrearPedido.MesaId : null;
 
         var prods = (await _catalogoProductosServicio.ListarProductosAsync()).Where(p => p.Activo).ToDictionary(p => p.Id);
@@ -50,13 +56,22 @@ public class TablesideModel : PageModel
 
         foreach (var l in Vm.CrearPedido.Lineas)
         {
-            if (!prods.TryGetValue(l.ProductoId, out var prod)) return BadRequest("Producto inválido.");
-            detalles.Add(new DetalleCreacionDto { ProductoId = l.ProductoId, Cantidad = l.Cantidad, PrecioUnitario = prod.Precio });
+            if (!prods.TryGetValue(l.ProductoId, out var prod))
+                return BadRequest(new { ok = false, error = "Producto inválido." });
+
+            detalles.Add(new DetalleCreacionDto
+            {
+                ProductoId = l.ProductoId,
+                Cantidad = l.Cantidad,
+                PrecioUnitario = prod.Precio,
+                Notas = l.Notas,
+                ModificacionesJson = l.ModificacionesJson
+            });
         }
 
         try
         {
-            var pedido = await _pedidosServicio.CrearPedidoAsync(tipoServicio, mesaId, detalles);
+            var pedido = await _pedidosServicio.CrearPedidoAsync(tipoServicio, mesaId, detalles, datosEntrega: CrearDatosEntregaSiAplica(tipoServicio));
             return new JsonResult(new { pedidoId = pedido.Id, estado = pedido.Estado, lineas = pedido.Detalles });
         }
         catch (ReglaDominioException ex) { return StatusCode(422, new { ok = false, error = ex.Message }); }
@@ -69,7 +84,7 @@ public class TablesideModel : PageModel
         try
         {
             if (pedidoId == Guid.Empty)
-                return BadRequest("ID de pedido inválido.");
+                return BadRequest(new { ok = false, error = "ID de pedido inválido." });
 
             await _pedidosServicio.MarcarEnPreparacionAsync(pedidoId);
             return new JsonResult(new { ok = true, estado = "EnPreparacion" });
@@ -112,6 +127,14 @@ public class TablesideModel : PageModel
         var productos = await _catalogoProductosServicio.ListarProductosAsync();
         Vm.ProductosDisponibles = productos.Where(p => p.Activo).OrderBy(p => p.CategoriaNombre).ThenBy(p => p.Nombre).ToList();
 
+        ProductosConReceta = [];
+        foreach (var producto in Vm.ProductosDisponibles)
+        {
+            var receta = await _recetasServicio.ObtenerPorProductoIdAsync(producto.Id);
+            if (receta is not null)
+                ProductosConReceta.Add(producto.Id);
+        }
+
         var mesas = await _mesasServicio.ListarMesasAsync();
         Vm.MesasDisponibles = mesas.Where(m => m.Activa).OrderBy(m => m.Numero).ToList();
 
@@ -119,5 +142,20 @@ public class TablesideModel : PageModel
 
         if (Vm.CrearPedido.Lineas.Count == 0)
             Vm.CrearPedido.Lineas.Add(new LineaPedidoFormVm());
+    }
+
+    private DatosEntregaDto? CrearDatosEntregaSiAplica(TipoServicio tipoServicio)
+    {
+        if (tipoServicio != TipoServicio.Delivery)
+            return null;
+
+        return new DatosEntregaDto
+        {
+            ClienteNombre = Vm.CrearPedido.ClienteDeliveryNombre,
+            Telefono = Vm.CrearPedido.ClienteDeliveryTelefono,
+            Direccion = Vm.CrearPedido.ClienteDeliveryDireccion,
+            Referencia = Vm.CrearPedido.ClienteDeliveryReferencia,
+            Notas = Vm.CrearPedido.ClienteDeliveryNotas
+        };
     }
 }

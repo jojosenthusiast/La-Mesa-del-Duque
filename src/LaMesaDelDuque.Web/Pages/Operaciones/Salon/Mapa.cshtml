@@ -3,12 +3,13 @@
 @{
     ViewData["Title"] = "Mapa del Salón";
     var puedeEditar = Model.Vm.PuedeEditar;
+    var primeraZonaId = Model.Vm.Zonas.FirstOrDefault()?.Id;
 }
 
 <section class="lmd-page-header rounded-top d-flex justify-content-between align-items-center">
     <div>
         <h1>Mapa del Salón</h1>
-        <p class="lmd-page-subtitle">Visualización del piso. Toque una mesa para actuar. Arrastre para mover.</p>
+        <p class="lmd-page-subtitle">Visualización del piso conectada al catálogo real de mesas.</p>
     </div>
     <div class="d-flex gap-2 align-items-center">
         <span id="lmd-mapa-conexion" class="lmd-mapa-badge lmd-mapa-badge--conectado">En vivo</span>
@@ -19,55 +20,96 @@
 <section class="bg-white border-top-0 p-0 rounded-bottom lmd-mapa-section">
     @Html.AntiForgeryToken()
 
-    <!-- Zonas tabs -->
-    <nav class="lmd-mapa-zonas-tabs" id="lmd-mapa-zonas-tabs">
-        @foreach (var zona in Model.Vm.Zonas)
+    <div class="lmd-mapa-resumen" aria-live="polite">
+        <span><strong>@Model.Vm.TotalMesas</strong> mesas del catálogo</span>
+        @if (Model.Vm.TieneMesasPendientesUbicacion)
         {
-            <button type="button"
-                    class="lmd-mapa-zona-tab @(zona == Model.Vm.Zonas.First() ? "lmd-mapa-zona-tab--activa" : "")"
-                    data-zona-id="@zona.Id"
-                    data-zona-nombre="@zona.Nombre">
-                @zona.Nombre
-            </button>
+            <span class="lmd-mapa-resumen-alerta"><strong>@Model.Vm.MesasPendientesUbicacion</strong>&nbsp;pendientes de ubicar</span>
         }
-    </nav>
-
-    <!-- Canvas de zonas -->
-    <div class="lmd-mapa-canvas-wrapper">
-        @foreach (var zona in Model.Vm.Zonas)
+        else if (Model.Vm.TieneMesas)
         {
-            var mesasZona = Model.Vm.Mesas.Where(m => m.ZonaId == zona.Id).ToList();
-            <div class="lmd-mapa-zona-canvas @(zona == Model.Vm.Zonas.First() ? "lmd-mapa-zona-canvas--activa" : "")"
-                 data-zona-id="@zona.Id"
-                 id="lmd-mapa-canvas-@zona.Id">
-                @if (mesasZona.Count == 0)
-                {
-                    <div class="lmd-mapa-empty">No hay mesas posicionadas en @zona.Nombre</div>
-                }
-                else
-                {
-                    foreach (var mesa in mesasZona)
-                    {
-                        <div class="lmd-mapa-mesa lmd-mapa-mesa--@((mesa.Forma ?? "Redonda").ToLowerInvariant()) @mesa.ClaseUrgencia"
-                             style="left:@(mesa.PosicionX)%; top:@(mesa.PosicionY)%; transform: rotate(@(mesa.Rotacion ?? 0)deg);"
-                             data-mesa-id="@mesa.Id"
-                             data-mesa-numero="@mesa.Numero"
-                             data-mesa-estado="@mesa.Estado"
-                             data-mesa-capacidad="@mesa.Capacidad"
-                             data-mesa-ocupada-desde="@(mesa.OcupadaDesde?.ToString("o") ?? "")"
-                             data-puede-editar="@(puedeEditar ? "true" : "false")"
-                             role="button"
-                             aria-label="Mesa @mesa.Numero, @mesa.Estado, capacidad @mesa.Capacidad">
-                            <span class="lmd-mapa-mesa-numero">@mesa.Numero</span>
-                            <span class="lmd-mapa-mesa-timer" id="timer-@mesa.Id"></span>
-                        </div>
-                    }
-                }
-            </div>
+            <span class="lmd-mapa-resumen-ok">Distribución configurada</span>
+        }
+        @if (Model.Vm.UsaZonaSugerida)
+        {
+            <span class="lmd-mapa-resumen-alerta">Crea una zona real para guardar posiciones.</span>
         }
     </div>
 
-    <!-- Panel de acción (tap-to-act) -->
+    @if (Model.Vm.Zonas.Count > 0)
+    {
+        <nav class="lmd-mapa-zonas-tabs" id="lmd-mapa-zonas-tabs" aria-label="Zonas del salón">
+            @foreach (var zona in Model.Vm.Zonas)
+            {
+                var zonaActiva = zona.Id == primeraZonaId;
+                <button type="button"
+                        class="lmd-mapa-zona-tab @(zonaActiva ? "lmd-mapa-zona-tab--activa" : string.Empty)"
+                        data-zona-id="@zona.Id"
+                        data-zona-nombre="@zona.Nombre">
+                    @zona.Nombre
+                </button>
+            }
+        </nav>
+    }
+
+    <div class="lmd-mapa-canvas-wrapper">
+        @if (!Model.Vm.TieneMesas)
+        {
+            <div class="lmd-mapa-empty lmd-mapa-empty--global">
+                <strong>No hay mesas configuradas.</strong>
+                @if (User.IsInRole("Administrador") || User.IsInRole("Encargado"))
+                {
+                    <a class="lmd-mapa-empty-link" asp-page="/Operaciones/Mesas/Index">Crear mesas</a>
+                }
+            </div>
+        }
+        else
+        {
+            @foreach (var zona in Model.Vm.Zonas)
+            {
+                var zonaActiva = zona.Id == primeraZonaId;
+                var mesasZona = Model.Vm.Mesas.Where(m => m.ZonaId == zona.Id).ToList();
+                <div class="lmd-mapa-zona-canvas @(zonaActiva ? "lmd-mapa-zona-canvas--activa" : string.Empty)"
+                     data-zona-id="@zona.Id"
+                     id="lmd-mapa-canvas-@zona.Id">
+                    @if (mesasZona.Count == 0)
+                    {
+                        <div class="lmd-mapa-empty">No hay mesas asignadas a @zona.Nombre.</div>
+                    }
+                    else
+                    {
+                        foreach (var mesa in mesasZona)
+                        {
+                            var formaCss = mesa.FormaVisual.ToLowerInvariant();
+                            var etiquetaMesa = $"Mesa {mesa.Numero}, {mesa.EstadoVisual}, capacidad {mesa.Capacidad} personas" + (mesa.EsUbicacionSugerida ? ", ubicación sugerida" : string.Empty);
+                            <div class="lmd-mapa-mesa lmd-mapa-mesa--@formaCss @mesa.ClaseUrgencia @(mesa.EsUbicacionSugerida ? "lmd-mapa-mesa--sugerida" : string.Empty)"
+                                 style="left:@(mesa.PosicionX)%; top:@(mesa.PosicionY)%; transform: rotate(@(mesa.Rotacion ?? 0)deg);"
+                                 data-mesa-id="@mesa.Id"
+                                 data-mesa-numero="@mesa.Numero"
+                                 data-mesa-estado="@mesa.EstadoVisual"
+                                 data-mesa-capacidad="@mesa.Capacidad"
+                                 data-mesa-activa="@(mesa.Activa ? "true" : "false")"
+                                 data-mesa-ocupada-desde="@(mesa.OcupadaDesde?.ToString("o") ?? string.Empty)"
+                                 data-ubicacion-sugerida="@(mesa.EsUbicacionSugerida ? "true" : "false")"
+                                 data-puede-editar="@(puedeEditar ? "true" : "false")"
+                                 role="button"
+                                 tabindex="0"
+                                 aria-label="@etiquetaMesa">
+                                <span class="lmd-mapa-mesa-numero">@mesa.Numero</span>
+                                <span class="lmd-mapa-mesa-capacidad">@mesa.Capacidad pax</span>
+                                <span class="lmd-mapa-mesa-timer" id="timer-@mesa.Id"></span>
+                                @if (mesa.EsUbicacionSugerida)
+                                {
+                                    <span class="lmd-mapa-mesa-sugerida">Ubicar</span>
+                                }
+                            </div>
+                        }
+                    }
+                </div>
+            }
+        }
+    </div>
+
     <div id="lmd-mapa-panel" class="lmd-mapa-panel" style="display:none;">
         <div class="lmd-mapa-panel-header">
             <strong id="lmd-mapa-panel-titulo">Mesa</strong>
@@ -87,19 +129,20 @@
         </div>
     </div>
 
-    <!-- Leyenda -->
-    <div class="lmd-mapa-leyenda">
+    <div class="lmd-mapa-leyenda" aria-label="Leyenda de estados de mesa">
         <div class="lmd-mapa-leyenda-item"><span class="lmd-mapa-leyenda-color lmd-mapa--disponible"></span> Disponible</div>
         <div class="lmd-mapa-leyenda-item"><span class="lmd-mapa-leyenda-color lmd-mapa--ocupada-verde"></span> Ocupada &lt;15min</div>
         <div class="lmd-mapa-leyenda-item"><span class="lmd-mapa-leyenda-color lmd-mapa--ocupada-amarillo"></span> Ocupada 15-30min</div>
         <div class="lmd-mapa-leyenda-item"><span class="lmd-mapa-leyenda-color lmd-mapa--ocupada-rojo"></span> Ocupada &gt;30min</div>
         <div class="lmd-mapa-leyenda-item"><span class="lmd-mapa-leyenda-color lmd-mapa--reservada"></span> Reservada</div>
         <div class="lmd-mapa-leyenda-item"><span class="lmd-mapa-leyenda-color lmd-mapa--mantenimiento"></span> Mantenimiento</div>
+        <div class="lmd-mapa-leyenda-item"><span class="lmd-mapa-leyenda-color lmd-mapa--inactiva"></span> Inactiva</div>
+        <div class="lmd-mapa-leyenda-item"><span class="lmd-mapa-leyenda-color lmd-mapa--sugerida"></span> Ubicación sugerida</div>
     </div>
 </section>
 
 @section Scripts {
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.0/signalr.min.js"></script>
+    <script src="~/lib/microsoft/signalr/dist/browser/signalr.min.js"></script>
     <script src="~/js/mapa-salon.js" asp-append-version="true"></script>
 }
 

@@ -7,6 +7,12 @@ public class MapaSalonVm
     public List<ZonaSalonDto> Zonas { get; set; } = [];
     public List<MesaMapaItemVm> Mesas { get; set; } = [];
     public bool PuedeEditar { get; set; }
+    public int TotalMesas { get; set; }
+    public int MesasPendientesUbicacion { get; set; }
+    public bool UsaZonaSugerida { get; set; }
+
+    public bool TieneMesas => TotalMesas > 0;
+    public bool TieneMesasPendientesUbicacion => MesasPendientesUbicacion > 0;
 }
 
 public class MesaMapaItemVm
@@ -22,13 +28,18 @@ public class MesaMapaItemVm
     public string? Forma { get; set; }
     public int? Rotacion { get; set; }
     public DateTime? OcupadaDesde { get; set; }
+    public bool EsUbicacionSugerida { get; set; }
 
-    public string ClaseUrgencia => Estado switch
+    public string EstadoVisual => Activa ? Estado : "Inactiva";
+    public string FormaVisual => string.IsNullOrWhiteSpace(Forma) ? "Redonda" : Forma;
+
+    public string ClaseUrgencia => EstadoVisual switch
     {
         "Ocupada" => CalcularUrgencia(),
         "Disponible" => "lmd-mapa--disponible",
         "Reservada" => "lmd-mapa--reservada",
         "EnMantenimiento" => "lmd-mapa--mantenimiento",
+        "Inactiva" => "lmd-mapa--inactiva",
         _ => "lmd-mapa--neutral"
     };
 

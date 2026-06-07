@@ -12,15 +12,17 @@ public class Pedido
     public DateTime FechaCreacion { get; private set; } = DateTime.UtcNow;
     public TipoServicio TipoServicio { get; private set; }
     public Mesa? Mesa { get; private set; }
-    public EstadoPedido Estado { get; private set; }
-    public DateTime CreatedAt { get; private set; }
-
-    // ── Delivery / domicilio (scalares, sin navegación para no tocar relaciones EF) ──
+    public Guid? MeseroAsignadoId { get; private set; }
+    public string? ClienteDeliveryNombre { get; private set; }
+    public string? ClienteDeliveryTelefono { get; private set; }
+    public string? ClienteDeliveryDireccion { get; private set; }
+    public string? ClienteDeliveryReferencia { get; private set; }
+    public string? ClienteDeliveryNotas { get; private set; }
     public Guid? RepartidorId { get; private set; }
-    public string? DireccionEntrega { get; private set; }
-    public string? TelefonoCliente { get; private set; }
     public DateTime? AsignadoEn { get; private set; }
     public DateTime? EntregadoEn { get; private set; }
+    public EstadoPedido Estado { get; private set; }
+    public DateTime CreatedAt { get; private set; }
     public IReadOnlyList<DetallePedido> Detalles => _detalles.AsReadOnly();
     public IReadOnlyList<Cuenta> Cuentas => _cuentas.AsReadOnly();
     public decimal Total => _detalles.Sum(d => d.Subtotal);
@@ -30,66 +32,48 @@ public class Pedido
     {
     }
 
-    public Pedido(TipoServicio tipoServicio, Mesa? mesa = null, string? direccionEntrega = null, string? telefonoCliente = null)
+    public Pedido(TipoServicio tipoServicio, Mesa? mesa = null)
     {
-        if (tipoServicio == TipoServicio.ParaLlevar && mesa is not null)
-            throw new ReglaDominioException("Un pedido para llevar no puede tener mesa asignada.");
-
-        if (tipoServicio == TipoServicio.Domicilio && mesa is not null)
-            throw new ReglaDominioException("Un pedido a domicilio no puede tener mesa asignada.");
-
-        if (tipoServicio == TipoServicio.Domicilio && string.IsNullOrWhiteSpace(direccionEntrega))
-            throw new ReglaDominioException("La dirección de entrega es obligatoria para pedidos a domicilio.");
+        if (tipoServicio != TipoServicio.ComerAqui && mesa is not null)
+            throw new ReglaDominioException("Solo un pedido para comer aquí puede tener mesa asignada.");
 
         Id = Guid.NewGuid();
         TipoServicio = tipoServicio;
         Mesa = mesa;
         Estado = EstadoPedido.Pendiente;
         CreatedAt = DateTime.UtcNow;
-
-        if (tipoServicio == TipoServicio.Domicilio)
-        {
-            DireccionEntrega = string.IsNullOrWhiteSpace(direccionEntrega) ? null : direccionEntrega.Trim();
-            TelefonoCliente = string.IsNullOrWhiteSpace(telefonoCliente) ? null : telefonoCliente.Trim();
-        }
     }
 
-    public void AsignarRepartidor(Guid repartidorId)
+    public void AsignarDatosDelivery(string nombre, string telefono, string direccion, string? referencia, string? notas)
     {
-        if (TipoServicio != TipoServicio.Domicilio)
-            throw new ReglaDominioException("Solo los pedidos a domicilio admiten repartidor.");
-        if (repartidorId == Guid.Empty)
-            throw new ReglaDominioException("El repartidor es obligatorio.");
-        if (Estado == EstadoPedido.Cancelado || Estado == EstadoPedido.Despachado)
-            throw new ReglaDominioException("No se puede asignar repartidor a un pedido cancelado o ya despachado.");
+        if (TipoServicio != TipoServicio.Delivery)
+            throw new ReglaDominioException("Solo un pedido delivery puede tener datos de entrega.");
 
-        RepartidorId = repartidorId;
-        AsignadoEn = DateTime.UtcNow;
+        if (string.IsNullOrWhiteSpace(nombre))
+            throw new ReglaDominioException("El nombre del cliente delivery es obligatorio.");
+
+        if (string.IsNullOrWhiteSpace(telefono))
+            throw new ReglaDominioException("El teléfono del cliente delivery es obligatorio.");
+
+        if (string.IsNullOrWhiteSpace(direccion))
+            throw new ReglaDominioException("La dirección de entrega es obligatoria.");
+
+        ClienteDeliveryNombre = nombre.Trim();
+        ClienteDeliveryTelefono = telefono.Trim();
+        ClienteDeliveryDireccion = direccion.Trim();
+        ClienteDeliveryReferencia = string.IsNullOrWhiteSpace(referencia) ? null : referencia.Trim();
+        ClienteDeliveryNotas = string.IsNullOrWhiteSpace(notas) ? null : notas.Trim();
     }
 
-    public void ActualizarDatosEntrega(string? direccion, string? telefono)
+    public void AsignarMesero(Guid meseroId)
     {
-        if (TipoServicio != TipoServicio.Domicilio)
-            throw new ReglaDominioException("Solo los pedidos a domicilio tienen datos de entrega.");
-        DireccionEntrega = string.IsNullOrWhiteSpace(direccion) ? null : direccion.Trim();
-        TelefonoCliente = string.IsNullOrWhiteSpace(telefono) ? null : telefono.Trim();
-    }
+        if (meseroId == Guid.Empty)
+            throw new ReglaDominioException("El mesero asignado es obligatorio.");
 
-    public void MarcarEntregado()
-    {
-        if (TipoServicio != TipoServicio.Domicilio)
-            throw new ReglaDominioException("Solo los pedidos a domicilio se marcan como entregados.");
-        if (RepartidorId is null)
-            throw new ReglaDominioException("Asigná un repartidor antes de marcar la entrega.");
+        if (Mesa is null || TipoServicio != TipoServicio.ComerAqui)
+            throw new ReglaDominioException("Solo un pedido de mesa puede tener mesero asignado.");
 
-        if (Estado == EstadoPedido.Listo || Estado == EstadoPedido.Pagado)
-        {
-            Estado = EstadoPedido.Despachado;
-            EntregadoEn = DateTime.UtcNow;
-            return;
-        }
-
-        throw new ReglaDominioException("Solo un pedido listo o pagado puede marcarse como entregado.");
+        MeseroAsignadoId = meseroId;
     }
 
     public void MarcarEnPreparacion()
@@ -142,6 +126,41 @@ public class Pedido
             throw new ReglaDominioException("Solo un pedido listo puede ser despachado.");
 
         Estado = EstadoPedido.Despachado;
+    }
+
+    public void AsignarRepartidor(Guid repartidorId)
+    {
+        if (repartidorId == Guid.Empty)
+            throw new ReglaDominioException("El repartidor asignado es obligatorio.");
+
+        if (TipoServicio != TipoServicio.Delivery)
+            throw new ReglaDominioException("Solo un pedido delivery puede tener repartidor asignado.");
+
+        RepartidorId = repartidorId;
+        AsignadoEn = DateTime.UtcNow;
+    }
+
+    public void MarcarEntregado()
+    {
+        if (TipoServicio != TipoServicio.Delivery)
+            throw new ReglaDominioException("Solo un pedido delivery puede marcarse como entregado.");
+
+        EntregadoEn = DateTime.UtcNow;
+
+        if (Estado is EstadoPedido.Listo or EstadoPedido.Pagado)
+            Estado = EstadoPedido.Despachado;
+    }
+
+    public void ActualizarDatosEntrega(string? direccion, string? telefono)
+    {
+        if (TipoServicio != TipoServicio.Delivery)
+            throw new ReglaDominioException("Solo un pedido delivery puede tener datos de entrega.");
+
+        if (!string.IsNullOrWhiteSpace(direccion))
+            ClienteDeliveryDireccion = direccion.Trim();
+
+        if (!string.IsNullOrWhiteSpace(telefono))
+            ClienteDeliveryTelefono = telefono.Trim();
     }
 
     public void Cancelar()

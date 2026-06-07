@@ -1,6 +1,7 @@
 using LaMesaDelDuque.Aplicacion.Dtos;
 using LaMesaDelDuque.Aplicacion.Servicios;
 using LaMesaDelDuque.Web.Hubs;
+using LaMesaDelDuque.Web.Models.Operaciones;
 using LaMesaDelDuque.Web.Pages.Operaciones.Pedidos;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -19,9 +20,8 @@ public class PedidosPageTests
         var recetas = new FakeRecetasProductosServicio();
         var ticket = new FakeTicketServicio();
         var alergenos = new FakeAlergenoServicio();
-        var delivery = new FakeDeliveryServicio();
 
-        var page = new IndexModel(pedidos, catalogo, mesas, recetas, delivery, ticket, alergenos, hub, Microsoft.Extensions.Logging.Abstractions.NullLogger<IndexModel>.Instance);
+        var page = new IndexModel(pedidos, catalogo, mesas, recetas, ticket, alergenos, hub, NullLogger<IndexModel>.Instance);
 
         await page.OnGetAsync();
 
@@ -29,6 +29,170 @@ public class PedidosPageTests
         Assert.All(page.Vm.ProductosDisponibles, p => Assert.True(p.Activo));
         Assert.NotEmpty(page.Vm.MesasDisponibles);
         Assert.NotEmpty(page.Vm.PedidosActivos);
+    }
+
+    [Fact]
+    public async Task OnGetAsync_marca_productos_con_receta_para_confirmacion()
+    {
+        var catalogo = new FakeCatalogoPedidosProductosServicio();
+        var recetas = new FakeRecetasProductosServicio(catalogo.ProductoActivoId);
+        var page = new IndexModel(
+            new FakePedidosServicio(),
+            catalogo,
+            new FakePedidosMesasServicio(),
+            recetas,
+            new FakeTicketServicio(),
+            new FakeAlergenoServicio(),
+            new FakeHubContext<PedidosHub>(),
+            NullLogger<IndexModel>.Instance);
+
+        await page.OnGetAsync();
+
+        Assert.Contains(catalogo.ProductoActivoId, page.ProductosConReceta);
+        Assert.DoesNotContain(catalogo.ProductoInactivoId, page.ProductosConReceta);
+    }
+
+    [Fact]
+    public async Task OnPostCrearAsync_reenvia_notas_y_modificaciones_al_servicio()
+    {
+        var catalogo = new FakeCatalogoPedidosProductosServicio();
+        var pedidos = new FakePedidosServicio();
+        var page = new IndexModel(
+            pedidos,
+            catalogo,
+            new FakePedidosMesasServicio(),
+            new FakeRecetasProductosServicio(),
+            new FakeTicketServicio(),
+            new FakeAlergenoServicio(),
+            new FakeHubContext<PedidosHub>(),
+            NullLogger<IndexModel>.Instance);
+        const string modificacionesJson = "[{\"accion\":\"confirmado\"}]";
+        page.Vm.CrearPedido.TipoServicio = "ParaLlevar";
+        page.Vm.CrearPedido.Lineas.Add(new LineaPedidoFormVm
+        {
+            ProductoId = catalogo.ProductoActivoId,
+            Cantidad = 2,
+            Notas = "Sin cebolla",
+            ModificacionesJson = modificacionesJson
+        });
+
+        await page.OnPostCrearAsync();
+
+        var detalle = Assert.Single(pedidos.DetallesCreados);
+        Assert.Equal("Sin cebolla", detalle.Notas);
+        Assert.Equal(modificacionesJson, detalle.ModificacionesJson);
+    }
+
+    [Fact]
+    public void PosJs_no_expone_intercambio_si_no_hay_catalogo_de_reemplazos_valido()
+    {
+        var repo = BuscarRaizRepositorio();
+        var posJs = File.ReadAllText(Path.Combine(repo, "src", "LaMesaDelDuque.Web", "wwwroot", "js", "pos.js"));
+
+        Assert.DoesNotContain("lmd-mod-ing-reemplazo", posJs);
+        Assert.DoesNotContain("accion: 'intercambiar'", posJs);
+        Assert.DoesNotContain("cambiarReemplazo", posJs);
+    }
+
+    public static string BuscarRaizRepositorio()
+    {
+        var dir = new DirectoryInfo(AppContext.BaseDirectory);
+        while (dir is not null && !File.Exists(Path.Combine(dir.FullName, "LaMesaDelDuque.slnx")))
+            dir = dir.Parent;
+
+        return dir?.FullName ?? throw new InvalidOperationException("No se encontró LaMesaDelDuque.slnx.");
+    }
+}
+
+public class TablesidePageTests
+{
+    [Fact]
+    public async Task OnGetAsync_marca_productos_con_receta_para_confirmacion_tableside()
+    {
+        var catalogo = new FakeCatalogoPedidosProductosServicio();
+        var page = new TablesideModel(
+            new FakePedidosServicio(),
+            catalogo,
+            new FakePedidosMesasServicio(),
+            new FakeRecetasProductosServicio(catalogo.ProductoActivoId),
+            NullLogger<TablesideModel>.Instance);
+
+        await page.OnGetAsync();
+
+        Assert.Contains(catalogo.ProductoActivoId, page.ProductosConReceta);
+    }
+
+    [Fact]
+    public async Task OnPostCrearJsonAsync_reenvia_notas_y_modificaciones_al_servicio_tableside()
+    {
+        var catalogo = new FakeCatalogoPedidosProductosServicio();
+        var pedidos = new FakePedidosServicio();
+        var page = new TablesideModel(
+            pedidos,
+            catalogo,
+            new FakePedidosMesasServicio(),
+            new FakeRecetasProductosServicio(catalogo.ProductoActivoId),
+            NullLogger<TablesideModel>.Instance);
+        const string modificacionesJson = "[{\"accion\":\"confirmado\"}]";
+        page.Vm.CrearPedido.TipoServicio = "ParaLlevar";
+        page.Vm.CrearPedido.Lineas.Add(new LineaPedidoFormVm
+        {
+            ProductoId = catalogo.ProductoActivoId,
+            Cantidad = 1,
+            Notas = "Confirmado en mesa",
+            ModificacionesJson = modificacionesJson
+        });
+
+        await page.OnPostCrearJsonAsync();
+
+        var detalle = Assert.Single(pedidos.DetallesCreados);
+        Assert.Equal("Confirmado en mesa", detalle.Notas);
+        Assert.Equal(modificacionesJson, detalle.ModificacionesJson);
+    }
+
+    [Fact]
+    public void TablesideJs_envia_confirmacion_para_productos_con_receta()
+    {
+        var repo = PedidosPageTests.BuscarRaizRepositorio();
+        var tablesideJs = File.ReadAllText(Path.Combine(repo, "src", "LaMesaDelDuque.Web", "wwwroot", "js", "tableside.js"));
+
+        Assert.Contains("tieneReceta", tablesideJs);
+        Assert.Contains("modificacionesJson", tablesideJs);
+        Assert.Contains("Ingredientes confirmados", tablesideJs);
+    }
+
+    [Fact]
+    public void PosJs_DebeExponerFlujoDeliveryConDatosObligatorios()
+    {
+        var source = File.ReadAllText(Path.Combine(LaMesaDelDuque.Pruebas.Calidad.ProjectPaths.RepoRoot, "src", "LaMesaDelDuque.Web", "wwwroot", "js", "pos.js"));
+
+        Assert.Contains("Nuevo delivery", source);
+        Assert.Contains("Vm.CrearPedido.ClienteDeliveryNombre", source);
+        Assert.Contains("Cliente, teléfono y dirección son obligatorios", source);
+        Assert.Contains("enviarPedidoActualACaja", source);
+    }
+
+    [Fact]
+    public void Despacho_DebeMostrarDatosDeDelivery()
+    {
+        var source = File.ReadAllText(Path.Combine(LaMesaDelDuque.Pruebas.Calidad.ProjectPaths.RepoRoot, "src", "LaMesaDelDuque.Web", "Pages", "Operaciones", "Despacho", "Index.cshtml"));
+
+        Assert.Contains("pedido.TipoServicio == \"Delivery\"", source);
+        Assert.Contains("ClienteDeliveryDireccion", source);
+        Assert.Contains("ClienteDeliveryTelefono", source);
+    }
+
+    [Fact]
+    public void Pos_DebeDistinguirPedidoPagadoPendienteDespacho()
+    {
+        var pageSource = File.ReadAllText(Path.Combine(LaMesaDelDuque.Pruebas.Calidad.ProjectPaths.RepoRoot, "src", "LaMesaDelDuque.Web", "Pages", "Operaciones", "Pedidos", "Index.cshtml"));
+        var jsSource = File.ReadAllText(Path.Combine(LaMesaDelDuque.Pruebas.Calidad.ProjectPaths.RepoRoot, "src", "LaMesaDelDuque.Web", "wwwroot", "js", "pos.js"));
+
+        Assert.Contains("PedidosPendientesDespacho", pageSource);
+        Assert.Contains("Concat(Model.Vm.PedidosPendientesDespacho)", pageSource);
+        Assert.Contains("pedidoEstado === 'Pagado'", jsSource);
+        Assert.Contains("Despachar", jsSource);
+        Assert.Contains("/Operaciones/Despacho", jsSource);
     }
 }
 
@@ -73,9 +237,14 @@ internal sealed class FakePedidosServicio : IPedidosServicio
         Total = 20,
         Detalles = [new DetallePedidoDto { Id = Guid.NewGuid(), ProductoId = Guid.NewGuid(), ProductoNombre = "Sopa", Cantidad = 1, PrecioUnitario = 20, Subtotal = 20 }]
     };
+    public List<DetalleCreacionDto> DetallesCreados { get; private set; } = [];
 
-    public Task<PedidoDto> CrearPedidoAsync(LaMesaDelDuque.Dominio.Enumeraciones.TipoServicio tipoServicio, Guid? mesaId, List<DetalleCreacionDto> detalles, string? direccionEntrega = null, string? telefonoCliente = null, CancellationToken cancelacion = default) => Task.FromResult(_pedido);
-    public Task<PedidoDto> AgregarDetalleAsync(Guid pedidoId, Guid productoId, int cantidad, decimal precioUnitario, string? modificacionesJson = null, string? notas = null, CancellationToken cancelacion = default) => Task.FromResult(_pedido);
+    public Task<PedidoDto> CrearPedidoAsync(LaMesaDelDuque.Dominio.Enumeraciones.TipoServicio tipoServicio, Guid? mesaId, List<DetalleCreacionDto> detalles, CancellationToken cancelacion = default, DatosEntregaDto? datosEntrega = null)
+    {
+        DetallesCreados = detalles;
+        return Task.FromResult(_pedido);
+    }
+    public Task<PedidoDto> AgregarDetalleAsync(Guid pedidoId, Guid productoId, int cantidad, decimal precioUnitario, string? notas = null, string? modificacionesJson = null, CancellationToken cancelacion = default) => Task.FromResult(_pedido);
     public Task<PedidoDto> EliminarDetalleAsync(Guid pedidoId, Guid detalleId, CancellationToken cancelacion = default) => Task.FromResult(_pedido);
     public Task<PedidoDto> ActualizarCantidadDetalleAsync(Guid pedidoId, Guid detalleId, int nuevaCantidad, CancellationToken cancelacion = default) => Task.FromResult(_pedido);
     public Task MarcarEnPreparacionAsync(Guid pedidoId, CancellationToken cancelacion = default) => Task.CompletedTask;
@@ -97,6 +266,9 @@ internal sealed class FakePedidosServicio : IPedidosServicio
 
 internal sealed class FakeCatalogoPedidosProductosServicio : ICatalogoProductosServicio
 {
+    public Guid ProductoActivoId { get; } = Guid.NewGuid();
+    public Guid ProductoInactivoId { get; } = Guid.NewGuid();
+
     public Task<List<CategoriaProductoDto>> ListarCategoriasAsync(CancellationToken cancelacion = default) => Task.FromResult(new List<CategoriaProductoDto>());
     public Task<CategoriaProductoDto> CrearCategoriaAsync(string nombre, CancellationToken cancelacion = default) => throw new NotImplementedException();
     public Task<CategoriaProductoDto> ActualizarCategoriaAsync(Guid categoriaId, string nombre, CancellationToken cancelacion = default) => throw new NotImplementedException();
@@ -104,8 +276,8 @@ internal sealed class FakeCatalogoPedidosProductosServicio : ICatalogoProductosS
     public Task<List<ProductoDto>> ListarProductosAsync(CancellationToken cancelacion = default)
         => Task.FromResult(new List<ProductoDto>
         {
-            new() { Id = Guid.NewGuid(), Nombre = "Sopa", CategoriaNombre = "Entradas", CategoriaId = Guid.NewGuid(), Precio = 20, Activo = true },
-            new() { Id = Guid.NewGuid(), Nombre = "Inactivo", CategoriaNombre = "Entradas", CategoriaId = Guid.NewGuid(), Precio = 10, Activo = false }
+            new() { Id = ProductoActivoId, Nombre = "Sopa", CategoriaNombre = "Entradas", CategoriaId = Guid.NewGuid(), Precio = 20, Activo = true },
+            new() { Id = ProductoInactivoId, Nombre = "Inactivo", CategoriaNombre = "Entradas", CategoriaId = Guid.NewGuid(), Precio = 10, Activo = false }
         });
     public Task<List<ProductoDto>> ListarProductosPorCategoriaAsync(Guid categoriaId, CancellationToken cancelacion = default) => Task.FromResult(new List<ProductoDto>());
     public Task<ProductoDto> CrearProductoAsync(string nombre, decimal precio, Guid categoriaId, string? descripcion = null, string? imagenUrl = null, int tiempoPreparacionMin = 5, CancellationToken cancelacion = default) => throw new NotImplementedException();
@@ -133,8 +305,22 @@ internal sealed class FakePedidosMesasServicio : IMesasServicio
 
 public class FakeRecetasProductosServicio : IRecetasProductosServicio
 {
+    private readonly Guid? _productoConRecetaId;
+
+    public FakeRecetasProductosServicio(Guid? productoConRecetaId = null)
+    {
+        _productoConRecetaId = productoConRecetaId;
+    }
+
     public Task<RecetaProductoDto> CrearRecetaAsync(Guid productoId, string instrucciones, List<RecetaIngredienteCreacionDto> ingredientes, CancellationToken cancelacion = default) => throw new NotImplementedException();
-    public Task<RecetaProductoDto?> ObtenerPorProductoIdAsync(Guid productoId, CancellationToken cancelacion = default) => Task.FromResult<RecetaProductoDto?>(null);
+    public Task<RecetaProductoDto?> ObtenerPorProductoIdAsync(Guid productoId, CancellationToken cancelacion = default)
+        => Task.FromResult(_productoConRecetaId == productoId
+            ? new RecetaProductoDto
+            {
+                ProductoId = productoId,
+                Ingredientes = [new RecetaIngredienteDto { IngredienteId = Guid.NewGuid(), IngredienteNombre = "Pan", CantidadRequerida = 1m }]
+            }
+            : null);
 }
 
 public class FakeTicketServicio : ITicketServicio
@@ -146,17 +332,4 @@ public class FakeAlergenoServicio : IAlergenoServicio
 {
     public Task<List<AlergenoDto>> ObtenerActivosAsync(CancellationToken cancelacion = default) => Task.FromResult(new List<AlergenoDto>());
     public Task<List<AlergenoDto>> ObtenerPorProductoAsync(Guid productoId, CancellationToken cancelacion = default) => Task.FromResult(new List<AlergenoDto>());
-}
-
-public class FakeDeliveryServicio : IDeliveryServicio
-{
-    public Task<List<DeliveryPedidoDto>> ListarPedidosDomicilioAsync(CancellationToken ct = default) => Task.FromResult(new List<DeliveryPedidoDto>());
-    public Task<List<DeliveryPedidoDto>> ListarPedidosAsignadosAsync(Guid repartidorId, CancellationToken ct = default) => Task.FromResult(new List<DeliveryPedidoDto>());
-    public Task<DeliveryResumenDto> ObtenerResumenAsync(CancellationToken ct = default) => Task.FromResult(new DeliveryResumenDto());
-    public Task<List<RepartidorDto>> ListarRepartidoresAsync(CancellationToken ct = default) => Task.FromResult(new List<RepartidorDto>());
-    public Task<List<ProductoDto>> ListarProductosAsync(CancellationToken ct = default) => Task.FromResult(new List<ProductoDto>());
-    public Task<Guid> CrearPedidoDomicilioAsync(string? direccion, string? telefono, Dictionary<Guid, int> items, CancellationToken ct = default) => Task.FromResult(Guid.Empty);
-    public Task AsignarRepartidorAsync(Guid pedidoId, Guid repartidorId, CancellationToken ct = default) => Task.CompletedTask;
-    public Task MarcarEntregadoAsync(Guid pedidoId, CancellationToken ct = default) => Task.CompletedTask;
-    public Task ActualizarDatosEntregaAsync(Guid pedidoId, string? direccion, string? telefono, CancellationToken ct = default) => Task.CompletedTask;
 }

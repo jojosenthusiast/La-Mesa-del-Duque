@@ -34,6 +34,18 @@ public class PedidoPaymentTests
     }
 
     [Fact]
+    public void MarcarEnCobro_DesdeListo_DebeCambiarEstado()
+    {
+        var pedido = CrearPedidoConDetalle();
+        pedido.MarcarEnPreparacion();
+        pedido.MarcarListo();
+
+        pedido.MarcarEnCobro();
+
+        Assert.Equal(EstadoPedido.EnCobro, pedido.Estado);
+    }
+
+    [Fact]
     public void MarcarEnCobro_DesdePendiente_DebeLanzarExcepcion()
     {
         var pedido = CrearPedidoConDetalle();
@@ -41,6 +53,38 @@ public class PedidoPaymentTests
         var ex = Assert.Throws<ReglaDominioException>(() => pedido.MarcarEnCobro());
 
         Assert.Contains("en cobro", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Pedido_DeliveryConMesa_DebeLanzarExcepcion()
+    {
+        var ex = Assert.Throws<ReglaDominioException>(() => new Pedido(TipoServicio.Delivery, _mesa));
+
+        Assert.Contains("comer aquí", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void AsignarDatosDelivery_CuandoFaltanDatos_DebeLanzarExcepcion()
+    {
+        var pedido = new Pedido(TipoServicio.Delivery);
+
+        var ex = Assert.Throws<ReglaDominioException>(() => pedido.AsignarDatosDelivery("Ana", "", "Calle 1", null, null));
+
+        Assert.Contains("teléfono", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void AsignarDatosDelivery_ConDatosValidos_DebeGuardarDatosNormalizados()
+    {
+        var pedido = new Pedido(TipoServicio.Delivery);
+
+        pedido.AsignarDatosDelivery(" Ana ", " 7777-8888 ", " Calle 1 ", " Portón negro ", " Llamar al llegar ");
+
+        Assert.Equal("Ana", pedido.ClienteDeliveryNombre);
+        Assert.Equal("7777-8888", pedido.ClienteDeliveryTelefono);
+        Assert.Equal("Calle 1", pedido.ClienteDeliveryDireccion);
+        Assert.Equal("Portón negro", pedido.ClienteDeliveryReferencia);
+        Assert.Equal("Llamar al llegar", pedido.ClienteDeliveryNotas);
     }
 
     [Fact]

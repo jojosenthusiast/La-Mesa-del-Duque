@@ -83,14 +83,8 @@ public class IndexModel : PageModel
 
     private async Task CargarDatosAsync()
     {
-        static bool RolVisible(string rol) => rol is not "Bodega" and not "SuperAdmin" and not "Gerente" and not "Mesero";
-
-        Vm.Usuarios = (await _usuariosServicio.ListarUsuariosAsync())
-            .Where(u => RolVisible(u.RolNombre) && u.Username is not "beatriz" and not "super" and not "luciana" and not "maria")
-            .ToList();
-        Vm.Roles = (await _usuariosServicio.ListarRolesAsync())
-            .Where(r => RolVisible(r.Nombre))
-            .ToList();
+        Vm.Usuarios = await _usuariosServicio.ListarUsuariosAsync();
+        Vm.Roles = await _usuariosServicio.ListarRolesAsync();
     }
 
     private void SetUiContext()

@@ -1,5 +1,6 @@
 using LaMesaDelDuque.Aplicacion.Servicios;
 using LaMesaDelDuque.Dominio.Enumeraciones;
+using LaMesaDelDuque.Dominio.Excepciones;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
@@ -11,8 +12,11 @@ namespace LaMesaDelDuque.Web.Pages.Operaciones.Inventario;
 [Authorize(Roles = "Administrador,Encargado")]
 public class IndexModel : PageModel
 {
+    private const string MensajeErrorInesperado = "Ocurrio un error interno. Intenta nuevamente.";
+
     private readonly IInventarioServicio _inv;
     private readonly IMermaServicio _merma;
+    private readonly ILogger<IndexModel> _logger;
 
     public List<IngredienteDto> Ingredientes { get; set; } = [];
     public List<ProveedorDto> Proveedores { get; set; } = [];
@@ -29,7 +33,12 @@ public class IndexModel : PageModel
     public Guid? EditIngredienteId { get; set; }
     public Guid? EditProveedorId { get; set; }
 
-    public IndexModel(IInventarioServicio inv, IMermaServicio merma) { _inv = inv; _merma = merma; }
+    public IndexModel(IInventarioServicio inv, IMermaServicio merma, ILogger<IndexModel> logger)
+    {
+        _inv = inv;
+        _merma = merma;
+        _logger = logger;
+    }
 
     public async Task OnGetAsync(Guid? editIngrediente, Guid? editProveedor)
     {
@@ -75,7 +84,9 @@ public class IndexModel : PageModel
             await _inv.CrearIngredienteAsync(new GuardarIngredienteRequest { Nombre = Nombre, UnidadMedida = UnidadMedida, StockActual = StockActual, StockMinimo = StockMinimo, CostoUnitario = CostoUnitario, ProveedorId = ProveedorId });
             ToastSuccess = "Ingrediente creado.";
         }
-        catch (Exception ex) { ToastError = ex.Message; }
+        catch (ReglaDominioException ex) { RegistrarErrorDeNegocio(ex.Message); }
+        catch (ArgumentException ex) { RegistrarErrorDeNegocio(ex.Message); }
+        catch (Exception ex) { RegistrarErrorInesperado(ex, "crear ingrediente"); }
         return RedirectToPage(new { tab = "ingredientes" });
     }
 
@@ -86,7 +97,9 @@ public class IndexModel : PageModel
             await _inv.ActualizarIngredienteAsync(Id, new GuardarIngredienteRequest { Nombre = Nombre, UnidadMedida = UnidadMedida, StockActual = StockActual, StockMinimo = StockMinimo, CostoUnitario = CostoUnitario, ProveedorId = ProveedorId });
             ToastSuccess = "Ingrediente actualizado.";
         }
-        catch (Exception ex) { ToastError = ex.Message; }
+        catch (ReglaDominioException ex) { RegistrarErrorDeNegocio(ex.Message); }
+        catch (ArgumentException ex) { RegistrarErrorDeNegocio(ex.Message); }
+        catch (Exception ex) { RegistrarErrorInesperado(ex, "editar ingrediente"); }
         return RedirectToPage(new { tab = "ingredientes" });
     }
 
@@ -97,7 +110,9 @@ public class IndexModel : PageModel
             await _inv.ToggleIngredienteActivoAsync(id);
             ToastSuccess = "Estado del ingrediente cambiado.";
         }
-        catch (Exception ex) { ToastError = ex.Message; }
+        catch (ReglaDominioException ex) { RegistrarErrorDeNegocio(ex.Message); }
+        catch (ArgumentException ex) { RegistrarErrorDeNegocio(ex.Message); }
+        catch (Exception ex) { RegistrarErrorInesperado(ex, "cambiar estado del ingrediente"); }
         return RedirectToPage(new { tab = "ingredientes" });
     }
 
@@ -108,7 +123,9 @@ public class IndexModel : PageModel
             await _inv.CrearProveedorAsync(new GuardarProveedorRequest { Nombre = Nombre, Nit = Nit, Contacto = Contacto, Telefono = Telefono });
             ToastSuccess = "Proveedor creado.";
         }
-        catch (Exception ex) { ToastError = ex.Message; }
+        catch (ReglaDominioException ex) { RegistrarErrorDeNegocio(ex.Message); }
+        catch (ArgumentException ex) { RegistrarErrorDeNegocio(ex.Message); }
+        catch (Exception ex) { RegistrarErrorInesperado(ex, "crear proveedor"); }
         return RedirectToPage(new { tab = "proveedores" });
     }
 
@@ -119,7 +136,9 @@ public class IndexModel : PageModel
             await _inv.ActualizarProveedorAsync(Id, new GuardarProveedorRequest { Nombre = Nombre, Nit = Nit, Contacto = Contacto, Telefono = Telefono, Email = Email, Direccion = Direccion });
             ToastSuccess = "Proveedor actualizado.";
         }
-        catch (Exception ex) { ToastError = ex.Message; }
+        catch (ReglaDominioException ex) { RegistrarErrorDeNegocio(ex.Message); }
+        catch (ArgumentException ex) { RegistrarErrorDeNegocio(ex.Message); }
+        catch (Exception ex) { RegistrarErrorInesperado(ex, "editar proveedor"); }
         return RedirectToPage(new { tab = "proveedores" });
     }
 
@@ -130,7 +149,9 @@ public class IndexModel : PageModel
             await _inv.ToggleProveedorActivoAsync(id);
             ToastSuccess = "Estado del proveedor cambiado.";
         }
-        catch (Exception ex) { ToastError = ex.Message; }
+        catch (ReglaDominioException ex) { RegistrarErrorDeNegocio(ex.Message); }
+        catch (ArgumentException ex) { RegistrarErrorDeNegocio(ex.Message); }
+        catch (Exception ex) { RegistrarErrorInesperado(ex, "cambiar estado del proveedor"); }
         return RedirectToPage(new { tab = "proveedores" });
     }
 
@@ -147,8 +168,28 @@ public class IndexModel : PageModel
             }, uid);
             ToastSuccess = "Merma registrada.";
         }
-        catch (Exception ex) { ToastError = ex.Message; }
+        catch (ReglaDominioException ex) { RegistrarErrorDeNegocio(ex.Message); }
+        catch (ArgumentException ex) { RegistrarErrorDeNegocio(ex.Message); }
+        catch (InvalidOperationException ex) when (EsErrorOperativoSeguro(ex)) { RegistrarErrorDeNegocio(ex.Message); }
+        catch (Exception ex) { RegistrarErrorInesperado(ex, "registrar merma"); }
         return RedirectToPage(new { tab = "mermas" });
+    }
+
+    private static bool EsErrorOperativoSeguro(InvalidOperationException ex)
+    {
+        return ex.Message.StartsWith("No hay cierre de", StringComparison.OrdinalIgnoreCase)
+            && ex.Message.Contains("registrar mermas", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private void RegistrarErrorInesperado(Exception ex, string accion)
+    {
+        _logger.LogError(ex, "Error inesperado al {Accion} en inventario.", accion);
+        ToastError = MensajeErrorInesperado;
+    }
+
+    private void RegistrarErrorDeNegocio(string mensaje)
+    {
+        ToastError = mensaje;
     }
 
     private Guid GetUsuarioId()

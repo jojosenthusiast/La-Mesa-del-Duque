@@ -18,7 +18,7 @@ public class KDSPageTests
     public async Task OnGetAsync_carga_ordenes_pendientes()
     {
         var servicio = new FakeCocinaServicio();
-        var page = CrearPage(servicio);
+        var page = CreatePage(servicio);
 
         await page.OnGetAsync();
 
@@ -30,7 +30,7 @@ public class KDSPageTests
     public async Task OnGetOrdenesJsonAsync_sin_estacion_retorna_todas()
     {
         var servicio = new FakeCocinaServicio();
-        var page = CrearPage(servicio);
+        var page = CreatePage(servicio);
 
         var result = await page.OnGetOrdenesJsonAsync("");
 
@@ -46,7 +46,7 @@ public class KDSPageTests
     public async Task OnGetOrdenesJsonAsync_con_estacion_filtra()
     {
         var servicio = new FakeCocinaServicio();
-        var page = CrearPage(servicio);
+        var page = CreatePage(servicio);
 
         var result = await page.OnGetOrdenesJsonAsync("Parrilla");
 
@@ -63,7 +63,7 @@ public class KDSPageTests
     {
         var servicio = new FakeCocinaServicio();
         var ordenId = servicio.Ordenes[0].Id;
-        var page = CrearPage(servicio);
+        var page = CreatePage(servicio);
 
         var result = await page.OnPostMarcarListoJsonAsync(ordenId);
 
@@ -78,19 +78,74 @@ public class KDSPageTests
     public async Task OnPostMarcarListoJsonAsync_orden_inexistente_devuelve_bad_request()
     {
         var servicio = new FakeCocinaServicio();
-        var page = CrearPage(servicio);
+        var page = CreatePage(servicio);
 
         var result = await page.OnPostMarcarListoJsonAsync(Guid.NewGuid());
 
         Assert.IsType<BadRequestObjectResult>(result);
     }
 
-    private static KDSModel CrearPage(FakeCocinaServicio servicio)
-        => new(
-            servicio,
-            new FakeCatalogoPedidosProductosServicio(),
-            new FakeNotificadorProductos(),
-            NullLogger<KDSModel>.Instance);
+    [Fact]
+    public void KDS_DebePermitirIrAInicioYCerrarSesion()
+    {
+        var source = File.ReadAllText(Path.Combine(
+            Calidad.ProjectPaths.RepoRoot,
+            "src",
+            "LaMesaDelDuque.Web",
+            "Pages",
+            "Cocina",
+            "KDS.cshtml"));
+
+        Assert.Contains("asp-page=\"/Index\"", source);
+        Assert.Contains("asp-page=\"/Auth/Logout\"", source);
+        Assert.Contains("Volver", source);
+        Assert.Contains("Cerrar sesión", source);
+    }
+
+    [Fact]
+    public void KDS_JavascriptDebeIdentificarPedidosDelivery()
+    {
+        var source = File.ReadAllText(Path.Combine(
+            Calidad.ProjectPaths.RepoRoot,
+            "src",
+            "LaMesaDelDuque.Web",
+            "wwwroot",
+            "js",
+            "cocina-kds.js"));
+
+        Assert.Contains("orden.tipoServicio === 'Delivery'", source);
+        Assert.Contains("Delivery", source);
+        Assert.Contains("truck.svg", source);
+    }
+
+    [Fact]
+    public void KDS_DebeMostrarPrioridadYTiempoEstimado()
+    {
+        var pageSource = File.ReadAllText(Path.Combine(
+            Calidad.ProjectPaths.RepoRoot,
+            "src",
+            "LaMesaDelDuque.Web",
+            "Pages",
+            "Cocina",
+            "KDS.cshtml"));
+
+        var jsSource = File.ReadAllText(Path.Combine(
+            Calidad.ProjectPaths.RepoRoot,
+            "src",
+            "LaMesaDelDuque.Web",
+            "wwwroot",
+            "js",
+            "cocina-kds.js"));
+
+        Assert.Contains("Atrasados", pageSource);
+        Assert.Contains("Por vencer", pageSource);
+        Assert.Contains("calcularEstadoTiempo", jsSource);
+        Assert.Contains("tiempoPreparacionMin", jsSource);
+        Assert.Contains("lmd-kds-card__eta", jsSource);
+    }
+
+    private static KDSModel CreatePage(ICocinaServicio servicio) =>
+        new(servicio, new FakeKdsCatalogoProductosServicio(), new FakeNotificadorProductos(), NullLogger<KDSModel>.Instance);
 
     internal sealed class FakeCocinaServicio : ICocinaServicio
     {
@@ -140,7 +195,20 @@ public class KDSPageTests
         }
     }
 
-    private sealed class FakeNotificadorProductos : INotificadorProductos
+    internal sealed class FakeKdsCatalogoProductosServicio : ICatalogoProductosServicio
+    {
+        public Task<List<CategoriaProductoDto>> ListarCategoriasAsync(CancellationToken cancelacion = default) => Task.FromResult(new List<CategoriaProductoDto>());
+        public Task<CategoriaProductoDto> CrearCategoriaAsync(string nombre, CancellationToken cancelacion = default) => throw new NotImplementedException();
+        public Task<CategoriaProductoDto> ActualizarCategoriaAsync(Guid categoriaId, string nombre, CancellationToken cancelacion = default) => throw new NotImplementedException();
+        public Task DesactivarCategoriaAsync(Guid categoriaId, CancellationToken cancelacion = default) => throw new NotImplementedException();
+        public Task<List<ProductoDto>> ListarProductosAsync(CancellationToken cancelacion = default) => Task.FromResult(new List<ProductoDto>());
+        public Task<List<ProductoDto>> ListarProductosPorCategoriaAsync(Guid categoriaId, CancellationToken cancelacion = default) => Task.FromResult(new List<ProductoDto>());
+        public Task<ProductoDto> CrearProductoAsync(string nombre, decimal precio, Guid categoriaId, string? descripcion = null, string? imagenUrl = null, int tiempoPreparacionMin = 5, CancellationToken cancelacion = default) => throw new NotImplementedException();
+        public Task<ProductoDto> ActualizarProductoAsync(Guid productoId, string nombre, decimal precio, Guid categoriaId, string? descripcion, string? imagenUrl = null, int? tiempoPreparacionMin = null, CancellationToken cancelacion = default) => throw new NotImplementedException();
+        public Task DesactivarProductoAsync(Guid productoId, CancellationToken cancelacion = default) => Task.CompletedTask;
+    }
+
+    internal sealed class FakeNotificadorProductos : INotificadorProductos
     {
         public Task NotificarProductoAgotadoAsync(Guid productoId, string nombreProducto, CancellationToken cancelacion = default) => Task.CompletedTask;
         public Task NotificarProductoReactivadoAsync(Guid productoId, string nombreProducto, CancellationToken cancelacion = default) => Task.CompletedTask;

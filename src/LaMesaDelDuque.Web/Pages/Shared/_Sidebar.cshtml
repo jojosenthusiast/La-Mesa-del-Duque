@@ -1,129 +1,55 @@
+@using LaMesaDelDuque.Web.Navegacion
 @{
-    var activeTab = ViewData["ActiveTab"]?.ToString() ?? "";
-    var esAdmin = User.IsInRole("Administrador");
+    var activeTab   = ViewData["ActiveTab"]?.ToString() ?? "";
+    var esAdmin     = User.IsInRole("Administrador");
     var esEncargado = User.IsInRole("Encargado");
-    var puedeCatalogo = esAdmin || esEncargado;
-    var puedeSalon = esAdmin || esEncargado;
-    var puedeTurno = esAdmin || esEncargado;
-    var puedePanel = esAdmin || esEncargado;
-    var puedeSistema = esAdmin;
-
-    var rolLabel = esAdmin ? "Administrador"
-        : esEncargado ? "Encargado"
-        : User.IsInRole("Mesero") ? "Mesero"
-        : User.IsInRole("Cajero") ? "Cajero"
-        : User.IsInRole("Cocinero") ? "Cocinero"
-        : User.IsInRole("Gerente") ? "Gerente"
-        : "Usuario";
+    var esGerente   = User.IsInRole("Gerente");
+    var rolLabel    = esAdmin ? "Administrador" : esGerente ? "Gerente" : "Encargado";
+    var sidebarSections = GestionSidebarNavigation.Construir(esAdmin, esEncargado, esGerente);
 }
-
 
 <aside class="lmd-sidebar" id="lmdSidebar" role="navigation" aria-label="Menú principal">
 
     <div class="lmd-sidebar__header">
-        <img src="~/img/marca/logo-simbolo.png" alt="La Mesa del Duque" class="lmd-sidebar__logo" />
-        <span class="lmd-sidebar__brand">La Mesa del Duque</span>
-        <button class="lmd-sidebar__toggle-btn" id="lmdSidebarToggle" aria-label="Colapsar menú">
-            <i class="bi bi-layout-sidebar-reverse"></i>
+        <a asp-page="/Index"
+           class="lmd-sidebar__brand-link"
+           id="lmdSidebarBrandLink"
+           aria-label="Ir al inicio">
+            <img src="~/img/marca/logo-simbolo.png" alt="La Mesa del Duque" class="lmd-sidebar__logo" />
+            <span class="lmd-sidebar__brand">La Mesa del Duque</span>
+        </a>
+        <button class="lmd-sidebar__toggle-btn"
+                id="lmdSidebarToggle"
+                type="button"
+                aria-controls="lmdSidebar"
+                aria-expanded="true"
+                aria-label="Colapsar menú principal"
+                title="Colapsar menú principal">
+            <i class="bi bi-layout-sidebar-reverse" aria-hidden="true"></i>
         </button>
     </div>
 
     <nav class="lmd-sidebar__nav">
-
-        @if (puedePanel)
+        @foreach (var section in sidebarSections)
         {
-            <div class="lmd-sidebar__section">
-                <span class="lmd-sidebar__section-label">Panel</span>
-                <a asp-page="/Admin/Dashboard/Dashboard"
-                   class="lmd-sidebar__item @(activeTab == "Dashboard" ? "lmd-sidebar__item--active" : "")"
-                   title="Dashboard">
-                    <i class="bi bi-speedometer2"></i>
-                    <span>Dashboard</span>
-                </a>
-            </div>
+        <div class="lmd-sidebar__section">
+            <span class="lmd-sidebar__section-label">@(section.Label)</span>
+            @foreach (var item in section.Items)
+            {
+            <a asp-page="@(item.Page)"
+               class="lmd-sidebar__item @(activeTab == item.ActiveTab ? "lmd-sidebar__item--active" : "")"
+               title="@(item.Title)">
+                <i class="@(item.IconCss)" aria-hidden="true"></i>
+                <span>@(item.Label)</span>
+            </a>
+            }
+        </div>
         }
-
-        @if (puedeCatalogo)
-        {
-            <div class="lmd-sidebar__section">
-                <span class="lmd-sidebar__section-label">Catálogo</span>
-                <a asp-page="/Operaciones/Productos/Index"
-                   class="lmd-sidebar__item @(activeTab == "Productos" ? "lmd-sidebar__item--active" : "")"
-                   title="Productos">
-                    <i class="bi bi-box-seam"></i>
-                    <span>Productos</span>
-                </a>
-                <a asp-page="/Operaciones/Inventario/Index"
-                   class="lmd-sidebar__item @(activeTab == "Inventario" ? "lmd-sidebar__item--active" : "")"
-                   title="Inventario">
-                    <i class="bi bi-archive"></i>
-                    <span>Inventario</span>
-                </a>
-            </div>
-        }
-
-        @if (puedeSalon)
-        {
-            <div class="lmd-sidebar__section">
-                <span class="lmd-sidebar__section-label">Salón</span>
-                <a asp-page="/Operaciones/Mesas/Index"
-                   class="lmd-sidebar__item @(activeTab == "Mesas" ? "lmd-sidebar__item--active" : "")"
-                   title="Mesas">
-                    <i class="bi bi-grid"></i>
-                    <span>Mesas</span>
-                </a>
-                <a asp-page="/Operaciones/Salon/Mapa"
-                   class="lmd-sidebar__item @(activeTab == "Mapa" ? "lmd-sidebar__item--active" : "")"
-                   title="Mapa del salón">
-                    <i class="bi bi-map"></i>
-                    <span>Mapa del salón</span>
-                </a>
-                <a asp-page="/Operaciones/Delivery/Index"
-                   class="lmd-sidebar__item @(activeTab == "Delivery" ? "lmd-sidebar__item--active" : "")"
-                   title="Delivery">
-                    <i class="bi bi-truck"></i>
-                    <span>Delivery</span>
-                </a>
-            </div>
-        }
-
-        @if (puedeTurno)
-        {
-            <div class="lmd-sidebar__section">
-                <span class="lmd-sidebar__section-label">Turno</span>
-                <a asp-page="/Cocina/KDS"
-                   class="lmd-sidebar__item @(activeTab == "Cocina" ? "lmd-sidebar__item--active" : "")"
-                   title="KDS Cocina">
-                    <i class="bi bi-display"></i>
-                    <span>KDS Cocina</span>
-                </a>
-                <a asp-page="/Operaciones/Cierre/Index"
-                   class="lmd-sidebar__item @(activeTab == "Cierre" ? "lmd-sidebar__item--active" : "")"
-                   title="Cierre de caja">
-                    <i class="bi bi-cash-stack"></i>
-                    <span>Cierre de caja</span>
-                </a>
-            </div>
-        }
-
-        @if (puedeSistema)
-        {
-            <div class="lmd-sidebar__section">
-                <span class="lmd-sidebar__section-label">Sistema</span>
-                <a asp-page="/Admin/Usuarios/Index"
-                   class="lmd-sidebar__item @(activeTab == "Usuarios" ? "lmd-sidebar__item--active" : "")"
-                   title="Usuarios">
-                    <i class="bi bi-people"></i>
-                    <span>Usuarios</span>
-                </a>
-            </div>
-        }
-
     </nav>
 
     <div class="lmd-sidebar__footer">
-        <div class="lmd-sidebar__user">
-            <i class="bi bi-person-circle"></i>
+        <div class="lmd-sidebar__user" aria-label="Sesión actual">
+            <i class="bi bi-person-circle" aria-hidden="true"></i>
             <div class="lmd-sidebar__user-info">
                 <span class="lmd-sidebar__username">@User.Identity?.Name</span>
                 <span class="lmd-sidebar__userrole">@rolLabel</span>
@@ -131,8 +57,8 @@
         </div>
         <form method="post" asp-page="/Auth/Logout">
             @Html.AntiForgeryToken()
-            <button type="submit" class="lmd-sidebar__logout" title="Cerrar sesión">
-                <i class="bi bi-box-arrow-right"></i>
+            <button type="submit" class="lmd-sidebar__logout" title="Cerrar sesión" aria-label="Cerrar sesión">
+                <i class="bi bi-box-arrow-right" aria-hidden="true"></i>
                 <span>Cerrar sesión</span>
             </button>
         </form>
@@ -141,68 +67,44 @@
 </aside>
 
 <script>
-document.addEventListener('DOMContentLoaded', function () {
-    var sidebar  = document.getElementById('lmdSidebar');
-    var toggle   = document.getElementById('lmdSidebarToggle');
-    var shell    = document.getElementById('lmdShellMain');
-    var backdrop = document.getElementById('lmdSidebarBackdrop');
-    var mobileBtn = document.getElementById('lmdMobileMenuBtn');
-    var KEY = 'lmd-sidebar-col-v2';
-    var OLD_KEY = 'lmd-sidebar-col';
-    var isMobile = function () { return window.matchMedia('(max-width: 767.98px)').matches; };
+(function () {
+    var sidebar = document.getElementById('lmdSidebar');
+    var toggle  = document.getElementById('lmdSidebarToggle');
+    var shell   = document.getElementById('lmdShellMain');
+    var brand   = document.getElementById('lmdSidebarBrandLink');
+    var KEY     = 'lmd-sidebar-col';
 
-    try { localStorage.removeItem(OLD_KEY); localStorage.removeItem(KEY); } catch (e) {}
+    function setCollapsed(collapsed) {
+        sidebar?.classList.toggle('lmd-sidebar--collapsed', collapsed);
+        shell?.classList.toggle('lmd-shell-with-sidebar--collapsed', collapsed);
+        localStorage.setItem(KEY, collapsed ? '1' : '0');
 
-    function abrirMobile() {
-        if (!sidebar) return;
-        sidebar.classList.remove('lmd-sidebar--collapsed');
-        shell?.classList.remove('lmd-shell-with-sidebar--collapsed');
-        sidebar.classList.add('lmd-sidebar--mobile-open');
-        backdrop?.classList.add('lmd-sidebar-backdrop--visible');
-        document.body.classList.add('lmd-sidebar-mobile-lock');
-    }
-
-    function cerrarMobile() {
-        sidebar?.classList.remove('lmd-sidebar--mobile-open');
-        backdrop?.classList.remove('lmd-sidebar-backdrop--visible');
-        document.body.classList.remove('lmd-sidebar-mobile-lock');
-    }
-
-    function aplicarEstadoDesktop() {
-        if (!sidebar || !shell) return;
-        if (isMobile()) {
-            sidebar.classList.remove('lmd-sidebar--collapsed');
-            shell.classList.remove('lmd-shell-with-sidebar--collapsed');
-            cerrarMobile();
-            return;
+        if (toggle) {
+            toggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+            toggle.setAttribute('aria-label', collapsed ? 'Expandir menú principal' : 'Colapsar menú principal');
+            toggle.setAttribute('title', collapsed ? 'Expandir menú principal' : 'Colapsar menú principal');
         }
-        sidebar.classList.remove('lmd-sidebar--collapsed');
-        shell.classList.remove('lmd-shell-with-sidebar--collapsed');
+
+        if (brand) {
+            brand.setAttribute('aria-label', collapsed ? 'Expandir menú principal' : 'Ir al inicio');
+        }
     }
 
-    aplicarEstadoDesktop();
+    if (localStorage.getItem(KEY) === '1') {
+        setCollapsed(true);
+    } else {
+        setCollapsed(false);
+    }
 
     toggle?.addEventListener('click', function () {
-        if (isMobile() || !sidebar) return;
-        var colapsado = !sidebar.classList.contains('lmd-sidebar--collapsed');
-        sidebar.classList.toggle('lmd-sidebar--collapsed', colapsado);
-        shell?.classList.toggle('lmd-shell-with-sidebar--collapsed', colapsado);
-        try { localStorage.setItem(KEY, colapsado ? '1' : '0'); } catch (e) {}
+        setCollapsed(!sidebar?.classList.contains('lmd-sidebar--collapsed'));
     });
 
-    mobileBtn?.addEventListener('click', function (event) {
-        event.preventDefault();
-        event.stopPropagation();
-        if (sidebar?.classList.contains('lmd-sidebar--mobile-open')) cerrarMobile();
-        else abrirMobile();
+    brand?.addEventListener('click', function (event) {
+        if (sidebar?.classList.contains('lmd-sidebar--collapsed')) {
+            event.preventDefault();
+            setCollapsed(false);
+        }
     });
-
-    backdrop?.addEventListener('click', cerrarMobile);
-
-    sidebar?.querySelectorAll('.lmd-sidebar__item').forEach(function (item) {
-        item.addEventListener('click', function () { if (isMobile()) cerrarMobile(); });
-    });
-
-    window.addEventListener('resize', aplicarEstadoDesktop);
-});
+})();
 </script>

@@ -35,9 +35,9 @@ public class KDSModel : PageModel
 
     public static IReadOnlyList<CookConfig> Cooks { get; } = new List<CookConfig>
     {
-        new(1, "Cocinero 1", "#e74c3c"),
-        new(2, "Cocinero 2", "#3498db"),
-        new(3, "Cocinero 3", "#2ecc71")
+        new(1, "Atrasados", "#e74c3c"),
+        new(2, "Por vencer", "#f1c40f"),
+        new(3, "En tiempo", "#2ecc71")
     };
 
     public static IReadOnlyDictionary<string, int> StationToColumn { get; } = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase)

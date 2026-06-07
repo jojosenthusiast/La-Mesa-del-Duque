@@ -77,9 +77,10 @@ public class LoginModel : PageModel
         {
             "Administrador" or "Encargado" => "/Admin/Dashboard/Dashboard",
             "Gerente"                       => "/Admin/Dashboard/Gerente",
-            "Cajero" or "Mesero"           => "/Operaciones/Pedidos/Index",
+            "Cajero"                        => "/Operaciones/Pedidos/Index",
+            "Mesero"                        => "/Operaciones/Mesero/Index",
             "Cocinero"                      => "/Cocina/KDS",
-            "Repartidor"                    => "/Operaciones/Repartidor/Index",
+            "Despacho"                      => "/Operaciones/Despacho/Index",
             _                               => "/Index"
         };
         return RedirectToPage(destino);

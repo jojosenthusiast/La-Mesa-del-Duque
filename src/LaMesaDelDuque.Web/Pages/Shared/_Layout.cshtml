@@ -6,11 +6,8 @@
     <meta name="description" content="La Mesa del Duque — Operaciones" />
     <title>@ViewData["Title"] — La Mesa del Duque</title>
     <link rel="icon" type="image/png" href="~/img/marca/logo-simbolo.png" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Montserrat:wght@400;500;600&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+    <link rel="stylesheet" href="~/lib/bootstrap-icons/font/bootstrap-icons.css" />
     <link rel="stylesheet" href="~/css/marca.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/sidebar.css" asp-append-version="true" />
@@ -26,10 +23,10 @@
     var esMesero    = isAuth && User.IsInRole("Mesero");
     var esCocinero  = isAuth && User.IsInRole("Cocinero");
     var esCajero    = isAuth && User.IsInRole("Cajero");
+    var esDespacho  = isAuth && User.IsInRole("Despacho");
     var esGerente   = isAuth && User.IsInRole("Gerente");
-    var esRepartidor = isAuth && User.IsInRole("Repartidor");
     var esGestion   = esAdmin || esEncargado || esGerente;
-    var rolStrip    = esCajero ? "Caja" : esMesero ? "Caja" : esCocinero ? "Cocina" : esRepartidor ? "Repartidor" : "";
+    var rolStrip    = esDespacho ? "Despacho" : esCajero ? "Caja" : esMesero ? "Mesero" : esCocinero ? "Cocina" : esGerente ? "Gerente" : "";
 }
 
     <div id="lmd-offline-banner" class="lmd-offline-banner" style="display:none;">
@@ -40,20 +37,9 @@
     @if (isAuth && esGestion)
     {
         <div class="lmd-app-shell">
-            <div class="lmd-sidebar-backdrop" id="lmdSidebarBackdrop"></div>
             <partial name="_Sidebar" />
             <div class="lmd-shell-with-sidebar" id="lmdShellMain">
-                <div class="lmd-mobile-topbar">
-                    <button class="lmd-mobile-topbar__hamburger" id="lmdMobileMenuBtn" aria-label="Abrir menú">
-                        <i class="bi bi-list"></i>
-                    </button>
-                    <span class="lmd-mobile-topbar__title">La Mesa del Duque</span>
-                    <partial name="_BotonVolver" model="@(string.Empty)" />
-                </div>
                 <main role="main" class="lmd-main-surface lmd-main-surface--sidebar">
-                    <div class="lmd-backbar-desktop">
-                        <partial name="_BotonVolver" model="@(string.Empty)" />
-                    </div>
                     @RenderBody()
                 </main>
             </div>
@@ -65,7 +51,9 @@
             <a asp-page="/Index" class="lmd-ops-strip__brand" aria-label="Inicio">
                 <img src="~/img/marca/logo-simbolo.png" alt="La Mesa del Duque" />
             </a>
-            <partial name="_BotonVolver" model="@(string.Empty)" />
+            <button type="button" class="lmd-ops-strip__back" onclick="history.length > 1 ? history.back() : window.location.href='@Url.Page("/Index")'">
+                Volver
+            </button>
             <span class="lmd-ops-strip__role">@rolStrip</span>
             <div class="lmd-ops-strip__user">
                 <span class="lmd-ops-strip__username">@User.Identity!.Name</span>

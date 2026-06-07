@@ -5,6 +5,7 @@ using LaMesaDelDuque.Infraestructura;
 using LaMesaDelDuque.Infraestructura.Persistencia;
 using LaMesaDelDuque.Web.Filtros;
 using LaMesaDelDuque.Web.Hubs;
+using LaMesaDelDuque.Web.Seguridad;
 using LaMesaDelDuque.Web.Servicios;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authentication.Cookies;
@@ -67,6 +68,7 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 
+app.UseLaMesaSecurityHeaders();
 app.UseHttpsRedirection();
 app.UseStaticFiles();
 
@@ -78,24 +80,31 @@ app.UseAuthorization();
 app.MapRazorPages();
 app.MapHub<PedidosHub>("/hubs/pedidos").RequireAuthorization();
 
-// Seed: crea roles, admin, categorías y datos operativos.
-// Corre siempre (es idempotente: cada bloque valida con if (!Any()) antes de insertar).
-// La base por defecto del proyecto es SQLite (sin connection string en appsettings).
+// Seed de desarrollo: crea roles, admin, categorías y datos operativos
+if (app.Environment.IsDevelopment())
 {
     using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<LaMesaDelDuqueDbContext>();
     Console.WriteLine($"DB PROVIDER: {db.Database.ProviderName}");
-    await PrepararBaseDatosAsync(db);
+    if (db.Database.ProviderName!.Contains("Sqlite"))
+    {
+        await db.Database.EnsureCreatedAsync();
+        await AsegurarColumnasDeliverySqliteAsync(db);
+    }
+    else
+    {
+        await db.Database.MigrateAsync();
+    }
     if (!await db.Set<Rol>().AnyAsync())
     {
         var adminRol = new Rol("Administrador", "Acceso total al sistema");
         var meseroRol = new Rol("Mesero", "Captura de pedidos y consulta de salón");
         var encargadoRol = new Rol("Encargado", "Gestión de catálogo, mesas y reportes");
         var cocineroRol = new Rol("Cocinero", "Visualización de pedidos en preparación");
-        var cajeroRol = new Rol("Cajero", "Cobro en caja, despacho y cierre de turno");
+        var cajeroRol = new Rol("Cajero", "Cobro en caja y cierre de turno");
         var gerenteRol = new Rol("Gerente", "Acceso a reportes, dashboard y auditoría sin módulos operativos");
-        var repartidorRol = new Rol("Repartidor", "Entrega de pedidos a domicilio");
-        db.Set<Rol>().AddRange(adminRol, meseroRol, encargadoRol, cocineroRol, cajeroRol, gerenteRol, repartidorRol);
+        var despachoRol = new Rol("Despacho", "Entrega pedidos listos y libera mesas");
+        db.Set<Rol>().AddRange(adminRol, meseroRol, encargadoRol, cocineroRol, cajeroRol, gerenteRol, despachoRol);
         await db.SaveChangesAsync();
 
         var adminHash = BCrypt.Net.BCrypt.HashPassword("Admin123!", 12);
@@ -104,7 +113,7 @@ app.MapHub<PedidosHub>("/hubs/pedidos").RequireAuthorization();
         var cocineroHash = BCrypt.Net.BCrypt.HashPassword("Cocina456!", 12);
         var cajeroHash = BCrypt.Net.BCrypt.HashPassword("Cajero567!", 12);
         var gerenteHash = BCrypt.Net.BCrypt.HashPassword("Gerente890!", 12);
-        var repartidorHash = BCrypt.Net.BCrypt.HashPassword("Driver345!", 12);
+        var despachoHash = BCrypt.Net.BCrypt.HashPassword("Despacho901!", 12);
         db.Set<Usuario>().AddRange(
             new Usuario("admin", "admin@mesadelduque.com", adminHash, "Administrador", adminRol),
             new Usuario("maria", "maria@mesadelduque.com", meseroHash, "María Mesera", meseroRol),
@@ -112,7 +121,7 @@ app.MapHub<PedidosHub>("/hubs/pedidos").RequireAuthorization();
             new Usuario("pedro", "pedro@mesadelduque.com", cocineroHash, "Pedro Cocinero", cocineroRol),
             new Usuario("sofia", "sofia@mesadelduque.com", cajeroHash, "Sofía Cajera", cajeroRol),
             new Usuario("luciana", "luciana@mesadelduque.com", gerenteHash, "Luciana Gerente", gerenteRol),
-            new Usuario("ronald", "ronald@mesadelduque.com", repartidorHash, "Ronald Repartidor", repartidorRol)
+            new Usuario("ana", "ana@mesadelduque.com", despachoHash, "Ana Despacho", despachoRol)
         );
         await db.SaveChangesAsync();
 
@@ -135,36 +144,13 @@ app.MapHub<PedidosHub>("/hubs/pedidos").RequireAuthorization();
             db.Set<Mesa>().Add(new Mesa(i, i <= 8 ? 4 : 8));
         await db.SaveChangesAsync();
 
-        // ── Seed: Zonas del salón + posiciones de mesas (arregla el Mapa vacío) ──
-        var salonPrincipal = new ZonaSalon("Salón Principal", 1);
-        var terraza = new ZonaSalon("Terraza", 2);
-        db.Set<ZonaSalon>().AddRange(salonPrincipal, terraza);
-        await db.SaveChangesAsync();
-
-        var mesasSeed = await db.Set<Mesa>().OrderBy(m => m.Numero).ToListAsync();
-        int idxMesa = 0;
-        foreach (var mesaPos in mesasSeed)
-        {
-            var zona = idxMesa < 6 ? salonPrincipal : terraza;
-            int col = idxMesa % 3;
-            int fila = (idxMesa / 3) % 3;
-            int x = 18 + col * 28;
-            int y = 20 + fila * 25;
-            var forma = mesaPos.Capacidad >= 8
-                ? LaMesaDelDuque.Dominio.Enumeraciones.FormaMesa.Cuadrada
-                : LaMesaDelDuque.Dominio.Enumeraciones.FormaMesa.Redonda;
-            mesaPos.ActualizarPosicion(x, y, zona.Id, forma, 0);
-            idxMesa++;
-        }
-        await db.SaveChangesAsync();
-
         db.Set<RestauranteConfig>().Add(new RestauranteConfig(
             "La Mesa del Duque",
             "Av. Principal #1, San Salvador",
             new TimeOnly(11, 0),
             new TimeOnly(23, 0),
             cantidadMesas: 10,
-            periodoGraciaMinutos: 0));
+            periodoGraciaMinutos: 5));
         await db.SaveChangesAsync();
 
         // ── Seed: Alérgenos ──────────────────────────────────
@@ -277,19 +263,6 @@ app.MapHub<PedidosHub>("/hubs/pedidos").RequireAuthorization();
             await db.SaveChangesAsync();
         }
 
-        // ── Seed: Receta Agua Mineral (para que todo producto descuente inventario) ──
-        var agua = productos.FirstOrDefault(p => p.Nombre.Contains("Agua"));
-        if (agua is not null && !await db.Set<RecetaProducto>().AnyAsync(r => r.ProductoId == agua.Id))
-        {
-            var riA = new[]
-            {
-                new RecetaIngrediente(ings.First(i => i.Nombre.Contains("Agua mineral")), 1m),
-            };
-            db.Set<RecetaProducto>().Add(new RecetaProducto(agua,
-                "1. Servir la botella de agua mineral fría.", riA));
-            await db.SaveChangesAsync();
-        }
-
         // ── Seed: ProductoAlergeno ──────────────────────────
         if (!await db.Set<ProductoAlergeno>().AnyAsync())
         {
@@ -321,9 +294,34 @@ app.MapHub<PedidosHub>("/hubs/pedidos").RequireAuthorization();
         }
     }
 
-    await AsegurarRolesUsuariosBaseAsync(db);
-    await AsegurarMapaSalonAsync(db);
-    await AsegurarRecetaAguaMineralAsync(db);
+    // Repair incremental development seeds added after the original bootstrap.
+    var despachoRolPersistente = await db.Set<Rol>().FirstOrDefaultAsync(r => r.Nombre == "Despacho");
+    if (despachoRolPersistente is null)
+    {
+        despachoRolPersistente = new Rol("Despacho", "Entrega pedidos listos y libera mesas");
+        db.Set<Rol>().Add(despachoRolPersistente);
+        await db.SaveChangesAsync();
+        Console.WriteLine("[DEV] Despacho role created.");
+    }
+
+    var despachoUsuario = await db.Set<Usuario>().FirstOrDefaultAsync(u => u.Username == "ana");
+    if (despachoUsuario is null)
+    {
+        db.Set<Usuario>().Add(new Usuario(
+            "ana",
+            "ana@mesadelduque.com",
+            BCrypt.Net.BCrypt.HashPassword("Despacho901!", 12),
+            "Ana Despacho",
+            despachoRolPersistente));
+        await db.SaveChangesAsync();
+        Console.WriteLine("[DEV] ana despacho user created.");
+    }
+    else if (despachoUsuario.RolId != despachoRolPersistente.Id)
+    {
+        despachoUsuario.CambiarRol(despachoRolPersistente);
+        await db.SaveChangesAsync();
+        Console.WriteLine("[DEV] ana assigned to Despacho role.");
+    }
 
     if (!await db.Set<RestauranteConfig>().AnyAsync())
     {
@@ -333,7 +331,7 @@ app.MapHub<PedidosHub>("/hubs/pedidos").RequireAuthorization();
             new TimeOnly(11, 0),
             new TimeOnly(23, 0),
             cantidadMesas: 10,
-            periodoGraciaMinutos: 0));
+            periodoGraciaMinutos: 5));
         await db.SaveChangesAsync();
     }
 
@@ -351,7 +349,16 @@ app.MapHub<PedidosHub>("/hubs/pedidos").RequireAuthorization();
     }
 
     // Repair stale seed hashes — no-op when already correct
-    var seedCredentials = CredencialesDemo();
+    var seedCredentials = new Dictionary<string, string>
+    {
+        ["admin"]   = "Admin123!",
+        ["maria"]   = "Mesero789!",
+        ["carlos"]  = "Encargado321!",
+        ["pedro"]   = "Cocina456!",
+        ["sofia"]   = "Cajero567!",
+        ["luciana"] = "Gerente890!",
+        ["ana"]     = "Despacho901!"
+    };
     var seedUsernames = seedCredentials.Keys.ToList();
     var seedUsers = await db.Set<Usuario>().Where(u => seedUsernames.Contains(u.Username)).ToListAsync();
     bool anyRepaired = false;
@@ -368,221 +375,49 @@ app.MapHub<PedidosHub>("/hubs/pedidos").RequireAuthorization();
     if (anyRepaired) await db.SaveChangesAsync();
 }
 
+app.Run();
 
-static async Task PrepararBaseDatosAsync(LaMesaDelDuqueDbContext db)
+static async Task AsegurarColumnasDeliverySqliteAsync(LaMesaDelDuqueDbContext db)
 {
-    var provider = db.Database.ProviderName ?? string.Empty;
-
-    if (provider.Contains("Sqlite", StringComparison.OrdinalIgnoreCase))
+    var columnasRequeridas = new Dictionary<string, string>
     {
-        await db.Database.EnsureCreatedAsync();
-        await RepararColumnasDeliveryPedidoSqliteAsync(db);
-        return;
-    }
+        ["ClienteDeliveryNombre"] = "TEXT",
+        ["ClienteDeliveryTelefono"] = "TEXT",
+        ["ClienteDeliveryDireccion"] = "TEXT",
+        ["ClienteDeliveryReferencia"] = "TEXT",
+        ["ClienteDeliveryNotas"] = "TEXT"
+    };
 
-    await db.Database.MigrateAsync();
-    await RepararColumnasDeliveryPedidoPostgresAsync(db);
-}
-
-static async Task RepararColumnasDeliveryPedidoSqliteAsync(LaMesaDelDuqueDbContext db)
-{
     var conexion = db.Database.GetDbConnection();
-    var cerrar = conexion.State != System.Data.ConnectionState.Open;
-    if (cerrar) await conexion.OpenAsync();
+    var cerrarConexion = conexion.State != System.Data.ConnectionState.Open;
+    if (cerrarConexion)
+        await conexion.OpenAsync();
 
     try
     {
-        var columnas = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        await using (var cmd = conexion.CreateCommand())
+        var columnasExistentes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        await using (var columnasCmd = conexion.CreateCommand())
         {
-            cmd.CommandText = "PRAGMA table_info(\"Pedido\");";
-            await using var reader = await cmd.ExecuteReaderAsync();
+            columnasCmd.CommandText = "PRAGMA table_info('Pedido');";
+            await using var reader = await columnasCmd.ExecuteReaderAsync();
             while (await reader.ReadAsync())
-                columnas.Add(reader.GetString(1));
+                columnasExistentes.Add(reader.GetString(1));
         }
 
-        if (columnas.Count == 0) return;
-
-        var columnasNecesarias = new (string Nombre, string Sql)[]
+        foreach (var columna in columnasRequeridas)
         {
-            ("RepartidorId", "ALTER TABLE \"Pedido\" ADD COLUMN \"RepartidorId\" TEXT NULL;"),
-            ("DireccionEntrega", "ALTER TABLE \"Pedido\" ADD COLUMN \"DireccionEntrega\" TEXT NULL;"),
-            ("TelefonoCliente", "ALTER TABLE \"Pedido\" ADD COLUMN \"TelefonoCliente\" TEXT NULL;"),
-            ("AsignadoEn", "ALTER TABLE \"Pedido\" ADD COLUMN \"AsignadoEn\" TEXT NULL;"),
-            ("EntregadoEn", "ALTER TABLE \"Pedido\" ADD COLUMN \"EntregadoEn\" TEXT NULL;")
-        };
+            if (columnasExistentes.Contains(columna.Key))
+                continue;
 
-        foreach (var columna in columnasNecesarias)
-        {
-            if (columnas.Contains(columna.Nombre)) continue;
-            await using var alter = conexion.CreateCommand();
-            alter.CommandText = columna.Sql;
-            await alter.ExecuteNonQueryAsync();
-            Console.WriteLine($"[DB] Columna Pedido.{columna.Nombre} agregada a SQLite.");
+            await using var alterCmd = conexion.CreateCommand();
+            alterCmd.CommandText = $"ALTER TABLE \"Pedido\" ADD COLUMN \"{columna.Key}\" {columna.Value};";
+            await alterCmd.ExecuteNonQueryAsync();
+            Console.WriteLine($"[DEV] SQLite schema repaired: Pedido.{columna.Key} added.");
         }
     }
     finally
     {
-        if (cerrar) await conexion.CloseAsync();
+        if (cerrarConexion)
+            await conexion.CloseAsync();
     }
 }
-
-static async Task RepararColumnasDeliveryPedidoPostgresAsync(LaMesaDelDuqueDbContext db)
-{
-    await db.Database.ExecuteSqlRawAsync(@"
-ALTER TABLE ""Pedido"" ADD COLUMN IF NOT EXISTS ""RepartidorId"" uuid NULL;
-ALTER TABLE ""Pedido"" ADD COLUMN IF NOT EXISTS ""DireccionEntrega"" character varying(250) NULL;
-ALTER TABLE ""Pedido"" ADD COLUMN IF NOT EXISTS ""TelefonoCliente"" character varying(30) NULL;
-ALTER TABLE ""Pedido"" ADD COLUMN IF NOT EXISTS ""AsignadoEn"" timestamp with time zone NULL;
-ALTER TABLE ""Pedido"" ADD COLUMN IF NOT EXISTS ""EntregadoEn"" timestamp with time zone NULL;
-");
-}
-
-static Dictionary<string, string> CredencialesDemo() => new()
-{
-    ["admin"] = "Admin123!",
-    ["maria"] = "Mesero789!",
-    ["carlos"] = "Encargado321!",
-    ["pedro"] = "Cocina456!",
-    ["sofia"] = "Cajero567!",
-    ["luciana"] = "Gerente890!",
-    ["ronald"] = "Driver345!"
-};
-
-static async Task<Rol> ObtenerOCrearRolAsync(LaMesaDelDuqueDbContext db, string nombre, string descripcion)
-{
-    var rol = await db.Set<Rol>().FirstOrDefaultAsync(r => r.Nombre == nombre);
-    if (rol is not null) return rol;
-
-    rol = new Rol(nombre, descripcion);
-    db.Set<Rol>().Add(rol);
-    await db.SaveChangesAsync();
-    Console.WriteLine($"[SEED] Rol creado: {nombre}");
-    return rol;
-}
-
-static async Task AsegurarRolesUsuariosBaseAsync(LaMesaDelDuqueDbContext db)
-{
-    var roles = new Dictionary<string, string>
-    {
-        ["Administrador"] = "Acceso total al sistema",
-        ["Mesero"] = "Captura de pedidos y consulta de salón",
-        ["Encargado"] = "Gestión de catálogo, mesas y reportes",
-        ["Cocinero"] = "Visualización de pedidos en preparación",
-        ["Cajero"] = "Cobro en caja, despacho y cierre de turno",
-        ["Gerente"] = "Acceso a reportes, dashboard y auditoría sin módulos operativos",
-        ["Repartidor"] = "Entrega de pedidos a domicilio"
-    };
-
-    var rolEntidades = new Dictionary<string, Rol>();
-    foreach (var (nombre, descripcion) in roles)
-        rolEntidades[nombre] = await ObtenerOCrearRolAsync(db, nombre, descripcion);
-
-    var usuarios = new[]
-    {
-        new { Username = "admin", Email = "admin@mesadelduque.com", Nombre = "Administrador", Rol = "Administrador" },
-        new { Username = "maria", Email = "maria@mesadelduque.com", Nombre = "María Mesera", Rol = "Mesero" },
-        new { Username = "carlos", Email = "carlos@mesadelduque.com", Nombre = "Carlos Encargado", Rol = "Encargado" },
-        new { Username = "pedro", Email = "pedro@mesadelduque.com", Nombre = "Pedro Cocinero", Rol = "Cocinero" },
-        new { Username = "sofia", Email = "sofia@mesadelduque.com", Nombre = "Sofía Cajera", Rol = "Cajero" },
-        new { Username = "luciana", Email = "luciana@mesadelduque.com", Nombre = "Luciana Gerente", Rol = "Gerente" },
-        new { Username = "ronald", Email = "ronald@mesadelduque.com", Nombre = "Ronald Repartidor", Rol = "Repartidor" }
-    };
-
-    var credenciales = CredencialesDemo();
-    var usuariosExistentes = await db.Set<Usuario>().ToListAsync();
-    foreach (var semilla in usuarios)
-    {
-        var existente = usuariosExistentes.FirstOrDefault(u => u.Username == semilla.Username);
-        if (existente is not null) continue;
-
-        var hash = BCrypt.Net.BCrypt.HashPassword(credenciales[semilla.Username], 12);
-        db.Set<Usuario>().Add(new Usuario(semilla.Username, semilla.Email, hash, semilla.Nombre, rolEntidades[semilla.Rol]));
-        Console.WriteLine($"[SEED] Usuario demo creado: {semilla.Username}");
-    }
-
-    foreach (var obsoleto in usuariosExistentes.Where(u => u.Username == "beatriz" || u.Username == "super"))
-    {
-        if (obsoleto.Activo)
-        {
-            obsoleto.Desactivar();
-            Console.WriteLine($"[SEED] Usuario demo desactivado por simplificación de roles: {obsoleto.Username}");
-        }
-    }
-
-    await db.SaveChangesAsync();
-}
-
-static async Task AsegurarMapaSalonAsync(LaMesaDelDuqueDbContext db)
-{
-    if (!await db.Set<Mesa>().AnyAsync())
-    {
-        for (var i = 1; i <= 10; i++)
-            db.Set<Mesa>().Add(new Mesa(i, i <= 8 ? 4 : 8));
-        await db.SaveChangesAsync();
-    }
-
-    var zonas = await db.Set<ZonaSalon>().OrderBy(z => z.Orden).ToListAsync();
-    var salonPrincipal = zonas.FirstOrDefault(z => z.Nombre == "Salón Principal");
-    var terraza = zonas.FirstOrDefault(z => z.Nombre == "Terraza");
-
-    if (salonPrincipal is null)
-    {
-        salonPrincipal = new ZonaSalon("Salón Principal", 1);
-        db.Set<ZonaSalon>().Add(salonPrincipal);
-    }
-
-    if (terraza is null)
-    {
-        terraza = new ZonaSalon("Terraza", 2);
-        db.Set<ZonaSalon>().Add(terraza);
-    }
-
-    await db.SaveChangesAsync();
-
-    var mesas = await db.Set<Mesa>().OrderBy(m => m.Numero).ToListAsync();
-    var actualizadas = false;
-    for (var idx = 0; idx < mesas.Count; idx++)
-    {
-        var mesa = mesas[idx];
-        var posicionValida = mesa.PosicionX is >= 3 and <= 94 && mesa.PosicionY is >= 4 and <= 92;
-        if (mesa.ZonaId.HasValue && posicionValida && mesa.Forma.HasValue)
-            continue;
-
-        var zona = idx < 6 ? salonPrincipal : terraza;
-        var col = idx % 3;
-        var fila = (idx / 3) % 3;
-        var x = 18 + col * 28;
-        var y = 20 + fila * 25;
-        var forma = mesa.Capacidad >= 8
-            ? LaMesaDelDuque.Dominio.Enumeraciones.FormaMesa.Cuadrada
-            : LaMesaDelDuque.Dominio.Enumeraciones.FormaMesa.Redonda;
-        mesa.ActualizarPosicion(x, y, zona.Id, forma, 0);
-        actualizadas = true;
-    }
-
-    if (actualizadas)
-    {
-        await db.SaveChangesAsync();
-        Console.WriteLine("[SEED] Mapa del salón reparado: zonas y posiciones de mesas aseguradas.");
-    }
-}
-
-static async Task AsegurarRecetaAguaMineralAsync(LaMesaDelDuqueDbContext db)
-{
-    var agua = await db.Set<Producto>().FirstOrDefaultAsync(p => p.Nombre.Contains("Agua"));
-    if (agua is null) return;
-    if (await db.Set<RecetaProducto>().AnyAsync(r => r.ProductoId == agua.Id)) return;
-
-    var ingredienteAgua = await db.Set<Ingrediente>().FirstOrDefaultAsync(i => i.Nombre.Contains("Agua mineral"));
-    if (ingredienteAgua is null) return;
-
-    db.Set<RecetaProducto>().Add(new RecetaProducto(
-        agua,
-        "1. Servir la botella de agua mineral fría.",
-        new[] { new RecetaIngrediente(ingredienteAgua, 1m) }));
-    await db.SaveChangesAsync();
-    Console.WriteLine("[SEED] Receta de Agua Mineral agregada para descuento de inventario.");
-}
-
-app.Run();

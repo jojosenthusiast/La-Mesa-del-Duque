@@ -72,7 +72,7 @@ internal class DeliveryServicio : IDeliveryServicio
         var mapaNombres = repartidores.ToDictionary(r => r.Id, r => r.Nombre);
 
         return pedidos
-            .Where(p => p.TipoServicio == TipoServicio.Domicilio && p.Estado != EstadoPedido.Cancelado && p.Estado != EstadoPedido.AnuladoPago)
+            .Where(p => p.TipoServicio == TipoServicio.Delivery && p.Estado != EstadoPedido.Cancelado && p.Estado != EstadoPedido.AnuladoPago)
             .OrderByDescending(p => p.FechaCreacion)
             .Select(p => MapDelivery(p, mapaNombres))
             .ToList();
@@ -120,7 +120,7 @@ internal class DeliveryServicio : IDeliveryServicio
     }
 
     // Se conserva para compatibilidad, pero el flujo recomendado es crear el pedido desde Caja/POS
-    // con TipoServicio = Domicilio y datos de entrega.
+    // con TipoServicio = Delivery y datos de entrega.
     public async Task<Guid> CrearPedidoDomicilioAsync(string? direccion, string? telefono, Dictionary<Guid, int> items, CancellationToken ct = default)
     {
         if (items is null || items.Count == 0)
@@ -147,7 +147,13 @@ internal class DeliveryServicio : IDeliveryServicio
         if (detalles.Count == 0)
             throw new ReglaDominioException("Agregá al menos un producto con cantidad mayor a cero.");
 
-        var pedido = await _pedidos.CrearPedidoAsync(TipoServicio.Domicilio, null, detalles, direccion, telefono, ct);
+        var datosEntrega = new DatosEntregaDto
+        {
+            ClienteNombre = "Cliente delivery",
+            Telefono = telefono,
+            Direccion = direccion
+        };
+        var pedido = await _pedidos.CrearPedidoAsync(TipoServicio.Delivery, null, detalles, ct, datosEntrega);
         return pedido.Id;
     }
 
@@ -193,8 +199,8 @@ internal class DeliveryServicio : IDeliveryServicio
             Estado = p.Estado.ToString(),
             Total = p.Total,
             Items = p.Detalles.Sum(d => d.Cantidad),
-            DireccionEntrega = p.DireccionEntrega,
-            TelefonoCliente = p.TelefonoCliente,
+            DireccionEntrega = p.ClienteDeliveryDireccion,
+            TelefonoCliente = p.ClienteDeliveryTelefono,
             RepartidorId = p.RepartidorId,
             RepartidorNombre = p.RepartidorId.HasValue && repartidores.TryGetValue(p.RepartidorId.Value, out var nombre) ? nombre : null,
             AsignadoEn = p.AsignadoEn,

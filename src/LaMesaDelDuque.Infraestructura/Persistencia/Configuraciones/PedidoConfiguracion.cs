@@ -29,13 +29,34 @@ internal class PedidoConfiguracion : IEntityTypeConfiguration<Pedido>
             .HasMaxLength(30)
             .IsRequired();
 
+        constructor.Property(p => p.MeseroAsignadoId)
+            .IsRequired(false);
+
+        constructor.Property(p => p.ClienteDeliveryNombre)
+            .HasMaxLength(120)
+            .IsRequired(false);
+
+        constructor.Property(p => p.ClienteDeliveryTelefono)
+            .HasMaxLength(40)
+            .IsRequired(false);
+
+        constructor.Property(p => p.ClienteDeliveryDireccion)
+            .HasMaxLength(300)
+            .IsRequired(false);
+
+        constructor.Property(p => p.ClienteDeliveryReferencia)
+            .HasMaxLength(200)
+            .IsRequired(false);
+
+        constructor.Property(p => p.ClienteDeliveryNotas)
+            .HasMaxLength(300)
+            .IsRequired(false);
+
         // Total es calculado, no se persiste
         constructor.Ignore(p => p.Total);
 
-        // ── Campos de delivery / domicilio (todos opcionales) ──
+        // ── Asignación de repartidor (todos opcionales) ──
         constructor.Property(p => p.RepartidorId).IsRequired(false);
-        constructor.Property(p => p.DireccionEntrega).HasMaxLength(250).IsRequired(false);
-        constructor.Property(p => p.TelefonoCliente).HasMaxLength(30).IsRequired(false);
         constructor.Property(p => p.AsignadoEn).IsRequired(false);
         constructor.Property(p => p.EntregadoEn).IsRequired(false);
 
@@ -47,6 +68,13 @@ internal class PedidoConfiguracion : IEntityTypeConfiguration<Pedido>
             .WithMany()
             .HasForeignKey("MesaId")
             .OnDelete(DeleteBehavior.Restrict);
+
+        constructor.HasOne<Usuario>()
+            .WithMany()
+            .HasForeignKey(p => p.MeseroAsignadoId)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        constructor.HasIndex(p => p.MeseroAsignadoId);
 
         // Detalles mapeados desde la propiedad pública Detalles
         // EF Core descubre automáticamente el backing field _detalles

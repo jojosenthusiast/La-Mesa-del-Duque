@@ -1,0 +1,95 @@
+@page
+@model LaMesaDelDuque.Web.Pages.Operaciones.Mesero.HandoffModel
+@{
+    ViewData["Title"] = "Transferir mesas";
+}
+@Html.AntiForgeryToken()
+
+<section class="container py-4">
+    <div class="d-flex justify-content-between align-items-center gap-3 mb-3">
+        <div>
+            <h1 class="h3 mb-1">Transferir mesas</h1>
+            <p class="text-muted mb-0">Traspasa una mesa activa a otro mesero durante cambio de turno.</p>
+        </div>
+        <a class="btn btn-outline-secondary" asp-page="/Operaciones/Mesero/Index">Volver al POS Mesero</a>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(Model.ToastOk))
+    {
+        <div class="alert alert-success" role="alert">@Model.ToastOk</div>
+    }
+    @if (!string.IsNullOrWhiteSpace(Model.ToastError))
+    {
+        <div class="alert alert-danger" role="alert">@Model.ToastError</div>
+    }
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+            @if (Model.MesasActivas.Count == 0)
+            {
+                <p class="mb-0 text-muted">No tienes mesas activas asignadas para transferir.</p>
+            }
+            else if (Model.MeserosActivos.Count == 0)
+            {
+                <p class="mb-0 text-muted">No hay meseros activos disponibles para recibir mesas.</p>
+            }
+            else
+            {
+                <form method="post" asp-page-handler="Transferir" class="row g-3 align-items-end">
+                    <div class="col-md-5">
+                        <label asp-for="MesaId" class="form-label">Mesa activa</label>
+                        <select asp-for="MesaId" class="form-select" required>
+                            <option value="">Seleccione una mesa</option>
+                            @foreach (var mesa in Model.MesasActivas)
+                            {
+                                <option value="@mesa.MesaId">Mesa @mesa.MesaNumero — @mesa.EstadoPedido — @mesa.Total.ToString("C")</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-5">
+                        <label asp-for="NuevoMeseroId" class="form-label">Transferir a</label>
+                        <select asp-for="NuevoMeseroId" class="form-select" required>
+                            <option value="">Seleccione un mesero</option>
+                            @foreach (var mesero in Model.MeserosActivos)
+                            {
+                                <option value="@mesero.Id">@mesero.NombreCompleto (@mesero.Username)</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-2 d-grid">
+                        <button type="submit" class="btn btn-primary">Transferir</button>
+                    </div>
+                </form>
+            }
+        </div>
+    </div>
+
+    @if (Model.MesasActivas.Count > 0)
+    {
+        <div class="table-responsive mt-4">
+            <table class="table table-sm align-middle">
+                <thead>
+                    <tr>
+                        <th>Mesa</th>
+                        <th>Pedido</th>
+                        <th>Estado</th>
+                        <th>Total</th>
+                        <th>Ocupada</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var mesa in Model.MesasActivas)
+                    {
+                        <tr>
+                            <td>@mesa.MesaNumero</td>
+                            <td>@mesa.PedidoId</td>
+                            <td>@mesa.EstadoPedido</td>
+                            <td>@mesa.Total.ToString("C")</td>
+                            <td>@mesa.MinutosOcupada min</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</section>

@@ -67,8 +67,12 @@ public class MetricaServicioTests : IDisposable
         pedido.AgregarDetalle(new DetallePedido(producto, 2, 3.50m));
         pedido.MarcarEnPreparacion();
         pedido.MarcarEnCobro();
+        var cuenta = pedido.CrearCuentas(1).Single();
+        var usuarioId = Guid.NewGuid();
+        cuenta.Pagar(MetodoPago.Efectivo, usuarioId: usuarioId);
         pedido.MarcarComoPagado();
         _contexto.Set<Pedido>().Add(pedido);
+        _contexto.Set<Pago>().Add(new Pago(cuenta.Id, cuenta.Total, MetodoPago.Efectivo, usuarioId: usuarioId));
         await _contexto.SaveChangesAsync();
 
         var metricas = await _servicio.ObtenerMetricasOperativasAsync();
@@ -99,7 +103,7 @@ public class MetricaServicioTests : IDisposable
 
         var metricas = await _servicio.ObtenerMetricasOperativasAsync();
 
-        Assert.Equal(15.00m, metricas.VentasHoy);
+        Assert.Equal(0m, metricas.VentasHoy);
         Assert.Equal(1, metricas.MesasActivas);
     }
 }

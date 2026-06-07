@@ -8,4 +8,5 @@ public interface ITurnoCajaRepositorio
     Task<TurnoCaja?> ObtenerPorIdAsync(Guid id, CancellationToken ct = default);
     Task<List<TurnoCaja>> ObtenerHistorialAsync(int pagina, int porPagina, CancellationToken ct = default);
     Task AgregarAsync(TurnoCaja turno, CancellationToken ct = default);
+    Task AgregarMovimientoAsync(MovimientoCaja movimiento, CancellationToken ct = default);
 }

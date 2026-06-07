@@ -538,6 +538,7 @@ namespace LaMesaDelDuque.Infraestructura.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<decimal>("StockActual")
+                        .IsConcurrencyToken()
                         .HasPrecision(10, 3)
                         .HasColumnType("numeric(10,3)");
 
@@ -562,7 +563,10 @@ namespace LaMesaDelDuque.Infraestructura.Migrations
 
                     b.HasIndex("ProveedorDefaultId");
 
-                    b.ToTable("Ingrediente");
+                    b.ToTable("Ingrediente", t =>
+                        {
+                            t.HasCheckConstraint("CK_Ingrediente_StockActual_NoNegativo", "\"StockActual\" >= 0");
+                        });
                 });
 
             modelBuilder.Entity("LaMesaDelDuque.Dominio.Entidades.MermaDiaria", b =>
@@ -964,10 +968,36 @@ namespace LaMesaDelDuque.Infraestructura.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<DateTime?>("AsignadoEn")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("ClienteDeliveryDireccion")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<string>("ClienteDeliveryNombre")
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<string>("ClienteDeliveryNotas")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<string>("ClienteDeliveryReferencia")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("ClienteDeliveryTelefono")
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
                     b.Property<DateTime>("CreatedAt")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp with time zone")
                         .HasDefaultValueSql("NOW()");
+
+                    b.Property<DateTime?>("EntregadoEn")
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<string>("Estado")
                         .IsRequired()
@@ -980,6 +1010,12 @@ namespace LaMesaDelDuque.Infraestructura.Migrations
                     b.Property<Guid?>("MesaId")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("MeseroAsignadoId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("RepartidorId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("TipoServicio")
                         .IsRequired()
                         .HasMaxLength(20)
@@ -988,6 +1024,8 @@ namespace LaMesaDelDuque.Infraestructura.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("MesaId");
+
+                    b.HasIndex("MeseroAsignadoId");
 
                     b.ToTable("Pedido");
                 });
@@ -1808,6 +1846,11 @@ namespace LaMesaDelDuque.Infraestructura.Migrations
                         .WithMany()
                         .HasForeignKey("MesaId")
                         .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("LaMesaDelDuque.Dominio.Entidades.Usuario", null)
+                        .WithMany()
+                        .HasForeignKey("MeseroAsignadoId")
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("Mesa");
                 });

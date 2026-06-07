@@ -26,6 +26,8 @@ public class TurnoCajaServicio : ITurnoCajaServicio
 
     public async Task<TurnoCajaDto> AbrirTurnoAsync(Guid cajeroId, decimal fondoInicial, CancellationToken ct = default)
     {
+        await AsegurarDiaOperativoAbiertoAsync(ct);
+
         var turnoActivo = await _uot.TurnosCaja.ObtenerTurnoActivoAsync(ct);
         if (turnoActivo is not null)
             throw new ReglaDominioException("Ya existe un turno de caja activo. Cerralo antes de abrir uno nuevo.");
@@ -79,6 +81,7 @@ public class TurnoCajaServicio : ITurnoCajaServicio
 
         var movimiento = new MovimientoCaja(turnoId, tipo, monto, motivo, usuarioId);
         turno.RegistrarMovimiento(movimiento);
+        await _uot.TurnosCaja.AgregarMovimientoAsync(movimiento, ct);
         await _uot.GuardarCambiosAsync(ct);
     }
 
@@ -122,6 +125,14 @@ public class TurnoCajaServicio : ITurnoCajaServicio
             ObservacionCierre = turno.ObservacionCierre,
             Movimientos = turno.Movimientos.Select(MapMovimiento).ToList()
         };
+    }
+
+    private async Task AsegurarDiaOperativoAbiertoAsync(CancellationToken ct)
+    {
+        var hoy = DateOnly.FromDateTime(DateTime.UtcNow);
+        var cierre = await _uot.CierresDia.ObtenerAbiertoAsync(hoy, ct);
+        if (cierre is null)
+            throw new ReglaDominioException("No hay día operativo abierto. Abra el día en Cierre de Día antes de abrir un turno de caja.");
     }
 
     private static TurnoCajaDto Map(TurnoCaja t) => new()

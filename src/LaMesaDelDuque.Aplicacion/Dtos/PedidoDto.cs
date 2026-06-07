@@ -6,9 +6,16 @@ public class PedidoDto
     public string TipoServicio { get; set; } = string.Empty;
     public Guid? MesaId { get; set; }
     public int? MesaNumero { get; set; }
+    public Guid? MeseroAsignadoId { get; set; }
+    public string? ClienteDeliveryNombre { get; set; }
+    public string? ClienteDeliveryTelefono { get; set; }
+    public string? ClienteDeliveryDireccion { get; set; }
+    public string? ClienteDeliveryReferencia { get; set; }
+    public string? ClienteDeliveryNotas { get; set; }
     public string Estado { get; set; } = string.Empty;
     public decimal Total { get; set; }
     public DateTime FechaCreacion { get; set; }
+    public DateTime? FechaListoDespacho { get; set; }
     public List<DetallePedidoDto> Detalles { get; set; } = [];
 
     // Datos logísticos para pedidos a domicilio. Se exponen en DTO para que Caja

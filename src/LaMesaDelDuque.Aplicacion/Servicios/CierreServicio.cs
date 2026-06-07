@@ -11,8 +11,6 @@ public interface ICierreServicio
     Task<CierreDiaDto> AbrirCierreAsync(Guid usuarioId, CancellationToken ct = default);
     Task<CierreDiaDto> CerrarDiaAsync(CierreCajaRequest req, Guid usuarioId, CancellationToken ct = default);
     Task<List<CierreDiaDto>> HistorialAsync(CancellationToken ct = default);
-    Task<List<PersonalJornadaDto>> PersonalDeLaJornadaAsync(DateOnly fecha, CancellationToken ct = default);
-    Task<List<CanalVentaResumenDto>> TotalesPorCanalAsync(DateOnly fecha, CancellationToken ct = default);
 }
 
 public class CierreServicio : ICierreServicio
@@ -30,23 +28,19 @@ public class CierreServicio : ICierreServicio
     {
         var hoy = DateOnly.FromDateTime(DateTime.UtcNow);
         var cierre = await _uot.CierresDia.ObtenerAbiertoAsync(hoy, ct);
-        return cierre is null ? null : Map(cierre);
+        return cierre is null ? null : await MapConTotalesEnVivoSiAbiertoAsync(cierre, ct);
     }
 
     public async Task<CierreDiaDto> AbrirCierreAsync(Guid usuarioId, CancellationToken ct = default)
     {
         var hoy = DateOnly.FromDateTime(DateTime.UtcNow);
-        // Puede existir un cierre de hoy ya cerrado (la fecha es única). Si es así,
-        // se reabre en lugar de intentar insertar otro (que rompería el índice único).
         var existente = await _uot.CierresDia.ObtenerPorFechaAsync(hoy, ct);
         if (existente is not null)
         {
             if (existente.EsCerrado)
-            {
-                existente.Reabrir();
-                await _uot.GuardarCambiosAsync(ct);
-            }
-            return Map(existente);
+                throw new ReglaDominioException("El día operativo de hoy ya fue cerrado y no puede reabrirse.");
+
+            return await MapConTotalesEnVivoSiAbiertoAsync(existente, ct);
         }
 
         var usuario = await _uot.Usuarios.ObtenerPorIdAsync(usuarioId, ct)
@@ -64,54 +58,14 @@ public class CierreServicio : ICierreServicio
         var cierre = await _uot.CierresDia.ObtenerAbiertoAsync(hoy, ct)
             ?? throw new ReglaDominioException("No hay cierre de día abierto.");
 
-        // ── Totales reales del sistema ──────────────────────────
-        decimal totalVentasEfectivo = 0;
-        decimal totalVentasTarjeta = 0;
-        int totalPedidos = 0;
-        int totalCancelados = 0;
+        var turnoActivo = await _uot.TurnosCaja.ObtenerTurnoActivoAsync(ct);
+        if (turnoActivo is not null)
+            throw new ReglaDominioException("Hay un turno de caja activo. Cierre el turno de caja antes de cerrar el día operativo.");
 
-        try
-        {
-            var pagosHoy = await _uot.Pagos.ObtenerDelDiaAsync(hoy, ct);
-            totalVentasEfectivo = pagosHoy
-                .Where(p => p.Metodo == MetodoPago.Efectivo)
-                .Sum(p => p.Monto);
-            totalVentasTarjeta = pagosHoy
-                .Where(p => p.Metodo != MetodoPago.Efectivo)
-                .Sum(p => p.Monto);
-        }
-        catch
-        {
-            // Fallback: si no hay pagos o la tabla falla, usar lo que declara el usuario
-            totalVentasEfectivo = req.EfectivoReal;
-            totalVentasTarjeta = req.TarjetaReal;
-        }
+        var totales = await CalcularTotalesSistemaAsync(hoy, ct);
 
-        try
-        {
-            totalPedidos = await _uot.Pedidos.ContarDelDiaAsync(hoy, ct);
-            totalCancelados = await _uot.Pedidos.ContarCanceladosDelDiaAsync(hoy, ct);
-        }
-        catch
-        {
-            // Fallback: si no se puede consultar pedidos, dejamos en 0
-        }
-
-        decimal totalMerma = 0;
-        try
-        {
-            var mermas = await _merma.ObtenerMermasDelDiaAsync(ct);
-            totalMerma = mermas.Sum(m => m.Costo);
-        }
-        catch
-        {
-            // Fallback: si falla la consulta de mermas, asumimos 0
-        }
-
-        var totalVentas = totalVentasEfectivo + totalVentasTarjeta;
-
-        cierre.Cerrar(totalVentas, totalVentasEfectivo, totalVentasTarjeta,
-            totalPedidos, totalCancelados, totalMerma,
+        cierre.Cerrar(totales.TotalVentas, totales.TotalEfectivo, totales.TotalTarjeta,
+            totales.TotalPedidos, totales.TotalCancelados, totales.TotalMerma,
             req.EfectivoReal, req.TarjetaReal, req.Observacion);
         await _uot.GuardarCambiosAsync(ct);
         return Map(cierre);
@@ -120,103 +74,76 @@ public class CierreServicio : ICierreServicio
     public async Task<List<CierreDiaDto>> HistorialAsync(CancellationToken ct = default)
     {
         var cierres = await _uot.CierresDia.ObtenerTodosAsync(ct);
-        return cierres.Select(Map).ToList();
-    }
+        var resultado = new List<CierreDiaDto>(cierres.Count);
 
-    public async Task<List<PersonalJornadaDto>> PersonalDeLaJornadaAsync(DateOnly fecha, CancellationToken ct = default)
-    {
-        var usuarios = await _uot.Usuarios.ObtenerTodosAsync(ct);
-        var turnos = await _uot.TurnosCaja.ObtenerHistorialAsync(1, 200, ct);
-        var turnosDelDia = turnos
-            .Where(t => DateOnly.FromDateTime(t.FechaApertura) == fecha)
-            .ToList();
-
-        var lista = new List<PersonalJornadaDto>();
-        foreach (var u in usuarios)
+        foreach (var cierre in cierres)
         {
-            var turno = turnosDelDia.FirstOrDefault(t => t.CajeroId == u.Id);
-            var accedioHoy = u.UltimoAcceso.HasValue && DateOnly.FromDateTime(u.UltimoAcceso.Value) == fecha;
-            if (turno is null && !accedioHoy)
-                continue;
-
-            lista.Add(new PersonalJornadaDto
-            {
-                NombreCompleto = u.NombreCompleto,
-                Rol = u.Rol?.Nombre ?? "—",
-                Entrada = turno?.FechaApertura ?? u.UltimoAcceso,
-                Salida = turno?.FechaCierre,
-                AbrioCaja = turno is not null
-            });
+            resultado.Add(await MapConTotalesEnVivoSiAbiertoAsync(cierre, ct));
         }
 
-        return lista
-            .OrderBy(p => p.Rol)
-            .ThenBy(p => p.NombreCompleto)
-            .ToList();
+        return resultado;
     }
 
-
-    public async Task<List<CanalVentaResumenDto>> TotalesPorCanalAsync(DateOnly fecha, CancellationToken ct = default)
+    private async Task<CierreDiaDto> MapConTotalesEnVivoSiAbiertoAsync(CierreDia cierre, CancellationToken ct)
     {
-        var pedidos = await _uot.Pedidos.ObtenerTodosAsync(ct);
-        var baseDia = pedidos
-            .Where(p => DateOnly.FromDateTime(p.FechaCreacion) == fecha)
-            .Where(p => p.Estado != EstadoPedido.Cancelado && p.Estado != EstadoPedido.AnuladoPago)
-            .ToList();
+        if (cierre.EsCerrado)
+            return Map(cierre);
 
-        return Enum.GetValues<TipoServicio>()
-            .Select(tipo =>
-            {
-                var grupo = baseDia.Where(p => p.TipoServicio == tipo).ToList();
-                return new CanalVentaResumenDto
-                {
-                    TipoServicio = tipo.ToString(),
-                    Nombre = tipo switch
-                    {
-                        TipoServicio.ComerAqui => "Comer aquí",
-                        TipoServicio.ParaLlevar => "Para llevar",
-                        TipoServicio.Domicilio => "Delivery",
-                        _ => tipo.ToString()
-                    },
-                    Pedidos = grupo.Count,
-                    Pagados = grupo.Count(p => p.EstaPagadoCompletamente || p.Estado is EstadoPedido.Pagado or EstadoPedido.Despachado),
-                    TotalVendido = grupo
-                        .Where(p => p.EstaPagadoCompletamente || p.Estado is EstadoPedido.Pagado or EstadoPedido.Despachado)
-                        .Sum(p => p.Total)
-                };
-            })
-            .OrderBy(c => c.Nombre)
-            .ToList();
+        var totales = await CalcularTotalesSistemaAsync(cierre.Fecha, ct);
+        return Map(cierre, totales);
     }
 
-    private static CierreDiaDto Map(CierreDia c) => new()
+    private async Task<TotalesSistemaCierre> CalcularTotalesSistemaAsync(DateOnly fecha, CancellationToken ct)
+    {
+        var pagos = await _uot.Pagos.ObtenerDelDiaAsync(fecha, ct);
+        var totalEfectivo = pagos
+            .Where(p => p.Metodo == MetodoPago.Efectivo)
+            .Sum(p => p.Monto);
+        var totalNoEfectivo = pagos
+            .Where(p => p.Metodo != MetodoPago.Efectivo)
+            .Sum(p => p.Monto);
+        var totalVentas = totalEfectivo + totalNoEfectivo;
+
+        var totalPedidos = await _uot.Pedidos.ContarPagadosDelDiaAsync(fecha, ct);
+        var totalCancelados = await _uot.Pedidos.ContarCanceladosDelDiaAsync(fecha, ct);
+        var totalMerma = 0m;
+
+        if (fecha == DateOnly.FromDateTime(DateTime.UtcNow))
+        {
+            var mermas = await _merma.ObtenerMermasDelDiaAsync(ct);
+            totalMerma = mermas.Sum(m => m.Costo);
+        }
+
+        return new TotalesSistemaCierre(totalVentas, totalEfectivo, totalNoEfectivo, totalPedidos, totalCancelados, totalMerma);
+    }
+
+    private static CierreDiaDto Map(CierreDia c, TotalesSistemaCierre? totales = null) => new()
     {
         Id = c.Id,
         Fecha = c.Fecha,
-        TotalVentas = c.TotalVentas,
-        TotalEfectivo = c.TotalVentasEfectivo,
-        TotalTarjeta = c.TotalVentasTarjeta,
-        TotalPedidos = c.TotalPedidos,
-        Cancelados = c.TotalPedidosCancelados,
-        TotalMerma = c.TotalMermaValorizada,
+        TotalVentas = totales?.TotalVentas ?? c.TotalVentas,
+        TotalEfectivo = totales?.TotalEfectivo ?? c.TotalVentasEfectivo,
+        TotalTarjeta = totales?.TotalTarjeta ?? c.TotalVentasTarjeta,
+        TotalPedidos = totales?.TotalPedidos ?? c.TotalPedidos,
+        Cancelados = totales?.TotalCancelados ?? c.TotalPedidosCancelados,
+        TotalMerma = totales?.TotalMerma ?? c.TotalMermaValorizada,
         EfectivoReal = c.EfectivoReal,
         TarjetaReal = c.TarjetaReal,
         DiferenciaEfectivo = c.DiferenciaEfectivo,
         DiferenciaTarjeta = c.DiferenciaTarjeta,
         EsCerrado = c.EsCerrado,
         CerradoEn = c.CerradoEn,
-        Observacion = c.Observacion
+        Observacion = c.Observacion,
+        UsuarioNombre = c.Usuario?.NombreCompleto ?? (c.UsuarioId == Guid.Empty ? "-" : c.UsuarioId.ToString())
     };
-}
 
-
-public class CanalVentaResumenDto
-{
-    public string TipoServicio { get; set; } = string.Empty;
-    public string Nombre { get; set; } = string.Empty;
-    public int Pedidos { get; set; }
-    public int Pagados { get; set; }
-    public decimal TotalVendido { get; set; }
+    private sealed record TotalesSistemaCierre(
+        decimal TotalVentas,
+        decimal TotalEfectivo,
+        decimal TotalTarjeta,
+        int TotalPedidos,
+        int TotalCancelados,
+        decimal TotalMerma);
 }
 
 public class CierreDiaDto
@@ -236,6 +163,7 @@ public class CierreDiaDto
     public bool EsCerrado { get; set; }
     public DateTime? CerradoEn { get; set; }
     public string? Observacion { get; set; }
+    public string UsuarioNombre { get; set; } = "-";
 }
 
 public class CierreCajaRequest
@@ -243,13 +171,4 @@ public class CierreCajaRequest
     public decimal EfectivoReal { get; set; }
     public decimal TarjetaReal { get; set; }
     public string? Observacion { get; set; }
-}
-
-public class PersonalJornadaDto
-{
-    public string NombreCompleto { get; set; } = string.Empty;
-    public string Rol { get; set; } = string.Empty;
-    public DateTime? Entrada { get; set; }
-    public DateTime? Salida { get; set; }
-    public bool AbrioCaja { get; set; }
 }

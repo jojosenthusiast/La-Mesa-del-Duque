@@ -28,8 +28,7 @@ internal class CocinaServicio : ICocinaServicio
             ? pedido.Detalles.Where(d => filtro.Contains(d.Id)).ToList()
             : pedido.Detalles.ToList();
 
-        var ordenesExistentes = await _uot.OrdenesCocina.ListarPorPedidoAsync(pedidoId, ct);
-        var detallesYaEnCocina = ordenesExistentes
+        var detallesYaEnCocina = (await _uot.OrdenesCocina.ListarPorPedidoAsync(pedidoId, ct))
             .Where(o => o.DetallePedidoId.HasValue)
             .Select(o => o.DetallePedidoId!.Value)
             .ToHashSet();
@@ -40,6 +39,7 @@ internal class CocinaServicio : ICocinaServicio
         {
             if (detallesYaEnCocina.Contains(detalle.Id))
                 continue;
+
             var estacion = detalle.Producto.Categoria?.EstacionCocina ?? EstacionCocina.Expo;
 
             var (alergenos, quitados, extras, curso) = ParsearModificaciones(detalle.ModificacionesJson);
@@ -62,20 +62,19 @@ internal class CocinaServicio : ICocinaServicio
                 alergenos,
                 quitados,
                 extras,
-                ResolverCocinero(estacion),
+                null,
                 detalle.Producto.Id,
                 cursoCocina,
                 detalle.Producto.TiempoPreparacionMin);
 
             await _uot.OrdenesCocina.AgregarAsync(orden, ct);
+            detallesYaEnCocina.Add(detalle.Id);
             ordenesCreadas.Add(orden);
         }
 
-        if (ordenesCreadas.Count == 0)
-            return;
-
         await _uot.GuardarCambiosAsync(ct);
 
+        // Notificar a cada estación
         foreach (var orden in ordenesCreadas)
         {
             await _notificador.NotificarOrdenCocinaAsync(orden.Estacion.ToString(), MapToDto(orden), ct);
@@ -102,18 +101,11 @@ internal class CocinaServicio : ICocinaServicio
         if (ordenesPedido.Count > 0 && ordenesPedido.All(o => o.Estado == EstadoLineaCocina.Listo))
         {
             var pedido = await _uot.Pedidos.ObtenerConDetallesParaActualizarAsync(orden.PedidoId, ct);
-            if (pedido is not null && pedido.Estado != EstadoPedido.Listo && pedido.Estado != EstadoPedido.Despachado)
+            if (pedido is not null && pedido.Estado == EstadoPedido.EnPreparacion)
             {
-                try
-                {
-                    pedido.MarcarListo();
-                    await _uot.GuardarCambiosAsync(ct);
-                    await _notificador.NotificarEstadoCambiadoAsync(pedido.Id, pedido.Estado, ct);
-                }
-                catch
-                {
-                    // Si el pedido no está en estado que permita Listo, ignorar
-                }
+                pedido.MarcarListo();
+                await _uot.GuardarCambiosAsync(ct);
+                await _notificador.NotificarEstadoCambiadoAsync(pedido.Id, pedido.Estado, ct);
             }
         }
 
@@ -201,20 +193,6 @@ internal class CocinaServicio : ICocinaServicio
         if (!string.IsNullOrWhiteSpace(extras)) partes.Add($"Extra: {extras}");
 
         return partes.Count > 0 ? string.Join(" | ", partes) : null;
-    }
-
-
-    private static int ResolverCocinero(EstacionCocina estacion)
-    {
-        return estacion switch
-        {
-            EstacionCocina.Parrilla => 1,
-            EstacionCocina.Expo => 1,
-            EstacionCocina.Fria => 2,
-            EstacionCocina.Bar => 2,
-            EstacionCocina.Caliente => 3,
-            _ => 1
-        };
     }
 
     private static OrdenCocinaDto MapToDto(OrdenCocina orden)

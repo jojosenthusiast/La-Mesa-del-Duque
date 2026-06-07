@@ -2,6 +2,40 @@
 @model LaMesaDelDuque.Web.Pages.Operaciones.Pedidos.IndexModel
 @{
     ViewData["Title"] = "Pedidos";
+    var jsonOptions = new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase };
+    var mesasPos = Model.Vm.MesasDisponibles.Select(m =>
+    {
+        var pedidoMesa = Model.Vm.PedidosActivos
+            .Concat(Model.Vm.PedidosPendientesDespacho)
+            .Where(p => p.MesaId == m.Id)
+            .OrderByDescending(p => p.FechaCreacion)
+            .FirstOrDefault();
+
+        return new
+        {
+            m.Id,
+            m.Numero,
+            m.Capacidad,
+            m.Estado,
+            Zona = m.Capacidad <= 2 ? "Pequeña" : m.Capacidad <= 4 ? "Mediana" : "Grande",
+            PedidoActualId = pedidoMesa?.Id,
+            PedidoTotal = pedidoMesa?.Total,
+            PedidoEstado = pedidoMesa?.Estado,
+            PedidoFechaCreacion = pedidoMesa?.FechaCreacion,
+            GraciaHasta = m.GraciaHasta
+        };
+    });
+
+    var productosPos = Model.Vm.ProductosDisponibles
+        .Select(p => new { p.Id, p.Nombre, p.Precio, p.CategoriaNombre, p.TiempoPreparacionMin, p.ImagenUrl });
+
+    var deliveriesActivos = Model.Vm.PedidosActivos
+        .Where(p => p.TipoServicio == "Delivery")
+        .Select(p => new { p.Id, p.Total, p.Estado, p.ClienteDeliveryNombre, p.ClienteDeliveryTelefono, p.ClienteDeliveryDireccion, p.ClienteDeliveryReferencia, p.ClienteDeliveryNotas });
+
+    var paraLlevarActivos = Model.Vm.PedidosActivos
+        .Where(p => p.TipoServicio == "ParaLlevar")
+        .Select(p => new { p.Id, p.Total, p.Estado, p.FechaCreacion });
 }
 @Html.AntiForgeryToken()
 
@@ -14,20 +48,18 @@
 </section>
 
 <script>
-    window.__lmdMesasDisponibles = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
-        Model.Vm.MesasDisponibles.Where(m => m.Estado == "Disponible").Select(m => new { m.Id, m.Numero, m.Capacidad, Zona = m.Capacidad <= 2 ? "Pequeña" : m.Capacidad <= 4 ? "Mediana" : "Grande" }),
-        new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase }));
+    window.__lmdMesasDisponibles = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(mesasPos, jsonOptions));
 
     window.__lmdProductosDisponibles = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
         Model.Vm.ProductosDisponibles.Select(p => new { p.Id, p.Nombre, p.Precio, p.CategoriaNombre, p.TiempoPreparacionMin, p.ImagenUrl, TieneReceta = Model.ProductosConReceta.Contains(p.Id) }),
-        new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase }));
+        jsonOptions));
 
-    window.__lmdRepartidoresDisponibles = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
-        Model.Vm.RepartidoresDisponibles.Select(r => new { r.Id, r.Nombre }),
-        new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase }));
+    window.__lmdPedidosDeliveryActivos = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(deliveriesActivos, jsonOptions));
+
+    window.__lmdPedidosParaLlevarActivos = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(paraLlevarActivos, jsonOptions));
 </script>
 
 @section Scripts {
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.0/signalr.min.js"></script>
+    <script src="~/lib/microsoft/signalr/dist/browser/signalr.min.js"></script>
     <script src="~/js/pos.js" asp-append-version="true"></script>
 }

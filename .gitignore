@@ -125,3 +125,4 @@ lmd-superfix/
 lmd-superfix-*/
 lmd-migrations.db
 qa-output/
+.codex-runtime/

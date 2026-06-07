@@ -4,6 +4,50 @@ Todas las modificaciones notables de este proyecto se documentarán en este arch
 
 El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/),
 y este proyecto adhiere al [Versionado Semántico](https://semver.org/lang/es/).
+## [1.0.0](https://github.com/jojosenthusiast/La-Mesa-del-Duque/compare/v0.13.0...v1.0.0) (2026-05-09)
+
+
+### ⚠ BREAKING CHANGES
+
+* primera versión operativa completa del sistema de restaurante. Cubre 8 historias de usuario, frontend operativo de 4 módulos, 207 tests, autenticación BCrypt, autorización por roles, SignalR y documentación curada.
+
+### Nuevas funcionalidades
+
+* **db:** agregar helper de conexión Supabase, script RLS e índices de rendimiento ([29cdbff](https://github.com/jojosenthusiast/La-Mesa-del-Duque/commit/29cdbff6bae135b6aa9db13b2f15af6fe942a61b))
+* **db:** generar script DDL idempotente completo (27 tablas, 821 líneas) ([026b6ed](https://github.com/jojosenthusiast/La-Mesa-del-Duque/commit/026b6ed3d36c97c0617c1f05b754d8377014ff17))
+* verificación integrada y cierre del Sprint 1 — Slice 8 ([f218a39](https://github.com/jojosenthusiast/La-Mesa-del-Duque/commit/f218a3907d3b48c6d9cffca6331029d50083e960))
+
+
+### Correcciones
+
+* autorización por rol en navbar y PageModels, SQLite fallback desarrollo, cookies SameAsRequest, seed 4 usuarios ([a57cc8c](https://github.com/jojosenthusiast/La-Mesa-del-Duque/commit/a57cc8cb84ebff39a8dc4ed90d7a957253e48630))
+* **db:** agregar columna Modulo y Descripcion al seed de Permisos ([4fefcce](https://github.com/jojosenthusiast/La-Mesa-del-Duque/commit/4fefcce9438906cea621a619c188718592dd673e))
+* **db:** corregir nombres de columna en RLS (CategoriaId, Fecha) ([4bd0d4c](https://github.com/jojosenthusiast/La-Mesa-del-Duque/commit/4bd0d4c85878b05303479acf8e07c2774949218d))
+* **db:** corregir nombres de política RLS (escapar %I para evitar comillas en nombres) ([b0d3191](https://github.com/jojosenthusiast/La-Mesa-del-Duque/commit/b0d319115697b857f9024b8820014375d4a29472))
+* **db:** corregir nombres de tabla en script RLS para coincidir con EF Core ([a3fc870](https://github.com/jojosenthusiast/La-Mesa-del-Duque/commit/a3fc870f929c15bb78611d3069ee2d6dd9128e25))
+* **db:** corregir UUIDs inválidos (g→0a, h→0b) en seed de Proveedor e Ingrediente ([f9811b5](https://github.com/jojosenthusiast/La-Mesa-del-Duque/commit/f9811b5ba6a85605c357979dfeaca077b8586995))
+* **db:** hacer script RLS idempotente — limpiar políticas existentes antes de crear ([da7dc5d](https://github.com/jojosenthusiast/La-Mesa-del-Duque/commit/da7dc5da1cce837e33224a40d7b97ef270ed58bd))
+* **db:** simplificar ConexionHelper — usar NpgsqlConnectionStringBuilder nativo para URLs pooler ([a7b4b63](https://github.com/jojosenthusiast/La-Mesa-del-Duque/commit/a7b4b63737d7806b2399e5931f73037040e3fb9f))
+* endurecer seguridad y corregir hallazgos críticos pre-1.0.0 ([06ab620](https://github.com/jojosenthusiast/La-Mesa-del-Duque/commit/06ab62074e20c3a2ec200054cf670c6749ef357e))
+* proteger IndexModel contra User null en tests, filtrar módulos por autenticación ([fe7fcfa](https://github.com/jojosenthusiast/La-Mesa-del-Duque/commit/fe7fcfa74110281bc85192dd41993e5f09d7d18c))
+* resolver conflicto de merge en CHANGELOG.md ([70f2e63](https://github.com/jojosenthusiast/La-Mesa-del-Duque/commit/70f2e63c81896c0334aac42e37592e229719c5a0))
+* **ui:** corregir navbar condicional por auth, usar logo canvas transparente, agregar seed data completo ([6f57eb8](https://github.com/jojosenthusiast/La-Mesa-del-Duque/commit/6f57eb8d635b2e3694474f00533ad914fe613f38))
+
+
+### Mejoras de rendimiento
+
+* **db:** optimizar políticas RLS con SELECT subquery para evitar re-evaluación por fila ([34d68e5](https://github.com/jojosenthusiast/La-Mesa-del-Duque/commit/34d68e52336d5eccb646f1766ad0177336151e0e))
+
+
+### Documentación
+
+* **release:** ampliar notas de las versiones 0.12.0 y 0.13.0 ([b2cf9eb](https://github.com/jojosenthusiast/La-Mesa-del-Duque/commit/b2cf9ebf1a2b92fc56615771e056dcafb188944a))
+
+
+### Pruebas
+
+* actualizar tests de infraestructura para SQLite fallback y tests de IndexPage para roles dinámicos ([7ac18f6](https://github.com/jojosenthusiast/La-Mesa-del-Duque/commit/7ac18f62f5dba0883a274e5f54dce178ae4d9fc4))
+
 ## [0.13.0](https://github.com/jojosenthusiast/La-Mesa-del-Duque/compare/v0.12.0...v0.13.0) (2026-05-09)
 
 ### Summary

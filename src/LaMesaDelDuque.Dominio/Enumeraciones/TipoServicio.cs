@@ -4,5 +4,5 @@ public enum TipoServicio
 {
     ParaLlevar,
     ComerAqui,
-    Domicilio
+    Delivery
 }

@@ -7,17 +7,54 @@
 
     // ── Helpers ────────────────────────────────────────
     function icon(name, cls) {
-        return '<svg class="lmd-icon ' + (cls || '') + '" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="https://cdn.jsdelivr.net/npm/lucide-static@latest/icons/' + name + '.svg#icon"/></svg>';
+        return '<svg class="lmd-icon ' + (cls || '') + '" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="/lib/lucide-static/icons/' + name + '.svg#icon"/></svg>';
     }
 
     function fmt(n) {
         return new Intl.NumberFormat('es-SV', { style: 'currency', currency: 'USD' }).format(n || 0);
     }
 
+    function escapeHtml(value) {
+        return String(value ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    function escapeJsString(value) {
+        return String(value ?? '')
+            .replace(/\\/g, '\\\\')
+            .replace(/'/g, "\\'")
+            .replace(/\r/g, '\\r')
+            .replace(/\n/g, '\\n')
+            .replace(/</g, '\\x3C')
+            .replace(/>/g, '\\x3E')
+            .replace(/&/g, '\\x26')
+            .replace(/"/g, '&quot;');
+    }
+
+    function fechaServidor(value) {
+        if (!value) return null;
+        var text = String(value);
+        if (/Z$|[+-]\d{2}:?\d{2}$/.test(text)) return new Date(text);
+        return new Date(text + 'Z');
+    }
+
+    async function confirmarAccion(message) {
+        if (typeof window.lmdConfirm === 'function') {
+            return await window.lmdConfirm(message);
+        }
+        return window.confirm(message);
+    }
+
+
     // ── State ──────────────────────────────────────────
     var state = {
         mesas: [],
         mesaActual:     null,
+        tipoServicio:   'ComerAqui',
         pedidoDetalles: [],
         pedidoTotal:    0,
         pedidoEstado:   null,
@@ -69,6 +106,18 @@
         });
     }
 
+    function productoPorId(productoId) {
+        return (window.__lmdProductosMesero || []).find(function (p) { return p.id === productoId; });
+    }
+
+    function productoRequiereConfirmacion(producto) {
+        return !!(producto && producto.tieneReceta);
+    }
+
+    function crearConfirmacionOriginal() {
+        return JSON.stringify([{ ingredienteId: '00000000-0000-0000-0000-000000000000', ingredienteNombre: 'Ingredientes confirmados', accion: 'confirmado', motivo: 'confirmado', ingredienteReemplazoId: null, ingredienteReemplazoNombre: null }]);
+    }
+
     // ═══════════════════════════════════════════════════
     // GRID DE MESAS
     // ═══════════════════════════════════════════════════
@@ -84,23 +133,36 @@
 
     function renderGrid() {
         var mesas = state.mesas;
-        var grupos = {};
-        mesas.forEach(function (m) {
-            var cap = m.capacidad || 0;
-            if (!grupos[cap]) grupos[cap] = [];
-            grupos[cap].push(m);
-        });
-        var caps = Object.keys(grupos).map(Number).sort(function (a, b) { return a - b; });
+        var secciones = [
+            { key: 'enCaja', titulo: 'En caja', ayuda: 'Cuentas enviadas para cobro', mesas: [] },
+            { key: 'ocupadas', titulo: 'Ocupadas', ayuda: 'Mesas con pedido activo', mesas: [] },
+            { key: 'disponibles', titulo: 'Disponibles', ayuda: 'Listas para tomar pedido', mesas: [] },
+            { key: 'noDisponibles', titulo: 'No disponibles', ayuda: 'Reservadas, en gracia o mantenimiento', mesas: [] }
+        ];
+        var seccionPorKey = secciones.reduce(function (acc, s) { acc[s.key] = s; return acc; }, {});
 
-        var mesasHtml = '';
-        caps.forEach(function (cap) {
-            mesasHtml += '<div class="lmd-pos-mesa-zona-separator">' + cap + ' personas</div>';
-            grupos[cap].forEach(function (m) {
+        mesas.forEach(function (m) {
+            var disponible = m.estado === 'Disponible';
+            var graciaHasta = fechaServidor(m.graciaHasta);
+            var enGracia   = disponible && graciaHasta && graciaHasta > Date.now();
+            var hayTab     = !disponible && m.pedidoActualId;
+            var enCobro    = hayTab && m.pedidoEstado === 'EnCobro';
+
+            if (enCobro) seccionPorKey.enCaja.mesas.push(m);
+            else if (hayTab) seccionPorKey.ocupadas.mesas.push(m);
+            else if (disponible && !enGracia) seccionPorKey.disponibles.mesas.push(m);
+            else seccionPorKey.noDisponibles.mesas.push(m);
+        });
+
+        var mesasHtml = secciones.map(function (seccion) {
+            if (seccion.mesas.length === 0) return '';
+            seccion.mesas.sort(function (a, b) { return (a.numero || 0) - (b.numero || 0); });
+            var cards = seccion.mesas.map(function (m) {
                 var disponible = m.estado === 'Disponible';
-                var enGracia   = disponible && m.graciaHasta && new Date(m.graciaHasta) > Date.now();
-                var hayTab     = !!m.pedidoActualId;
+                var graciaHasta = fechaServidor(m.graciaHasta);
+                var enGracia   = disponible && graciaHasta && graciaHasta > Date.now();
+                var hayTab     = !disponible && m.pedidoActualId;
                 var enCobro    = hayTab && m.pedidoEstado === 'EnCobro';
-                var ocupadaSinPedido = !disponible && !hayTab && !enGracia;
                 var cls = enGracia  ? 'lmd-pos-mesa-card--en-gracia'
                     : disponible    ? 'lmd-pos-mesa-card--disponible'
                     : enCobro       ? 'lmd-pos-mesa-card--en-cobro'
@@ -108,43 +170,51 @@
                 var onclick = enGracia   ? ''
                     : hayTab     ? ' onclick="mesero.abrirDetalle(\'' + m.id + '\')"'
                     : disponible ? ' onclick="mesero.abrirNuevoPedido(\'' + m.id + '\')"'
-                    : ocupadaSinPedido ? ' onclick="mesero.liberarMesaManual(\'' + m.id + '\')"'
                     : '';
 
                 var badgeHtml = '';
                 if (enGracia) {
-                    var secsLeft = Math.max(0, Math.floor((new Date(m.graciaHasta).getTime() - Date.now()) / 1000));
+                    var secsLeft = Math.max(0, Math.floor((graciaHasta.getTime() - Date.now()) / 1000));
                     var mins = Math.floor(secsLeft / 60), secs = secsLeft % 60;
                     badgeHtml = '<span class="lmd-pos-mesa-card__gracia-badge" data-gracia-hasta="' + m.graciaHasta + '">' +
                         icon('timer') + ' <span class="lmd-gracia-tiempo">' + mins + ':' + (secs < 10 ? '0' : '') + secs + '</span></span>';
                 } else if (enCobro) {
-                    badgeHtml = '<span class="lmd-pos-mesa-card__cobrar-badge">' + icon('receipt') + ' Cobrar</span>';
+                    badgeHtml = '<span class="lmd-pos-mesa-card__cobrar-badge">' + icon('receipt') + ' En caja</span>';
                 } else if (hayTab) {
-                    var minTab = m.pedidoFechaCreacion
-                        ? Math.floor((Date.now() - new Date(m.pedidoFechaCreacion).getTime()) / 60000) : 0;
+                    var fechaPedido = fechaServidor(m.pedidoFechaCreacion);
+                    var minTab = fechaPedido ? Math.floor((Date.now() - fechaPedido.getTime()) / 60000) : 0;
                     badgeHtml = '<span class="lmd-pos-mesa-card__tab-badge" data-pedido-fecha="' + (m.pedidoFechaCreacion || '') + '">' +
                         icon('clock') + ' <span class="lmd-tab-tiempo">' + (minTab > 0 ? minTab + ' min' : 'Tab') + '</span></span>';
-                } else if (ocupadaSinPedido) {
-                    badgeHtml = '<span class="lmd-pos-mesa-card__tab-badge">' + icon('unlock') + ' Tocar para liberar</span>';
+                } else if (!disponible) {
+                    badgeHtml = '<span class="lmd-pos-mesa-card__tab-badge">' + escapeHtml(m.estado || 'No disponible') + '</span>';
                 }
 
-                mesasHtml += '<div class="lmd-pos-mesa-card ' + cls + '"' + onclick + '>' +
+                return '<div class="lmd-pos-mesa-card ' + cls + '"' + onclick + '>' +
                     '<span class="lmd-pos-mesa-card__numero">' + m.numero + '</span>' +
                     '<span class="lmd-pos-mesa-card__capacidad">' + m.capacidad + ' pax</span>' +
                     badgeHtml +
-                    (m.zona ? '<span class="lmd-pos-mesa-card__zona">' + m.zona + '</span>' : '') +
+                    (m.zona ? '<span class="lmd-pos-mesa-card__zona">' + escapeHtml(m.zona) + '</span>' : '') +
                 '</div>';
-            });
-        });
+            }).join('');
+            return '<section class="lmd-mesero-mesa-section lmd-mesero-mesa-section--' + seccion.key + '">' +
+                '<div class="lmd-mesero-mesa-section__header">' +
+                    '<div><span class="lmd-mesero-mesa-section__title">' + seccion.titulo + '</span>' +
+                    '<span class="lmd-mesero-mesa-section__help">' + seccion.ayuda + '</span></div>' +
+                    '<span class="lmd-mesero-mesa-section__count">' + seccion.mesas.length + '</span>' +
+                '</div>' +
+                '<div class="lmd-pos-mesas-grid lmd-mesero-grid">' + cards + '</div>' +
+            '</section>';
+        }).join('');
 
         SHELL.innerHTML =
             '<div class="lmd-mesero-wrap">' +
                 '<div class="lmd-mesero-header">' +
                     icon('utensils-crossed') +
                     '<span>Salón</span>' +
+                    '<button class="lmd-mesero-refrescar lmd-mesero-header-action" onclick="mesero.abrirParaLlevar()" title="Nuevo pedido para llevar">' + icon('package') + ' Para llevar</button>' +
                     '<button class="lmd-mesero-refrescar" onclick="mesero.refrescarGrid()" title="Refrescar">' + icon('refresh-cw') + '</button>' +
                 '</div>' +
-                '<div class="lmd-pos-mesas-grid lmd-mesero-grid">' +
+                '<div class="lmd-mesero-secciones">' +
                     (mesasHtml || '<div class="lmd-pos-empty">Sin mesas configuradas</div>') +
                 '</div>' +
             '</div>';
@@ -189,31 +259,24 @@
     function _renderDetalle() {
         var m       = state.mesaActual;
         var enCobro = state.pedidoEstado === 'EnCobro';
+        var esParaLlevar = state.tipoServicio === 'ParaLlevar';
+        var tituloPedido = esParaLlevar ? 'Para llevar' : 'Mesa ' + escapeHtml(m.numero);
 
         var estadoLabel = _ESTADO_LABEL[state.pedidoEstado] || state.pedidoEstado || '';
         var estadoBadge = estadoLabel
             ? '<span class="lmd-mesero-estado-badge lmd-mesero-estado-badge--' +
-              (state.pedidoEstado || '').toLowerCase() + '">' + estadoLabel + '</span>'
+              escapeHtml((state.pedidoEstado || '').toLowerCase()) + '">' + escapeHtml(estadoLabel) + '</span>'
             : '';
 
         var itemsHtml = state.pedidoDetalles.length === 0
             ? '<div class="lmd-pos-empty" style="padding:1.5rem 1rem;">' + icon('package-open') + ' Sin ítems</div>'
             : state.pedidoDetalles.map(function (d) {
-                var qtyHtml = enCobro
-                    ? '<span class="lmd-mesero-item__cant">× ' + d.cantidad + '</span>'
-                    : '<div class="lmd-mesero-item__qty-ctrl">' +
-                        '<button onclick="mesero.ajustarCantidad(\'' + m.pedidoActualId + '\',\'' + d.id + '\',-1)">' + icon('minus') + '</button>' +
-                        '<span>' + d.cantidad + '</span>' +
-                        '<button onclick="mesero.ajustarCantidad(\'' + m.pedidoActualId + '\',\'' + d.id + '\',1)">' + icon('plus') + '</button>' +
-                      '</div>';
-                var voidBtn = !enCobro
-                    ? '<button class="lmd-mesero-item__void" title="Anular" ' +
-                      'onclick="mesero.voidItem(\'' + m.pedidoActualId + '\',\'' + d.id + '\',\'' + d.productoNombre.replace(/'/g, "\\'") + '\')">' +
-                      icon('trash-2') + '</button>'
-                    : '';
+                var qtyHtml = '<span class="lmd-mesero-item__cant">× ' + d.cantidad + '</span>' +
+                    '<span class="lmd-mesero-item__enviado">En cocina</span>';
+                var voidBtn = '';
                 return '<div class="lmd-mesero-item">' +
                     '<div class="lmd-mesero-item__info">' +
-                        '<span class="lmd-mesero-item__nombre">' + d.productoNombre + '</span>' +
+                        '<span class="lmd-mesero-item__nombre">' + escapeHtml(d.productoNombre) + '</span>' +
                         qtyHtml +
                     '</div>' +
                     '<div class="lmd-mesero-item__right">' +
@@ -224,15 +287,14 @@
             }).join('');
 
         var accionesHtml = enCobro
-            ? '<button class="lmd-mesero-btn lmd-mesero-btn--cobrar" onclick="mesero.abrirPago()">' +
-                icon('credit-card') + ' Cobrar</button>'
+            ? '<div class="lmd-mesero-cuenta-en-caja">' + icon('receipt') + ' Cuenta enviada a caja</div>'
             : '<button class="lmd-mesero-btn" onclick="mesero.abrirAgregar()">' + icon('plus') + ' Agregar</button>' +
-              '<button class="lmd-mesero-btn lmd-mesero-btn--cuenta" onclick="mesero.pedirCuenta()">' + icon('receipt') + ' Pedir cuenta</button>';
+              '<button class="lmd-mesero-btn lmd-mesero-btn--cuenta" onclick="mesero.pedirCuenta()">' + icon('receipt') + ' Enviar cuenta a caja</button>';
 
         var html =
             '<div class="lmd-pos-ov-header">' +
                 '<button class="lmd-pos-ov-back" onclick="mesero.cerrarDetalle()">' + icon('arrow-left') + '</button>' +
-                '<span class="lmd-pos-ov-title">' + icon('armchair') + ' Mesa ' + m.numero + estadoBadge + '</span>' +
+                '<span class="lmd-pos-ov-title">' + icon(esParaLlevar ? 'package' : 'armchair') + ' ' + tituloPedido + estadoBadge + '</span>' +
                 '<div class="lmd-pos-ov-total">' + fmt(state.pedidoTotal) + '</div>' +
             '</div>' +
             '<div class="lmd-mesero-detalle-body">' +
@@ -251,7 +313,7 @@
     function cerrarDetalle() { cerrarOverlay('detalle'); }
 
     async function voidItem(pedidoId, detalleId, nombre) {
-        var ok = await window.lmdConfirm('¿Anular "' + nombre + '"?');
+        var ok = await confirmarAccion('¿Anular "' + nombre + '"?');
         if (!ok) return;
         try {
             var res  = await postJson('EliminarLineaJson', { pedidoId: pedidoId, detalleId: detalleId });
@@ -282,7 +344,9 @@
     async function pedirCuenta() {
         var m = state.mesaActual;
         if (!m) return;
-        var ok = await window.lmdConfirm('¿Solicitar cuenta para Mesa ' + m.numero + '?');
+        if (!m.pedidoActualId) { window.lmdToast('No hay pedido activo.', 'error'); return; }
+        var etiqueta = state.tipoServicio === 'ParaLlevar' ? 'pedido para llevar' : 'Mesa ' + m.numero;
+        var ok = await confirmarAccion('¿Enviar cuenta de ' + etiqueta + ' a caja?');
         if (!ok) return;
         try {
             var res  = await postJson('MarcarEnCobroJson', { pedidoId: m.pedidoActualId });
@@ -292,13 +356,23 @@
             _renderDetalle();
             await refrescarMesas();
             renderGrid();
-            window.lmdToast('Cuenta solicitada — Mesa ' + m.numero, 'success');
+            window.lmdToast('Cuenta enviada a caja — ' + etiqueta, 'success');
         } catch (e) { window.lmdToast('Error de conexión', 'error'); }
+    }
+
+    function abrirParaLlevar() {
+        state.tipoServicio = 'ParaLlevar';
+        state.mesaActual = { id: null, numero: null, pedidoActualId: null, tipoServicio: 'ParaLlevar' };
+        state.carrito = [];
+        state.catFiltro = 'Todos';
+        state.busquedaProd = '';
+        _renderAgregar();
     }
 
     function abrirNuevoPedido(mesaId) {
         var m = state.mesas.find(function (x) { return x.id === mesaId; });
         if (!m || m.estado !== 'Disponible') return;
+        state.tipoServicio = 'ComerAqui';
         state.mesaActual   = m;
         state.carrito      = [];
         state.catFiltro    = 'Todos';
@@ -306,37 +380,17 @@
         _renderAgregar();
     }
 
-    async function liberarMesaManual(mesaId) {
-        var m = state.mesas.find(function (x) { return x.id === mesaId; });
-        if (!m) return;
-        var ok = await window.lmdConfirm('¿Marcar Mesa ' + m.numero + ' como disponible?');
-        if (!ok) return;
-        try {
-            var res = await postJson('CambiarEstadoMesaJson', { mesaId: m.id, estado: 'Disponible' });
-            var data = await res.json().catch(function () { return {}; });
-            if (!res.ok) {
-                window.lmdToast(data.error || 'No se pudo liberar la mesa', 'error');
-                return;
-            }
-            await refrescarMesas();
-            renderGrid();
-            window.lmdToast('Mesa ' + m.numero + ' disponible', 'success');
-        } catch (e) {
-            window.lmdToast('Error de conexión', 'error');
-        }
-    }
-
     async function _crearPedidoConItems(m) {
         var itemsJson = JSON.stringify(state.carrito.map(function (i) {
-            return {
-                productoId: i.id,
-                cantidad: i.cantidad,
-                notas: i.notas || null,
-                modificacionesJson: i.modificacionesJson || null
-            };
+            return { productoId: i.id, cantidad: i.cantidad, notas: i.notas || null, modificacionesJson: i.modificacionesJson || null };
         }));
         try {
-            var res  = await postJson('CrearConItemsJson', { mesaId: m.id, itemsJson: itemsJson });
+            var tipoServicio = state.tipoServicio || 'ComerAqui';
+            var res  = await postJson('CrearConItemsJson', {
+                mesaId: tipoServicio === 'ComerAqui' ? m.id : null,
+                tipoServicio: tipoServicio,
+                itemsJson: itemsJson
+            });
             var data = await res.json().catch(function () { return {}; });
             if (!res.ok) { window.lmdToast(data.error || 'Error al crear pedido', 'error'); return; }
             state.mesaActual = Object.assign({}, m, { pedidoActualId: data.pedidoId });
@@ -351,7 +405,7 @@
             await refrescarMesas();
             renderGrid();
             _renderDetalle();
-            window.lmdToast('Mesa ' + m.numero + ' — Pedido creado', 'success');
+            window.lmdToast((tipoServicio === 'ParaLlevar' ? 'Para llevar' : 'Mesa ' + m.numero) + ' — Pedido creado', 'success');
         } catch (e) { window.lmdToast('Error de conexión', 'error'); }
     }
 
@@ -379,9 +433,9 @@
 
         var catHtml = cats.map(function (c) {
             return '<button class="lmd-pos-cat-btn' + (c === state.catFiltro ? ' lmd-pos-cat-btn--activa' : '') + '" ' +
-                'onclick="mesero.filtrarCat(\'' + c.replace(/'/g, "\\'") + '\')">' +
+                'onclick="mesero.filtrarCat(\'' + escapeJsString(c) + '\')">' +
                 icon(c === 'Todos' ? 'layers' : c === 'Bebidas' ? 'wine' : c === 'Postres' ? 'cake-slice' : 'utensils') +
-                '<span>' + c + '</span>' +
+                '<span>' + escapeHtml(c) + '</span>' +
             '</button>';
         }).join('');
 
@@ -393,11 +447,11 @@
         });
 
         var prodHtml = filtrados.map(function (p) {
-            var requiere = productoRequiereConfirmacion(p);
-            return '<div class="lmd-pos-product-card' + (requiere ? ' lmd-pos-product-card--requiere-confirmacion' : '') + '" onclick="mesero.addToCart(\'' + p.id + '\')">' +
-                '<span class="lmd-pos-product-card__nombre">' + p.nombre + '</span>' +
+            var requiereConfirmacion = productoRequiereConfirmacion(p);
+            return '<div class="lmd-pos-product-card' + (requiereConfirmacion ? ' lmd-pos-product-card--requiere-confirmacion' : '') + '" onclick="mesero.addToCart(\'' + escapeJsString(p.id) + '\')">' +
+                '<span class="lmd-pos-product-card__nombre">' + escapeHtml(p.nombre) + '</span>' +
                 '<span class="lmd-pos-product-card__precio">' + fmt(p.precio) + '</span>' +
-                (requiere ? '<small class="lmd-pos-product-card__sub">Ingredientes confirmados al agregar</small>' : '') +
+                (requiereConfirmacion ? '<small class="lmd-pos-product-card__sub">Ingredientes confirmados al agregar</small>' : '') +
             '</div>';
         }).join('');
 
@@ -406,7 +460,7 @@
             ? '<div class="lmd-pos-cart__empty">' + icon('shopping-cart') + '<span>Sin ítems</span></div>'
             : state.carrito.map(function (item) {
                 return '<div class="lmd-mesero-cart-item">' +
-                    '<span class="lmd-mesero-cart-item__nombre">' + item.nombre +
+                    '<span class="lmd-mesero-cart-item__nombre">' + escapeHtml(item.nombre) +
                         (item.ingredientesConfirmados ? ' <small class="lmd-pos-product-card__sub">✓ ingredientes</small>' : '') + '</span>' +
                     '<div class="lmd-mesero-cart-item__qty">' +
                         '<button onclick="mesero.decCart(\'' + item.id + '\')">' + icon('minus') + '</button>' +
@@ -419,7 +473,7 @@
 
         var esNuevaMesa = !state.mesaActual || !state.mesaActual.pedidoActualId;
         var titulo = esNuevaMesa
-            ? 'Nueva orden — Mesa ' + (state.mesaActual ? state.mesaActual.numero : '')
+            ? 'Nueva orden — ' + (state.tipoServicio === 'ParaLlevar' ? 'Para llevar' : 'Mesa ' + (state.mesaActual ? state.mesaActual.numero : ''))
             : 'Agregar ítems';
         var sendDisabled = state.carrito.length === 0 ? ' disabled' : '';
         var html =
@@ -460,9 +514,8 @@
         var prod = productoPorId(productoId);
         if (!prod) return;
         var ex = state.carrito.find(function (i) { return i.id === productoId; });
-        if (ex) {
-            ex.cantidad++;
-        } else {
+        if (ex) ex.cantidad++;
+        else {
             var item = { id: prod.id, nombre: prod.nombre, precio: prod.precio, cantidad: 1 };
             if (productoRequiereConfirmacion(prod)) {
                 item.modificacionesJson = crearConfirmacionOriginal();
@@ -532,90 +585,11 @@
         } catch (e) { window.lmdToast('Error de conexión', 'error'); }
     }
 
-    // ═══════════════════════════════════════════════════
-    // OVERLAY DE PAGO
-    // ═══════════════════════════════════════════════════
-    function abrirPago() {
-        var total = state.pedidoTotal;
-        var html =
-            '<div class="lmd-pos-ov-header">' +
-                '<button class="lmd-pos-ov-back" onclick="mesero.cerrarPago()">' + icon('arrow-left') + '</button>' +
-                '<span class="lmd-pos-ov-title">' + icon('credit-card') + ' Cobrar</span>' +
-                '<div class="lmd-pos-ov-total">' + fmt(total) + '</div>' +
-            '</div>' +
-            '<div class="lmd-pos-pm-grid">' +
-                '<button class="lmd-pos-pm-btn" onclick="mesero.abrirEfectivo(' + total.toFixed(2) + ')">' +
-                    '<span class="lmd-pos-pm-btn__icon">' + icon('banknote') + '</span>' +
-                    '<span class="lmd-pos-pm-btn__label">Efectivo</span>' +
-                    '<span class="lmd-pos-pm-btn__sub">Billetes y monedas</span>' +
-                '</button>' +
-                '<button class="lmd-pos-pm-btn" onclick="mesero.pagarDirecto(\'tarjeta\',' + total.toFixed(2) + ')">' +
-                    '<span class="lmd-pos-pm-btn__icon">' + icon('credit-card') + '</span>' +
-                    '<span class="lmd-pos-pm-btn__label">Tarjeta</span>' +
-                    '<span class="lmd-pos-pm-btn__sub">Débito / Crédito</span>' +
-                '</button>' +
-                '<button class="lmd-pos-pm-btn" onclick="mesero.pagarDirecto(\'qr\',' + total.toFixed(2) + ')">' +
-                    '<span class="lmd-pos-pm-btn__icon">' + icon('qr-code') + '</span>' +
-                    '<span class="lmd-pos-pm-btn__label">QR / Transferencia</span>' +
-                    '<span class="lmd-pos-pm-btn__sub">Wompi, BAC, Niu</span>' +
-                '</button>' +
-            '</div>';
-        abrirOverlay('pago', html, { closeOnBackdrop: false });
-    }
-
-    function cerrarPago() { cerrarOverlay('pago'); cerrarOverlay('efectivo'); }
-
-    function abrirEfectivo(total) {
-        var html =
-            '<div class="lmd-pos-ov-header">' +
-                '<button class="lmd-pos-ov-back" onclick="mesero.volverMetodos()">' + icon('arrow-left') + '</button>' +
-                '<span class="lmd-pos-ov-title">' + icon('banknote') + ' Efectivo</span>' +
-                '<div class="lmd-pos-ov-total">' + fmt(total) + '</div>' +
-            '</div>' +
-            '<div class="lmd-pos-efectivo-body">' +
-                '<label class="lmd-pos-efectivo-label">Monto recibido</label>' +
-                '<input id="lmd-mesero-cash" class="lmd-pos-efectivo-input" type="number" step="0.01" ' +
-                    'min="' + total.toFixed(2) + '" value="' + total.toFixed(2) + '" />' +
-                '<div class="lmd-pos-qr-actions">' +
-                    '<button class="lmd-pos-ov-btn" onclick="mesero.volverMetodos()">' + icon('arrow-left') + ' Volver</button>' +
-                    '<button class="lmd-pos-ov-btn lmd-pos-ov-btn--primary" onclick="mesero.confirmarEfectivo(' + total.toFixed(2) + ')">' +
-                        icon('check-circle') + ' Confirmar</button>' +
-                '</div>' +
-            '</div>';
-        cerrarOverlay('pago');
-        abrirOverlay('efectivo', html, { closeOnBackdrop: false });
-    }
-
-    function volverMetodos() { cerrarOverlay('efectivo'); abrirPago(); }
-
-    function confirmarEfectivo(total) {
-        var input = document.getElementById('lmd-mesero-cash');
-        var monto = parseFloat(input ? input.value : total);
-        if (isNaN(monto) || monto < total) { window.lmdToast('Monto insuficiente', 'error'); return; }
-        pagarDirecto('efectivo', monto);
-    }
-
-    async function pagarDirecto(metodo, monto) {
-        var m = state.mesaActual;
-        if (!m) return;
-        try {
-            var res  = await postJson('PagarJson', { pedidoId: m.pedidoActualId, metodoPago: metodo, monto: monto });
-            var data = await res.json().catch(function () { return {}; });
-            if (!res.ok) { window.lmdToast(data.error || 'Error al registrar pago', 'error'); return; }
-            cerrarOverlay('efectivo');
-            cerrarOverlay('pago');
-            cerrarOverlay('detalle');
-            await refrescarMesas();
-            renderGrid();
-            window.lmdToast(data.mensaje || 'Pago registrado', 'success');
-        } catch (e) { window.lmdToast('Error de conexión', 'error'); }
-    }
-
-    // ═══════════════════════════════════════════════════
     // SIGNALR
     // ═══════════════════════════════════════════════════
     async function sincronizarDetalle() {
         if (!state.mesaActual) return;
+        if (state.tipoServicio === 'ParaLlevar') return;
         var m = state.mesas.find(function (x) { return x.id === state.mesaActual.id; });
         if (!m || !m.pedidoActualId) { cerrarDetalle(); return; }
         state.mesaActual = m;
@@ -648,7 +622,8 @@
         document.querySelectorAll('[data-pedido-fecha]').forEach(function (badge) {
             var span = badge.querySelector('.lmd-tab-tiempo');
             if (!span) return;
-            var min = Math.floor((Date.now() - new Date(badge.dataset.pedidoFecha).getTime()) / 60000);
+            var fechaPedido = fechaServidor(badge.dataset.pedidoFecha);
+            var min = fechaPedido ? Math.floor((Date.now() - fechaPedido.getTime()) / 60000) : 0;
             span.textContent = min > 0 ? min + ' min' : 'Tab';
         });
     }
@@ -660,7 +635,8 @@
         badges.forEach(function (badge) {
             var span = badge.querySelector('.lmd-gracia-tiempo');
             if (!span) return;
-            var secsLeft = Math.max(0, Math.floor((new Date(badge.dataset.graciaHasta).getTime() - Date.now()) / 1000));
+            var graciaHasta = fechaServidor(badge.dataset.graciaHasta);
+            var secsLeft = graciaHasta ? Math.max(0, Math.floor((graciaHasta.getTime() - Date.now()) / 1000)) : 0;
             if (secsLeft <= 0) { hayVencidos = true; return; }
             var mins = Math.floor(secsLeft / 60), secs = secsLeft % 60;
             span.textContent = mins + ':' + (secs < 10 ? '0' : '') + secs;
@@ -678,9 +654,8 @@
     window.mesero = {
         refrescarGrid,
         abrirDetalle, cerrarDetalle, voidItem, ajustarCantidad, pedirCuenta,
-        abrirNuevoPedido, liberarMesaManual,
-        abrirAgregar, cerrarAgregar, filtrarCat, buscarProd, addToCart, incCart, decCart, enviarItems,
-        abrirPago, cerrarPago, abrirEfectivo, volverMetodos, confirmarEfectivo, pagarDirecto
+        abrirNuevoPedido, abrirParaLlevar,
+        abrirAgregar, cerrarAgregar, filtrarCat, buscarProd, addToCart, incCart, decCart, enviarItems
     };
 
     document.addEventListener('DOMContentLoaded', async function () {

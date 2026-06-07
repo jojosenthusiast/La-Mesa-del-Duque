@@ -11,9 +11,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>@ViewData["Title"] — La Mesa del Duque</title>
     <link rel="icon" type="image/png" href="~/img/marca/logo-simbolo.png" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="~/css/marca.css" asp-append-version="true" />
     <script src="~/js/site.js" asp-append-version="true"></script>
     @Html.AntiForgeryToken()
@@ -29,7 +26,7 @@
     <div class="lmd-tableside-grid" id="tableside-grid"></div>
 
     <div class="lmd-tableside-bottom">
-        <button class="lmd-tableside-btn-volver" onclick="tableside.irAMesas()"><svg class="lmd-icon" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="https://cdn.jsdelivr.net/npm/lucide-static@latest/icons/arrow-left.svg#icon"/></svg> Mesas</button>
+        <button class="lmd-tableside-btn-volver" onclick="tableside.irAMesas()"><svg class="lmd-icon" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="/lib/lucide-static/icons/arrow-left.svg#icon"/></svg> Mesas</button>
         <div class="lmd-tableside-pedido-info" id="tableside-pedido-info">0 items — $0.00</div>
         <button class="lmd-tableside-btn-enviar" id="tableside-btn-enviar" onclick="tableside.enviarACocina()" disabled>Enviar a Cocina</button>
     </div>
@@ -42,12 +39,9 @@
             Model.Vm.MesasDisponibles.Select(m => new { m.Id, m.Numero, m.Capacidad, m.Estado }), jsonOptsTableside));
 
         window.__lmdProductosDisponibles = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
-            Model.Vm.ProductosDisponibles.Select(p => new { p.Id, p.Nombre, p.Precio, p.CategoriaNombre, p.TiempoPreparacionMin, p.ImagenUrl }), jsonOptsTableside));
+            Model.Vm.ProductosDisponibles.Select(p => new { p.Id, p.Nombre, p.Precio, p.CategoriaNombre, p.TiempoPreparacionMin, p.ImagenUrl, TieneReceta = Model.ProductosConReceta.Contains(p.Id) }), jsonOptsTableside));
     </script>
-
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.7/signalr.min.js"
-            integrity="sha512-7SRCYIJ8cT6+S4fuC1t7F/LPLoWvMhX7Oxf2N3Qu5jVoYW/P73eBEb0lHNPD0sSR9Cpsu+TtKz9vg8WYkJDtIw=="
-            crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="~/lib/microsoft/signalr/dist/browser/signalr.min.js"></script>
     <script src="~/js/tableside.js" asp-append-version="true"></script>
 </body>
 </html>

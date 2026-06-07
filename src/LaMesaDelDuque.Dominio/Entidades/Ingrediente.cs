@@ -107,8 +107,13 @@ public class Ingrediente
 
     public void DescontarStock(decimal cantidad)
     {
-        if (cantidad < 0) throw new ReglaDominioException("La cantidad a descontar no puede ser negativa.");
-        StockActual = Math.Max(0, StockActual - cantidad);
+        if (cantidad <= 0)
+            throw new ReglaDominioException("La cantidad a descontar debe ser mayor a cero.");
+
+        if (StockActual < cantidad)
+            throw new ReglaDominioException($"Stock insuficiente de {Nombre}: disponible {StockActual} {UnidadMedida}, solicitado {cantidad} {UnidadMedida}.");
+
+        StockActual -= cantidad;
         UpdatedAt = DateTime.UtcNow;
     }
 

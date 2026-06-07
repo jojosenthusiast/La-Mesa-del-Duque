@@ -1,4 +1,5 @@
 using LaMesaDelDuque.Dominio.Entidades;
+using LaMesaDelDuque.Dominio.Excepciones;
 using LaMesaDelDuque.Dominio.Repositorios;
 using LaMesaDelDuque.Infraestructura.Persistencia;
 using Microsoft.EntityFrameworkCore;
@@ -72,70 +73,30 @@ internal class UnidadDeTrabajo : IUnidadDeTrabajo
         OrdenCocinaRepositorio ordenCocinaRepositorio,
         CuentaRepositorio cuentaRepositorio,
         PagoRepositorio pagoRepositorio,
-        ProveedorRepositorio? proveedorRepositorio = null,
-        MermaRepositorio? mermaRepositorio = null,
-        CierreDiaRepositorio? cierreDiaRepositorio = null,
-        ZonaSalonRepositorio? zonaSalonRepositorio = null)
-        : this(
-            contexto,
-            categoriaRepositorio,
-            productoRepositorio,
-            ingredienteRepositorio,
-            mesaRepositorio,
-            pedidoRepositorio,
-            rolRepositorio,
-            usuarioRepositorio,
-            auditoriaRepositorio,
-            recetaProductoRepositorio,
-            ordenCocinaRepositorio,
-            cuentaRepositorio,
-            pagoRepositorio,
-            new PromocionRepositorio(contexto),
-            new TurnoCajaRepositorio(contexto),
-            new DescuentoRepositorio(contexto),
-            new MotivoDescuentoRepositorio(contexto),
-            new DevolucionRepositorio(contexto),
-            proveedorRepositorio,
-            mermaRepositorio,
-            cierreDiaRepositorio,
-            zonaSalonRepositorio)
-    {
-    }
-
-    public UnidadDeTrabajo(
-        LaMesaDelDuqueDbContext contexto,
-        CategoriaProductoRepositorio categoriaRepositorio,
-        ProductoRepositorio productoRepositorio,
-        IngredienteRepositorio ingredienteRepositorio,
-        MesaRepositorio mesaRepositorio,
-        PedidoRepositorio pedidoRepositorio,
-        RolRepositorio rolRepositorio,
-        UsuarioRepositorio usuarioRepositorio,
-        AuditoriaRepositorio auditoriaRepositorio,
-        RecetaProductoRepositorio recetaProductoRepositorio,
-        OrdenCocinaRepositorio ordenCocinaRepositorio,
-        CuentaRepositorio cuentaRepositorio,
-        PagoRepositorio pagoRepositorio,
         ZonaSalonRepositorio zonaSalonRepositorio)
-        : this(
-            contexto,
-            categoriaRepositorio,
-            productoRepositorio,
-            ingredienteRepositorio,
-            mesaRepositorio,
-            pedidoRepositorio,
-            rolRepositorio,
-            usuarioRepositorio,
-            auditoriaRepositorio,
-            recetaProductoRepositorio,
-            ordenCocinaRepositorio,
-            cuentaRepositorio,
-            pagoRepositorio,
-            proveedorRepositorio: null,
-            mermaRepositorio: null,
-            cierreDiaRepositorio: null,
-            zonaSalonRepositorio: zonaSalonRepositorio)
     {
+        _contexto = contexto;
+        Categorias = categoriaRepositorio;
+        Productos = productoRepositorio;
+        Ingredientes = ingredienteRepositorio;
+        Mesas = mesaRepositorio;
+        Pedidos = pedidoRepositorio;
+        Roles = rolRepositorio;
+        Usuarios = usuarioRepositorio;
+        Auditorias = auditoriaRepositorio;
+        RecetasProductos = recetaProductoRepositorio;
+        OrdenesCocina = ordenCocinaRepositorio;
+        Cuentas = cuentaRepositorio;
+        Pagos = pagoRepositorio;
+        Proveedores = new ProveedorRepositorio(contexto);
+        Mermas = new MermaRepositorio(contexto);
+        CierresDia = new CierreDiaRepositorio(contexto);
+        ZonasSalon = zonaSalonRepositorio;
+        Promociones = new PromocionRepositorio(contexto);
+        TurnosCaja = new TurnoCajaRepositorio(contexto);
+        Descuentos = new DescuentoRepositorio(contexto);
+        MotivosDescuento = new MotivoDescuentoRepositorio(contexto);
+        Devoluciones = new DevolucionRepositorio(contexto);
     }
 
     public ICategoriaProductoRepositorio Categorias { get; }
@@ -162,7 +123,14 @@ internal class UnidadDeTrabajo : IUnidadDeTrabajo
 
     public async Task<int> GuardarCambiosAsync(CancellationToken cancelacion = default)
     {
-        return await _contexto.SaveChangesAsync(cancelacion);
+        try
+        {
+            return await _contexto.SaveChangesAsync(cancelacion);
+        }
+        catch (DbUpdateConcurrencyException ex)
+        {
+            throw new ConcurrenciaException("La información fue modificada por otra operación. Vuelva a intentarlo.", ex);
+        }
     }
 
     public async Task<int> ObtenerPeriodoGraciaMinutosAsync(CancellationToken cancelacion = default)
