@@ -24,12 +24,22 @@ internal class CocinaServicio : ICocinaServicio
             ?? throw new ArgumentException($"No se encontró el pedido con ID {pedidoId}.", nameof(pedidoId));
 
         var filtro = soloDetalles?.ToHashSet();
-        var detallesAFirar = filtro is not null
+        var detallesAFiltrar = filtro is not null
             ? pedido.Detalles.Where(d => filtro.Contains(d.Id)).ToList()
             : pedido.Detalles.ToList();
 
-        foreach (var detalle in detallesAFirar)
+        var detallesYaEnCocina = (await _uot.OrdenesCocina.ListarPorPedidoAsync(pedidoId, ct))
+            .Where(o => o.DetallePedidoId.HasValue)
+            .Select(o => o.DetallePedidoId!.Value)
+            .ToHashSet();
+
+        var ordenesCreadas = new List<OrdenCocina>();
+
+        foreach (var detalle in detallesAFiltrar)
         {
+            if (detallesYaEnCocina.Contains(detalle.Id))
+                continue;
+
             var estacion = detalle.Producto.Categoria?.EstacionCocina ?? EstacionCocina.Expo;
 
             var (alergenos, quitados, extras, curso) = ParsearModificaciones(detalle.ModificacionesJson);
@@ -58,13 +68,14 @@ internal class CocinaServicio : ICocinaServicio
                 detalle.Producto.TiempoPreparacionMin);
 
             await _uot.OrdenesCocina.AgregarAsync(orden, ct);
+            detallesYaEnCocina.Add(detalle.Id);
+            ordenesCreadas.Add(orden);
         }
 
         await _uot.GuardarCambiosAsync(ct);
 
         // Notificar a cada estación
-        var ordenesCreadas = await _uot.OrdenesCocina.ListarPendientesAsync(cancelacion: ct);
-        foreach (var orden in ordenesCreadas.Where(o => o.PedidoId == pedidoId))
+        foreach (var orden in ordenesCreadas)
         {
             await _notificador.NotificarOrdenCocinaAsync(orden.Estacion.ToString(), MapToDto(orden), ct);
         }

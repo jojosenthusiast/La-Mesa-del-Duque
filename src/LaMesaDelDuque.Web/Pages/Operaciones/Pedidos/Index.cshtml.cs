@@ -55,6 +55,8 @@ public class IndexModel : PageModel
     [TempData]
     public string? ToastError { get; set; }
 
+    public HashSet<Guid> ProductosConReceta { get; private set; } = [];
+
     public async Task OnGetAsync()
     {
         SetUiContext();
@@ -97,7 +99,9 @@ public class IndexModel : PageModel
             {
                 ProductoId = linea.ProductoId,
                 Cantidad = linea.Cantidad,
-                PrecioUnitario = producto.Precio
+                PrecioUnitario = producto.Precio,
+                Notas = linea.Notas,
+                ModificacionesJson = linea.ModificacionesJson
             });
         }
 
@@ -124,14 +128,14 @@ public class IndexModel : PageModel
     }
 
     // ── Agregar / actualizar / eliminar línea ─────────────────
-    public async Task<IActionResult> OnPostAgregarLineaAsync(Guid pedidoId, Guid productoId, int cantidad, decimal precioUnitario)
+    public async Task<IActionResult> OnPostAgregarLineaAsync(Guid pedidoId, Guid productoId, int cantidad, decimal precioUnitario, string? notas = null, string? modificacionesJson = null)
         => await EjecutarAccionPedidoAsync(async () =>
         {
             var producto = (await _catalogoProductosServicio.ListarProductosAsync())
                 .FirstOrDefault(p => p.Id == productoId && p.Activo)
                 ?? throw new ArgumentException("Debe seleccionar un producto activo válido.", nameof(productoId));
 
-            await _pedidosServicio.AgregarDetalleAsync(pedidoId, productoId, cantidad, producto.Precio);
+            await _pedidosServicio.AgregarDetalleAsync(pedidoId, productoId, cantidad, producto.Precio, notas, modificacionesJson);
             ToastSuccess = "Línea agregada.";
             return RedirectToPage(new { PedidoActualId = pedidoId });
         });
@@ -672,6 +676,13 @@ public class IndexModel : PageModel
         {
             var productos = await _catalogoProductosServicio.ListarProductosAsync();
             Vm.ProductosDisponibles = productos.Where(p => p.Activo).OrderBy(p => p.CategoriaNombre).ThenBy(p => p.Nombre).ToList();
+            ProductosConReceta = [];
+            foreach (var producto in Vm.ProductosDisponibles)
+            {
+                var receta = await _recetasServicio.ObtenerPorProductoIdAsync(producto.Id);
+                if (receta is not null && receta.Ingredientes.Count > 0)
+                    ProductosConReceta.Add(producto.Id);
+            }
 
             var mesas = await _mesasServicio.ListarMesasAsync();
             Vm.MesasDisponibles = mesas.Where(m => m.Activa).OrderBy(m => m.Numero).ToList();
@@ -689,6 +700,7 @@ public class IndexModel : PageModel
         catch (Exception ex)
         {
             Vm.ProductosDisponibles = [];
+            ProductosConReceta = [];
             Vm.MesasDisponibles = [];
             Vm.PedidosActivos = [];
             ToastError = $"Error al cargar datos: {ex.Message}";

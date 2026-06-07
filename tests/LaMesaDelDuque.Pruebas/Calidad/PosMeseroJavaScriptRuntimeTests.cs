@@ -22,6 +22,22 @@ public class PosMeseroJavaScriptRuntimeTests
         Assert.True(resultado.ExitCode == 0, resultado.Output);
     }
 
+    [Fact]
+    public void PosDebeIncrementarProductoConRecetaConfirmadoDesdeGrid()
+    {
+        if (!NodeEstaDisponible())
+        {
+            return;
+        }
+
+        var script = Path.Combine(ProjectPaths.RepoRoot, "tests", "LaMesaDelDuque.Pruebas", "Calidad", "pos-recipe-grid-smoke.js");
+        var posJavaScript = Path.Combine(ProjectPaths.RepoRoot, "src", "LaMesaDelDuque.Web", "wwwroot", "js", "pos.js");
+
+        var resultado = RunNode(script, posJavaScript, string.Empty);
+
+        Assert.True(resultado.ExitCode == 0, resultado.Output);
+    }
+
     private static bool NodeEstaDisponible()
     {
         try

@@ -64,8 +64,44 @@ public class MeseroPageTests
         Assert.Equal(0, pedidos.PagarCalls);
     }
 
-    private static MeseroIndexModel CreatePage(FakeMeseroPedidosServicio pedidos) =>
-        new(pedidos, new FakeMeseroCatalogoServicio(), new FakeMeseroMesasServicio(), new FakeMeseroHubContext<PedidosHub>(), NullLogger<MeseroIndexModel>.Instance);
+    [Fact]
+    public async Task OnGetAsync_marca_productos_con_receta_para_confirmacion()
+    {
+        var pedidos = new FakeMeseroPedidosServicio();
+        var catalogo = new FakeMeseroCatalogoServicio();
+        var page = CreatePage(pedidos, catalogo, new FakeMeseroRecetasServicio(catalogo.ProductoActivoId));
+
+        await page.OnGetAsync();
+
+        Assert.Contains(catalogo.ProductoActivoId, page.ProductosConReceta);
+    }
+
+    [Fact]
+    public async Task OnPostCrearConItemsJsonAsync_reenvia_notas_y_modificaciones_al_servicio()
+    {
+        var pedidos = new FakeMeseroPedidosServicio();
+        var catalogo = new FakeMeseroCatalogoServicio();
+        var page = CreatePage(pedidos, catalogo);
+        const string modificacionesJson = "[{\"accion\":\"confirmado\"}]";
+        var itemsJson = $"[{{\"productoId\":\"{catalogo.ProductoActivoId}\",\"cantidad\":1,\"notas\":\"Sin sal\",\"modificacionesJson\":{System.Text.Json.JsonSerializer.Serialize(modificacionesJson)}}}]";
+
+        await page.OnPostCrearConItemsJsonAsync(Guid.NewGuid(), itemsJson);
+
+        var detalle = Assert.Single(pedidos.DetallesCreados);
+        Assert.Equal("Sin sal", detalle.Notas);
+        Assert.Equal(modificacionesJson, detalle.ModificacionesJson);
+    }
+
+    private static MeseroIndexModel CreatePage(
+        FakeMeseroPedidosServicio pedidos,
+        FakeMeseroCatalogoServicio? catalogo = null,
+        FakeMeseroRecetasServicio? recetas = null) =>
+        new(pedidos,
+            catalogo ?? new FakeMeseroCatalogoServicio(),
+            new FakeMeseroMesasServicio(),
+            recetas ?? new FakeMeseroRecetasServicio(),
+            new FakeMeseroHubContext<PedidosHub>(),
+            NullLogger<MeseroIndexModel>.Instance);
 
     private sealed class FakeMeseroPedidosServicio : IPedidosServicio
     {
@@ -83,6 +119,7 @@ public class MeseroPageTests
         public Guid? LastPedidoId { get; private set; }
         public MetodoPago? LastMetodoPago { get; private set; }
         public string? LastReferenciaPos { get; private set; }
+        public List<DetalleCreacionDto> DetallesCreados { get; private set; } = [];
 
         public Task PagarPedidoAsync(Guid pedidoId, MetodoPago metodoPago = MetodoPago.Efectivo, string? referenciaPos = null, CancellationToken cancelacion = default)
         {
@@ -96,7 +133,12 @@ public class MeseroPageTests
         public Task<PedidoDto?> ObtenerPedidoAsync(Guid pedidoId, CancellationToken cancelacion = default) =>
             Task.FromResult<PedidoDto?>(pedidoId == Pedido.Id ? Pedido : null);
 
-        public Task<PedidoDto> CrearPedidoAsync(TipoServicio tipoServicio, Guid? mesaId, List<DetalleCreacionDto> detalles, CancellationToken cancelacion = default) => Task.FromResult(Pedido);
+        public Task<PedidoDto> CrearPedidoAsync(TipoServicio tipoServicio, Guid? mesaId, List<DetalleCreacionDto> detalles, CancellationToken cancelacion = default)
+        {
+            DetallesCreados = detalles;
+            return Task.FromResult(Pedido);
+        }
+
         public Task<PedidoDto> AgregarDetalleAsync(Guid pedidoId, Guid productoId, int cantidad, decimal precioUnitario, string? notas = null, string? modificacionesJson = null, CancellationToken cancelacion = default) => Task.FromResult(Pedido);
         public Task AgregarItemsAsync(Guid pedidoId, List<DetalleCreacionDto> items, CancellationToken cancelacion = default) => Task.CompletedTask;
         public Task<PedidoDto> EliminarDetalleAsync(Guid pedidoId, Guid detalleId, CancellationToken cancelacion = default) => Task.FromResult(Pedido);
@@ -117,15 +159,42 @@ public class MeseroPageTests
 
     private sealed class FakeMeseroCatalogoServicio : ICatalogoProductosServicio
     {
+        public Guid ProductoActivoId { get; } = Guid.NewGuid();
+        public Guid ProductoInactivoId { get; } = Guid.NewGuid();
+
         public Task<List<CategoriaProductoDto>> ListarCategoriasAsync(CancellationToken cancelacion = default) => Task.FromResult(new List<CategoriaProductoDto>());
         public Task<CategoriaProductoDto> CrearCategoriaAsync(string nombre, CancellationToken cancelacion = default) => throw new NotImplementedException();
         public Task<CategoriaProductoDto> ActualizarCategoriaAsync(Guid categoriaId, string nombre, CancellationToken cancelacion = default) => throw new NotImplementedException();
         public Task DesactivarCategoriaAsync(Guid categoriaId, CancellationToken cancelacion = default) => throw new NotImplementedException();
-        public Task<List<ProductoDto>> ListarProductosAsync(CancellationToken cancelacion = default) => Task.FromResult(new List<ProductoDto>());
+        public Task<List<ProductoDto>> ListarProductosAsync(CancellationToken cancelacion = default) => Task.FromResult(new List<ProductoDto>
+        {
+            new() { Id = ProductoActivoId, Nombre = "Tosta", CategoriaNombre = "Entradas", CategoriaId = Guid.NewGuid(), Precio = 42.50m, Activo = true },
+            new() { Id = ProductoInactivoId, Nombre = "Inactivo", CategoriaNombre = "Entradas", CategoriaId = Guid.NewGuid(), Precio = 1m, Activo = false }
+        });
         public Task<List<ProductoDto>> ListarProductosPorCategoriaAsync(Guid categoriaId, CancellationToken cancelacion = default) => Task.FromResult(new List<ProductoDto>());
         public Task<ProductoDto> CrearProductoAsync(string nombre, decimal precio, Guid categoriaId, string? descripcion = null, string? imagenUrl = null, int tiempoPreparacionMin = 5, CancellationToken cancelacion = default) => throw new NotImplementedException();
         public Task<ProductoDto> ActualizarProductoAsync(Guid productoId, string nombre, decimal precio, Guid categoriaId, string? descripcion, string? imagenUrl = null, int? tiempoPreparacionMin = null, CancellationToken cancelacion = default) => throw new NotImplementedException();
         public Task DesactivarProductoAsync(Guid productoId, CancellationToken cancelacion = default) => throw new NotImplementedException();
+    }
+
+    private sealed class FakeMeseroRecetasServicio : IRecetasProductosServicio
+    {
+        private readonly Guid? _productoConRecetaId;
+
+        public FakeMeseroRecetasServicio(Guid? productoConRecetaId = null)
+        {
+            _productoConRecetaId = productoConRecetaId;
+        }
+
+        public Task<RecetaProductoDto> CrearRecetaAsync(Guid productoId, string instrucciones, List<RecetaIngredienteCreacionDto> ingredientes, CancellationToken cancelacion = default) => throw new NotImplementedException();
+        public Task<RecetaProductoDto?> ObtenerPorProductoIdAsync(Guid productoId, CancellationToken cancelacion = default)
+            => Task.FromResult(_productoConRecetaId == productoId
+                ? new RecetaProductoDto
+                {
+                    ProductoId = productoId,
+                    Ingredientes = [new RecetaIngredienteDto { IngredienteId = Guid.NewGuid(), IngredienteNombre = "Pan", CantidadRequerida = 1m }]
+                }
+                : null);
     }
 
     private sealed class FakeMeseroMesasServicio : IMesasServicio

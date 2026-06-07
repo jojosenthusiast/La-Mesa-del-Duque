@@ -124,6 +124,22 @@ public class CocinaServicioTests : IDisposable
     }
 
     [Fact]
+    public async Task GenerarOrdenesAsync_CuandoDetalleYaTieneOrden_NoDuplicaNiReNotifica()
+    {
+        var (mesa, producto) = await CrearMesaYProductoAsync(EstacionCocina.Parrilla);
+        var pedido = await CrearPedidoAsync(mesa, producto);
+
+        await _servicio.GenerarOrdenesAsync(pedido.Id);
+        _notificadorSpy.OrdenesCocina.Clear();
+
+        await _servicio.GenerarOrdenesAsync(pedido.Id);
+
+        var ordenes = await _contexto.Set<OrdenCocina>().Where(o => o.PedidoId == pedido.Id).ToListAsync();
+        Assert.Single(ordenes);
+        Assert.Empty(_notificadorSpy.OrdenesCocina);
+    }
+
+    [Fact]
     public async Task ListarPendientesAsync_SinFiltro_DebeRetornarTodasLasPendientesYNoListos()
     {
         var (_, producto1) = await CrearMesaYProductoAsync(EstacionCocina.Parrilla);
@@ -143,6 +159,34 @@ public class CocinaServicioTests : IDisposable
 
         Assert.DoesNotContain(pendientes, o => o.PedidoId == pedido1.Id);
         Assert.Contains(pendientes, o => o.PedidoId == pedido2.Id);
+    }
+
+    [Fact]
+    public async Task ListarPendientesAsync_NoDebeRetornarCanceladasNiEntregadas()
+    {
+        var (_, productoPendiente) = await CrearMesaYProductoAsync(EstacionCocina.Parrilla);
+        var (_, productoEntregado) = await CrearMesaYProductoAsync(EstacionCocina.Fria);
+        var (_, productoCancelado) = await CrearMesaYProductoAsync(EstacionCocina.Caliente);
+
+        var pedidoPendiente = await CrearPedidoAsync(null, productoPendiente);
+        var pedidoEntregado = await CrearPedidoAsync(null, productoEntregado);
+        var pedidoCancelado = await CrearPedidoAsync(null, productoCancelado);
+
+        await _servicio.GenerarOrdenesAsync(pedidoPendiente.Id);
+        await _servicio.GenerarOrdenesAsync(pedidoEntregado.Id);
+        await _servicio.GenerarOrdenesAsync(pedidoCancelado.Id);
+
+        var ordenEntregada = await _contexto.Set<OrdenCocina>().FirstAsync(o => o.PedidoId == pedidoEntregado.Id);
+        var ordenCancelada = await _contexto.Set<OrdenCocina>().FirstAsync(o => o.PedidoId == pedidoCancelado.Id);
+        CambiarEstadoCocina(ordenEntregada, EstadoLineaCocina.Entregado);
+        CambiarEstadoCocina(ordenCancelada, EstadoLineaCocina.Cancelado);
+        await _uot.GuardarCambiosAsync();
+
+        var pendientes = await _servicio.ListarPendientesAsync();
+
+        Assert.Contains(pendientes, o => o.PedidoId == pedidoPendiente.Id && o.Estado == EstadoLineaCocina.Pendiente.ToString());
+        Assert.DoesNotContain(pendientes, o => o.PedidoId == pedidoEntregado.Id);
+        Assert.DoesNotContain(pendientes, o => o.PedidoId == pedidoCancelado.Id);
     }
 
     [Fact]
@@ -210,5 +254,12 @@ public class CocinaServicioTests : IDisposable
         var ordenes = await _contexto.Set<OrdenCocina>().Where(o => o.PedidoId == pedido.Id).ToListAsync();
         Assert.Single(ordenes);
         Assert.Equal(EstacionCocina.Caliente, ordenes[0].Estacion);
+    }
+
+    private static void CambiarEstadoCocina(OrdenCocina orden, EstadoLineaCocina estado)
+    {
+        typeof(OrdenCocina)
+            .GetProperty(nameof(OrdenCocina.Estado))!
+            .SetValue(orden, estado);
     }
 }
