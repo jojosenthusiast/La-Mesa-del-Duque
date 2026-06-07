@@ -21,6 +21,10 @@
     window.__lmdProductosDisponibles = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
         Model.Vm.ProductosDisponibles.Select(p => new { p.Id, p.Nombre, p.Precio, p.CategoriaNombre, p.TiempoPreparacionMin, p.ImagenUrl }),
         new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase }));
+
+    window.__lmdRepartidoresDisponibles = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+        Model.Vm.RepartidoresDisponibles.Select(r => new { r.Id, r.Nombre }),
+        new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase }));
 </script>
 
 @section Scripts {

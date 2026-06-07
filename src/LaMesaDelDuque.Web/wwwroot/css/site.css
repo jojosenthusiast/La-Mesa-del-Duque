@@ -89,3 +89,48 @@ html {
     font-family: var(--lmd-fuente-titulo);
     color: var(--lmd-texto-primario);
 }
+
+/* ═══════════════════════════════════════════════════════
+   Diálogo de confirmación (window.lmdConfirm)
+   Antes no tenía estilos y se renderizaba como texto suelto
+   al final de la página; ahora es un modal centrado.
+   ═══════════════════════════════════════════════════════ */
+.lmd-modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 4000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    background: rgba(15, 27, 45, 0.55);
+    animation: lmd-modal-fade 0.15s ease;
+}
+
+@keyframes lmd-modal-fade {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.lmd-modal {
+    background: #ffffff;
+    border: 1px solid rgba(201, 162, 78, 0.35);
+    border-radius: 0.85rem;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+    width: 100%;
+    max-width: 420px;
+    padding: 1.5rem 1.5rem 1.25rem;
+}
+
+.lmd-modal p {
+    margin: 0 0 1.25rem;
+    font-size: 1rem;
+    line-height: 1.45;
+    color: var(--lmd-texto-primario, #0F1B2D);
+}
+
+.lmd-modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+}

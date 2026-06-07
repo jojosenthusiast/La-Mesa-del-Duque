@@ -32,6 +32,13 @@ internal class PedidoConfiguracion : IEntityTypeConfiguration<Pedido>
         // Total es calculado, no se persiste
         constructor.Ignore(p => p.Total);
 
+        // ── Campos de delivery / domicilio (todos opcionales) ──
+        constructor.Property(p => p.RepartidorId).IsRequired(false);
+        constructor.Property(p => p.DireccionEntrega).HasMaxLength(250).IsRequired(false);
+        constructor.Property(p => p.TelefonoCliente).HasMaxLength(30).IsRequired(false);
+        constructor.Property(p => p.AsignadoEn).IsRequired(false);
+        constructor.Property(p => p.EntregadoEn).IsRequired(false);
+
         // FK sombra hacia Mesa
         constructor.Property<Guid?>("MesaId")
             .IsRequired(false);

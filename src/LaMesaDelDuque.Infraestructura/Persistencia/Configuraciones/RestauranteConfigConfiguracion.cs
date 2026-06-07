@@ -39,7 +39,7 @@ internal class RestauranteConfigConfiguracion : IEntityTypeConfiguration<Restaur
             .HasColumnType("text");
 
         constructor.Property(r => r.PeriodoGraciaMinutos)
-            .HasDefaultValue(5)
+            .HasDefaultValue(0)
             .IsRequired();
 
         constructor.Property(r => r.CreatedAt)

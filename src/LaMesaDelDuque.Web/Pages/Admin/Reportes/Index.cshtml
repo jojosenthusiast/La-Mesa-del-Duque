@@ -1,0 +1,214 @@
+@page
+@model LaMesaDelDuque.Web.Pages.Admin.Reportes.IndexModel
+@{
+    ViewData["Title"] = "Reportes";
+    ViewData["ActiveTab"] = "Reportes";
+}
+
+<section class="lmd-page-header rounded-top">
+    <div>
+        <h1>Reportes</h1>
+        <p class="lmd-page-subtitle">Generar y descargar reportes documentales en PDF y Excel.</p>
+    </div>
+</section>
+
+<section class="bg-white p-4 rounded-bottom">
+
+    @if (!string.IsNullOrWhiteSpace(Model.ToastError))
+    {
+        <div class="alert alert-danger alert-dismissible fade show py-2 mb-4" data-lmd-toast="true" role="alert">
+            @Model.ToastError
+            <button type="button" class="btn-close" aria-label="Cerrar"></button>
+        </div>
+    }
+
+    @* Selector de rango de fechas compartido *@
+    <div class="card mb-4 border-0 bg-light">
+        <div class="card-body py-3">
+            <h6 class="card-title fw-bold mb-3">Rango de fechas para todos los reportes</h6>
+            <div class="row g-3 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label form-label-sm fw-semibold">Desde</label>
+                    <input type="date" id="rangoDesde"
+                           class="form-control form-control-sm"
+                           value="@Model.Desde.ToString("yyyy-MM-dd")" />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label form-label-sm fw-semibold">Hasta</label>
+                    <input type="date" id="rangoHasta"
+                           class="form-control form-control-sm"
+                           value="@Model.Hasta.ToString("yyyy-MM-dd")" />
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @* Tarjetas de reportes *@
+    <div class="row g-4">
+
+        @* Ventas PDF *@
+        <div class="col-md-6">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-body d-flex flex-column">
+                    <div class="d-flex align-items-center gap-3 mb-3">
+                        <span class="fs-1" aria-hidden="true">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none"
+                                 stroke="#d4af37" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+                                <polyline points="14 2 14 8 20 8"/>
+                                <line x1="16" y1="13" x2="8" y2="13"/>
+                                <line x1="16" y1="17" x2="8" y2="17"/>
+                                <polyline points="10 9 9 9 8 9"/>
+                            </svg>
+                        </span>
+                        <div>
+                            <h5 class="card-title mb-0 fw-bold">Ventas por Período (PDF)</h5>
+                            <small class="text-muted">Resumen gerencial con ventas diarias, métodos de pago y top productos.</small>
+                        </div>
+                    </div>
+                    <form method="get" class="mt-auto" data-reporte-form>
+                        <input type="hidden" name="handler" value="VentasPdf" />
+                        <input type="hidden" class="campo-desde" name="desde" value="@Model.Desde.ToString("yyyy-MM-dd")" />
+                        <input type="hidden" class="campo-hasta" name="hasta" value="@Model.Hasta.ToString("yyyy-MM-dd")" />
+                        <button type="submit" class="btn btn-sm lmd-action-primary w-100">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+                                <polyline points="7 10 12 15 17 10"/>
+                                <line x1="12" y1="15" x2="12" y2="3"/>
+                            </svg>
+                            Descargar PDF
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        @* Ventas Excel *@
+        <div class="col-md-6">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-body d-flex flex-column">
+                    <div class="d-flex align-items-center gap-3 mb-3">
+                        <span class="fs-1" aria-hidden="true">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none"
+                                 stroke="#217346" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+                                <polyline points="14 2 14 8 20 8"/>
+                                <line x1="16" y1="13" x2="8" y2="13"/>
+                                <line x1="16" y1="17" x2="8" y2="17"/>
+                                <polyline points="10 9 9 9 8 9"/>
+                            </svg>
+                        </span>
+                        <div>
+                            <h5 class="card-title mb-0 fw-bold">Ventas por Período (Excel)</h5>
+                            <small class="text-muted">Detallado por producto, día y método de pago. Ideal para contabilidad.</small>
+                        </div>
+                    </div>
+                    <form method="get" class="mt-auto" data-reporte-form>
+                        <input type="hidden" name="handler" value="VentasExcel" />
+                        <input type="hidden" class="campo-desde" name="desde" value="@Model.Desde.ToString("yyyy-MM-dd")" />
+                        <input type="hidden" class="campo-hasta" name="hasta" value="@Model.Hasta.ToString("yyyy-MM-dd")" />
+                        <button type="submit" class="btn btn-sm lmd-action-neutral w-100">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+                                <polyline points="7 10 12 15 17 10"/>
+                                <line x1="12" y1="15" x2="12" y2="3"/>
+                            </svg>
+                            Descargar Excel
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        @* Kardex Excel *@
+        <div class="col-md-6">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-body d-flex flex-column">
+                    <div class="d-flex align-items-center gap-3 mb-3">
+                        <span class="fs-1" aria-hidden="true">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none"
+                                 stroke="#217346" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                                <line x1="3" y1="9" x2="21" y2="9"/>
+                                <line x1="3" y1="15" x2="21" y2="15"/>
+                                <line x1="9" y1="3" x2="9" y2="21"/>
+                                <line x1="15" y1="3" x2="15" y2="21"/>
+                            </svg>
+                        </span>
+                        <div>
+                            <h5 class="card-title mb-0 fw-bold">Kardex de Inventario (Excel)</h5>
+                            <small class="text-muted">Stock actual, mermas del período y valor total por ingrediente.</small>
+                        </div>
+                    </div>
+                    <form method="get" class="mt-auto" data-reporte-form>
+                        <input type="hidden" name="handler" value="KardexExcel" />
+                        <input type="hidden" class="campo-desde" name="desde" value="@Model.Desde.ToString("yyyy-MM-dd")" />
+                        <input type="hidden" class="campo-hasta" name="hasta" value="@Model.Hasta.ToString("yyyy-MM-dd")" />
+                        <button type="submit" class="btn btn-sm lmd-action-neutral w-100">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+                                <polyline points="7 10 12 15 17 10"/>
+                                <line x1="12" y1="15" x2="12" y2="3"/>
+                            </svg>
+                            Descargar Excel
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        @* Mermas PDF *@
+        <div class="col-md-6">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-body d-flex flex-column">
+                    <div class="d-flex align-items-center gap-3 mb-3">
+                        <span class="fs-1" aria-hidden="true">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none"
+                                 stroke="#d4af37" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+                            </svg>
+                        </span>
+                        <div>
+                            <h5 class="card-title mb-0 fw-bold">Mermas del Período (PDF)</h5>
+                            <small class="text-muted">Registro de desperdicios con costo total acumulado del período.</small>
+                        </div>
+                    </div>
+                    <form method="get" class="mt-auto" data-reporte-form>
+                        <input type="hidden" name="handler" value="MermasPdf" />
+                        <input type="hidden" class="campo-desde" name="desde" value="@Model.Desde.ToString("yyyy-MM-dd")" />
+                        <input type="hidden" class="campo-hasta" name="hasta" value="@Model.Hasta.ToString("yyyy-MM-dd")" />
+                        <button type="submit" class="btn btn-sm lmd-action-primary w-100">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+                                <polyline points="7 10 12 15 17 10"/>
+                                <line x1="12" y1="15" x2="12" y2="3"/>
+                            </svg>
+                            Descargar PDF
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</section>
+
+@section Scripts {
+    <script>
+        // Sincroniza los pickers de fecha globales con los campos hidden de cada formulario
+        const desdeInput = document.getElementById('rangoDesde');
+        const hastaInput = document.getElementById('rangoHasta');
+
+        function sincronizarFechas() {
+            document.querySelectorAll('.campo-desde').forEach(el => el.value = desdeInput.value);
+            document.querySelectorAll('.campo-hasta').forEach(el => el.value = hastaInput.value);
+        }
+
+        desdeInput.addEventListener('change', sincronizarFechas);
+        hastaInput.addEventListener('change', sincronizarFechas);
+    </script>
+}

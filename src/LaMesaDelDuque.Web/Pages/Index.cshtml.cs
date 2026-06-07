@@ -20,6 +20,7 @@ public class IndexModel : PageModel
         var esCocinero = autenticado && User.IsInRole("Cocinero");
         var esCajero = autenticado && User.IsInRole("Cajero");
         var esGerente = autenticado && User.IsInRole("Gerente");
+        var esRepartidor = autenticado && User.IsInRole("Repartidor");
 
         // Pedidos: Admin, Encargado, Cajero
         if (esAdmin || esEncargado || esCajero)
@@ -40,6 +41,14 @@ public class IndexModel : PageModel
         // Despacho: Admin, Encargado, Cajero, Mesero
         if (esAdmin || esEncargado || esCajero || esMesero)
             modulos.Add(new("Despacho", "/Operaciones/Despacho/Index", "Pedidos listos para entregar y liberar mesas."));
+
+        // Delivery: Admin, Encargado, Cajero
+        if (esAdmin || esEncargado || esCajero)
+            modulos.Add(new("Delivery", "/Operaciones/Delivery/Index", "Resumen de pedidos a domicilio y asignación de repartidores."));
+
+        // Repartidor: vista liviana de envíos asignados
+        if (esRepartidor)
+            modulos.Add(new("Mis entregas", "/Operaciones/Repartidor/Index", "Direcciones, teléfonos y confirmación de entrega."));
 
         // Productos: Admin, Encargado
         if (esAdmin || esEncargado)
@@ -85,9 +94,10 @@ public class IndexModel : PageModel
         if (esAdmin || esGerente)
             modulos.Add(new("Auditoría", "/Admin/Auditoria/Index", "Registro de acciones y cambios del sistema."));
 
-        // Usuarios: solo Admin
+        // Usuarios: Admin
         if (esAdmin)
             modulos.Add(new("Usuarios", "/Admin/Usuarios/Index", "Gestión de acceso y roles del sistema."));
+
 
         ModuleLinks = modulos;
     }

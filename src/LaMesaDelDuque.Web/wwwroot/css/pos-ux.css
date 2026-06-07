@@ -1649,6 +1649,24 @@ html:has(#lmd-pos-contenido) .lmd-main-surface {
     text-transform: uppercase;
     letter-spacing: 0.06em;
 }
+/* Badge de cantidad en carrito */
+.lmd-pos-producto-card__cart-badge {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    background: var(--lmd-dorado-real, #c9a84c);
+    color: #0a0a14;
+    font-size: 0.65rem;
+    font-weight: 800;
+    border-radius: 999px;
+    padding: 2px 7px;
+    z-index: 2;
+    pointer-events: none;
+}
+.lmd-pos-producto-card--en-carrito {
+    border-color: rgba(201, 168, 76, 0.5);
+    background: rgba(201, 168, 76, 0.06);
+}
 .lmd-pos-producto-card--promo {
     border-color: rgba(46,204,113,0.35);
 }
@@ -1896,4 +1914,258 @@ html:has(#lmd-pos-contenido) .lmd-main-surface {
     padding: 2px 5px;
     border-radius: 3px;
     pointer-events: none;
+}
+
+/* ══════════════════════════════════════════════════════
+   RESPONSIVE — POS Mobile (< 768px)
+   ══════════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+
+    /* Selección: stack vertical en lugar de 50/50 */
+    .lmd-pos-seleccion {
+        flex-direction: column !important;
+    }
+    .lmd-pos-seleccion__mitad {
+        width: 100% !important;
+        min-height: unset !important;
+    }
+    .lmd-pos-para-llevar-card {
+        padding: 1.25rem;
+    }
+
+    /* Productos: 3 columnas → 2 */
+    .lmd-pos-productos {
+        grid-template-columns: 1fr !important;
+        grid-template-rows: auto auto 1fr !important;
+        height: 100vh;
+    }
+    .lmd-pos-categorias {
+        overflow-x: auto;
+        flex-wrap: nowrap !important;
+        padding: 0.4rem 0.5rem;
+    }
+    .lmd-pos-cat-btn {
+        flex-shrink: 0;
+        font-size: 0.72rem;
+        padding: 0.3rem 0.7rem;
+    }
+    .lmd-pos-productos-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+        overflow-y: auto;
+        max-height: 42vh;
+    }
+    .lmd-pos-producto-card__nombre {
+        font-size: 0.75rem;
+    }
+
+    /* Carrito: mostrar abajo como drawer */
+    .lmd-pos-cart {
+        position: fixed !important;
+        bottom: 0; left: 0; right: 0;
+        max-height: 44vh;
+        border-radius: 12px 12px 0 0;
+        z-index: 200;
+        overflow-y: auto;
+        box-shadow: 0 -4px 20px rgba(0,0,0,0.4);
+    }
+    .lmd-pos-cart__acciones {
+        flex-wrap: wrap;
+        gap: 0.4rem;
+    }
+    .lmd-pos-cart-btn {
+        flex: 1 1 40%;
+        font-size: 0.78rem;
+        padding: 0.5rem 0.4rem;
+    }
+
+    /* Overlays: fullscreen en mobile */
+    .lmd-pos-ov-panel {
+        width: 100% !important;
+        max-width: 100% !important;
+        border-radius: 12px 12px 0 0;
+        max-height: 90vh;
+        overflow-y: auto;
+    }
+    .lmd-pos-overlay--bottom .lmd-pos-ov-panel {
+        bottom: 0;
+        position: fixed;
+        left: 0; right: 0;
+    }
+    .lmd-pos-pm-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+    }
+
+    /* Modificador: fullscreen */
+    .lmd-mod-body {
+        padding: 0.75rem;
+    }
+    .lmd-mod-ing-row {
+        flex-wrap: wrap;
+        gap: 0.3rem;
+    }
+    .lmd-mod-ing-reemplazo {
+        width: 100%;
+    }
+
+    /* Mesas grid en mobile */
+    .lmd-pos-mesas-grid {
+        grid-template-columns: repeat(3, 1fr) !important;
+    }
+    .lmd-pos-mesa-card {
+        min-height: 60px;
+    }
+    .lmd-pos-mesa-card__numero {
+        font-size: 1.2rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .lmd-pos-productos-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+    }
+    .lmd-pos-mesas-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+    }
+    .lmd-pos-pm-grid {
+        grid-template-columns: 1fr 1fr !important;
+    }
+}
+
+/* Delivery en POS */
+.lmd-pos-delivery-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+    max-width: 100%;
+    padding: .25rem .55rem;
+    border-radius: 999px;
+    background: rgba(13, 110, 253, .10);
+    color: #0d6efd;
+    font-size: .78rem;
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+@media (max-width: 767.98px) {
+    .lmd-pos-delivery-badge { max-width: 180px; }
+}
+
+/* Hotfix caja: botones visibles para Retiro / Delivery en fondo oscuro */
+.lmd-pos-service-btn {
+    width: 100%;
+    min-height: 48px;
+    border-radius: 10px;
+    font-weight: 800;
+    letter-spacing: .01em;
+}
+.lmd-pos-service-btn--takeout {
+    background: var(--lmd-dorado-real, #C9A24E) !important;
+    border-color: var(--lmd-dorado-real, #C9A24E) !important;
+    color: #0F1B2D !important;
+}
+.lmd-pos-service-btn--delivery {
+    background: transparent !important;
+    border: 1px solid var(--lmd-dorado-real, #C9A24E) !important;
+    color: var(--lmd-dorado-real, #C9A24E) !important;
+}
+.lmd-pos-service-btn--delivery:hover,
+.lmd-pos-service-btn--delivery:focus {
+    background: rgba(201, 162, 78, .15) !important;
+    color: #F7F4EC !important;
+}
+
+/* Hotfix POS: pedidos para llevar / delivery abiertos */
+.lmd-pos-offpremise-list {
+    width: min(520px, 92%);
+    margin: 0 auto 1.1rem;
+    display: grid;
+    gap: .65rem;
+}
+.lmd-pos-offpremise-list__title {
+    color: var(--lmd-dorado-real, #C9A24E);
+    font-family: var(--lmd-font-titulo, Georgia, serif);
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    font-size: .78rem;
+    text-align: left;
+}
+.lmd-pos-offpremise-card {
+    position: relative;
+    width: 100%;
+    border: 1px solid rgba(201, 162, 78, .35);
+    border-radius: 14px;
+    background: rgba(255,255,255,.045);
+    color: #F7F4EC;
+    padding: .85rem 6rem .85rem 1rem;
+    display: grid;
+    gap: .2rem;
+    text-align: left;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,.03);
+}
+.lmd-pos-offpremise-card:hover,
+.lmd-pos-offpremise-card:focus {
+    border-color: var(--lmd-dorado-real, #C9A24E);
+    background: rgba(201,162,78,.10);
+    outline: none;
+}
+.lmd-pos-offpremise-card__main {
+    font-weight: 900;
+    display: inline-flex;
+    align-items: center;
+    gap: .4rem;
+}
+.lmd-pos-offpremise-card__sub {
+    color: rgba(247,244,236,.72);
+    font-size: .82rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.lmd-pos-offpremise-card__meta {
+    color: var(--lmd-dorado-real, #C9A24E);
+    font-size: .82rem;
+    font-weight: 800;
+}
+.lmd-pos-offpremise-card__badge {
+    position: absolute;
+    right: .75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    border-radius: 999px;
+    background: rgba(255,255,255,.10);
+    color: #F7F4EC;
+    padding: .35rem .65rem;
+    font-size: .72rem;
+    font-weight: 900;
+    text-transform: uppercase;
+}
+.lmd-pos-offpremise-card--cobrar .lmd-pos-offpremise-card__badge {
+    background: var(--lmd-dorado-real, #C9A24E);
+    color: #0F1B2D;
+}
+.lmd-pos-cart-item--registrado {
+    border-left: 3px solid var(--lmd-dorado-real, #C9A24E);
+    opacity: .96;
+}
+.lmd-pos-cart-item__estado {
+    display: block;
+    margin-top: .12rem;
+    color: rgba(247,244,236,.55);
+    font-size: .68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+}
+@media (max-width: 767.98px) {
+    .lmd-pos-offpremise-list { width: 100%; }
+    .lmd-pos-offpremise-card { padding-right: 1rem; }
+    .lmd-pos-offpremise-card__badge {
+        position: static;
+        transform: none;
+        justify-self: start;
+        margin-top: .25rem;
+    }
 }

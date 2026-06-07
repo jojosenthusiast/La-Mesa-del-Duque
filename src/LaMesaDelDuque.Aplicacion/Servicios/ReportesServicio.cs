@@ -30,7 +30,6 @@ public class ReportesServicio : IReportesServicio
         var pedidos = await ObtenerPedidosPagadosAsync(desde, hasta, ct);
         var pagos = await _uot.Pagos.ObtenerPorRangoFechaAsync(desde, hasta, ct);
 
-        // Lookup usuarioId → nombre completo
         var usuarioIds = pagos.Select(p => p.UsuarioId).Distinct().ToList();
         var usuarios = new Dictionary<Guid, string>();
         foreach (var uid in usuarioIds)
@@ -39,7 +38,6 @@ public class ReportesServicio : IReportesServicio
             if (u is not null) usuarios[uid] = u.NombreCompleto;
         }
 
-        // Resumen de pagos por método (para hoja resumen)
         var pagosPorMetodo = pagos
             .GroupBy(p => p.Metodo)
             .Select(g => new { Metodo = g.Key.ToString(), Count = g.Count(), Total = g.Sum(x => x.Monto) })
@@ -48,7 +46,7 @@ public class ReportesServicio : IReportesServicio
 
         using var wb = new XLWorkbook();
 
-        // ── Hoja 1: Detalle Ventas ────────────────────────────────────────────
+        // Hoja 1: Detalle Ventas
         var wsD = wb.Worksheets.Add("Detalle Ventas");
         var hd = new[] { "Fecha", "Mesa", "Producto", "Cantidad", "Precio Unit.", "Descuento", "Subtotal" };
         for (int i = 0; i < hd.Length; i++)
@@ -81,10 +79,10 @@ public class ReportesServicio : IReportesServicio
         }
         wsD.Columns().AdjustToContents();
 
-        // ── Hoja 2: Resumen por Día ───────────────────────────────────────────
-        var wsRD = wb.Worksheets.Add("Resumen por Día");
+        // Hoja 2: Resumen por Día
+        var wsRD = wb.Worksheets.Add("Resumen por Dia");
         wsRD.Cell(1, 1).Value = "Fecha";
-        wsRD.Cell(1, 2).Value = "Nº Pedidos";
+        wsRD.Cell(1, 2).Value = "Pedidos";
         wsRD.Cell(1, 3).Value = "Total Ventas";
         wsRD.Row(1).Style.Font.Bold = true;
 
@@ -106,13 +104,12 @@ public class ReportesServicio : IReportesServicio
         wsRD.Cell(rRD, 1).Value = "TOTAL";
         wsRD.Cell(rRD, 1).Style.Font.Bold = true;
         wsRD.Cell(rRD, 2).Value = pedidos.Count;
-        wsRD.Cell(rRD, 2).Style.Font.Bold = true;
         wsRD.Cell(rRD, 3).Value = porDia.Sum(d => d.Total);
         wsRD.Cell(rRD, 3).Style.NumberFormat.Format = "#,##0.00";
         wsRD.Cell(rRD, 3).Style.Font.Bold = true;
         wsRD.Columns().AdjustToContents();
 
-        // ── Hoja 3: Resumen por Producto ──────────────────────────────────────
+        // Hoja 3: Por Producto
         var wsPr = wb.Worksheets.Add("Por Producto");
         wsPr.Cell(1, 1).Value = "Producto";
         wsPr.Cell(1, 2).Value = "Cantidad";
@@ -136,10 +133,10 @@ public class ReportesServicio : IReportesServicio
         }
         wsPr.Columns().AdjustToContents();
 
-        // ── Hoja 4: Por Método de Pago ────────────────────────────────────────
-        var wsM = wb.Worksheets.Add("Por Método de Pago");
-        wsM.Cell(1, 1).Value = "Método";
-        wsM.Cell(1, 2).Value = "Nº Pagos";
+        // Hoja 4: Por Metodo de Pago
+        var wsM = wb.Worksheets.Add("Por Metodo de Pago");
+        wsM.Cell(1, 1).Value = "Metodo";
+        wsM.Cell(1, 2).Value = "Pagos";
         wsM.Cell(1, 3).Value = "Total Cobrado";
         wsM.Cell(1, 4).Value = "Cajeros";
         wsM.Row(1).Style.Font.Bold = true;
@@ -182,6 +179,7 @@ public class ReportesServicio : IReportesServicio
             .ToList();
 
         var totalGeneral = porDia.Sum(d => d.Total);
+        var pedidosCount = pedidos.Count;
 
         var porMetodo = pagos
             .GroupBy(p => p.Metodo.ToString())
@@ -196,7 +194,7 @@ public class ReportesServicio : IReportesServicio
             .Take(5)
             .ToList();
 
-        var periodo = $"{desde:dd/MM/yyyy} — {hasta:dd/MM/yyyy}";
+        var periodo = $"{desde:dd/MM/yyyy} - {hasta:dd/MM/yyyy}";
 
         var doc = Document.Create(container =>
         {
@@ -210,15 +208,14 @@ public class ReportesServicio : IReportesServicio
                 page.Header().Column(col =>
                 {
                     col.Item().Text("La Mesa del Duque").FontSize(20).Bold().FontColor("#d4af37");
-                    col.Item().Text("Reporte de Ventas — Resumen Gerencial").FontSize(12).FontColor("#d4af37");
-                    col.Item().Text($"Período: {periodo}").FontSize(10).FontColor("#cccccc");
+                    col.Item().Text("Reporte de Ventas - Resumen Gerencial").FontSize(12).FontColor("#d4af37");
+                    col.Item().Text($"Periodo: {periodo}").FontSize(10).FontColor("#cccccc");
                     col.Item().PaddingTop(4).LineHorizontal(1).LineColor("#d4af37");
                 });
 
                 page.Content().PaddingTop(12).Column(col =>
                 {
-                    // Ventas por día
-                    col.Item().Text("Ventas por Día").FontSize(11).Bold().FontColor("#d4af37");
+                    col.Item().Text("Ventas por Dia").FontSize(11).Bold().FontColor("#d4af37");
                     col.Item().PaddingTop(4).Table(tbl =>
                     {
                         tbl.ColumnsDefinition(c =>
@@ -228,28 +225,28 @@ public class ReportesServicio : IReportesServicio
                             c.RelativeColumn(2);
                         });
 
-                        tbl.Header(h =>
+                        tbl.Header(header =>
                         {
-                            AddPdfHeader(h.Cell(), "Fecha");
-                            AddPdfHeader(h.Cell(), "Pedidos");
-                            AddPdfHeader(h.Cell(), "Total");
+                            header.Cell().Background("#d4af37").Padding(4).Text("Fecha").Bold().FontColor(Colors.Grey.Darken4).FontSize(9);
+                            header.Cell().Background("#d4af37").Padding(4).Text("Pedidos").Bold().FontColor(Colors.Grey.Darken4).FontSize(9);
+                            header.Cell().Background("#d4af37").Padding(4).Text("Total").Bold().FontColor(Colors.Grey.Darken4).FontSize(9);
                         });
 
-                        bool alt = false;
+                        bool alt1 = false;
                         foreach (var d in porDia)
                         {
-                            var bg = alt ? "#2a2a3e" : "#1a1a2e";
+                            var bg = alt1 ? "#2a2a3e" : "#1a1a2e";
                             tbl.Cell().Background(bg).Padding(3).Text(d.Fecha.ToString("dd/MM/yyyy")).FontColor("#f0f0f0").FontSize(8);
                             tbl.Cell().Background(bg).Padding(3).AlignRight().Text(d.Count.ToString()).FontColor("#f0f0f0").FontSize(8);
                             tbl.Cell().Background(bg).Padding(3).AlignRight().Text($"${d.Total:N2}").FontColor("#f0f0f0").FontSize(8);
-                            alt = !alt;
+                            alt1 = !alt1;
                         }
                         tbl.Cell().Background("#d4af37").Padding(3).Text("TOTAL").Bold().FontColor(Colors.Grey.Darken4).FontSize(8);
-                        tbl.Cell().Background("#d4af37").Padding(3).AlignRight().Text(pedidos.Count.ToString()).Bold().FontColor(Colors.Grey.Darken4).FontSize(8);
+                        tbl.Cell().Background("#d4af37").Padding(3).AlignRight().Text(pedidosCount.ToString()).Bold().FontColor(Colors.Grey.Darken4).FontSize(8);
                         tbl.Cell().Background("#d4af37").Padding(3).AlignRight().Text($"${totalGeneral:N2}").Bold().FontColor(Colors.Grey.Darken4).FontSize(8);
                     });
 
-                    col.Item().PaddingTop(14).Text("Totales por Método de Pago").FontSize(11).Bold().FontColor("#d4af37");
+                    col.Item().PaddingTop(14).Text("Totales por Metodo de Pago").FontSize(11).Bold().FontColor("#d4af37");
                     col.Item().PaddingTop(4).Table(tbl =>
                     {
                         tbl.ColumnsDefinition(c =>
@@ -257,19 +254,20 @@ public class ReportesServicio : IReportesServicio
                             c.RelativeColumn(3);
                             c.RelativeColumn(2);
                         });
-                        tbl.Header(h =>
+
+                        tbl.Header(header =>
                         {
-                            AddPdfHeader(h.Cell(), "Método");
-                            AddPdfHeader(h.Cell(), "Total");
+                            header.Cell().Background("#d4af37").Padding(4).Text("Metodo").Bold().FontColor(Colors.Grey.Darken4).FontSize(9);
+                            header.Cell().Background("#d4af37").Padding(4).Text("Total").Bold().FontColor(Colors.Grey.Darken4).FontSize(9);
                         });
 
-                        bool alt = false;
+                        bool alt2 = false;
                         foreach (var m in porMetodo)
                         {
-                            var bg = alt ? "#2a2a3e" : "#1a1a2e";
+                            var bg = alt2 ? "#2a2a3e" : "#1a1a2e";
                             tbl.Cell().Background(bg).Padding(3).Text(m.Metodo).FontColor("#f0f0f0").FontSize(8);
                             tbl.Cell().Background(bg).Padding(3).AlignRight().Text($"${m.Total:N2}").FontColor("#f0f0f0").FontSize(8);
-                            alt = !alt;
+                            alt2 = !alt2;
                         }
                     });
 
@@ -282,28 +280,29 @@ public class ReportesServicio : IReportesServicio
                             c.RelativeColumn(1);
                             c.RelativeColumn(2);
                         });
-                        tbl.Header(h =>
+
+                        tbl.Header(header =>
                         {
-                            AddPdfHeader(h.Cell(), "Producto");
-                            AddPdfHeader(h.Cell(), "Cant.");
-                            AddPdfHeader(h.Cell(), "Total");
+                            header.Cell().Background("#d4af37").Padding(4).Text("Producto").Bold().FontColor(Colors.Grey.Darken4).FontSize(9);
+                            header.Cell().Background("#d4af37").Padding(4).Text("Cant.").Bold().FontColor(Colors.Grey.Darken4).FontSize(9);
+                            header.Cell().Background("#d4af37").Padding(4).Text("Total").Bold().FontColor(Colors.Grey.Darken4).FontSize(9);
                         });
 
-                        bool alt = false;
+                        bool alt3 = false;
                         foreach (var p in top5)
                         {
-                            var bg = alt ? "#2a2a3e" : "#1a1a2e";
+                            var bg = alt3 ? "#2a2a3e" : "#1a1a2e";
                             tbl.Cell().Background(bg).Padding(3).Text(p.Nombre).FontColor("#f0f0f0").FontSize(8);
                             tbl.Cell().Background(bg).Padding(3).AlignRight().Text(p.Cant.ToString()).FontColor("#f0f0f0").FontSize(8);
                             tbl.Cell().Background(bg).Padding(3).AlignRight().Text($"${p.Total:N2}").FontColor("#f0f0f0").FontSize(8);
-                            alt = !alt;
+                            alt3 = !alt3;
                         }
                     });
                 });
 
                 page.Footer().AlignCenter().Text(t =>
                 {
-                    t.Span($"Generado el {DateTime.Now:dd/MM/yyyy HH:mm}   |   Página ").FontColor("#888888").FontSize(8);
+                    t.Span($"Generado el {DateTime.Now:dd/MM/yyyy HH:mm}   |   Pagina ").FontColor("#888888").FontSize(8);
                     t.CurrentPageNumber().FontColor("#888888").FontSize(8);
                     t.Span(" de ").FontColor("#888888").FontSize(8);
                     t.TotalPages().FontColor("#888888").FontSize(8);
@@ -331,7 +330,7 @@ public class ReportesServicio : IReportesServicio
         using var wb = new XLWorkbook();
         var ws = wb.Worksheets.Add("Kardex Inventario");
 
-        var hds = new[] { "Ingrediente", "Unidad", "Stock Actual", "Total Mermas Período", "Costo Mermas", "Costo Unitario", "Valor Stock" };
+        var hds = new[] { "Ingrediente", "Unidad", "Stock Actual", "Total Mermas", "Costo Mermas", "Costo Unitario", "Valor Stock" };
         for (int i = 0; i < hds.Length; i++)
         {
             var c = ws.Cell(1, i + 1);
@@ -383,8 +382,9 @@ public class ReportesServicio : IReportesServicio
     {
         var mermas = await _uot.Mermas.ObtenerPorRangoAsync(desde, hasta, ct);
         var totalCosto = mermas.Sum(m => m.CostoEstimado);
-        var periodo = $"{desde:dd/MM/yyyy} — {hasta:dd/MM/yyyy}";
+        var periodo = $"{desde:dd/MM/yyyy} - {hasta:dd/MM/yyyy}";
         var lista = mermas.OrderBy(m => m.CreatedAt).ToList();
+        var listaCount = lista.Count;
 
         var doc = Document.Create(container =>
         {
@@ -399,13 +399,13 @@ public class ReportesServicio : IReportesServicio
                 {
                     col.Item().Text("La Mesa del Duque").FontSize(20).Bold().FontColor("#d4af37");
                     col.Item().Text("Reporte de Mermas").FontSize(12).FontColor("#d4af37");
-                    col.Item().Text($"Período: {periodo}").FontSize(10).FontColor("#cccccc");
+                    col.Item().Text($"Periodo: {periodo}").FontSize(10).FontColor("#cccccc");
                     col.Item().PaddingTop(4).LineHorizontal(1).LineColor("#d4af37");
                 });
 
                 page.Content().PaddingTop(12).Column(col =>
                 {
-                    col.Item().Text($"Total registros: {lista.Count}   |   Costo total del período: ${totalCosto:N2}")
+                    col.Item().Text($"Total registros: {listaCount}   |   Costo total: ${totalCosto:N2}")
                         .FontSize(10).Bold().FontColor("#d4af37");
 
                     col.Item().PaddingTop(8).Table(tbl =>
@@ -421,15 +421,15 @@ public class ReportesServicio : IReportesServicio
                             c.RelativeColumn(2);
                         });
 
-                        tbl.Header(h =>
+                        tbl.Header(header =>
                         {
-                            AddPdfHeader(h.Cell(), "Fecha");
-                            AddPdfHeader(h.Cell(), "Ingrediente");
-                            AddPdfHeader(h.Cell(), "Cant.");
-                            AddPdfHeader(h.Cell(), "Tipo");
-                            AddPdfHeader(h.Cell(), "Costo");
-                            AddPdfHeader(h.Cell(), "Usuario");
-                            AddPdfHeader(h.Cell(), "Motivo");
+                            header.Cell().Background("#d4af37").Padding(3).Text("Fecha").Bold().FontColor(Colors.Grey.Darken4).FontSize(8);
+                            header.Cell().Background("#d4af37").Padding(3).Text("Ingrediente").Bold().FontColor(Colors.Grey.Darken4).FontSize(8);
+                            header.Cell().Background("#d4af37").Padding(3).Text("Cant.").Bold().FontColor(Colors.Grey.Darken4).FontSize(8);
+                            header.Cell().Background("#d4af37").Padding(3).Text("Tipo").Bold().FontColor(Colors.Grey.Darken4).FontSize(8);
+                            header.Cell().Background("#d4af37").Padding(3).Text("Costo").Bold().FontColor(Colors.Grey.Darken4).FontSize(8);
+                            header.Cell().Background("#d4af37").Padding(3).Text("Usuario").Bold().FontColor(Colors.Grey.Darken4).FontSize(8);
+                            header.Cell().Background("#d4af37").Padding(3).Text("Motivo").Bold().FontColor(Colors.Grey.Darken4).FontSize(8);
                         });
 
                         bool alt = false;
@@ -437,12 +437,12 @@ public class ReportesServicio : IReportesServicio
                         {
                             var bg = alt ? "#2a2a3e" : "#1a1a2e";
                             tbl.Cell().Background(bg).Padding(3).Text(m.CreatedAt.ToLocalTime().ToString("dd/MM/yy HH:mm")).FontColor("#f0f0f0").FontSize(7);
-                            tbl.Cell().Background(bg).Padding(3).Text(m.Ingrediente?.Nombre ?? "—").FontColor("#f0f0f0").FontSize(7);
+                            tbl.Cell().Background(bg).Padding(3).Text(m.Ingrediente?.Nombre ?? "-").FontColor("#f0f0f0").FontSize(7);
                             tbl.Cell().Background(bg).Padding(3).AlignRight().Text($"{m.CantidadDescartada:N2}").FontColor("#f0f0f0").FontSize(7);
                             tbl.Cell().Background(bg).Padding(3).Text(m.Tipo.ToString()).FontColor("#f0f0f0").FontSize(7);
                             tbl.Cell().Background(bg).Padding(3).AlignRight().Text($"${m.CostoEstimado:N2}").FontColor("#f0f0f0").FontSize(7);
-                            tbl.Cell().Background(bg).Padding(3).Text(m.Usuario?.NombreCompleto ?? "—").FontColor("#f0f0f0").FontSize(7);
-                            tbl.Cell().Background(bg).Padding(3).Text(m.Notas ?? "—").FontColor("#888888").FontSize(7);
+                            tbl.Cell().Background(bg).Padding(3).Text(m.Usuario?.NombreCompleto ?? "-").FontColor("#f0f0f0").FontSize(7);
+                            tbl.Cell().Background(bg).Padding(3).Text(m.Notas ?? "-").FontColor("#888888").FontSize(7);
                             alt = !alt;
                         }
 
@@ -450,14 +450,13 @@ public class ReportesServicio : IReportesServicio
                             .Text("COSTO TOTAL").Bold().FontColor(Colors.Grey.Darken4).FontSize(8);
                         tbl.Cell().Background("#d4af37").Padding(3).AlignRight()
                             .Text($"${totalCosto:N2}").Bold().FontColor(Colors.Grey.Darken4).FontSize(8);
-                        tbl.Cell().ColumnSpan(2).Background("#d4af37").Padding(3)
-                            .Text("").FontSize(8);
+                        tbl.Cell().ColumnSpan(2).Background("#d4af37").Padding(3).Text("").FontSize(8);
                     });
                 });
 
                 page.Footer().AlignCenter().Text(t =>
                 {
-                    t.Span($"Generado el {DateTime.Now:dd/MM/yyyy HH:mm}   |   Página ").FontColor("#888888").FontSize(8);
+                    t.Span($"Generado el {DateTime.Now:dd/MM/yyyy HH:mm}   |   Pagina ").FontColor("#888888").FontSize(8);
                     t.CurrentPageNumber().FontColor("#888888").FontSize(8);
                     t.Span(" de ").FontColor("#888888").FontSize(8);
                     t.TotalPages().FontColor("#888888").FontSize(8);
@@ -473,7 +472,6 @@ public class ReportesServicio : IReportesServicio
     private async Task<List<Pedido>> ObtenerPedidosPagadosAsync(
         DateTime desde, DateTime hasta, CancellationToken ct)
     {
-        // ObtenerTodosAsync incluye Mesa y Detalles.Producto (ver PedidoRepositorio)
         var todos = await _uot.Pedidos.ObtenerTodosAsync(ct);
         return todos
             .Where(p => p.Estado == EstadoPedido.Pagado
@@ -481,8 +479,4 @@ public class ReportesServicio : IReportesServicio
                         && p.FechaCreacion <= hasta)
             .ToList();
     }
-
-    private static void AddPdfHeader(IContainer cell, string text) =>
-        cell.Background("#d4af37").Padding(4)
-            .Text(text).Bold().FontColor(Colors.Grey.Darken4).FontSize(9);
 }

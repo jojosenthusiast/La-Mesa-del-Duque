@@ -18,6 +18,7 @@ public class IndexModel : PageModel
     private readonly ICatalogoProductosServicio _catalogoProductosServicio;
     private readonly IMesasServicio _mesasServicio;
     private readonly IRecetasProductosServicio _recetasServicio;
+    private readonly IDeliveryServicio _deliveryServicio;
     private readonly ITicketServicio _ticketServicio;
     private readonly IAlergenoServicio _alergenoServicio;
     private readonly IHubContext<PedidosHub> _hubContext;
@@ -28,6 +29,7 @@ public class IndexModel : PageModel
         ICatalogoProductosServicio catalogoProductosServicio,
         IMesasServicio mesasServicio,
         IRecetasProductosServicio recetasServicio,
+        IDeliveryServicio deliveryServicio,
         ITicketServicio ticketServicio,
         IAlergenoServicio alergenoServicio,
         IHubContext<PedidosHub> hubContext,
@@ -37,6 +39,7 @@ public class IndexModel : PageModel
         _catalogoProductosServicio = catalogoProductosServicio;
         _mesasServicio = mesasServicio;
         _recetasServicio = recetasServicio;
+        _deliveryServicio = deliveryServicio;
         _ticketServicio = ticketServicio;
         _alergenoServicio = alergenoServicio;
         _hubContext = hubContext;
@@ -104,8 +107,19 @@ public class IndexModel : PageModel
         try
         {
             var mesaId = tipoServicio == TipoServicio.ComerAqui ? Vm.CrearPedido.MesaId : null;
-            var pedido = await _pedidosServicio.CrearPedidoAsync(tipoServicio, mesaId, detalles);
-            ToastSuccess = "Pedido creado correctamente.";
+            var pedido = await _pedidosServicio.CrearPedidoAsync(
+                tipoServicio,
+                mesaId,
+                detalles,
+                Vm.CrearPedido.DireccionEntrega,
+                Vm.CrearPedido.TelefonoCliente);
+
+            if (tipoServicio == TipoServicio.Domicilio && Vm.CrearPedido.RepartidorId.HasValue)
+                await _deliveryServicio.AsignarRepartidorAsync(pedido.Id, Vm.CrearPedido.RepartidorId.Value);
+
+            ToastSuccess = tipoServicio == TipoServicio.Domicilio
+                ? "Pedido a domicilio creado, enviado a cocina y listo para seguimiento."
+                : "Pedido creado correctamente.";
             return RedirectToPage(new { PedidoActualId = pedido.Id });
         }
         catch (ReglaDominioException ex)
@@ -261,6 +275,9 @@ public class IndexModel : PageModel
         Enum.TryParse<TipoServicio>(Vm.CrearPedido.TipoServicio, true, out var tipoServicio);
         var mesaId = tipoServicio == TipoServicio.ComerAqui ? Vm.CrearPedido.MesaId : null;
 
+        if (tipoServicio == TipoServicio.Domicilio && string.IsNullOrWhiteSpace(Vm.CrearPedido.DireccionEntrega))
+            return StatusCode(422, new { ok = false, error = "La dirección de entrega es obligatoria para delivery." });
+
         var prods = (await _catalogoProductosServicio.ListarProductosAsync()).Where(p => p.Activo).ToDictionary(p => p.Id);
         var detalles = new List<DetalleCreacionDto>();
 
@@ -272,13 +289,32 @@ public class IndexModel : PageModel
 
         try
         {
-            var pedido = await _pedidosServicio.CrearPedidoAsync(tipoServicio, mesaId, detalles);
-            var detallesResponse = pedido.Detalles.Select(d => new
+            var pedido = await _pedidosServicio.CrearPedidoAsync(
+                tipoServicio,
+                mesaId,
+                detalles,
+                Vm.CrearPedido.DireccionEntrega,
+                Vm.CrearPedido.TelefonoCliente);
+
+            if (tipoServicio == TipoServicio.Domicilio && Vm.CrearPedido.RepartidorId.HasValue)
+                await _deliveryServicio.AsignarRepartidorAsync(pedido.Id, Vm.CrearPedido.RepartidorId.Value);
+
+            var pedidoActualizado = await _pedidosServicio.ObtenerPedidoAsync(pedido.Id) ?? pedido;
+            var detallesResponse = pedidoActualizado.Detalles.Select(d => new
             {
                 id = d.Id, productoId = d.ProductoId,
                 productoNombre = d.ProductoNombre, cantidad = d.Cantidad, precioUnitario = d.PrecioUnitario
             });
-            return new JsonResult(new { pedidoId = pedido.Id, total = pedido.Total, detalles = detallesResponse });
+            return new JsonResult(new
+            {
+                pedidoId = pedidoActualizado.Id,
+                total = pedidoActualizado.Total,
+                tipoServicio = pedidoActualizado.TipoServicio,
+                direccionEntrega = pedidoActualizado.DireccionEntrega,
+                telefonoCliente = pedidoActualizado.TelefonoCliente,
+                repartidorId = pedidoActualizado.RepartidorId,
+                detalles = detallesResponse
+            });
         }
         catch (ReglaDominioException ex)
         {
@@ -586,6 +622,42 @@ public class IndexModel : PageModel
         catch (Exception ex) { _logger.LogError(ex, "Error en handler JSON"); return StatusCode(500, new { ok = false, error = "Ocurrió un error interno." }); }
     }
 
+    public async Task<IActionResult> OnGetPedidosSinMesaJsonAsync()
+    {
+        try
+        {
+            var pedidos = await _pedidosServicio.ListarPedidosActivosAsync();
+            var data = pedidos
+                .Where(p => !p.MesaId.HasValue)
+                .OrderByDescending(p => p.FechaCreacion)
+                .Select(p => new
+                {
+                    id = p.Id,
+                    tipoServicio = p.TipoServicio,
+                    estado = p.Estado,
+                    total = p.Total,
+                    fechaCreacion = p.FechaCreacion,
+                    direccionEntrega = p.DireccionEntrega,
+                    telefonoCliente = p.TelefonoCliente,
+                    repartidorId = p.RepartidorId,
+                    detalles = p.Detalles.Select(d => new
+                    {
+                        id = d.Id,
+                        productoId = d.ProductoId,
+                        productoNombre = d.ProductoNombre,
+                        cantidad = d.Cantidad,
+                        precioUnitario = d.PrecioUnitario,
+                        subtotal = d.Subtotal
+                    })
+                });
+
+            return new JsonResult(new { pedidos = data });
+        }
+        catch (ReglaDominioException ex) { return StatusCode(422, new { ok = false, error = ex.Message }); }
+        catch (ArgumentException ex) { return BadRequest(new { ok = false, error = ex.Message }); }
+        catch (Exception ex) { _logger.LogError(ex, "Error al listar pedidos sin mesa"); return StatusCode(500, new { ok = false, error = "Ocurrió un error interno." }); }
+    }
+
     public async Task<IActionResult> OnGetDetallesPedidoJsonAsync(Guid pedidoId)
     {
         try
@@ -672,6 +744,7 @@ public class IndexModel : PageModel
         {
             var productos = await _catalogoProductosServicio.ListarProductosAsync();
             Vm.ProductosDisponibles = productos.Where(p => p.Activo).OrderBy(p => p.CategoriaNombre).ThenBy(p => p.Nombre).ToList();
+            Vm.RepartidoresDisponibles = await _deliveryServicio.ListarRepartidoresAsync();
 
             var mesas = await _mesasServicio.ListarMesasAsync();
             Vm.MesasDisponibles = mesas.Where(m => m.Activa).OrderBy(m => m.Numero).ToList();
@@ -681,7 +754,7 @@ public class IndexModel : PageModel
                 ? Vm.PedidosActivos.FirstOrDefault(p => p.Id == PedidoActualId.Value)
                 : Vm.PedidosActivos.OrderByDescending(p => p.Total).FirstOrDefault();
 
-            Vm.CrearPedido.TipoServicio = Vm.CrearPedido.TipoServicio is "ParaLlevar" or "ComerAqui" ? Vm.CrearPedido.TipoServicio : "ComerAqui";
+            Vm.CrearPedido.TipoServicio = Vm.CrearPedido.TipoServicio is "ParaLlevar" or "ComerAqui" or "Domicilio" ? Vm.CrearPedido.TipoServicio : "ComerAqui";
 
             if (Vm.CrearPedido.Lineas.Count == 0)
                 Vm.CrearPedido.Lineas.Add(new LineaPedidoFormVm());
@@ -689,6 +762,7 @@ public class IndexModel : PageModel
         catch (Exception ex)
         {
             Vm.ProductosDisponibles = [];
+            Vm.RepartidoresDisponibles = [];
             Vm.MesasDisponibles = [];
             Vm.PedidosActivos = [];
             ToastError = $"Error al cargar datos: {ex.Message}";

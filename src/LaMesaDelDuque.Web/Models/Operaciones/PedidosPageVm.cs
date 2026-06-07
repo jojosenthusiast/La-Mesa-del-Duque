@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using LaMesaDelDuque.Aplicacion.Dtos;
+using LaMesaDelDuque.Aplicacion.Servicios;
 
 namespace LaMesaDelDuque.Web.Models.Operaciones;
 
@@ -7,6 +8,7 @@ public class PedidosPageVm
 {
     public List<MesaDto> MesasDisponibles { get; set; } = [];
     public List<ProductoDto> ProductosDisponibles { get; set; } = [];
+    public List<RepartidorDto> RepartidoresDisponibles { get; set; } = [];
     public PedidoDto? PedidoActual { get; set; }
     public List<PedidoDto> PedidosActivos { get; set; } = [];
     public CrearPedidoFormVm CrearPedido { get; set; } = new();
@@ -20,6 +22,14 @@ public class CrearPedidoFormVm
     public string TipoServicio { get; set; } = "ComerAqui";
 
     public Guid? MesaId { get; set; }
+
+    [MaxLength(250)]
+    public string? DireccionEntrega { get; set; }
+
+    [MaxLength(30)]
+    public string? TelefonoCliente { get; set; }
+
+    public Guid? RepartidorId { get; set; }
 
     [MinLength(1, ErrorMessage = "Debe incluir al menos una línea en el pedido.")]
     public List<LineaPedidoFormVm> Lineas { get; set; } = [];

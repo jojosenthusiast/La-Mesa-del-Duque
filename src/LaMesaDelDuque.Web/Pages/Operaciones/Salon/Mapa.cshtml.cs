@@ -1,3 +1,4 @@
+using System.Text.Json;
 using LaMesaDelDuque.Aplicacion.Dtos;
 using LaMesaDelDuque.Aplicacion.Servicios;
 using LaMesaDelDuque.Dominio.Excepciones;
@@ -84,7 +85,7 @@ public class MapaModel : PageModel
             zonas = Vm.Zonas,
             mesas = Vm.Mesas,
             puedeEditar = Vm.PuedeEditar
-        });
+        }, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
     }
 
     private async Task CargarDatosAsync()
@@ -92,22 +93,51 @@ public class MapaModel : PageModel
         var zonas = await _zonasServicio.ListarActivasAsync();
         var mesas = await _mesasServicio.ListarMesasAsync();
 
+        // El parche anterior dependía de ZonaId/PosicionX/PosicionY ya sembrados.
+        // En SQLite existente eso dejaba el mapa vacío. Aquí la vista siempre dibuja
+        // las mesas activas usando posiciones de respaldo en porcentaje si faltan datos
+        // o si quedaron posiciones viejas en pixeles (ej. 260, 440).
+        if (zonas.Count == 0)
+        {
+            zonas.Add(new ZonaSalonDto
+            {
+                Id = Guid.Empty,
+                Nombre = "Salón Principal",
+                Orden = 1,
+                Activa = true
+            });
+        }
+
+        var zonaIds = zonas.Select(z => z.Id).ToHashSet();
+        var zonaPrincipal = zonas.OrderBy(z => z.Orden).First();
+
         Vm.Zonas = zonas;
         Vm.Mesas = mesas
-            .Where(m => m.PosicionX.HasValue && m.PosicionY.HasValue && m.ZonaId.HasValue)
-            .Select(m => new MesaMapaItemVm
+            .Where(m => m.Activa)
+            .OrderBy(m => m.Numero)
+            .Select((m, index) =>
             {
-                Id = m.Id,
-                Numero = m.Numero,
-                Capacidad = m.Capacidad,
-                Estado = m.Estado,
-                Activa = m.Activa,
-                PosicionX = m.PosicionX,
-                PosicionY = m.PosicionY,
-                ZonaId = m.ZonaId,
-                Forma = m.Forma,
-                Rotacion = m.Rotacion,
-                OcupadaDesde = m.OcupadaDesde
+                var tieneZonaValida = m.ZonaId.HasValue && zonaIds.Contains(m.ZonaId.Value);
+                var tienePosicionValida = m.PosicionX is >= 3 and <= 94 && m.PosicionY is >= 4 and <= 92;
+                var col = index % 4;
+                var fila = index / 4;
+                var fallbackX = 12 + col * 23;
+                var fallbackY = 18 + fila * 24;
+
+                return new MesaMapaItemVm
+                {
+                    Id = m.Id,
+                    Numero = m.Numero,
+                    Capacidad = m.Capacidad,
+                    Estado = m.Estado,
+                    Activa = m.Activa,
+                    PosicionX = tienePosicionValida ? m.PosicionX : fallbackX,
+                    PosicionY = tienePosicionValida ? m.PosicionY : fallbackY,
+                    ZonaId = tieneZonaValida ? m.ZonaId : zonaPrincipal.Id,
+                    Forma = string.IsNullOrWhiteSpace(m.Forma) ? (m.Capacidad >= 8 ? "Cuadrada" : "Redonda") : m.Forma,
+                    Rotacion = m.Rotacion ?? 0,
+                    OcupadaDesde = m.OcupadaDesde
+                };
             })
             .ToList();
 

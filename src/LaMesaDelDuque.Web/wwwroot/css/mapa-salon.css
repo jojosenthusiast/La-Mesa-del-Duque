@@ -343,3 +343,28 @@
         gap: 0.5rem;
     }
 }
+
+/* Hotfix mapa: asegurar alto visible y mesas dentro del canvas */
+.lmd-mapa-canvas-wrapper {
+    min-height: 560px;
+}
+.lmd-mapa-zona-canvas {
+    min-height: 560px;
+}
+.lmd-mapa-mesa {
+    transform-origin: center center;
+}
+@media (max-width: 767.98px) {
+    .lmd-mapa-canvas-wrapper,
+    .lmd-mapa-zona-canvas {
+        min-height: 520px;
+    }
+    .lmd-mapa-mesa {
+        width: 56px;
+        height: 56px;
+    }
+    .lmd-mapa-mesa--bar {
+        width: 82px;
+        height: 46px;
+    }
+}

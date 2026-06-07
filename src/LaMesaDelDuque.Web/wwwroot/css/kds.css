@@ -7,7 +7,7 @@
 .lmd-kds-shell {
     display: flex;
     flex-direction: column;
-    height: calc(100vh - var(--lmd-nav-alto, 72px) - 80px);
+    height: 100vh;
     overflow: hidden;
     background: #0a0a14;
     color: #fff;
@@ -88,6 +88,14 @@
     border-radius: 4px; margin-right: 0.5rem;
 }
 .lmd-kds-undo-btn:hover { background: #333; color: #fff; }
+
+/* Logout button */
+.lmd-kds-logout-btn {
+    appearance: none; border: 1px solid #555; background: transparent;
+    color: #888; font-size: 1rem; padding: 0.3rem 0.7rem; cursor: pointer;
+    border-radius: 4px; margin-left: 0.5rem; transition: background 0.2s, color 0.2s, border-color 0.2s;
+}
+.lmd-kds-logout-btn:hover { background: #c0392b; color: #fff; border-color: #c0392b; }
 
 /* Visual separators between sections */
 .lmd-kds-card__header + .lmd-kds-card__dish-row,
@@ -210,4 +218,38 @@
 @media (max-width: 768px) {
     .lmd-kds-orders { grid-template-columns: 1fr; }
     .lmd-kds-card__producto { font-size: 1rem; }
+}
+
+/* Superfix KDS layout */
+.lmd-kds-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: .7rem 1rem;
+    background: #0f0f1f;
+    border-bottom: 1px solid #1a1a2e;
+    flex-shrink: 0;
+}
+.lmd-kds-header__left,
+.lmd-kds-header__right { display: flex; align-items: center; gap: .75rem; }
+.lmd-kds-header__left { min-width: 180px; }
+.lmd-kds-header__right { margin-left: auto; }
+.lmd-kds-titulo { margin: 0; color: var(--lmd-dorado-real); font-family: var(--lmd-fuente-titulo); font-size: 1.35rem; }
+.lmd-kds-reloj { font-weight: 700; opacity: .8; }
+.lmd-kds-contador { font-size: .8rem; color: #bbb; white-space: nowrap; }
+.lmd-kds-offline-badge { display: none; background: #c0392b; color: #fff; border-radius: 999px; padding: .2rem .55rem; font-size: .7rem; font-weight: 800; }
+.lmd-kds-main { flex: 1; min-height: 0; overflow: hidden; }
+.lmd-kds-columns { height: 100%; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .75rem; padding: .75rem; overflow: hidden; }
+.lmd-kds-col { min-width: 0; min-height: 0; display: flex; flex-direction: column; background: #111122; border: 1px solid #1f1f36; border-radius: .75rem; overflow: hidden; }
+.lmd-kds-col-header { display: flex; justify-content: space-between; gap: .5rem; padding: .6rem .75rem; background: rgba(255,255,255,.04); flex-shrink: 0; }
+.lmd-kds-col-name { font-weight: 800; }
+.lmd-kds-col-count { font-size: .78rem; color: #aaa; }
+.lmd-kds-col .lmd-kds-orders { min-height: 0; display: flex; flex-direction: column; overflow-y: auto; }
+.lmd-kds-card__curso { display: inline-block; margin-left: .4rem; font-size: .7rem; color: var(--lmd-dorado-real); text-transform: uppercase; }
+
+@media (max-width: 900px) {
+    .lmd-kds-header { flex-wrap: wrap; align-items: stretch; }
+    .lmd-kds-stations { order: 3; width: 100%; }
+    .lmd-kds-columns { grid-template-columns: 1fr; overflow-y: auto; }
+    .lmd-kds-col { min-height: 320px; }
 }

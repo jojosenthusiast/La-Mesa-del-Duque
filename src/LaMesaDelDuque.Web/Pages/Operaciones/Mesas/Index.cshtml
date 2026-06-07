@@ -2,6 +2,8 @@
 @model LaMesaDelDuque.Web.Pages.Operaciones.Mesas.IndexModel
 @{
     ViewData["Title"] = "Mesas";
+    var puedeGestionarMesas = User.IsInRole("Administrador") || User.IsInRole("Encargado");
+    var puedeLiberarMesas = puedeGestionarMesas || User.IsInRole("Mesero");
 
     static string BadgeClass(string estado) => estado switch
     {
@@ -27,7 +29,7 @@
         <h1>Mesas</h1>
         <p class="lmd-page-subtitle">Control visual del estado del salón y transiciones rápidas.</p>
     </div>
-    @if (User.IsInRole("Administrador") || User.IsInRole("Encargado"))
+    @if (puedeGestionarMesas)
     {
     <button class="btn lmd-action-primary" type="button" data-bs-toggle="collapse" data-bs-target="#mesa-form">
         Nueva mesa
@@ -96,14 +98,17 @@
                     </div>
 
                     <div class="d-flex flex-wrap gap-2">
-                        @if (User.IsInRole("Administrador") || User.IsInRole("Encargado"))
+                        @if (puedeLiberarMesas)
                         {
-                            <form method="post" asp-page-handler="CambiarEstado" class="d-inline lmd-confirm-destructive" data-confirm-message="La mesa tiene pedidos activos. ¿Desea marcarla como Disponible?">
+                            <form method="post" asp-page-handler="CambiarEstado" class="d-inline lmd-confirm-destructive" data-confirm-message="¿Desea marcar esta mesa como Disponible?">
                                 @Html.AntiForgeryToken()
                                 <input type="hidden" name="id" value="@mesa.Id" />
                                 <input type="hidden" name="nuevoEstado" value="Disponible" />
                                 <button type="submit" class="btn btn-sm lmd-action-success" @(mesa.Estado == "Disponible" ? "disabled" : null)>Disponible</button>
                             </form>
+                        }
+                        @if (puedeGestionarMesas)
+                        {
                             <form method="post" asp-page-handler="CambiarEstado" class="d-inline">
                                 @Html.AntiForgeryToken()
                                 <input type="hidden" name="id" value="@mesa.Id" />
@@ -141,4 +146,30 @@
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.0/signalr.min.js"></script>
+    <script>
+        (function () {
+            if (!window.signalR) return;
+            var recargar = function () { setTimeout(function () { location.reload(); }, 500); };
+            var connection = new signalR.HubConnectionBuilder()
+                .withUrl('/hubs/pedidos')
+                .withAutomaticReconnect()
+                .build();
+
+            connection.on('RecibirNotificacionPedido', function (payload) {
+                var tipo = payload && (payload.tipo || payload.Tipo);
+                if (!tipo || tipo === 'PedidoCreado' || tipo === 'EstadoCambiado' || tipo === 'PedidoCancelado') {
+                    recargar();
+                }
+            });
+            connection.on('EstadoCambiado', recargar);
+            connection.on('PedidoCreado', recargar);
+            connection.on('PedidoCancelado', recargar);
+            connection.on('MesaActualizada', recargar);
+
+            connection.start()
+                .then(function () { return connection.invoke('UnirseASalon').catch(function () {}); })
+                .catch(function (err) { console.warn('SignalR Mesas:', err); });
+        })();
+    </script>
 }

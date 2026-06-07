@@ -16,6 +16,28 @@
     function totalLineas(lineas) {
         return lineas.reduce(function (s, l) { return s + (l.precioUnitario || 0) * (l.cantidad || 0); }, 0);
     }
+    function detallesServidor() {
+        return state && state.pedidoActual && Array.isArray(state.pedidoActual.detalles)
+            ? state.pedidoActual.detalles
+            : [];
+    }
+    function totalPedidoActual() {
+        var totalServidor = state && state.pedidoActual && !isNaN(Number(state.pedidoActual.total))
+            ? Number(state.pedidoActual.total)
+            : 0;
+        return totalServidor + totalLineas(state ? state.lineas : []);
+    }
+    function htmlEscape(value) {
+        return String(value || '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+    function jsString(value) {
+        return String(value || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+    }
 
     // ── State ──────────────────────────────────────────
     const state = {
@@ -23,6 +45,7 @@
         tipoServicio: null,
         mesaId: null,
         mesaNumero: null,
+        entrega: { direccion: '', telefono: '', repartidorId: '' },
         lineas: [],
         pedidoActual: null,        // { id }
         pagado: false,
@@ -50,6 +73,10 @@
         });
         var el = document.getElementById('lmd-pos-screen-' + nombre);
         if (el) el.classList.add('lmd-pos-screen--activa');
+
+        // El botón superior de volver en Caja solo debe aparecer dentro de una orden.
+        var back = document.getElementById('lmd-pos-back-btn');
+        if (back) back.style.display = nombre === 'productos' ? 'inline-flex' : 'none';
     }
 
     // ── Overlay system ──────────────────────────────────
@@ -87,6 +114,7 @@
     // ═══════════════════════════════════════════════════
     function renderSeleccion() {
         var mesas = window.__lmdMesasDisponibles || [];
+        var pedidosSinMesa = window.__lmdPedidosSinMesaActivos || [];
         // Group by capacity, sort ascending within each group
         var grupos = {};
         mesas.forEach(function (m) {
@@ -131,17 +159,43 @@
             });
         });
 
+        var pedidosSinMesaHtml = pedidosSinMesa.length > 0
+            ? '<div class="lmd-pos-offpremise-list">' +
+                '<div class="lmd-pos-offpremise-list__title">Pedidos abiertos</div>' +
+                pedidosSinMesa.map(function (p) {
+                    var tipo = p.tipoServicio === 'Domicilio' ? 'Delivery' : 'Retiro';
+                    var estado = p.estado || 'Activo';
+                    var cobrar = estado === 'Listo' || estado === 'EnCobro';
+                    var sub = p.tipoServicio === 'Domicilio'
+                        ? (p.direccionEntrega || 'Sin dirección')
+                        : 'Retiro en caja';
+                    var fechaAttr = p.fechaCreacion ? ' data-pedido-fecha="' + p.fechaCreacion + '"' : '';
+                    return '<button type="button" class="lmd-pos-offpremise-card' + (cobrar ? ' lmd-pos-offpremise-card--cobrar' : '') + '" onclick="pos.retomarPedidoSinMesa(\'' + jsString(p.id) + '\')">' +
+                        '<span class="lmd-pos-offpremise-card__main">' + icon(p.tipoServicio === 'Domicilio' ? 'truck' : 'package') + ' ' + tipo + '</span>' +
+                        '<span class="lmd-pos-offpremise-card__sub">' + htmlEscape(sub) + '</span>' +
+                        '<span class="lmd-pos-offpremise-card__meta">' + fmt(p.total || 0) + ' · <span' + fechaAttr + '><span class="lmd-tab-tiempo">' + htmlEscape(estado) + '</span></span></span>' +
+                        '<span class="lmd-pos-offpremise-card__badge">' + (cobrar ? 'Cobrar' : htmlEscape(estado)) + '</span>' +
+                    '</button>';
+                }).join('') +
+              '</div>'
+            : '';
+
         var html = '<div class="lmd-pos-seleccion">' +
             '<div class="lmd-pos-seleccion__mitad lmd-pos-seleccion__comer-aqui">' +
                 '<div class="lmd-pos-seleccion__header">' + icon('utensils-crossed') + ' Comer aquí</div>' +
                 '<div class="lmd-pos-mesas-grid">' + (mesasHtml || '<div class="lmd-pos-empty">Sin mesas disponibles</div>') + '</div>' +
             '</div>' +
-            '<div class="lmd-pos-seleccion__mitad lmd-pos-seleccion__para-llevar" onclick="pos.seleccionarParaLlevar()">' +
-                '<div class="lmd-pos-seleccion__header">' + icon('package') + ' Para llevar</div>' +
+            '<div class="lmd-pos-seleccion__mitad lmd-pos-seleccion__para-llevar">' +
+                '<div class="lmd-pos-seleccion__header">' + icon('package') + ' Para llevar / delivery</div>' +
+                pedidosSinMesaHtml +
                 '<div class="lmd-pos-para-llevar-card">' +
                     '<div class="lmd-pos-para-llevar-card__icon">' + icon('shopping-bag') + '</div>' +
-                    '<div class="lmd-pos-para-llevar-card__titulo">Para llevar</div>' +
-                    '<div class="lmd-pos-para-llevar-card__sub">Toca para iniciar sin mesa</div>' +
+                    '<div class="lmd-pos-para-llevar-card__titulo">Pedido sin mesa</div>' +
+                    '<div class="lmd-pos-para-llevar-card__sub">Usalo para retiro en caja o configurá envío a domicilio.</div>' +
+                    '<div class="d-grid gap-2 mt-3">' +
+                        '<button type="button" class="btn lmd-pos-service-btn lmd-pos-service-btn--takeout" onclick="pos.seleccionarParaLlevar()">Retiro en caja</button>' +
+                        '<button type="button" class="btn lmd-pos-service-btn lmd-pos-service-btn--delivery" onclick="pos.seleccionarDelivery()">Configurar delivery</button>' +
+                    '</div>' +
                 '</div>' +
             '</div>' +
         '</div>';
@@ -168,6 +222,7 @@
         state.tipoServicio = 'ComerAqui';
         state.mesaId = mesaId;
         state.mesaNumero = numero;
+        state.entrega = { direccion: '', telefono: '', repartidorId: '' };
         _resetPedido();
         renderProductos();
         mostrarPantalla('productos');
@@ -179,6 +234,7 @@
         state.tipoServicio = 'ComerAqui';
         state.mesaId = mesaId;
         state.mesaNumero = mesaNumero;
+        state.entrega = { direccion: '', telefono: '', repartidorId: '' };
         state.lineas = [];
         state.pedidoActual = { id: pedidoId, total: tabTotal, detalles: [] };
         state.pagado = false;
@@ -193,6 +249,7 @@
         try {
             await fetch('?handler=MarcarEnCobroJson', { method: 'POST', body: form, headers: { 'X-Requested-With': 'XMLHttpRequest' } });
         } catch (e) { /* continúa aunque falle el server */ }
+        await cargarDetallesPedidoActual();
         renderProductos();
         mostrarPantalla('productos');
         lmdToast('Tab retomado — Mesa ' + mesaNumero, 'success');
@@ -202,6 +259,7 @@
         state.tipoServicio = 'ComerAqui';
         state.mesaId = mesaId;
         state.mesaNumero = mesaNumero;
+        state.entrega = { direccion: '', telefono: '', repartidorId: '' };
         state.lineas = [];
         state.pedidoActual = { id: pedidoId, total: tabTotal, detalles: [] };
         state.pagado = false;
@@ -211,18 +269,81 @@
         state.propinaMonto = 0;
         state.split = { activo: false, personas: [], personaActual: 0 };
         keypadValue = '0';
+        cargarDetallesPedidoActual().finally(function () {
+            renderProductos();
+            mostrarPantalla('productos');
+            abrirOverlayPago();
+        });
+    }
+
+    async function retomarPedidoSinMesa(pedidoId) {
+        var pedidos = window.__lmdPedidosSinMesaActivos || [];
+        var p = pedidos.find(function (x) { return String(x.id) === String(pedidoId); }) || { id: pedidoId, tipoServicio: 'ParaLlevar', total: 0 };
+        state.tipoServicio = p.tipoServicio === 'Domicilio' ? 'Domicilio' : 'ParaLlevar';
+        state.mesaId = null;
+        state.mesaNumero = null;
+        state.entrega = {
+            direccion: p.direccionEntrega || '',
+            telefono: p.telefonoCliente || '',
+            repartidorId: p.repartidorId || ''
+        };
+        state.lineas = [];
+        state.pedidoActual = { id: p.id || pedidoId, total: Number(p.total || 0), detalles: p.detalles || [], estado: p.estado || '' };
+        state.pagado = false;
+        state.pagoMetodo = null;
+        state.pagoMonto = null;
+        state.pagoReferencia = null;
+        state.propinaMonto = 0;
+        state.split = { activo: false, personas: [], personaActual: 0 };
+        keypadValue = '0';
+        await cargarDetallesPedidoActual();
         renderProductos();
         mostrarPantalla('productos');
-        abrirOverlayPago();
+        lmdToast((p.estado === 'Listo' || p.estado === 'EnCobro') ? 'Pedido listo para cobrar.' : 'Pedido retomado. Podés agregar más productos o cobrar.', 'success');
+    }
+
+    async function cargarDetallesPedidoActual() {
+        if (!state.pedidoActual || !state.pedidoActual.id) return;
+        try {
+            var r = await fetch('?handler=DetallesPedidoJson&pedidoId=' + encodeURIComponent(state.pedidoActual.id), { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+            if (!r.ok) return;
+            var d = await r.json();
+            state.pedidoActual.detalles = d.detalles || [];
+            if (d.total != null) state.pedidoActual.total = Number(d.total || 0);
+        } catch (e) {}
     }
 
     function seleccionarParaLlevar() {
         state.tipoServicio = 'ParaLlevar';
         state.mesaId = null;
         state.mesaNumero = null;
+        state.entrega = { direccion: '', telefono: '', repartidorId: '' };
         _resetPedido();
         renderProductos();
         mostrarPantalla('productos');
+    }
+
+    function seleccionarDelivery() {
+        state.tipoServicio = 'Domicilio';
+        state.mesaId = null;
+        state.mesaNumero = null;
+        state.entrega = { direccion: '', telefono: '', repartidorId: '' };
+        _resetPedido();
+        renderProductos();
+        mostrarPantalla('productos');
+        abrirConfigEnvio(true);
+    }
+
+    function servicioLabel() {
+        if (state.tipoServicio === 'ComerAqui') return 'Mesa ' + state.mesaNumero;
+        if (state.tipoServicio === 'Domicilio') return 'Delivery';
+        return 'Para llevar';
+    }
+
+    function entregaResumenHtml() {
+        if (state.tipoServicio !== 'Domicilio') return '';
+        var dir = (state.entrega && state.entrega.direccion) ? state.entrega.direccion : 'Sin dirección';
+        return '<span class="lmd-pos-delivery-badge">' + icon('truck') + ' ' + dir + '</span>';
     }
 
     function _resetPedido() {
@@ -257,28 +378,45 @@
         }).join('');
 
         var productosHtml = renderProductGrid(prods);
-        var total = totalLineas(state.lineas);
-        var hayItems = state.lineas.length > 0;
+        var detalles = detallesServidor();
+        var total = totalPedidoActual();
+        var hayItems = state.lineas.length > 0 || detalles.length > 0;
+
+        var detallesHtml = detalles.map(function (d) {
+            var cantidad = d.cantidad || 1;
+            var precio = d.subtotal != null ? d.subtotal : (d.precioUnitario || 0) * cantidad;
+            return '<div class="lmd-pos-cart-item lmd-pos-cart-item--registrado">' +
+                '<div class="lmd-pos-cart-item__info">' +
+                    '<span class="lmd-pos-cart-item__nombre">' + htmlEscape(d.productoNombre || d.nombre || 'Producto') + '<small class="lmd-pos-cart-item__estado">En pedido</small></span>' +
+                    '<span class="lmd-pos-cart-item__precio">' + fmt(precio) + '</span>' +
+                '</div>' +
+                '<div class="lmd-pos-cart-item__controles">' +
+                    '<span class="lmd-pos-cart-item__qty lmd-pos-cart-item__qty--locked">x' + cantidad + '</span>' +
+                '</div>' +
+            '</div>';
+        }).join('');
+
+        var lineasHtml = state.lineas.map(function (l, i) {
+            return '<div class="lmd-pos-cart-item">' +
+                '<div class="lmd-pos-cart-item__info">' +
+                    '<span class="lmd-pos-cart-item__nombre">' + htmlEscape(l.productoNombre || l.nombre || '') + (l.tieneModificaciones ? '<span class="lmd-pos-mod-dot" title="Tiene modificaciones"></span>' : '') + '<small class="lmd-pos-cart-item__estado">Nuevo</small></span>' +
+                    '<span class="lmd-pos-cart-item__precio">' + fmt((l.precioUnitario || 0) * (l.cantidad || 0)) + '</span>' +
+                '</div>' +
+                '<div class="lmd-pos-cart-item__controles">' +
+                    (state.pagado
+                        ? '<span class="lmd-pos-cart-item__qty lmd-pos-cart-item__qty--locked">x' + l.cantidad + '</span>'
+                        : '<button class="lmd-pos-cart-item__qty-btn" onclick="pos.decrementarItem(' + i + ')">' + icon('minus') + '</button>' +
+                          '<span class="lmd-pos-cart-item__qty">' + l.cantidad + '</span>' +
+                          '<button class="lmd-pos-cart-item__qty-btn" onclick="pos.incrementarItem(' + i + ')">' + icon('plus') + '</button>' +
+                          '<button class="lmd-pos-cart-item__remove" onclick="pos.eliminarDelCarrito(' + i + ')">' + icon('x') + '</button>'
+                    ) +
+                '</div>' +
+            '</div>';
+        }).join('');
 
         var cartItemsHtml = !hayItems
             ? '<div class="lmd-pos-cart__empty">' + icon('shopping-cart') + '<span>Carrito vacío</span></div>'
-            : state.lineas.map(function (l, i) {
-                return '<div class="lmd-pos-cart-item">' +
-                    '<div class="lmd-pos-cart-item__info">' +
-                        '<span class="lmd-pos-cart-item__nombre">' + (l.productoNombre || l.nombre || '') + (l.tieneModificaciones ? '<span class="lmd-pos-mod-dot" title="Tiene modificaciones"></span>' : '') + '</span>' +
-                        '<span class="lmd-pos-cart-item__precio">' + fmt((l.precioUnitario || 0) * (l.cantidad || 0)) + '</span>' +
-                    '</div>' +
-                    '<div class="lmd-pos-cart-item__controles">' +
-                        (state.pagado
-                            ? '<span class="lmd-pos-cart-item__qty lmd-pos-cart-item__qty--locked">x' + l.cantidad + '</span>'
-                            : '<button class="lmd-pos-cart-item__qty-btn" onclick="pos.decrementarItem(' + i + ')">' + icon('minus') + '</button>' +
-                              '<span class="lmd-pos-cart-item__qty">' + l.cantidad + '</span>' +
-                              '<button class="lmd-pos-cart-item__qty-btn" onclick="pos.incrementarItem(' + i + ')">' + icon('plus') + '</button>' +
-                              '<button class="lmd-pos-cart-item__remove" onclick="pos.eliminarDelCarrito(' + i + ')">' + icon('x') + '</button>'
-                        ) +
-                    '</div>' +
-                '</div>';
-              }).join('');
+            : detallesHtml + lineasHtml;
 
         var pagarLabel = state.pagado ? icon('check-circle') + ' Pagado' : icon('credit-card') + ' Pagar';
         var listoLabel = state.pagado
@@ -293,15 +431,17 @@
             '<div class="lmd-pos-cart">' +
                 '<div class="lmd-pos-cart__header">' +
                     icon('shopping-bag') +
-                    '<span>' + (state.tipoServicio === 'ComerAqui' ? 'Mesa ' + state.mesaNumero : 'Para llevar') + '</span>' +
+                    '<span>' + servicioLabel() + '</span>' +
                     (state.pedidoActual && !state.pagado ? '<span class="lmd-pos-tab-activo-badge">' + icon('clock') + ' Tab activo</span>' : '') +
                     (!state.pagado ? '<button class="lmd-pos-cart-change-servicio" onclick="pos.cambiarServicio()" title="Cambiar tipo de servicio">' + icon('refresh-cw') + '</button>' : '') +
+                    (!state.pagado && state.tipoServicio !== 'ComerAqui' ? '<button class="lmd-pos-cart-change-servicio" onclick="pos.abrirConfigEnvio()" title="Configurar envío">' + icon('truck') + '</button>' : '') +
+                    entregaResumenHtml() +
                     (state.pagado ? '<span class="lmd-pos-pagado-badge">' + icon('check-circle') + ' Pagado</span>' : '') +
                 '</div>' +
                 '<div class="lmd-pos-cart__items" id="lmd-pos-cart-items">' + cartItemsHtml + '</div>' +
                 '<div class="lmd-pos-cart__total">' + fmt(total) + '</div>' +
                 '<div class="lmd-pos-cart__acciones">' +
-                    '<button class="lmd-pos-cart-btn lmd-pos-cart-btn--listo" onclick="pos.confirmarListo()"' + (!hayItems ? ' disabled' : '') + '>' + listoLabel + '</button>' +
+                    '<button class="lmd-pos-cart-btn lmd-pos-cart-btn--listo" onclick="pos.confirmarListo()"' + ((state.pagado || state.lineas.length > 0) ? '' : ' disabled') + '>' + listoLabel + '</button>' +
                     '<button class="lmd-pos-cart-btn lmd-pos-cart-btn--cancelar" onclick="pos.cancelarOrden()">' + icon('x-circle') + ' Cancelar</button>' +
                     '<button class="lmd-pos-cart-btn lmd-pos-cart-btn--pagar' + (state.pagado ? ' lmd-pos-cart-btn--pagado' : '') + '" onclick="pos.irAPago()"' + ((!hayItems && !state.pedidoActual) || state.pagado ? ' disabled' : '') + '>' + pagarLabel + '</button>' +
                     (state.pagado ? '<button class="lmd-pos-cart-btn lmd-pos-cart-btn--anular" onclick="pos.confirmarAnulacion()">' + icon('rotate-ccw') + ' Anular pago</button>' : '') +
@@ -332,8 +472,12 @@
                       fmt(Math.max(0, precioConDescuento)) +
                   '</span>'
                 : '<span class="lmd-pos-producto-card__precio">' + fmt(p.precio || 0) + '</span>';
-            return '<div class="lmd-pos-producto-card' + (agotado ? ' lmd-pos-producto-card--agotado' : '') + (tienePromo ? ' lmd-pos-producto-card--promo' : '') + '">' +
-                '<div class="lmd-pos-producto-card__body" onclick="' + (agotado || state.pagado ? '' : 'pos.agregarAlCarrito(\'' + p.id + '\',\'' + (p.nombre || '').replace(/'/g, "\\'") + '\',' + (p.precio || 0) + ')') + '">' +
+            // Badge cantidad en carrito
+            var lineaEnCarrito = state.lineas.find(function (l) { return l.productoId === p.id; });
+            var cartBadge = lineaEnCarrito ? '<span class="lmd-pos-producto-card__cart-badge">×' + lineaEnCarrito.cantidad + '</span>' : '';
+
+            return '<div class="lmd-pos-producto-card' + (agotado ? ' lmd-pos-producto-card--agotado' : '') + (tienePromo ? ' lmd-pos-producto-card--promo' : '') + (lineaEnCarrito ? ' lmd-pos-producto-card--en-carrito' : '') + '">' +
+                cartBadge + '<div class="lmd-pos-producto-card__body" onclick="' + (agotado || state.pagado ? '' : 'pos.agregarAlCarrito(\'' + p.id + '\',\'' + (p.nombre || '').replace(/'/g, "\\'") + '\',' + (p.precio || 0) + ')') + '">' +
                     '<div class="lmd-pos-producto-card__ico">' + icon(ico) + '</div>' +
                     '<span class="lmd-pos-producto-card__nombre">' + (p.nombre || '') + '</span>' +
                     precioHtml +
@@ -420,9 +564,12 @@
     // LISTO — enviar a cocina (+ docs si está pagado)
     // ═══════════════════════════════════════════════════
     async function confirmarListo() {
-        if (state.lineas.length === 0) { lmdToast('Agrega productos primero', 'error'); return; }
-
         if (state.pagado) { abrirOverlayDocumentos(); return; }
+
+        if (state.lineas.length === 0) {
+            lmdToast(state.pedidoActual ? 'Agrega productos nuevos para enviar más a cocina.' : 'Agrega productos primero', state.pedidoActual ? 'info' : 'error');
+            return;
+        }
 
         if (_creandoPedido) return;
         _creandoPedido = true;
@@ -448,6 +595,7 @@
                     state.pedidoActual.total = dataMas.total || ((state.pedidoActual.total || 0) + totalLineas(state.lineas));
                     if (dataMas.detalles) state.pedidoActual.detalles = dataMas.detalles;
                     state.lineas = [];
+                    await refrescarPedidosSinMesa();
                     renderProductos();
                 } else {
                     var errMas = await resMas.json().catch(function () { return null; });
@@ -459,10 +607,12 @@
         }
 
         // Sin tab: crear pedido nuevo
+        if (!validarEntregaAntesDeCrear()) { _creandoPedido = false; return; }
         var form = new FormData();
         form.append('__RequestVerificationToken', csrf ? csrf.value : '');
         form.append('Vm.CrearPedido.TipoServicio', state.tipoServicio || 'ComerAqui');
         if (state.mesaId) form.append('Vm.CrearPedido.MesaId', state.mesaId);
+        aplicarDatosEntrega(form);
         state.lineas.forEach(function (l, i) {
             form.append('Vm.CrearPedido.Lineas[' + i + '].ProductoId', l.productoId);
             form.append('Vm.CrearPedido.Lineas[' + i + '].Cantidad', l.cantidad || 1);
@@ -473,21 +623,86 @@
             var res = await fetch('?handler=CrearJson', { method: 'POST', body: form, headers: { 'X-Requested-With': 'XMLHttpRequest' } });
             var data = await res.json();
             if (data.pedidoId) {
-                lmdToast('Pedido enviado a cocina', 'success');
-                if (state.tipoServicio === 'ParaLlevar') {
-                    _creandoPedido = false;
-                    nuevaOrden();
-                } else {
-                    state.pedidoActual = { id: data.pedidoId, total: data.total || totalLineas(state.lineas), detalles: data.detalles || [] };
-                    state.lineas = [];
-                    _creandoPedido = false;
-                    renderProductos();
-                }
+                state.pedidoActual = { id: data.pedidoId, total: data.total || totalLineas(state.lineas), detalles: data.detalles || [] };
+                state.lineas = [];
+                _creandoPedido = false;
+                await refrescarPedidosSinMesa();
+                renderProductos();
+                lmdToast('Pedido enviado a cocina. Podés cobrarlo desde esta misma pantalla.', 'success');
                 return;
             }
         } catch (e) { lmdToast('Error al enviar pedido', 'error'); }
         _creandoPedido = false;
 
+    }
+
+
+    function aplicarDatosEntrega(form) {
+        if (state.tipoServicio !== 'Domicilio') return;
+        form.append('Vm.CrearPedido.DireccionEntrega', (state.entrega && state.entrega.direccion) || '');
+        form.append('Vm.CrearPedido.TelefonoCliente', (state.entrega && state.entrega.telefono) || '');
+        if (state.entrega && state.entrega.repartidorId) {
+            form.append('Vm.CrearPedido.RepartidorId', state.entrega.repartidorId);
+        }
+    }
+
+    function validarEntregaAntesDeCrear() {
+        if (state.tipoServicio !== 'Domicilio') return true;
+        if (state.entrega && state.entrega.direccion && state.entrega.direccion.trim()) return true;
+        lmdToast('Configurá la dirección de delivery antes de enviar o cobrar.', 'error');
+        abrirConfigEnvio(true);
+        return false;
+    }
+
+    function abrirConfigEnvio(obligatorio) {
+        var repartidores = window.__lmdRepartidoresDisponibles || [];
+        var opts = '<option value="">Asignar después</option>' + repartidores.map(function (r) {
+            var selected = state.entrega && state.entrega.repartidorId === r.id ? ' selected' : '';
+            return '<option value="' + r.id + '"' + selected + '>' + (r.nombre || 'Repartidor') + '</option>';
+        }).join('');
+        var html =
+            '<div class="lmd-pos-ov-header">' +
+                '<span class="lmd-pos-ov-title">' + icon('truck') + ' Configurar envío</span>' +
+                (!obligatorio ? '<button class="lmd-pos-ov-close" onclick="pos.cerrarConfigEnvio()">' + icon('x') + '</button>' : '') +
+            '</div>' +
+            '<div class="lmd-pos-cambiar-servicio-body">' +
+                '<label class="form-label">Dirección de entrega</label>' +
+                '<input id="lmd-delivery-dir" class="form-control mb-2" maxlength="250" placeholder="Calle, número, colonia, referencia" value="' + ((state.entrega && state.entrega.direccion) || '').replace(/"/g, '&quot;') + '" />' +
+                '<label class="form-label">Teléfono del cliente</label>' +
+                '<input id="lmd-delivery-tel" class="form-control mb-2" maxlength="30" placeholder="0000-0000" value="' + ((state.entrega && state.entrega.telefono) || '').replace(/"/g, '&quot;') + '" />' +
+                '<label class="form-label">Repartidor</label>' +
+                '<select id="lmd-delivery-rep" class="form-select mb-3">' + opts + '</select>' +
+                '<div class="d-flex gap-2 flex-wrap">' +
+                    '<button type="button" class="btn btn-dark" onclick="pos.guardarConfigEnvio()">Guardar envío</button>' +
+                    '<button type="button" class="btn btn-outline-secondary" onclick="pos.quitarEnvio()">Retiro en caja</button>' +
+                '</div>' +
+            '</div>';
+        state.tipoServicio = 'Domicilio';
+        abrirOverlay('delivery', html, { closeOnBackdrop: !obligatorio, wide: true });
+    }
+
+    function guardarConfigEnvio() {
+        var dir = document.getElementById('lmd-delivery-dir')?.value || '';
+        var tel = document.getElementById('lmd-delivery-tel')?.value || '';
+        var rep = document.getElementById('lmd-delivery-rep')?.value || '';
+        if (!dir.trim()) { lmdToast('La dirección de entrega es obligatoria.', 'error'); return; }
+        state.tipoServicio = 'Domicilio';
+        state.mesaId = null;
+        state.mesaNumero = null;
+        state.entrega = { direccion: dir.trim(), telefono: tel.trim(), repartidorId: rep };
+        cerrarOverlay('delivery');
+        renderProductos();
+        lmdToast('Datos de delivery guardados', 'success');
+    }
+
+    function cerrarConfigEnvio() { cerrarOverlay('delivery'); }
+
+    function quitarEnvio() {
+        state.tipoServicio = 'ParaLlevar';
+        state.entrega = { direccion: '', telefono: '', repartidorId: '' };
+        cerrarOverlay('delivery');
+        renderProductos();
+        lmdToast('Pedido cambiado a retiro en caja', 'info');
     }
 
     // ═══════════════════════════════════════════════════
@@ -509,12 +724,14 @@
         }
 
         if (!state.pedidoActual) {
+            if (!validarEntregaAntesDeCrear()) return;
             _creandoPedido = true;
             var csrf = document.querySelector('input[name="__RequestVerificationToken"]');
             var form = new FormData();
             form.append('__RequestVerificationToken', csrf ? csrf.value : '');
             form.append('Vm.CrearPedido.TipoServicio', state.tipoServicio || 'ComerAqui');
             if (state.mesaId) form.append('Vm.CrearPedido.MesaId', state.mesaId);
+            aplicarDatosEntrega(form);
             state.lineas.forEach(function (l, i) {
                 form.append('Vm.CrearPedido.Lineas[' + i + '].ProductoId', l.productoId);
                 form.append('Vm.CrearPedido.Lineas[' + i + '].Cantidad', l.cantidad || 1);
@@ -524,7 +741,12 @@
             try {
                 var res = await fetch('?handler=CrearJson', { method: 'POST', body: form, headers: { 'X-Requested-With': 'XMLHttpRequest' } });
                 var data = await res.json();
-                if (data.pedidoId) state.pedidoActual = { id: data.pedidoId };
+                if (data.pedidoId) {
+                    state.pedidoActual = { id: data.pedidoId, total: data.total || totalLineas(state.lineas), detalles: data.detalles || [] };
+                    state.lineas = [];
+                    await refrescarPedidosSinMesa();
+                    renderProductos();
+                }
                 else { lmdToast('No se pudo crear el pedido', 'error'); _creandoPedido = false; return; }
             } catch (e) { lmdToast('Error al crear pedido', 'error'); _creandoPedido = false; return; }
             _creandoPedido = false;
@@ -543,9 +765,7 @@
     ];
 
     function abrirOverlayPago() {
-        var total = (state.pedidoActual && state.pedidoActual.total)
-            ? state.pedidoActual.total + totalLineas(state.lineas)
-            : totalLineas(state.lineas);
+        var total = totalPedidoActual();
         var btnsHtml = METODOS_PAGO.map(function (m) {
             return '<button class="lmd-pos-pm-btn ' + (m.cls || '') + '" onclick="pos.procesarPago(\'' + m.codigo + '\',' + total.toFixed(2) + ')">' +
                 '<span class="lmd-pos-pm-btn__icon">' + icon(m.icon) + '</span>' +
@@ -837,9 +1057,7 @@
                 }
             } catch (e) {}
         }
-        var total = (state.pedidoActual && state.pedidoActual.total)
-            ? state.pedidoActual.total + totalLineas(state.lineas)
-            : totalLineas(state.lineas);
+        var total = totalPedidoActual();
         var html =
             '<div class="lmd-pos-ov-header">' +
                 '<button class="lmd-pos-ov-back" onclick="pos.volverAPago()">' + icon('arrow-left') + '</button>' +
@@ -879,7 +1097,7 @@
     function splitIgualitario() {
         _splitN = 2;
         cerrarOverlay('split');
-        var total = totalLineas(state.lineas);
+        var total = totalPedidoActual();
         var html =
             '<div class="lmd-pos-ov-header">' +
                 '<button class="lmd-pos-ov-back" onclick="pos.volverAPago()">' + icon('arrow-left') + '</button>' +
@@ -909,7 +1127,7 @@
         _splitN = Math.max(2, Math.min(10, _splitN + delta));
         var el = document.getElementById('split-n');
         if (el) el.textContent = _splitN;
-        var total = totalLineas(state.lineas);
+        var total = totalPedidoActual();
         var preview = document.getElementById('split-preview');
         if (preview) preview.innerHTML = _splitPreview(total, _splitN);
     }
@@ -947,7 +1165,7 @@
     }
 
     function _renderSplitNPicker() {
-        var total = totalLineas(state.lineas);
+        var total = totalPedidoActual();
         var esMixto = _splitTipo === 'mixto';
         var titulo = esMixto ? 'División mixta' : 'Por persona';
         var icono = esMixto ? 'git-merge' : 'users';
@@ -1109,7 +1327,7 @@
         var idx = personas.findIndex(function (p) { return !p.pagado; });
         if (idx < 0) {
             state.split.activo = false;
-            var total = totalLineas(state.lineas);
+            var total = totalPedidoActual();
             finalizarPago('split', total, 'SPLIT-' + state.split.personas.length);
             return;
         }
@@ -1239,24 +1457,37 @@
                 var res = await fetch('?handler=PagarJson', { method: 'POST', body: form, headers: { 'X-Requested-With': 'XMLHttpRequest' } });
                 var data = await res.json().catch(function () { return null; });
                 if (!res.ok) {
-                    lmdToast(data && data.error ? data.error : 'Error al registrar pago', 'error');
-                    abrirOverlayPago();
+                    var errMsg = data && data.error ? data.error : 'Error al registrar pago';
+                    lmdToast(errMsg, 'error');
+                    // Si el pedido ya fue pagado no reabrir el overlay de pago (evita bucle)
+                    var yaFinalizado = errMsg && (errMsg.toLowerCase().includes('pagado') || errMsg.toLowerCase().includes('cancelado') || errMsg.toLowerCase().includes('despachado'));
+                    if (yaFinalizado) {
+                        cerrarTodasOverlaysPago();
+                        await Promise.all([refrescarMesas(), refrescarPedidosSinMesa()]);
+                        state.pagado = true;
+                        renderProductos();
+                    } else {
+                        abrirOverlayPago();
+                    }
                     return;
                 }
+                // Éxito: SIEMPRE cerrar overlays y marcar como pagado
+                await Promise.all([refrescarMesas(), refrescarPedidosSinMesa()]);
+                state.pagado = true;
+                cerrarTodasOverlaysPago();
+                renderProductos();
+                mostrarPantalla('productos');
                 if (data && data.mensaje) lmdToast(data.mensaje, 'success');
                 if (data && data.ticketHtml) {
-                    await refrescarMesas();
-                    state.pagado = true;
-                    cerrarTodasOverlaysPago();
-                    renderProductos();
-                    mostrarPantalla('productos');
                     mostrarTicketModal(data.ticketHtml);
-                    return;
+                } else {
+                    lmdToast('Pago registrado. Presiona Finalizar para el comprobante.', 'success');
                 }
-            } catch (e) { lmdToast('Error de conexión', 'error'); return; }
+                return;
+            } catch (e) { lmdToast('Error de conexión', 'error'); cerrarTodasOverlaysPago(); return; }
         }
 
-        await refrescarMesas();
+        await Promise.all([refrescarMesas(), refrescarPedidosSinMesa()]);
         state.pagado = true;
         cerrarTodasOverlaysPago();
         renderProductos();
@@ -1294,9 +1525,7 @@
     ];
 
     function abrirOverlayDocumentos() {
-        var total = (state.pedidoActual && state.pedidoActual.total)
-            ? state.pedidoActual.total
-            : totalLineas(state.lineas);
+        var total = totalPedidoActual();
         var propina = state.propinaMonto || 0;
         var btnsHtml = DOCUMENTOS.map(function (d) {
             return '<button class="lmd-pos-pm-btn" onclick="pos.emitirDocumento(\'' + d.codigo + '\')">' +
@@ -1359,8 +1588,9 @@
         state.tipoServicio = null;
         state.mesaId = null;
         state.mesaNumero = null;
+        state.entrega = { direccion: '', telefono: '', repartidorId: '' };
         _resetPedido();
-        await refrescarMesas();
+        await Promise.all([refrescarMesas(), refrescarPedidosSinMesa()]);
         renderSeleccion();
         mostrarPantalla('seleccion');
     }
@@ -1392,6 +1622,30 @@
             _mod.alergenosProducto = await r2.json() || [];
         } catch (e) { _mod.alergenosProducto = []; }
 
+        // BUG FIX: si el producto ya está en el carrito con modificaciones, restaurar ese estado
+        var lineaExistente = state.lineas.find(function (l) { return l.productoId === productoId; });
+        if (lineaExistente && lineaExistente.modificacionesJson) {
+            try {
+                var modsExistentes = JSON.parse(lineaExistente.modificacionesJson);
+                modsExistentes.forEach(function (m) {
+                    if (m.accion === 'alergia') {
+                        if (_mod.alergias.indexOf(m.ingredienteNombre.toLowerCase()) < 0)
+                            _mod.alergias.push(m.ingredienteNombre.toLowerCase());
+                    } else {
+                        var ing = _mod.ingredientes.find(function (i) { return i.id === m.ingredienteId; });
+                        if (ing) {
+                            ing.estado = m.accion === 'intercambiar' ? 'quitado' : m.accion;
+                            if (m.accion === 'intercambiar') {
+                                ing.reemplazoId = m.ingredienteReemplazoId;
+                                ing.reemplazoNombre = m.ingredienteReemplazoNombre || '';
+                            }
+                        }
+                    }
+                });
+            } catch (e) {}
+        }
+        if (lineaExistente && lineaExistente.notas) _mod.notaCustom = lineaExistente.notas;
+
         renderModificadorModal();
     }
 
@@ -1408,7 +1662,15 @@
         var ingsHtml = _mod.ingredientes.length > 0
             ? _mod.ingredientes.map(function (ing) {
                 var est = ing.estado || 'normal';
-                var otros = _mod.ingredientes.filter(function (o) { return o.id !== ing.id; });
+                // Excluir: el mismo ingrediente, los ya quitados, y los ya usados como reemplazo de otro
+                var usadosComoReemplazo = _mod.ingredientes
+                    .filter(function (x) { return x.reemplazoId && x.id !== ing.id; })
+                    .map(function (x) { return x.reemplazoId; });
+                var otros = _mod.ingredientes.filter(function (o) {
+                    return o.id !== ing.id &&
+                           o.estado !== 'quitado' &&
+                           usadosComoReemplazo.indexOf(o.id) < 0;
+                });
                 var reemplazoSel = est === 'quitado' && otros.length > 0
                     ? '<select class="lmd-mod-ing-reemplazo" onchange="pos.cambiarReemplazo(\'' + ing.id + '\', this.value)">' +
                           '<option value="">— Sin reemplazo</option>' +
@@ -1416,7 +1678,7 @@
                               return '<option value="' + o.id + '"' + (ing.reemplazoId === o.id ? ' selected' : '') + '>' + o.nombre + '</option>';
                           }).join('') +
                       '</select>'
-                    : '';
+                    : (est === 'quitado' ? '<span style="font-size:0.75rem;color:#aaa">Sin reemplazos disponibles</span>' : '');
                 return '<div class="lmd-mod-ing-row lmd-mod-ing-row--' + est + '">' +
                     '<span class="lmd-mod-ing-nombre">' + ing.nombre + ' <small>(' + ing.cantidad + ')</small></span>' +
                     '<div class="lmd-mod-ing-acciones">' +
@@ -1430,6 +1692,7 @@
 
         var html =
             '<div class="lmd-pos-ov-header">' +
+                '<button class="lmd-pos-ov-back" onclick="pos.cerrarModificadores()" title="Volver sin agregar">' + icon('arrow-left') + '</button>' +
                 '<span class="lmd-pos-ov-title">' + icon('edit-3') + ' ' + _mod.productoNombre + '</span>' +
                 '<button class="lmd-pos-ov-close" onclick="pos.cerrarModificadores()">' + icon('x') + '</button>' +
             '</div>' +
@@ -1455,8 +1718,10 @@
     function toggleEstadoIngrediente(id, estado) {
         var ing = _mod.ingredientes.find(function (i) { return i.id === id; });
         if (!ing) return;
+        // BUG FIX: si ya está en ese estado, volver a normal; si no, cambiar
         ing.estado = ing.estado === estado ? 'normal' : estado;
         if (ing.estado !== 'quitado') { ing.reemplazoId = null; ing.reemplazoNombre = ''; }
+        // Re-render solo el modal de modificadores (no todo el POS)
         renderModificadorModal();
     }
 
@@ -1469,6 +1734,7 @@
             ing.reemplazoId = reemplazoId;
             ing.reemplazoNombre = r ? r.nombre : '';
         }
+        // No re-renderizar el modal completo para no perder la selección del dropdown
     }
 
     function toggleAlergia(alergia) {
@@ -1508,7 +1774,14 @@
         if (_mod.notaCustom && _mod.notaCustom.trim()) notasArr.push(_mod.notaCustom.trim());
         var notas = notasArr.length > 0 ? notasArr.join(' | ') : null;
 
+        // BUG FIX: buscar la línea; si no existe, agregarla al carrito primero
+        var prod = (window.__lmdProductosDisponibles || []).find(function (p) { return p.id === _mod.productoId; });
         var linea = state.lineas.find(function (l) { return l.productoId === _mod.productoId; });
+        if (!linea && prod) {
+            state.lineas.push({ productoId: _mod.productoId, productoNombre: _mod.productoNombre, cantidad: 1, precioUnitario: prod.precio || 0 });
+            linea = state.lineas[state.lineas.length - 1];
+        }
+
         if (linea) {
             linea.modificacionesJson = mods.length > 0 ? JSON.stringify(mods) : null;
             linea.notas = notas;
@@ -1517,7 +1790,7 @@
         }
 
         var total = mods.length + (notas ? 1 : 0);
-        lmdToast(total > 0 ? 'Modificaciones aplicadas (' + total + ')' : 'Sin cambios', total > 0 ? 'success' : 'info');
+        lmdToast(total > 0 ? 'Modificaciones aplicadas (' + total + ')' : 'Producto agregado al carrito', total > 0 ? 'success' : 'info');
     }
 
     // ═══════════════════════════════════════════════════
@@ -1543,14 +1816,18 @@
         }).join('');
 
         var esComerAqui = state.tipoServicio === 'ComerAqui';
+        var esDelivery = state.tipoServicio === 'Domicilio';
         var html =
             '<div class="lmd-pos-ov-header">' +
                 '<span class="lmd-pos-ov-title">' + icon('refresh-cw') + ' Cambiar servicio</span>' +
                 '<button class="lmd-pos-ov-close" onclick="pos.cerrarCambiarServicio()">' + icon('x') + '</button>' +
             '</div>' +
             '<div class="lmd-pos-cambiar-servicio-body">' +
-                '<button class="lmd-pos-cambiar-servicio-opcion' + (!esComerAqui ? ' lmd-pos-cambiar-servicio-opcion--activa' : '') + '" onclick="pos.cambiarAParaLlevar()">' +
-                    icon('package') + '<span>Para llevar</span>' +
+                '<button class="lmd-pos-cambiar-servicio-opcion' + (!esComerAqui && !esDelivery ? ' lmd-pos-cambiar-servicio-opcion--activa' : '') + '" onclick="pos.cambiarAParaLlevar()">' +
+                    icon('package') + '<span>Retiro en caja</span>' +
+                '</button>' +
+                '<button class="lmd-pos-cambiar-servicio-opcion' + (esDelivery ? ' lmd-pos-cambiar-servicio-opcion--activa' : '') + '" onclick="pos.cambiarADelivery()">' +
+                    icon('truck') + '<span>Delivery</span>' +
                 '</button>' +
                 '<div class="lmd-pos-cambiar-servicio-sep">— o selecciona una mesa —</div>' +
                 '<div class="lmd-pos-mesas-grid lmd-pos-mesas-grid--mini">' +
@@ -1568,6 +1845,7 @@
         state.tipoServicio = 'ComerAqui';
         state.mesaId = mesaId;
         state.mesaNumero = numero;
+        state.entrega = { direccion: '', telefono: '', repartidorId: '' };
         cerrarOverlay('cambiarservicio');
         renderProductos();
         lmdToast('Cambiado a Mesa ' + numero, 'success');
@@ -1577,9 +1855,19 @@
         state.tipoServicio = 'ParaLlevar';
         state.mesaId = null;
         state.mesaNumero = null;
+        state.entrega = { direccion: '', telefono: '', repartidorId: '' };
         cerrarOverlay('cambiarservicio');
         renderProductos();
         lmdToast('Cambiado a Para llevar', 'success');
+    }
+
+    function cambiarADelivery() {
+        state.tipoServicio = 'Domicilio';
+        state.mesaId = null;
+        state.mesaNumero = null;
+        cerrarOverlay('cambiarservicio');
+        abrirConfigEnvio(true);
+        renderProductos();
     }
 
     function cerrarCambiarServicio() { cerrarOverlay('cambiarservicio'); }
@@ -1615,7 +1903,7 @@
 
     function reintentarPago(metodo) {
         cerrarOverlay('errorpago');
-        var total = totalLineas(state.lineas);
+        var total = totalPedidoActual();
         if (metodo === 'tarjeta') abrirOverlayTarjeta(total);
         else if (metodo === 'qr') abrirOverlayQR(total);
         else abrirOverlayPago();
@@ -1632,9 +1920,15 @@
                 .withAutomaticReconnect()
                 .build();
             connection.on('EstadoCambiado', function (pedidoId, nuevoEstado) {
-                if (nuevoEstado === 'Pagado' || nuevoEstado === 'Despachado' || nuevoEstado === 'EnCobro') refrescarMesas();
+                if (nuevoEstado === 'Pagado' || nuevoEstado === 'Despachado' || nuevoEstado === 'EnCobro' || nuevoEstado === 'Listo' || nuevoEstado === 'EnPreparacion') {
+                    refrescarSeleccionSiVisible();
+                    if (state.pedidoActual && String(state.pedidoActual.id) === String(pedidoId)) {
+                        state.pedidoActual.estado = nuevoEstado;
+                        if (nuevoEstado === 'Listo') lmdToast('Cocina marcó este pedido como listo para cobrar.', 'success');
+                    }
+                }
             });
-            connection.on('PedidoCreado', function () { refrescarMesas(); });
+            connection.on('PedidoCreado', function () { refrescarSeleccionSiVisible(); });
             connection.on('ItemRecuperado', function (orden) {
                 if (orden && state.pedidoActual && orden.pedidoId === state.pedidoActual.id) {
                     lmdToast('Cocina recuperó un item — orden aún en preparación', 'warn');
@@ -1693,9 +1987,40 @@
         } catch (e) {}
     }
 
+    async function refrescarPedidosSinMesa() {
+        try {
+            var res = await fetch('?handler=PedidosSinMesaJson', { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+            if (res.ok) {
+                var data = await res.json();
+                window.__lmdPedidosSinMesaActivos = (data && data.pedidos) ? data.pedidos : [];
+            }
+        } catch (e) {}
+    }
+
+    async function refrescarSeleccionSiVisible() {
+        await Promise.all([refrescarMesas(), refrescarPedidosSinMesa()]);
+        if (state.pantalla === 'seleccion') renderSeleccion();
+    }
+
+    async function volverASeleccion() {
+        cerrarOverlay('delivery');
+        cerrarOverlay('cambiarservicio');
+        cerrarOverlay('modificador');
+        cerrarOverlay('documentos');
+        cerrarTodasOverlaysPago();
+        state.tipoServicio = null;
+        state.mesaId = null;
+        state.mesaNumero = null;
+        state.entrega = { direccion: '', telefono: '', repartidorId: '' };
+        _resetPedido();
+        await Promise.all([refrescarMesas(), refrescarPedidosSinMesa()]);
+        renderSeleccion();
+        mostrarPantalla('seleccion');
+    }
+
     // ── Public API ──────────────────────────────────────
     window.pos = {
-        seleccionarMesa, seleccionarParaLlevar,
+        seleccionarMesa, seleccionarParaLlevar, seleccionarDelivery, retomarPedidoSinMesa, volverASeleccion,
         filtrarCategoria, agregarAlCarrito, incrementarItem, decrementarItem, eliminarDelCarrito,
         cancelarOrden, confirmarListo, irAPago,
         cerrarPago, procesarPago,
@@ -1711,7 +2036,8 @@
         confirmarPropina,
         abrirModificadores, toggleAlergia, _setNotaCustom,
         cerrarModificadores, confirmarModificadores,
-        cambiarServicio, cambiarAMesa, cambiarAParaLlevar, cerrarCambiarServicio,
+        cambiarServicio, cambiarAMesa, cambiarAParaLlevar, cambiarADelivery, cerrarCambiarServicio,
+        abrirConfigEnvio, guardarConfigEnvio, cerrarConfigEnvio, quitarEnvio,
         simularRechazo, reintentarPago
     };
 
@@ -1746,12 +2072,12 @@
     }
 
     document.addEventListener('DOMContentLoaded', async function () {
-        await refrescarMesas();
+        await Promise.all([refrescarMesas(), refrescarPedidosSinMesa()]);
         renderSeleccion();
         initSignalR();
         setInterval(actualizarTiemposEnMesa, 30000);
         setInterval(actualizarTimersGracia, 1000);
-        setInterval(refrescarMesas, 30000);
+        setInterval(refrescarSeleccionSiVisible, 30000);
 
         window.addEventListener('offline', function () {
             var banner = document.getElementById('lmd-offline-banner');

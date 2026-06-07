@@ -14,6 +14,13 @@ public class Pedido
     public Mesa? Mesa { get; private set; }
     public EstadoPedido Estado { get; private set; }
     public DateTime CreatedAt { get; private set; }
+
+    // ── Delivery / domicilio (scalares, sin navegación para no tocar relaciones EF) ──
+    public Guid? RepartidorId { get; private set; }
+    public string? DireccionEntrega { get; private set; }
+    public string? TelefonoCliente { get; private set; }
+    public DateTime? AsignadoEn { get; private set; }
+    public DateTime? EntregadoEn { get; private set; }
     public IReadOnlyList<DetallePedido> Detalles => _detalles.AsReadOnly();
     public IReadOnlyList<Cuenta> Cuentas => _cuentas.AsReadOnly();
     public decimal Total => _detalles.Sum(d => d.Subtotal);
@@ -23,16 +30,66 @@ public class Pedido
     {
     }
 
-    public Pedido(TipoServicio tipoServicio, Mesa? mesa = null)
+    public Pedido(TipoServicio tipoServicio, Mesa? mesa = null, string? direccionEntrega = null, string? telefonoCliente = null)
     {
         if (tipoServicio == TipoServicio.ParaLlevar && mesa is not null)
             throw new ReglaDominioException("Un pedido para llevar no puede tener mesa asignada.");
+
+        if (tipoServicio == TipoServicio.Domicilio && mesa is not null)
+            throw new ReglaDominioException("Un pedido a domicilio no puede tener mesa asignada.");
+
+        if (tipoServicio == TipoServicio.Domicilio && string.IsNullOrWhiteSpace(direccionEntrega))
+            throw new ReglaDominioException("La dirección de entrega es obligatoria para pedidos a domicilio.");
 
         Id = Guid.NewGuid();
         TipoServicio = tipoServicio;
         Mesa = mesa;
         Estado = EstadoPedido.Pendiente;
         CreatedAt = DateTime.UtcNow;
+
+        if (tipoServicio == TipoServicio.Domicilio)
+        {
+            DireccionEntrega = string.IsNullOrWhiteSpace(direccionEntrega) ? null : direccionEntrega.Trim();
+            TelefonoCliente = string.IsNullOrWhiteSpace(telefonoCliente) ? null : telefonoCliente.Trim();
+        }
+    }
+
+    public void AsignarRepartidor(Guid repartidorId)
+    {
+        if (TipoServicio != TipoServicio.Domicilio)
+            throw new ReglaDominioException("Solo los pedidos a domicilio admiten repartidor.");
+        if (repartidorId == Guid.Empty)
+            throw new ReglaDominioException("El repartidor es obligatorio.");
+        if (Estado == EstadoPedido.Cancelado || Estado == EstadoPedido.Despachado)
+            throw new ReglaDominioException("No se puede asignar repartidor a un pedido cancelado o ya despachado.");
+
+        RepartidorId = repartidorId;
+        AsignadoEn = DateTime.UtcNow;
+    }
+
+    public void ActualizarDatosEntrega(string? direccion, string? telefono)
+    {
+        if (TipoServicio != TipoServicio.Domicilio)
+            throw new ReglaDominioException("Solo los pedidos a domicilio tienen datos de entrega.");
+        DireccionEntrega = string.IsNullOrWhiteSpace(direccion) ? null : direccion.Trim();
+        TelefonoCliente = string.IsNullOrWhiteSpace(telefono) ? null : telefono.Trim();
+    }
+
+    public void MarcarEntregado()
+    {
+        if (TipoServicio != TipoServicio.Domicilio)
+            throw new ReglaDominioException("Solo los pedidos a domicilio se marcan como entregados.");
+        if (RepartidorId is null)
+            throw new ReglaDominioException("Asigná un repartidor antes de marcar la entrega.");
+
+        if (Estado == EstadoPedido.Listo || Estado == EstadoPedido.Pagado)
+        {
+            Estado = EstadoPedido.Despachado;
+            EntregadoEn = DateTime.UtcNow;
+            return;
+        }
+
+        throw new ReglaDominioException("Solo un pedido listo o pagado puede marcarse como entregado.");
     }
 
     public void MarcarEnPreparacion()
@@ -48,8 +105,8 @@ public class Pedido
 
     public void MarcarEnCobro()
     {
-        if (Estado != EstadoPedido.EnPreparacion)
-            throw new ReglaDominioException("Solo se puede marcar en cobro un pedido en preparación.");
+        if (Estado != EstadoPedido.EnPreparacion && Estado != EstadoPedido.Listo)
+            throw new ReglaDominioException("Solo se puede marcar en cobro un pedido en preparación o listo.");
 
         Estado = EstadoPedido.EnCobro;
     }

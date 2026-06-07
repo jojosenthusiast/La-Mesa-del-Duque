@@ -6,11 +6,13 @@ public interface IMermaRepositorio
 {
     Task AgregarAsync(MermaDiaria merma, CancellationToken ct = default);
     Task<List<MermaDiaria>> ObtenerDelDiaAsync(DateOnly fecha, CancellationToken ct = default);
+    Task<List<MermaDiaria>> ObtenerPorRangoAsync(DateTime desde, DateTime hasta, CancellationToken ct = default);
 }
 
 public interface ICierreDiaRepositorio
 {
     Task<CierreDia?> ObtenerAbiertoAsync(DateOnly fecha, CancellationToken ct = default);
+    Task<CierreDia?> ObtenerPorFechaAsync(DateOnly fecha, CancellationToken ct = default);
     Task AgregarAsync(CierreDia cierre, CancellationToken ct = default);
     Task<List<CierreDia>> ObtenerTodosAsync(CancellationToken ct = default);
 }

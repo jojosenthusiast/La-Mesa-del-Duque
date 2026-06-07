@@ -26,8 +26,10 @@
     var esMesero    = isAuth && User.IsInRole("Mesero");
     var esCocinero  = isAuth && User.IsInRole("Cocinero");
     var esCajero    = isAuth && User.IsInRole("Cajero");
-    var esGestion   = esAdmin || esEncargado;
-    var rolStrip    = esCajero ? "Caja" : esMesero ? "Mesero" : esCocinero ? "Cocina" : "";
+    var esGerente   = isAuth && User.IsInRole("Gerente");
+    var esRepartidor = isAuth && User.IsInRole("Repartidor");
+    var esGestion   = esAdmin || esEncargado || esGerente;
+    var rolStrip    = esCajero ? "Caja" : esMesero ? "Caja" : esCocinero ? "Cocina" : esRepartidor ? "Repartidor" : "";
 }
 
     <div id="lmd-offline-banner" class="lmd-offline-banner" style="display:none;">
@@ -38,9 +40,20 @@
     @if (isAuth && esGestion)
     {
         <div class="lmd-app-shell">
+            <div class="lmd-sidebar-backdrop" id="lmdSidebarBackdrop"></div>
             <partial name="_Sidebar" />
             <div class="lmd-shell-with-sidebar" id="lmdShellMain">
+                <div class="lmd-mobile-topbar">
+                    <button class="lmd-mobile-topbar__hamburger" id="lmdMobileMenuBtn" aria-label="Abrir menú">
+                        <i class="bi bi-list"></i>
+                    </button>
+                    <span class="lmd-mobile-topbar__title">La Mesa del Duque</span>
+                    <partial name="_BotonVolver" model="@(string.Empty)" />
+                </div>
                 <main role="main" class="lmd-main-surface lmd-main-surface--sidebar">
+                    <div class="lmd-backbar-desktop">
+                        <partial name="_BotonVolver" model="@(string.Empty)" />
+                    </div>
                     @RenderBody()
                 </main>
             </div>
@@ -52,6 +65,7 @@
             <a asp-page="/Index" class="lmd-ops-strip__brand" aria-label="Inicio">
                 <img src="~/img/marca/logo-simbolo.png" alt="La Mesa del Duque" />
             </a>
+            <partial name="_BotonVolver" model="@(string.Empty)" />
             <span class="lmd-ops-strip__role">@rolStrip</span>
             <div class="lmd-ops-strip__user">
                 <span class="lmd-ops-strip__username">@User.Identity!.Name</span>

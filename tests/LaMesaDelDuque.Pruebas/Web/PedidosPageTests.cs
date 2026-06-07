@@ -18,8 +18,9 @@ public class PedidosPageTests
         var recetas = new FakeRecetasProductosServicio();
         var ticket = new FakeTicketServicio();
         var alergenos = new FakeAlergenoServicio();
+        var delivery = new FakeDeliveryServicio();
 
-        var page = new IndexModel(pedidos, catalogo, mesas, recetas, ticket, alergenos, hub);
+        var page = new IndexModel(pedidos, catalogo, mesas, recetas, delivery, ticket, alergenos, hub, Microsoft.Extensions.Logging.Abstractions.NullLogger<IndexModel>.Instance);
 
         await page.OnGetAsync();
 
@@ -72,12 +73,12 @@ internal sealed class FakePedidosServicio : IPedidosServicio
         Detalles = [new DetallePedidoDto { Id = Guid.NewGuid(), ProductoId = Guid.NewGuid(), ProductoNombre = "Sopa", Cantidad = 1, PrecioUnitario = 20, Subtotal = 20 }]
     };
 
-    public Task<PedidoDto> CrearPedidoAsync(LaMesaDelDuque.Dominio.Enumeraciones.TipoServicio tipoServicio, Guid? mesaId, List<DetalleCreacionDto> detalles, CancellationToken cancelacion = default) => Task.FromResult(_pedido);
+    public Task<PedidoDto> CrearPedidoAsync(LaMesaDelDuque.Dominio.Enumeraciones.TipoServicio tipoServicio, Guid? mesaId, List<DetalleCreacionDto> detalles, string? direccionEntrega = null, string? telefonoCliente = null, CancellationToken cancelacion = default) => Task.FromResult(_pedido);
     public Task<PedidoDto> AgregarDetalleAsync(Guid pedidoId, Guid productoId, int cantidad, decimal precioUnitario, string? modificacionesJson = null, string? notas = null, CancellationToken cancelacion = default) => Task.FromResult(_pedido);
     public Task<PedidoDto> EliminarDetalleAsync(Guid pedidoId, Guid detalleId, CancellationToken cancelacion = default) => Task.FromResult(_pedido);
     public Task<PedidoDto> ActualizarCantidadDetalleAsync(Guid pedidoId, Guid detalleId, int nuevaCantidad, CancellationToken cancelacion = default) => Task.FromResult(_pedido);
     public Task MarcarEnPreparacionAsync(Guid pedidoId, CancellationToken cancelacion = default) => Task.CompletedTask;
-    public Task PagarPedidoAsync(Guid pedidoId, CancellationToken cancelacion = default) => Task.CompletedTask;
+    public Task PagarPedidoAsync(Guid pedidoId, LaMesaDelDuque.Dominio.Enumeraciones.MetodoPago metodoPago = LaMesaDelDuque.Dominio.Enumeraciones.MetodoPago.Efectivo, string? referenciaPos = null, CancellationToken cancelacion = default) => Task.CompletedTask;
     public Task CancelarPedidoAsync(Guid pedidoId, CancellationToken cancelacion = default) => Task.CompletedTask;
     public Task EliminarPedidoPendienteAsync(Guid pedidoId, Guid usuarioId, string? ipAddress = null, CancellationToken cancelacion = default) => Task.CompletedTask;
     public Task<PedidoDto?> ObtenerPedidoAsync(Guid pedidoId, CancellationToken cancelacion = default) => Task.FromResult<PedidoDto?>(_pedido);
@@ -87,7 +88,7 @@ internal sealed class FakePedidosServicio : IPedidosServicio
     public Task MarcarEnCobroAsync(Guid pedidoId, CancellationToken cancelacion = default) => Task.CompletedTask;
     public Task<List<CuentaDto>> CrearCuentasAsync(Guid pedidoId, int cantidad, CancellationToken cancelacion = default) => Task.FromResult(new List<CuentaDto>());
     public Task<List<CuentaDto>> CrearCuentasConItemsAsync(Guid pedidoId, Dictionary<int, List<(Guid detalleId, int cantidad)>> asignaciones, CancellationToken cancelacion = default) => Task.FromResult(new List<CuentaDto>());
-    public Task<CuentaDto> PagarCuentaAsync(Guid cuentaId, LaMesaDelDuque.Dominio.Enumeraciones.MetodoPago metodoPago, decimal propinaMonto = 0, CancellationToken cancelacion = default) => Task.FromResult(new CuentaDto());
+    public Task<CuentaDto> PagarCuentaAsync(Guid cuentaId, LaMesaDelDuque.Dominio.Enumeraciones.MetodoPago metodoPago, decimal propinaMonto = 0, string? referenciaPos = null, CancellationToken cancelacion = default) => Task.FromResult(new CuentaDto());
     public Task<List<CuentaDto>> ObtenerCuentasAsync(Guid pedidoId, CancellationToken cancelacion = default) => Task.FromResult(new List<CuentaDto>());
     public Task AnularPagoAsync(Guid pedidoId, CancellationToken cancelacion = default) => Task.CompletedTask;
     public Task AgregarItemsAsync(Guid pedidoId, List<DetalleCreacionDto> items, CancellationToken cancelacion = default) => Task.CompletedTask;

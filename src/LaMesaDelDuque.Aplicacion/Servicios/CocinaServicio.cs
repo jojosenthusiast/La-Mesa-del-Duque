@@ -24,12 +24,22 @@ internal class CocinaServicio : ICocinaServicio
             ?? throw new ArgumentException($"No se encontró el pedido con ID {pedidoId}.", nameof(pedidoId));
 
         var filtro = soloDetalles?.ToHashSet();
-        var detallesAFirar = filtro is not null
+        var detallesAFiltrar = filtro is not null
             ? pedido.Detalles.Where(d => filtro.Contains(d.Id)).ToList()
             : pedido.Detalles.ToList();
 
-        foreach (var detalle in detallesAFirar)
+        var ordenesExistentes = await _uot.OrdenesCocina.ListarPorPedidoAsync(pedidoId, ct);
+        var detallesYaEnCocina = ordenesExistentes
+            .Where(o => o.DetallePedidoId.HasValue)
+            .Select(o => o.DetallePedidoId!.Value)
+            .ToHashSet();
+
+        var ordenesCreadas = new List<OrdenCocina>();
+
+        foreach (var detalle in detallesAFiltrar)
         {
+            if (detallesYaEnCocina.Contains(detalle.Id))
+                continue;
             var estacion = detalle.Producto.Categoria?.EstacionCocina ?? EstacionCocina.Expo;
 
             var (alergenos, quitados, extras, curso) = ParsearModificaciones(detalle.ModificacionesJson);
@@ -52,19 +62,21 @@ internal class CocinaServicio : ICocinaServicio
                 alergenos,
                 quitados,
                 extras,
-                null,
+                ResolverCocinero(estacion),
                 detalle.Producto.Id,
                 cursoCocina,
                 detalle.Producto.TiempoPreparacionMin);
 
             await _uot.OrdenesCocina.AgregarAsync(orden, ct);
+            ordenesCreadas.Add(orden);
         }
+
+        if (ordenesCreadas.Count == 0)
+            return;
 
         await _uot.GuardarCambiosAsync(ct);
 
-        // Notificar a cada estación
-        var ordenesCreadas = await _uot.OrdenesCocina.ListarPendientesAsync(cancelacion: ct);
-        foreach (var orden in ordenesCreadas.Where(o => o.PedidoId == pedidoId))
+        foreach (var orden in ordenesCreadas)
         {
             await _notificador.NotificarOrdenCocinaAsync(orden.Estacion.ToString(), MapToDto(orden), ct);
         }
@@ -189,6 +201,20 @@ internal class CocinaServicio : ICocinaServicio
         if (!string.IsNullOrWhiteSpace(extras)) partes.Add($"Extra: {extras}");
 
         return partes.Count > 0 ? string.Join(" | ", partes) : null;
+    }
+
+
+    private static int ResolverCocinero(EstacionCocina estacion)
+    {
+        return estacion switch
+        {
+            EstacionCocina.Parrilla => 1,
+            EstacionCocina.Expo => 1,
+            EstacionCocina.Fria => 2,
+            EstacionCocina.Bar => 2,
+            EstacionCocina.Caliente => 3,
+            _ => 1
+        };
     }
 
     private static OrdenCocinaDto MapToDto(OrdenCocina orden)

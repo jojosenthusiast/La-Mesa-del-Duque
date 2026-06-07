@@ -7,15 +7,17 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 
 namespace LaMesaDelDuque.Web.Pages.Operaciones.Mesas;
 
-[Authorize(Roles = "Administrador,Encargado")]
+[Authorize(Roles = "Administrador,Encargado,Mesero")]
 public class IndexModel : PageModel
 {
     private static readonly string[] EstadosOrdenados = ["Disponible", "Ocupada", "Reservada", "Mantenimiento", "Inactiva"];
     private readonly IMesasServicio _mesasServicio;
+    private readonly IPedidosServicio _pedidosServicio;
 
-    public IndexModel(IMesasServicio mesasServicio)
+    public IndexModel(IMesasServicio mesasServicio, IPedidosServicio pedidosServicio)
     {
         _mesasServicio = mesasServicio;
+        _pedidosServicio = pedidosServicio;
     }
 
     [BindProperty]
@@ -79,12 +81,27 @@ public class IndexModel : PageModel
     public async Task<IActionResult> OnPostCambiarEstadoAsync(Guid id, string nuevoEstado)
     {
         SetUiContext();
-        if (!(User.IsInRole("Administrador") || User.IsInRole("Encargado")))
+        var puedeGestionar = User.IsInRole("Administrador") || User.IsInRole("Encargado");
+        var puedeLiberar = User.IsInRole("Mesero") && string.Equals(nuevoEstado, "Disponible", StringComparison.OrdinalIgnoreCase);
+        if (!(puedeGestionar || puedeLiberar))
         {
             return Forbid();
         }
         try
         {
+            // Al liberar una mesa con pedido activo, cancelarlo también: esto lo
+            // quita del KDS de cocina (notificación PedidoCancelado) y devuelve stock.
+            if (string.Equals(nuevoEstado, "Disponible", StringComparison.OrdinalIgnoreCase))
+            {
+                var activos = await _pedidosServicio.ListarPedidosActivosAsync();
+                var delaMesa = activos.Where(p => p.MesaId == id).ToList();
+                foreach (var pedido in delaMesa)
+                {
+                    try { await _pedidosServicio.CancelarPedidoAsync(pedido.Id); }
+                    catch (ReglaDominioException) { /* pedido ya pagado/cancelado: se ignora */ }
+                }
+            }
+
             await _mesasServicio.CambiarEstadoMesaAsync(id, nuevoEstado);
             ToastSuccess = $"Mesa actualizada a estado {nuevoEstado}.";
         }

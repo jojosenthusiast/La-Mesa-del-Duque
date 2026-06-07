@@ -24,6 +24,7 @@ public static class InyeccionAplicacion
         servicios.AddScoped<IMermaServicio, MermaServicio>();
         servicios.AddScoped<ICierreServicio, CierreServicio>();
         servicios.AddScoped<IDespachoServicio, DespachoServicio>();
+        servicios.AddScoped<IDeliveryServicio, DeliveryServicio>();
         servicios.AddScoped<IZonasSalonServicio, ZonasSalonServicio>();
         servicios.AddScoped<IMetricaServicio, MetricaServicio>();
         servicios.AddScoped<ITurnoCajaServicio, TurnoCajaServicio>();

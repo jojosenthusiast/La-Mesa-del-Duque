@@ -17,6 +17,7 @@
 <body class="lmd-kds-shell">
     <header class="lmd-kds-header">
         <div class="lmd-kds-header__left">
+            <partial name="_BotonVolver" model="@("/")" />
             <h1 class="lmd-kds-titulo">Cocina</h1>
             <span id="lmd-kds-reloj" class="lmd-kds-reloj">--:--</span>
         </div>
@@ -33,6 +34,10 @@
             <span id="lmd-kds-offline-badge" class="lmd-kds-offline-badge">OFFLINE</span>
             <span id="lmd-kds-contador" class="lmd-kds-contador">0 ordenes</span>
             <div id="lmd-kds-indicador-visual" class="lmd-kds-indicador"></div>
+            <form method="post" action="/Auth/Logout" style="display:inline;">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="lmd-kds-logout-btn" title="Cerrar sesión">⏻</button>
+            </form>
         </div>
     </header>
 
@@ -58,7 +63,6 @@
         <span class="ms-auto text-muted" style="font-size:0.7rem">KDS v3 — LMDD</span>
     </footer>
 
-    @Html.AntiForgeryToken()
     <script>
         window.__lmdKdsCooks = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
             KDSModel.Cooks.Select(c => new { c.Id, c.Name, c.Color }),

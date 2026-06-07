@@ -73,6 +73,17 @@ public class CierreDia
         CreatedAt = DateTime.UtcNow;
     }
 
+
+    public void Reabrir()
+    {
+        if (!EsCerrado)
+            return;
+
+        EsCerrado = false;
+        CerradoEn = null;
+        Observacion = null;
+    }
+
     public void Cerrar(
         decimal totalVentas,
         decimal totalVentasEfectivo,

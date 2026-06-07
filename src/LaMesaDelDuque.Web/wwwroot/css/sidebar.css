@@ -266,6 +266,7 @@
 .lmd-shell-with-sidebar {
     margin-left: var(--lmd-sidebar-ancho);
     flex: 1;
+    min-width: 0;
     min-height: 100vh;
     background: var(--lmd-fondo);
     transition: margin-left 0.25s ease;
@@ -277,6 +278,7 @@
 
 .lmd-main-surface--sidebar {
     padding: 1.75rem 2rem 2.5rem;
+    overflow-x: hidden;
 }
 
 /* ─── Strip operativo (Cajero, Mesero, Cocinero) ─── */
@@ -350,4 +352,188 @@
     padding-top: var(--lmd-ops-strip-alto);
     min-height: 100vh;
     width: 100%;
+}
+
+/* ═══════════════════════════════════════════════════════
+   Mobile topbar — siempre presente en HTML, oculto en desktop
+   ═══════════════════════════════════════════════════════ */
+.lmd-mobile-topbar {
+    display: none;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.6rem 1rem;
+    background: var(--lmd-azul-duque);
+    border-bottom: 1px solid rgba(201, 162, 78, 0.14);
+    position: sticky;
+    top: 0;
+    z-index: 300;
+}
+.lmd-mobile-topbar__hamburger {
+    background: none;
+    border: none;
+    color: rgba(247, 244, 236, 0.7);
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 0.2rem 0.4rem;
+    line-height: 1;
+    flex-shrink: 0;
+}
+.lmd-mobile-topbar__hamburger:hover { color: var(--lmd-dorado-real); }
+.lmd-mobile-topbar__title {
+    font-family: var(--lmd-fuente-titulo);
+    font-size: 0.85rem;
+    color: var(--lmd-dorado-real);
+    flex: 1;
+}
+
+/* Backdrop oscuro detrás del sidebar mobile */
+.lmd-sidebar-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 499;
+}
+.lmd-sidebar-backdrop--visible { display: block; }
+
+/* ═══════════════════════════════════════════════════════
+   RESPONSIVE — Mobile (< 768px)
+   ═══════════════════════════════════════════════════════ */
+@media (max-width: 767.98px) {
+
+    /* Mostrar topbar mobile con hamburger */
+    .lmd-mobile-topbar {
+        display: flex;
+    }
+
+    /* Sidebar: fuera de pantalla por defecto, overlay cuando se abre */
+    .lmd-sidebar {
+        transform: translateX(-100%);
+        width: var(--lmd-sidebar-ancho) !important;
+        transition: transform 0.25s ease;
+        z-index: 500;
+    }
+    .lmd-sidebar--mobile-open {
+        transform: translateX(0);
+    }
+
+    /* Contenido ocupa todo el ancho (sin margin del sidebar) */
+    .lmd-shell-with-sidebar,
+    .lmd-shell-with-sidebar--collapsed {
+        margin-left: 0 !important;
+        width: 100%;
+    }
+
+    /* Ocultar el toggle de desktop (collapse) en mobile */
+    .lmd-sidebar__toggle-btn {
+        display: none !important;
+    }
+
+    /* En mobile las letras del sidebar siempre se ven (no usar estado collapsed) */
+    .lmd-sidebar--collapsed {
+        width: var(--lmd-sidebar-ancho) !important;
+    }
+    .lmd-sidebar--collapsed .lmd-sidebar__brand,
+    .lmd-sidebar--collapsed .lmd-sidebar__section-label,
+    .lmd-sidebar--collapsed .lmd-sidebar__item span,
+    .lmd-sidebar--collapsed .lmd-sidebar__user-info,
+    .lmd-sidebar--collapsed .lmd-sidebar__logout span {
+        opacity: 1 !important;
+        pointer-events: auto !important;
+    }
+
+    /* Padding reducido en mobile */
+    .lmd-main-surface--sidebar {
+        padding: 0.75rem 0.75rem 2rem;
+    }
+
+    /* Bootstrap grid en 1 columna en mobile */
+    .row.g-3 > .col-md-4,
+    .row.g-3 > .col-md-6,
+    .row.g-3 > .col-md-3,
+    .row > .col-md-4,
+    .row > .col-md-6,
+    .row > .col-md-3 {
+        flex: 0 0 100%;
+        max-width: 100%;
+    }
+
+    /* Cards más compactas */
+    .lmd-kpi-card .card-body { padding: 1rem; }
+    .lmd-kpi-value { font-size: 1.75rem; }
+
+    /* Tabla con scroll horizontal */
+    .table-responsive { font-size: 0.78rem; -webkit-overflow-scrolling: touch; }
+
+    /* Page header más pequeño */
+    .lmd-page-header { padding: 1rem; }
+    .lmd-page-header h1 { font-size: 1.4rem; }
+}
+
+/* Hotfix navegación: botón Volver consistente en vistas con sidebar */
+.lmd-backbar-desktop {
+    display: flex;
+    justify-content: flex-start;
+    margin-bottom: .75rem;
+}
+
+@media (max-width: 767.98px) {
+    .lmd-backbar-desktop {
+        display: none;
+    }
+
+    .lmd-mobile-topbar > button[aria-label="Volver"],
+    .lmd-mobile-topbar > a[aria-label="Volver"] {
+        margin-left: auto;
+        padding: .35rem .55rem !important;
+        font-size: .82rem !important;
+    }
+}
+
+/* Hotfix navegación: botón volver estable en layout, POS y móvil */
+.lmd-back-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: .45rem;
+    min-height: 36px;
+    padding: .42rem .78rem;
+    border: 1px solid rgba(201, 162, 78, .48);
+    border-radius: 10px;
+    background: rgba(15, 27, 45, .55);
+    color: var(--lmd-dorado-real, #C9A24E) !important;
+    font-family: var(--lmd-fuente-cuerpo, 'Montserrat', sans-serif);
+    font-size: .86rem;
+    font-weight: 700;
+    line-height: 1;
+    text-decoration: none !important;
+    cursor: pointer;
+}
+.lmd-back-btn:hover,
+.lmd-back-btn:focus {
+    color: #F7F4EC !important;
+    background: rgba(201, 162, 78, .18);
+    border-color: var(--lmd-dorado-real, #C9A24E);
+}
+.lmd-back-btn i {
+    display: inline-flex;
+    font-size: 1rem;
+    line-height: 1;
+}
+.lmd-ops-strip .lmd-back-btn {
+    min-width: 40px;
+    width: 40px;
+    padding-inline: 0;
+    flex: 0 0 auto;
+}
+.lmd-ops-strip .lmd-back-btn span {
+    display: none;
+}
+.lmd-mobile-topbar .lmd-back-btn span {
+    display: none;
+}
+.lmd-mobile-topbar .lmd-back-btn {
+    min-width: 40px;
+    width: 40px;
+    padding-inline: 0;
 }
