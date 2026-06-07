@@ -55,6 +55,11 @@ internal class PedidoConfiguracion : IEntityTypeConfiguration<Pedido>
         // Total es calculado, no se persiste
         constructor.Ignore(p => p.Total);
 
+        // ── Asignación de repartidor (todos opcionales) ──
+        constructor.Property(p => p.RepartidorId).IsRequired(false);
+        constructor.Property(p => p.AsignadoEn).IsRequired(false);
+        constructor.Property(p => p.EntregadoEn).IsRequired(false);
+
         // FK sombra hacia Mesa
         constructor.Property<Guid?>("MesaId")
             .IsRequired(false);

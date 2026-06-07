@@ -209,6 +209,7 @@ public class MesasServicioTests : IDisposable
         var mesa = await _servicio.CrearMesaAsync(41, 4);
 
         var mesaTracked = await _uot.Mesas.ObtenerParaActualizarAsync(mesa.Id);
+        mesaTracked!.Ocupar();
         var categoria = new CategoriaProducto("Bebidas activas");
         await _uot.Categorias.AgregarAsync(categoria);
         var producto = new Producto("Café activo", 3.00m, categoria);

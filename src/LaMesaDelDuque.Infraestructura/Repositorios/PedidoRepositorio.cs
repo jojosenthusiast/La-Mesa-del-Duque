@@ -60,6 +60,7 @@ internal class PedidoRepositorio : IPedidoRepositorio
             .Include(p => p.Mesa)
             .Include(p => p.Detalles)
                 .ThenInclude(d => d.Producto)
+            .Include(p => p.Cuentas)
             .ToListAsync(cancelacion);
     }
 

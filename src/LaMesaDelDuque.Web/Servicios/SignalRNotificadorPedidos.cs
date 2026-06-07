@@ -17,14 +17,23 @@ public sealed class SignalRNotificadorPedidos : INotificadorPedidos
         _logger = logger;
     }
 
-    public Task NotificarPedidoCreadoAsync(Guid pedidoId, EstadoPedido estado, CancellationToken cancelacion = default) =>
-        EnviarAsync(new { tipo = "PedidoCreado", pedidoId, estado = estado.ToString() }, cancelacion);
+    public async Task NotificarPedidoCreadoAsync(Guid pedidoId, EstadoPedido estado, CancellationToken cancelacion = default)
+    {
+        await EnviarAsync(new { tipo = "PedidoCreado", pedidoId, estado = estado.ToString() }, cancelacion);
+        await EnviarEventoDirectoAsync("PedidoCreado", cancelacion, pedidoId, estado.ToString());
+    }
 
-    public Task NotificarEstadoCambiadoAsync(Guid pedidoId, EstadoPedido nuevoEstado, CancellationToken cancelacion = default) =>
-        EnviarAsync(new { tipo = "EstadoCambiado", pedidoId, estado = nuevoEstado.ToString() }, cancelacion);
+    public async Task NotificarEstadoCambiadoAsync(Guid pedidoId, EstadoPedido nuevoEstado, CancellationToken cancelacion = default)
+    {
+        await EnviarAsync(new { tipo = "EstadoCambiado", pedidoId, estado = nuevoEstado.ToString() }, cancelacion);
+        await EnviarEventoDirectoAsync("EstadoCambiado", cancelacion, pedidoId, nuevoEstado.ToString());
+    }
 
-    public Task NotificarPedidoCanceladoAsync(Guid pedidoId, CancellationToken cancelacion = default) =>
-        EnviarAsync(new { tipo = "PedidoCancelado", pedidoId }, cancelacion);
+    public async Task NotificarPedidoCanceladoAsync(Guid pedidoId, CancellationToken cancelacion = default)
+    {
+        await EnviarAsync(new { tipo = "PedidoCancelado", pedidoId }, cancelacion);
+        await EnviarEventoDirectoAsync("PedidoCancelado", cancelacion, pedidoId);
+    }
 
     public Task NotificarOrdenCocinaAsync(string estacion, OrdenCocinaDto dto, CancellationToken cancelacion = default) =>
         EnviarAGrupoAsync($"cocina-{estacion}", "NuevaOrden", dto, cancelacion);
@@ -44,6 +53,32 @@ public sealed class SignalRNotificadorPedidos : INotificadorPedidos
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "No se pudo emitir notificación de pedido por SignalR.");
+        }
+    }
+
+    private async Task EnviarEventoDirectoAsync(string methodName, CancellationToken cancelacion, params object[] args)
+    {
+        try
+        {
+            switch (args.Length)
+            {
+                case 0:
+                    await _hub.Clients.All.SendAsync(methodName, cancelacion);
+                    break;
+                case 1:
+                    await _hub.Clients.All.SendAsync(methodName, args[0], cancelacion);
+                    break;
+                case 2:
+                    await _hub.Clients.All.SendAsync(methodName, args[0], args[1], cancelacion);
+                    break;
+                default:
+                    await _hub.Clients.All.SendAsync(methodName, args, cancelacion);
+                    break;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "No se pudo emitir evento directo de pedido por SignalR: {MethodName}.", methodName);
         }
     }
 

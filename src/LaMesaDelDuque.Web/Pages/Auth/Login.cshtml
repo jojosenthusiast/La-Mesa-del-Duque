@@ -8,7 +8,16 @@
     <div class="col-md-5">
         <div class="card shadow">
             <div class="card-body p-4">
-                <h3 class="card-title text-center mb-4">Iniciar sesión</h3>
+                <div class="text-center mb-3">
+                    <img src="~/img/marca/logo-simbolo.png" alt="La Mesa del Duque" style="height:48px;margin-bottom:0.5rem;" />
+                    <h3 class="card-title mb-0">La Mesa del Duque</h3>
+                    <p class="text-muted small mb-0">Sistema de gestión de restaurante</p>
+                </div>
+
+                @if (!string.IsNullOrEmpty(Model.RegistroExitoso))
+                {
+                    <div class="alert alert-success">@Model.RegistroExitoso</div>
+                }
 
                 @if (!string.IsNullOrEmpty(Model.MensajeError))
                 {
@@ -19,16 +28,35 @@
                     <div asp-validation-summary="ModelOnly" class="text-danger mb-2"></div>
                     <div class="mb-3">
                         <label asp-for="Username" class="form-label">Usuario</label>
-                        <input asp-for="Username" type="text" class="form-control" required autofocus />
+                        <input asp-for="Username" type="text" class="form-control" required autofocus autocomplete="username" />
                         <span asp-validation-for="Username" class="text-danger"></span>
                     </div>
                     <div class="mb-3">
                         <label asp-for="Password" class="form-label">Contraseña</label>
-                        <input asp-for="Password" type="password" class="form-control" required />
+                        <input asp-for="Password" type="password" class="form-control" required autocomplete="current-password" />
                         <span asp-validation-for="Password" class="text-danger"></span>
                     </div>
-                    <button type="submit" class="btn btn-primary w-100">Ingresar</button>
+                    <button type="submit" class="btn btn-primary w-100 py-2">Ingresar</button>
                 </form>
+
+                <div class="text-center mt-3">
+                    <a asp-page="/Auth/Register" class="small">Registrar empleado con clave de rol</a>
+                </div>
+
+                <hr class="my-3" />
+                <div class="text-muted small">
+                    <p class="fw-semibold mb-1">Credenciales de demostración:</p>
+                    <table class="table table-sm table-bordered mb-0" style="font-size:0.78rem;">
+                        <thead class="table-light"><tr><th>Usuario</th><th>Contraseña</th><th>Rol</th></tr></thead>
+                        <tbody>
+                            <tr><td><code>admin</code></td><td><code>Admin123!</code></td><td>Administrador</td></tr>
+                            <tr><td><code>sofia</code></td><td><code>Cajero567!</code></td><td>Cajero / Caja</td></tr>
+                            <tr><td><code>pedro</code></td><td><code>Cocina456!</code></td><td>Cocinero / KDS</td></tr>
+                            <tr><td><code>carlos</code></td><td><code>Encargado321!</code></td><td>Encargado</td></tr>
+                            <tr><td><code>ronald</code></td><td><code>Driver345!</code></td><td>Repartidor</td></tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>

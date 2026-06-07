@@ -120,7 +120,7 @@ public class IndexModel : PageModel
         public string Telefono { get; set; } = string.Empty;
         public string HorarioApertura { get; set; } = "11:00";
         public string HorarioCierre { get; set; } = "23:00";
-        public int PeriodoGraciaMinutos { get; set; } = 5;
+        public int PeriodoGraciaMinutos { get; set; } = 0;
         public string Nit { get; set; } = string.Empty;
         public int IvaPorcentaje { get; set; } = 13;
         public int PropinaPorcentaje { get; set; } = 10;

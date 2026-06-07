@@ -1,0 +1,75 @@
+@page
+@model LaMesaDelDuque.Web.Pages.Operaciones.Repartidor.IndexModel
+@{ ViewData["Title"] = "Mis entregas"; ViewData["ActiveTab"] = "Repartidor"; }
+@Html.AntiForgeryToken()
+
+<section class="lmd-page-header rounded-top">
+    <h1>Mis entregas</h1>
+    <p class="lmd-page-subtitle">Vista liviana para repartidor: dirección, teléfono, total, estado y confirmación de entrega.</p>
+</section>
+
+<section class="bg-white p-3 rounded-bottom">
+    @if (!string.IsNullOrWhiteSpace(Model.ToastSuccess))
+    {
+        <div class="alert alert-success py-2">@Model.ToastSuccess</div>
+    }
+    @if (!string.IsNullOrWhiteSpace(Model.ToastError))
+    {
+        <div class="alert alert-danger py-2">@Model.ToastError</div>
+    }
+
+    @if (Model.EsSupervisor)
+    {
+        <form method="get" class="d-flex flex-wrap align-items-end gap-2 mb-3">
+            <div>
+                <label class="form-label mb-1">Ver repartidor</label>
+                <select name="repartidorId" class="form-select form-select-sm">
+                    @foreach (var r in Model.Repartidores)
+                    {
+                        <option value="@r.Id" selected="@(Model.RepartidorSeleccionadoId == r.Id)">@r.Nombre</option>
+                    }
+                </select>
+            </div>
+            <button type="submit" class="btn btn-sm btn-dark">Filtrar</button>
+        </form>
+    }
+
+    @if (!Model.Pedidos.Any())
+    {
+        <div class="alert alert-info mb-0">No hay entregas asignadas pendientes.</div>
+    }
+    else
+    {
+        <div class="row g-3">
+            @foreach (var p in Model.Pedidos)
+            {
+                <div class="col-lg-6">
+                    <article class="border rounded p-3 h-100 shadow-sm">
+                        <div class="d-flex justify-content-between gap-2 mb-2">
+                            <span class="badge bg-primary">@(p.Estado == "Pagado" ? "Pagado" : p.Estado)</span>
+                            <span class="fw-bold">@p.Total.ToString("C")</span>
+                        </div>
+                        <h5 class="mb-1">Pedido @p.FechaCreacion.ToLocalTime().ToString("HH:mm")</h5>
+                        <p class="mb-2"><i class="bi bi-geo-alt"></i> @(string.IsNullOrWhiteSpace(p.DireccionEntrega) ? "Sin dirección" : p.DireccionEntrega)</p>
+                        <p class="mb-2"><i class="bi bi-telephone"></i> @(string.IsNullOrWhiteSpace(p.TelefonoCliente) ? "Sin teléfono" : p.TelefonoCliente)</p>
+                        <p class="text-muted small mb-3">Items: @p.Items · Asignado: @(p.AsignadoEn?.ToLocalTime().ToString("dd/MM HH:mm") ?? "—")</p>
+
+                        @if (p.PuedeEntregarse)
+                        {
+                            <form method="post" asp-page-handler="Entregar">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="pedidoId" value="@p.Id" />
+                                <input type="hidden" name="repartidorId" value="@Model.RepartidorSeleccionadoId" />
+                                <button type="submit" class="btn btn-success w-100">Confirmar entrega</button>
+                            </form>
+                        }
+                        else
+                        {
+                            <div class="alert alert-warning py-2 mb-0">Todavía no se puede entregar. Esperá que cocina lo marque listo o que caja lo cobre.</div>
+                        }
+                    </article>
+                </div>
+            }
+        </div>
+    }
+</section>

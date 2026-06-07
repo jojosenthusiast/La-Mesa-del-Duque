@@ -18,6 +18,9 @@ public class Pedido
     public string? ClienteDeliveryDireccion { get; private set; }
     public string? ClienteDeliveryReferencia { get; private set; }
     public string? ClienteDeliveryNotas { get; private set; }
+    public Guid? RepartidorId { get; private set; }
+    public DateTime? AsignadoEn { get; private set; }
+    public DateTime? EntregadoEn { get; private set; }
     public EstadoPedido Estado { get; private set; }
     public DateTime CreatedAt { get; private set; }
     public IReadOnlyList<DetallePedido> Detalles => _detalles.AsReadOnly();
@@ -123,6 +126,41 @@ public class Pedido
             throw new ReglaDominioException("Solo un pedido listo puede ser despachado.");
 
         Estado = EstadoPedido.Despachado;
+    }
+
+    public void AsignarRepartidor(Guid repartidorId)
+    {
+        if (repartidorId == Guid.Empty)
+            throw new ReglaDominioException("El repartidor asignado es obligatorio.");
+
+        if (TipoServicio != TipoServicio.Delivery)
+            throw new ReglaDominioException("Solo un pedido delivery puede tener repartidor asignado.");
+
+        RepartidorId = repartidorId;
+        AsignadoEn = DateTime.UtcNow;
+    }
+
+    public void MarcarEntregado()
+    {
+        if (TipoServicio != TipoServicio.Delivery)
+            throw new ReglaDominioException("Solo un pedido delivery puede marcarse como entregado.");
+
+        EntregadoEn = DateTime.UtcNow;
+
+        if (Estado is EstadoPedido.Listo or EstadoPedido.Pagado)
+            Estado = EstadoPedido.Despachado;
+    }
+
+    public void ActualizarDatosEntrega(string? direccion, string? telefono)
+    {
+        if (TipoServicio != TipoServicio.Delivery)
+            throw new ReglaDominioException("Solo un pedido delivery puede tener datos de entrega.");
+
+        if (!string.IsNullOrWhiteSpace(direccion))
+            ClienteDeliveryDireccion = direccion.Trim();
+
+        if (!string.IsNullOrWhiteSpace(telefono))
+            ClienteDeliveryTelefono = telefono.Trim();
     }
 
     public void Cancelar()

@@ -1,0 +1,37 @@
+@model object?
+@{
+    var destino = Model as string;
+    if (string.IsNullOrWhiteSpace(destino)) destino = null;
+
+    var path = Context?.Request?.Path.Value ?? string.Empty;
+    var esPosCaja = path.StartsWith("/Operaciones/Pedidos", StringComparison.OrdinalIgnoreCase);
+}
+
+@if (esPosCaja)
+{
+    <button id="lmd-pos-back-btn"
+            type="button"
+            class="lmd-back-btn lmd-back-btn--pos"
+            style="display:none"
+            onclick="if (window.pos && window.pos.volverASeleccion) { window.pos.volverASeleccion(); }"
+            aria-label="Volver a mesas">
+        <i class="bi bi-arrow-left" aria-hidden="true"></i>
+        <span>Mesas</span>
+    </button>
+}
+else if (destino is null)
+{
+    <button type="button" class="lmd-back-btn"
+            onclick="if (history.length > 1) { history.back(); } else { location.href='/'; }"
+            aria-label="Volver">
+        <i class="bi bi-arrow-left" aria-hidden="true"></i>
+        <span>Volver</span>
+    </button>
+}
+else
+{
+    <a href="@destino" class="lmd-back-btn" aria-label="Volver">
+        <i class="bi bi-arrow-left" aria-hidden="true"></i>
+        <span>Volver</span>
+    </a>
+}
