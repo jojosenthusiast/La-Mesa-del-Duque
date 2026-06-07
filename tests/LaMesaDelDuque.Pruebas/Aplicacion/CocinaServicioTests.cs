@@ -224,6 +224,25 @@ public class CocinaServicioTests : IDisposable
     }
 
     [Fact]
+    public async Task MarcarListoAsync_CuandoPedidoYaEstaPagado_NoDebeVolverAListo()
+    {
+        var (_, producto) = await CrearMesaYProductoAsync();
+        var pedido = await CrearPedidoAsync(null, producto);
+        pedido.MarcarEnPreparacion();
+        pedido.MarcarEnCobro();
+        pedido.MarcarComoPagado();
+        await _uot.GuardarCambiosAsync();
+        await _servicio.GenerarOrdenesAsync(pedido.Id);
+
+        var orden = (await _uot.OrdenesCocina.ListarPendientesAsync()).First();
+
+        await _servicio.MarcarListoAsync(orden.Id);
+
+        var pedidoActualizado = await _uot.Pedidos.ObtenerConDetallesAsync(pedido.Id);
+        Assert.Equal(EstadoPedido.Pagado, pedidoActualizado!.Estado);
+    }
+
+    [Fact]
     public async Task RecuperarAsync_CuandoOrdenEstaListo_DebeVolverAEnPreparacion()
     {
         var (_, producto) = await CrearMesaYProductoAsync();

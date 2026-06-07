@@ -102,13 +102,15 @@ public class PedidosServicioTests : IDisposable
     }
 
     [Fact]
-    public async Task ListarListosParaDespachoAsync_DebeUsarHoraListoDeCocinaComoReferenciaDespacho()
+    public async Task ListarListosParaDespachoAsync_DebeListarPagadosYUsarHoraListoDeCocinaComoReferenciaDespacho()
     {
         var (mesa, producto) = await CrearMesaYProductoAsync(80);
         var pedido = new Pedido(TipoServicio.ComerAqui, mesa);
         pedido.AgregarDetalle(new DetallePedido(producto, 1, 3.50m, null, null));
         pedido.MarcarEnPreparacion();
         pedido.MarcarListo();
+        pedido.MarcarEnCobro();
+        pedido.MarcarComoPagado();
 
         typeof(Pedido).GetProperty(nameof(Pedido.CreatedAt))!
             .SetValue(pedido, DateTime.UtcNow.AddHours(-6));
@@ -152,6 +154,45 @@ public class PedidosServicioTests : IDisposable
         Assert.Null(pedido.MesaId);
         Assert.Null(pedido.MesaNumero);
         Assert.Equal(7.00m, pedido.Total);
+    }
+
+    [Fact]
+    public async Task CrearPedido_Delivery_DebeExigirYMapearDatosEntrega()
+    {
+        var (_, producto) = await CrearMesaYProductoAsync(81);
+
+        var pedido = await _servicio.CrearPedidoAsync(TipoServicio.Delivery, null, new List<DetalleCreacionDto>
+        {
+            new() { ProductoId = producto.Id, Cantidad = 1, PrecioUnitario = 3.50m }
+        }, datosEntrega: new DatosEntregaDto
+        {
+            ClienteNombre = "Ana Delivery",
+            Telefono = "7777-8888",
+            Direccion = "Calle 1",
+            Referencia = "Portón negro",
+            Notas = "Llamar al llegar"
+        });
+
+        Assert.Equal("Delivery", pedido.TipoServicio);
+        Assert.Null(pedido.MesaId);
+        Assert.Equal("Ana Delivery", pedido.ClienteDeliveryNombre);
+        Assert.Equal("7777-8888", pedido.ClienteDeliveryTelefono);
+        Assert.Equal("Calle 1", pedido.ClienteDeliveryDireccion);
+        Assert.Equal("Portón negro", pedido.ClienteDeliveryReferencia);
+        Assert.Equal("Llamar al llegar", pedido.ClienteDeliveryNotas);
+    }
+
+    [Fact]
+    public async Task CrearPedido_DeliverySinDatos_DebeRechazarOperacion()
+    {
+        var (_, producto) = await CrearMesaYProductoAsync(82);
+
+        var ex = await Assert.ThrowsAsync<ReglaDominioException>(() => _servicio.CrearPedidoAsync(TipoServicio.Delivery, null, new List<DetalleCreacionDto>
+        {
+            new() { ProductoId = producto.Id, Cantidad = 1, PrecioUnitario = 3.50m }
+        }));
+
+        Assert.Contains("datos de entrega", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -289,16 +330,19 @@ public class PedidosServicioTests : IDisposable
             new() { ProductoId = producto.Id, Cantidad = 1, PrecioUnitario = 3.50m }
         });
 
+        await _servicio.MarcarEnCobroAsync(pedido.Id);
         await _servicio.PagarPedidoAsync(pedido.Id);
 
         await Assert.ThrowsAsync<ReglaDominioException>(() => _servicio.EliminarPedidoPendienteAsync(pedido.Id, usuario.Id));
     }
 
     [Fact]
-    public async Task ListarPedidosActivos_DebeIncluirPendientesYEnPreparacion()
+    public async Task ListarPedidosActivos_DebeIncluirPendientesEnPreparacionListosYEnCobro()
     {
         var (_, producto1) = await CrearMesaYProductoAsync(17);
         var (_, producto2) = await CrearMesaYProductoAsync(18);
+        var (_, producto3) = await CrearMesaYProductoAsync(19);
+        var (_, producto4) = await CrearMesaYProductoAsync(20);
 
         var pendiente = await _servicio.CrearPedidoAsync(TipoServicio.ParaLlevar, null, new List<DetalleCreacionDto>
         {
@@ -310,10 +354,24 @@ public class PedidosServicioTests : IDisposable
             new() { ProductoId = producto2.Id, Cantidad = 1, PrecioUnitario = 3.50m }
         });
 
+        var listo = new Pedido(TipoServicio.ParaLlevar);
+        listo.AgregarDetalle(new DetallePedido(producto3, 1, 3.50m));
+        listo.MarcarEnPreparacion();
+        listo.MarcarListo();
+        await _uot.Pedidos.AgregarAsync(listo);
+
+        var enCobro = await _servicio.CrearPedidoAsync(TipoServicio.ParaLlevar, null, new List<DetalleCreacionDto>
+        {
+            new() { ProductoId = producto4.Id, Cantidad = 1, PrecioUnitario = 3.50m }
+        });
+        await _servicio.MarcarEnCobroAsync(enCobro.Id);
+
         var activos = await _servicio.ListarPedidosActivosAsync();
 
         Assert.Contains(activos, x => x.Id == pendiente.Id);
         Assert.Contains(activos, x => x.Id == enPreparacion.Id);
+        Assert.Contains(activos, x => x.Id == listo.Id);
+        Assert.Contains(activos, x => x.Id == enCobro.Id);
     }
 
     [Fact]
@@ -326,12 +384,28 @@ public class PedidosServicioTests : IDisposable
             new() { ProductoId = producto.Id, Cantidad = 1, PrecioUnitario = 3.50m }
         });
 
+        await _servicio.MarcarEnCobroAsync(pedido.Id);
         await _servicio.PagarPedidoAsync(pedido.Id);
 
         var mesaActualizada = await _uot.Mesas.ObtenerPorIdAsync(mesa.Id);
         Assert.NotNull(mesaActualizada);
         Assert.Equal(EstadoMesa.Ocupada, mesaActualizada!.Estado);
         Assert.Null(mesaActualizada.GraciaHasta);
+    }
+
+    [Fact]
+    public async Task PagarPedido_SinEnviarACaja_DebeRechazarOperacion()
+    {
+        var (mesa, producto) = await CrearMesaYProductoAsync(32);
+
+        var pedido = await _servicio.CrearPedidoAsync(TipoServicio.ComerAqui, mesa.Id, new List<DetalleCreacionDto>
+        {
+            new() { ProductoId = producto.Id, Cantidad = 1, PrecioUnitario = 3.50m }
+        });
+
+        var ex = await Assert.ThrowsAsync<ReglaDominioException>(() => _servicio.PagarPedidoAsync(pedido.Id));
+
+        Assert.Contains("enviado a caja", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

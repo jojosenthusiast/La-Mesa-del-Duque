@@ -53,7 +53,7 @@ public class IndexModel : PageModel
         try
         {
             await _despacho.DespacharPedidoAsync(pedidoId);
-            ToastSuccess = "Pedido despachado. Mesa liberada.";
+            ToastSuccess = "Pedido despachado.";
         }
         catch (ReglaDominioException ex)
         {
@@ -72,7 +72,7 @@ public class IndexModel : PageModel
         try
         {
             await _despacho.DespacharPedidoAsync(req.PedidoId);
-            return new JsonResult(new { ok = true });
+            return new JsonResult(new { ok = true, mensaje = "Pedido despachado." });
         }
         catch (ReglaDominioException ex)
         {

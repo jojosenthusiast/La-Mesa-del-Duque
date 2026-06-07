@@ -57,7 +57,7 @@ public class PedidoTests
     {
         var ex = Assert.Throws<ReglaDominioException>(() => new Pedido(TipoServicio.ParaLlevar, _mesa));
 
-        Assert.Contains("para llevar", ex.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("mesa", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

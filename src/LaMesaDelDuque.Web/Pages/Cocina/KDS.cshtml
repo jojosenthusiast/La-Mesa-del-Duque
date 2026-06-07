@@ -27,6 +27,14 @@
             <button class="lmd-kds-station-btn" data-estacion="Bar">Bar</button>
             <button class="lmd-kds-station-btn" data-estacion="Expo">Expo</button>
         </nav>
+        <nav class="lmd-kds-quick-filters" aria-label="Filtros rápidos de cocina">
+            <button class="lmd-kds-filter-btn lmd-kds-filter-btn--active" data-prioridad="Todas">Todo</button>
+            <button class="lmd-kds-filter-btn" data-prioridad="Atrasado">Atrasados</button>
+            <button class="lmd-kds-filter-btn" data-prioridad="PorVencer">Por vencer</button>
+            <button class="lmd-kds-filter-btn" data-servicio="ComerAqui">Mesas</button>
+            <button class="lmd-kds-filter-btn" data-servicio="ParaLlevar">Para llevar</button>
+            <button class="lmd-kds-filter-btn" data-servicio="Delivery">Delivery</button>
+        </nav>
         <div class="lmd-kds-header__right">
             <button type="button" class="lmd-kds-nav-btn" onclick="history.length > 1 ? history.back() : window.location.href='@Url.Page("/Index")'">Volver</button>
             <a class="lmd-kds-nav-btn" asp-page="/Index">Inicio</a>
@@ -57,9 +65,9 @@
     </main>
 
     <footer class="lmd-kds-legend">
-        <span class="lmd-kds-legend-item"><span class="lmd-kds-legend-dot lmd-kds-legend-dot--fresh"></span> &lt;15min</span>
-        <span class="lmd-kds-legend-item"><span class="lmd-kds-legend-dot lmd-kds-legend-dot--warn"></span> 15-30min</span>
-        <span class="lmd-kds-legend-item"><span class="lmd-kds-legend-dot lmd-kds-legend-dot--alert"></span> &gt;30min</span>
+        <span class="lmd-kds-legend-item"><span class="lmd-kds-legend-dot lmd-kds-legend-dot--fresh"></span> A tiempo</span>
+        <span class="lmd-kds-legend-item"><span class="lmd-kds-legend-dot lmd-kds-legend-dot--warn"></span> Consumió 80% del tiempo estimado</span>
+        <span class="lmd-kds-legend-item"><span class="lmd-kds-legend-dot lmd-kds-legend-dot--alert"></span> Superó 120% del tiempo estimado</span>
         <span class="ms-auto text-muted" style="font-size:0.7rem">KDS v3 — LMDD</span>
     </footer>
 

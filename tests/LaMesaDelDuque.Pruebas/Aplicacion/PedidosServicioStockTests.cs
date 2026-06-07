@@ -222,6 +222,7 @@ public class PedidosServicioStockTests : IDisposable
         {
             CrearDetalleConfirmado(producto)
         });
+        await _servicio.MarcarEnCobroAsync(pedido.Id);
         await _servicio.PagarPedidoAsync(pedido.Id);
 
         var ex = await Assert.ThrowsAsync<ReglaDominioException>(() =>

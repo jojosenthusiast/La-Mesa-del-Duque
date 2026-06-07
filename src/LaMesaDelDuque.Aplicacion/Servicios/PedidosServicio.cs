@@ -27,7 +27,7 @@ internal class PedidosServicio : IPedidosServicio
         _notificadorDashboard = notificadorDashboard;
     }
 
-    public async Task<PedidoDto> CrearPedidoAsync(TipoServicio tipoServicio, Guid? mesaId, List<DetalleCreacionDto> detalles, CancellationToken cancelacion = default)
+    public async Task<PedidoDto> CrearPedidoAsync(TipoServicio tipoServicio, Guid? mesaId, List<DetalleCreacionDto> detalles, CancellationToken cancelacion = default, DatosEntregaDto? datosEntrega = null)
     {
         await AsegurarDiaOperativoAbiertoAsync(cancelacion);
 
@@ -36,8 +36,8 @@ internal class PedidosServicio : IPedidosServicio
 
         Mesa? mesa = null;
 
-        if (tipoServicio == TipoServicio.ParaLlevar && mesaId.HasValue)
-            throw new ReglaDominioException("Un pedido para llevar no puede tener mesa asignada.");
+        if (tipoServicio != TipoServicio.ComerAqui && mesaId.HasValue)
+            throw new ReglaDominioException("Solo un pedido para comer aquí puede tener mesa asignada.");
 
         if (mesaId.HasValue)
         {
@@ -49,6 +49,19 @@ internal class PedidosServicio : IPedidosServicio
         }
 
         var pedido = new Pedido(tipoServicio, mesa);
+
+        if (tipoServicio == TipoServicio.Delivery)
+        {
+            if (datosEntrega is null)
+                throw new ReglaDominioException("Los datos de entrega son obligatorios para delivery.");
+
+            pedido.AsignarDatosDelivery(
+                datosEntrega.ClienteNombre ?? string.Empty,
+                datosEntrega.Telefono ?? string.Empty,
+                datosEntrega.Direccion ?? string.Empty,
+                datosEntrega.Referencia,
+                datosEntrega.Notas);
+        }
 
         var meseroActualId = ObtenerMeseroActualId();
         if (mesa is not null && meseroActualId != Guid.Empty)
@@ -185,6 +198,9 @@ internal class PedidosServicio : IPedidosServicio
 
         var pedido = await _uot.Pedidos.ObtenerConDetallesParaActualizarAsync(pedidoId, cancelacion)
             ?? throw new ArgumentException($"No se encontró el pedido con ID {pedidoId}.", nameof(pedidoId));
+
+        if (pedido.Estado != EstadoPedido.EnCobro)
+            throw new ReglaDominioException("Solo se puede cobrar un pedido enviado a caja.");
 
         // Crear cuenta única si no existe ninguna (flujo de pago simple)
         var cuentasExistentes = await _uot.Cuentas.ObtenerPorPedidoAsync(pedidoId, cancelacion);
@@ -572,7 +588,7 @@ internal class PedidosServicio : IPedidosServicio
     {
         var pedidos = await _uot.Pedidos.ObtenerTodosAsync(cancelacion);
         return pedidos
-            .Where(p => p.Estado == EstadoPedido.Pendiente || p.Estado == EstadoPedido.EnPreparacion || p.Estado == EstadoPedido.EnCobro)
+            .Where(p => p.Estado == EstadoPedido.Pendiente || p.Estado == EstadoPedido.EnPreparacion || p.Estado == EstadoPedido.Listo || p.Estado == EstadoPedido.EnCobro)
             .Select(MapToDto)
             .ToList();
     }
@@ -581,7 +597,7 @@ internal class PedidosServicio : IPedidosServicio
     {
         var pedidos = await _uot.Pedidos.ObtenerTodosAsync(cancelacion);
         var listos = pedidos
-            .Where(p => p.Estado == EstadoPedido.Listo || p.Estado == EstadoPedido.Pagado)
+            .Where(p => p.Estado == EstadoPedido.Pagado)
             .ToList();
 
         var dtos = new List<PedidoDto>(listos.Count);
@@ -612,6 +628,9 @@ internal class PedidosServicio : IPedidosServicio
 
         var pedido = await _uot.Pedidos.ObtenerConDetallesParaActualizarAsync(pedidoId, cancelacion)
             ?? throw new ArgumentException($"No se encontró el pedido con ID {pedidoId}.", nameof(pedidoId));
+
+        if (pedido.Estado == EstadoPedido.EnCobro)
+            return;
 
         pedido.MarcarEnCobro();
         await _uot.GuardarCambiosAsync(cancelacion);
@@ -694,6 +713,12 @@ internal class PedidosServicio : IPedidosServicio
                 var cuenta = await _uot.Cuentas.ObtenerParaActualizarAsync(cuentaId, cancelacion)
                     ?? throw new ArgumentException($"No se encontró la cuenta con ID {cuentaId}.", nameof(cuentaId));
 
+                var pedido = await _uot.Pedidos.ObtenerConCuentasParaActualizarAsync(cuenta.PedidoId, cancelacion)
+                    ?? throw new ArgumentException($"No se encontró el pedido con ID {cuenta.PedidoId}.", nameof(cuentaId));
+
+                if (pedido.Estado != EstadoPedido.EnCobro)
+                    throw new ReglaDominioException("Solo se puede cobrar un pedido enviado a caja.");
+
                 var usuarioId = ObtenerUsuarioIdActual();
                 if (usuarioId == Guid.Empty)
                     throw new InvalidOperationException("No se pudo identificar el usuario actual para registrar el pago.");
@@ -703,8 +728,7 @@ internal class PedidosServicio : IPedidosServicio
                 var pago = new Pago(cuentaId, cuenta.Total, metodoPago, propinaMonto, usuarioId, referenciaPos);
                 await _uot.Pagos.AgregarAsync(pago, cancelacion);
 
-                var pedido = await _uot.Pedidos.ObtenerConCuentasParaActualizarAsync(cuenta.PedidoId, cancelacion);
-                if (pedido is not null && pedido.EstaPagadoCompletamente)
+                if (pedido.EstaPagadoCompletamente)
                 {
                     pedido.MarcarComoPagado();
                     await _notificadorPedidos.NotificarEstadoCambiadoAsync(pedido.Id, pedido.Estado, cancelacion);
@@ -832,6 +856,11 @@ internal class PedidosServicio : IPedidosServicio
             MesaId = pedido.Mesa?.Id,
             MesaNumero = pedido.Mesa?.Numero,
             MeseroAsignadoId = pedido.MeseroAsignadoId,
+            ClienteDeliveryNombre = pedido.ClienteDeliveryNombre,
+            ClienteDeliveryTelefono = pedido.ClienteDeliveryTelefono,
+            ClienteDeliveryDireccion = pedido.ClienteDeliveryDireccion,
+            ClienteDeliveryReferencia = pedido.ClienteDeliveryReferencia,
+            ClienteDeliveryNotas = pedido.ClienteDeliveryNotas,
             Estado = pedido.Estado.ToString(),
             Total = pedido.Total,
             FechaCreacion = pedido.CreatedAt,

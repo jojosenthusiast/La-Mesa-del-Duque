@@ -87,9 +87,14 @@ if (app.Environment.IsDevelopment())
     var db = scope.ServiceProvider.GetRequiredService<LaMesaDelDuqueDbContext>();
     Console.WriteLine($"DB PROVIDER: {db.Database.ProviderName}");
     if (db.Database.ProviderName!.Contains("Sqlite"))
+    {
         await db.Database.EnsureCreatedAsync();
+        await AsegurarColumnasDeliverySqliteAsync(db);
+    }
     else
+    {
         await db.Database.MigrateAsync();
+    }
     if (!await db.Set<Rol>().AnyAsync())
     {
         var adminRol = new Rol("Administrador", "Acceso total al sistema");
@@ -371,3 +376,48 @@ if (app.Environment.IsDevelopment())
 }
 
 app.Run();
+
+static async Task AsegurarColumnasDeliverySqliteAsync(LaMesaDelDuqueDbContext db)
+{
+    var columnasRequeridas = new Dictionary<string, string>
+    {
+        ["ClienteDeliveryNombre"] = "TEXT",
+        ["ClienteDeliveryTelefono"] = "TEXT",
+        ["ClienteDeliveryDireccion"] = "TEXT",
+        ["ClienteDeliveryReferencia"] = "TEXT",
+        ["ClienteDeliveryNotas"] = "TEXT"
+    };
+
+    var conexion = db.Database.GetDbConnection();
+    var cerrarConexion = conexion.State != System.Data.ConnectionState.Open;
+    if (cerrarConexion)
+        await conexion.OpenAsync();
+
+    try
+    {
+        var columnasExistentes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        await using (var columnasCmd = conexion.CreateCommand())
+        {
+            columnasCmd.CommandText = "PRAGMA table_info('Pedido');";
+            await using var reader = await columnasCmd.ExecuteReaderAsync();
+            while (await reader.ReadAsync())
+                columnasExistentes.Add(reader.GetString(1));
+        }
+
+        foreach (var columna in columnasRequeridas)
+        {
+            if (columnasExistentes.Contains(columna.Key))
+                continue;
+
+            await using var alterCmd = conexion.CreateCommand();
+            alterCmd.CommandText = $"ALTER TABLE \"Pedido\" ADD COLUMN \"{columna.Key}\" {columna.Value};";
+            await alterCmd.ExecuteNonQueryAsync();
+            Console.WriteLine($"[DEV] SQLite schema repaired: Pedido.{columna.Key} added.");
+        }
+    }
+    finally
+    {
+        if (cerrarConexion)
+            await conexion.CloseAsync();
+    }
+}

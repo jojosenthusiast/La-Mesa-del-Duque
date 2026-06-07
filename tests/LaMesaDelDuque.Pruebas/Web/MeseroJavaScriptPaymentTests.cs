@@ -5,14 +5,14 @@ namespace LaMesaDelDuque.Pruebas.Web;
 public class MeseroJavaScriptPaymentTests
 {
     [Fact]
-    public void MeseroJs_DebeCapturarReferenciaAntesDePagosNoEfectivo()
+    public void MeseroJs_NoDebeExponerFlujoDePagoDirecto()
     {
         var scriptPath = Path.Combine(ProjectPaths.RepoRoot, "src", "LaMesaDelDuque.Web", "wwwroot", "js", "mesero.js");
         var source = File.ReadAllText(scriptPath);
 
-        Assert.Contains("abrirReferenciaPago(\\'tarjeta\\'", source, StringComparison.Ordinal);
-        Assert.Contains("abrirReferenciaPago(\\'qr\\'", source, StringComparison.Ordinal);
-        Assert.Contains("lmd-mesero-payment-ref", source, StringComparison.Ordinal);
-        Assert.Contains("referencia: referencia", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("PagarJson", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("abrirReferenciaPago", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("lmd-mesero-payment-ref", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("referencia: referencia", source, StringComparison.Ordinal);
     }
 }

@@ -116,12 +116,20 @@ class Element {
       return this.tagName === 'INPUT' && this.name === '__RequestVerificationToken';
     }
 
-    const match = trimmed.match(/^\.([\w-]+)(?::not\(\.([\w-]+)\))?(?:\[([^\]=]+)(?:="([^"]*)")?\])?$/);
+    const rejectedClasses = [...trimmed.matchAll(/:not\(\.([\w-]+)\)/g)].map(match => match[1]);
+    if (rejectedClasses.some(className => this.classList.contains(className))) return false;
+
+    if (/:not\(\[hidden\]\)/.test(trimmed) && this.hidden) return false;
+
+    const normalized = trimmed
+      .replace(/:not\(\.[\w-]+\)/g, '')
+      .replace(/:not\(\[hidden\]\)/g, '');
+
+    const match = normalized.match(/^\.([\w-]+)(?:\[([^\]=]+)(?:="([^"]*)")?\])?$/);
     if (!match) return false;
 
-    const [, requiredClass, rejectedClass, attrName, attrValue] = match;
+    const [, requiredClass, attrName, attrValue] = match;
     if (!this.classList.contains(requiredClass)) return false;
-    if (rejectedClass && this.classList.contains(rejectedClass)) return false;
     if (!attrName) return true;
 
     const key = toDatasetKey(attrName);
