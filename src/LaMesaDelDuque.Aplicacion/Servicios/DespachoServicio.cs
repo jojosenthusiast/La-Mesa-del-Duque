@@ -20,8 +20,10 @@ public sealed class DespachoServicio : IDespachoServicio
 
         var mesaId = pedido.Mesa?.Id;
 
-        if (pedido.Estado == EstadoPedido.Pagado)
-            pedido.MarcarListo();
+        if (pedido.Estado != EstadoPedido.Pagado)
+            throw new ReglaDominioException("Solo se puede despachar y liberar un pedido pagado.");
+
+        pedido.MarcarListo();
 
         pedido.MarcarDespachado();
 

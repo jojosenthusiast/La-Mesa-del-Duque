@@ -156,6 +156,7 @@ public class PedidosServicioStockTests : IDisposable
         {
             new() { ProductoId = producto.Id, Cantidad = 1, PrecioUnitario = producto.Precio }
         });
+        await _servicio.MarcarEnCobroAsync(pedido.Id);
         await _servicio.PagarPedidoAsync(pedido.Id);
 
         var ex = await Assert.ThrowsAsync<ReglaDominioException>(() =>

@@ -13,6 +13,13 @@
     function fmt(n) {
         return new Intl.NumberFormat('es-SV', { style: 'currency', currency: 'USD' }).format(n || 0);
     }
+
+    function fechaServidor(value) {
+        if (!value) return null;
+        var text = String(value);
+        if (/Z$|[+-]\d{2}:?\d{2}$/.test(text)) return new Date(text);
+        return new Date(text + 'Z');
+    }
     function totalLineas(lineas) {
         return lineas.reduce(function (s, l) { return s + (l.precioUnitario || 0) * (l.cantidad || 0); }, 0);
     }
@@ -51,6 +58,7 @@
         pagoMetodo: null,
         pagoMonto: null,
         pagoReferencia: null,
+        delivery: null,
         // split payment
         split: {
             activo: false,
@@ -122,27 +130,34 @@
             mesasHtml += '<div class="lmd-pos-mesa-zona-separator">' + cap + ' personas</div>';
             grupos[cap].forEach(function (m) {
                 var disponible = m.estado === 'Disponible';
-                var enGracia = disponible && m.graciaHasta && new Date(m.graciaHasta) > Date.now();
+                var graciaHasta = fechaServidor(m.graciaHasta);
+                var enGracia = disponible && graciaHasta && graciaHasta > Date.now();
                 var hayTab = !disponible && m.pedidoActualId;
                 var enCobro = hayTab && m.pedidoEstado === 'EnCobro';
+                var pagadoPendienteDespacho = hayTab && m.pedidoEstado === 'Pagado';
                 var cls = enGracia ? 'lmd-pos-mesa-card--en-gracia'
                     : disponible ? 'lmd-pos-mesa-card--disponible'
+                    : pagadoPendienteDespacho ? 'lmd-pos-mesa-card--pagado'
                     : enCobro ? 'lmd-pos-mesa-card--en-cobro'
                     : 'lmd-pos-mesa-card--ocupada';
                 var onclick = enGracia ? '' : ' onclick="pos.seleccionarMesa(\'' + m.id + '\',' + m.numero + ')"';
                 var badgeHtml = '';
                 if (enGracia) {
-                    var secsLeft = Math.max(0, Math.floor((new Date(m.graciaHasta).getTime() - Date.now()) / 1000));
+                    var secsLeft = Math.max(0, Math.floor((graciaHasta.getTime() - Date.now()) / 1000));
                     var mins = Math.floor(secsLeft / 60), secs = secsLeft % 60;
                     badgeHtml = '<span class="lmd-pos-mesa-card__gracia-badge" data-gracia-hasta="' + m.graciaHasta + '">' +
                         icon('timer') + ' <span class="lmd-gracia-tiempo">' + mins + ':' + (secs < 10 ? '0' : '') + secs + '</span></span>';
                 } else if (enCobro) {
                     badgeHtml = '<span class="lmd-pos-mesa-card__cobrar-badge">' + icon('receipt') + ' Cobrar</span>';
+                } else if (pagadoPendienteDespacho) {
+                    badgeHtml = '<span class="lmd-pos-mesa-card__despachar-badge">' + icon('truck') + ' Despachar</span>';
                 } else if (hayTab) {
                     var fechaAttr = m.pedidoFechaCreacion ? ' data-pedido-fecha="' + m.pedidoFechaCreacion + '"' : '';
-                    var minTab = m.pedidoFechaCreacion ? Math.floor((Date.now() - new Date(m.pedidoFechaCreacion).getTime()) / 60000) : 0;
+                    var fechaPedido = fechaServidor(m.pedidoFechaCreacion);
+                    var minTab = fechaPedido ? Math.floor((Date.now() - fechaPedido.getTime()) / 60000) : 0;
                     var tiempoLabel = minTab > 0 ? minTab + ' min' : 'Tab';
-                    badgeHtml = '<span class="lmd-pos-mesa-card__tab-badge"' + fechaAttr + '>' + icon('clock') + ' <span class="lmd-tab-tiempo">' + tiempoLabel + '</span></span>';
+                    var estadoTab = etiquetaEstadoPedido(m.pedidoEstado);
+                    badgeHtml = '<span class="lmd-pos-mesa-card__tab-badge"' + fechaAttr + '>' + icon('clock') + ' <span class="lmd-tab-estado">' + estadoTab + '</span> <span class="lmd-tab-tiempo">' + tiempoLabel + '</span></span>';
                 }
                 mesasHtml += '<div class="lmd-pos-mesa-card ' + cls + '"' + onclick + '>' +
                     '<span class="lmd-pos-mesa-card__numero">' + m.numero + '</span>' +
@@ -153,7 +168,29 @@
             });
         });
 
-        var html = '<div class="lmd-pos-seleccion">' +
+        var deliveriesActivos = window.__lmdPedidosDeliveryActivos || [];
+        var deliveriesHtml = deliveriesActivos.length === 0
+            ? '<div class="lmd-pos-delivery-empty">Sin deliveries activos</div>'
+            : deliveriesActivos.map(function (p) {
+                return '<button class="lmd-pos-delivery-active" onclick="pos.retomarDelivery(\'' + escapeJsString(p.id) + '\')">' +
+                    '<span>' + escapeHtml(p.clienteDeliveryNombre || 'Cliente delivery') + '</span>' +
+                    '<strong>' + fmt(p.total || 0) + '</strong>' +
+                    '<small>' + escapeHtml(p.estado || '') + '</small>' +
+                '</button>';
+            }).join('');
+
+        var paraLlevarActivos = window.__lmdPedidosParaLlevarActivos || [];
+        var paraLlevarHtml = paraLlevarActivos.length === 0
+            ? '<div class="lmd-pos-delivery-empty">Sin pedidos para llevar activos</div>'
+            : paraLlevarActivos.map(function (p) {
+                return '<button class="lmd-pos-delivery-active" onclick="pos.retomarParaLlevar(\'' + escapeJsString(p.id) + '\')">' +
+                    '<span>Pedido para llevar</span>' +
+                    '<strong>' + fmt(p.total || 0) + '</strong>' +
+                    '<small>' + escapeHtml(p.estado || '') + '</small>' +
+                '</button>';
+            }).join('');
+
+        var html = '<div class="lmd-pos-seleccion lmd-pos-seleccion--triple">' +
             '<div class="lmd-pos-seleccion__mitad lmd-pos-seleccion__comer-aqui">' +
                 '<div class="lmd-pos-seleccion__header">' + icon('utensils-crossed') + ' Comer aquí</div>' +
                 '<div class="lmd-pos-mesas-grid">' + (mesasHtml || '<div class="lmd-pos-empty">Sin mesas disponibles</div>') + '</div>' +
@@ -165,6 +202,16 @@
                     '<div class="lmd-pos-para-llevar-card__titulo">Para llevar</div>' +
                     '<div class="lmd-pos-para-llevar-card__sub">Toca para iniciar sin mesa</div>' +
                 '</div>' +
+                '<div class="lmd-pos-delivery-activos" onclick="event.stopPropagation()">' + paraLlevarHtml + '</div>' +
+            '</div>' +
+            '<div class="lmd-pos-seleccion__mitad lmd-pos-seleccion__delivery" onclick="pos.abrirDelivery()">' +
+                '<div class="lmd-pos-seleccion__header">' + icon('truck') + ' Delivery</div>' +
+                '<div class="lmd-pos-para-llevar-card lmd-pos-delivery-card">' +
+                    '<div class="lmd-pos-para-llevar-card__icon">' + icon('map-pin') + '</div>' +
+                    '<div class="lmd-pos-para-llevar-card__titulo">Delivery</div>' +
+                    '<div class="lmd-pos-para-llevar-card__sub">Cliente, teléfono y dirección obligatorios</div>' +
+                '</div>' +
+                '<div class="lmd-pos-delivery-activos" onclick="event.stopPropagation()">' + deliveriesHtml + '</div>' +
             '</div>' +
         '</div>';
 
@@ -181,6 +228,9 @@
             if (m.pedidoActualId) {
                 if (m.pedidoEstado === 'EnCobro') {
                     cobrarMesaDirecto(mesaId, numero, m.pedidoActualId, m.pedidoTotal || 0);
+                } else if (m.pedidoEstado === 'Pagado') {
+                    lmdToast('Pedido pagado. Envíalo desde Despacho para liberar la mesa.', 'info');
+                    window.location.href = '/Operaciones/Despacho';
                 } else {
                     retomarTab(mesaId, numero, m.pedidoActualId, m.pedidoTotal || 0);
                 }
@@ -190,9 +240,17 @@
         state.tipoServicio = 'ComerAqui';
         state.mesaId = mesaId;
         state.mesaNumero = numero;
+        state.delivery = null;
         _resetPedido();
         renderProductos();
         mostrarPantalla('productos');
+    }
+
+    function etiquetaEstadoPedido(estado) {
+        if (estado === 'EnPreparacion') return 'En cocina';
+        if (estado === 'Listo') return 'Listo';
+        if (estado === 'Pendiente') return 'Pendiente';
+        return estado || 'Tab';
     }
 
     async function retomarTab(mesaId, mesaNumero, pedidoId, tabTotal) {
@@ -201,6 +259,7 @@
         state.tipoServicio = 'ComerAqui';
         state.mesaId = mesaId;
         state.mesaNumero = mesaNumero;
+        state.delivery = null;
         state.lineas = [];
         state.pedidoActual = { id: pedidoId, total: tabTotal, detalles: [] };
         state.pagado = false;
@@ -224,6 +283,7 @@
         state.tipoServicio = 'ComerAqui';
         state.mesaId = mesaId;
         state.mesaNumero = mesaNumero;
+        state.delivery = null;
         state.lineas = [];
         state.pedidoActual = { id: pedidoId, total: tabTotal, detalles: [] };
         state.pagado = false;
@@ -242,7 +302,99 @@
         state.tipoServicio = 'ParaLlevar';
         state.mesaId = null;
         state.mesaNumero = null;
+        state.delivery = null;
         _resetPedido();
+        renderProductos();
+        mostrarPantalla('productos');
+    }
+
+    async function retomarParaLlevar(pedidoId) {
+        var pedido = (window.__lmdPedidosParaLlevarActivos || []).find(function (p) { return p.id === pedidoId; });
+        if (!pedido) return;
+        try {
+            var res = await fetch('?handler=DetallesPedidoJson&pedidoId=' + pedidoId, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+            var data = await res.json().catch(function () { return {}; });
+            state.tipoServicio = 'ParaLlevar';
+            state.mesaId = null;
+            state.mesaNumero = null;
+            state.delivery = null;
+            state.lineas = [];
+            state.pedidoActual = { id: pedidoId, total: data.total || pedido.total || 0, detalles: data.detalles || [] };
+            state.pagado = false;
+            renderProductos();
+            mostrarPantalla('productos');
+            lmdToast('Pedido para llevar retomado', 'success');
+        } catch (e) {
+            lmdToast('No se pudo retomar el pedido para llevar', 'error');
+        }
+    }
+
+    function abrirDelivery() {
+        var d = state.delivery || {};
+        var html =
+            '<div class="lmd-pos-ov-header">' +
+                '<button class="lmd-pos-ov-back" onclick="pos.cerrarDelivery()">' + icon('arrow-left') + '</button>' +
+                '<span class="lmd-pos-ov-title">' + icon('truck') + ' Nuevo delivery</span>' +
+            '</div>' +
+            '<div class="lmd-pos-delivery-form">' +
+                '<label>Cliente<input id="lmd-delivery-nombre" class="lmd-pos-efectivo-input" maxlength="120" value="' + escapeHtml(d.clienteNombre || '') + '" placeholder="Nombre del cliente" /></label>' +
+                '<label>Teléfono<input id="lmd-delivery-telefono" class="lmd-pos-efectivo-input" maxlength="40" value="' + escapeHtml(d.telefono || '') + '" placeholder="Ej. 7777-8888" /></label>' +
+                '<label>Dirección<textarea id="lmd-delivery-direccion" class="lmd-pos-delivery-textarea" maxlength="300" placeholder="Dirección completa">' + escapeHtml(d.direccion || '') + '</textarea></label>' +
+                '<label>Referencia<textarea id="lmd-delivery-referencia" class="lmd-pos-delivery-textarea" maxlength="200" placeholder="Portón, color de casa, punto cercano">' + escapeHtml(d.referencia || '') + '</textarea></label>' +
+                '<label>Notas de entrega<textarea id="lmd-delivery-notas" class="lmd-pos-delivery-textarea" maxlength="300" placeholder="Indicaciones para despacho">' + escapeHtml(d.notas || '') + '</textarea></label>' +
+                '<div class="lmd-pos-qr-actions">' +
+                    '<button class="lmd-pos-ov-btn" onclick="pos.cerrarDelivery()">Cancelar</button>' +
+                    '<button class="lmd-pos-ov-btn lmd-pos-ov-btn--primary" onclick="pos.confirmarDelivery()">' + icon('arrow-right') + ' Continuar</button>' +
+                '</div>' +
+            '</div>';
+        abrirOverlay('delivery', html, { closeOnBackdrop: false });
+    }
+
+    function cerrarDelivery() { cerrarOverlay('delivery'); }
+
+    async function retomarDelivery(pedidoId) {
+        var delivery = (window.__lmdPedidosDeliveryActivos || []).find(function (p) { return p.id === pedidoId; });
+        if (!delivery) return;
+        try {
+            var res = await fetch('?handler=DetallesPedidoJson&pedidoId=' + pedidoId, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+            var data = await res.json().catch(function () { return {}; });
+            state.tipoServicio = 'Delivery';
+            state.mesaId = null;
+            state.mesaNumero = null;
+            state.delivery = {
+                clienteNombre: delivery.clienteDeliveryNombre,
+                telefono: delivery.clienteDeliveryTelefono,
+                direccion: delivery.clienteDeliveryDireccion,
+                referencia: delivery.clienteDeliveryReferencia,
+                notas: delivery.clienteDeliveryNotas
+            };
+            state.lineas = [];
+            state.pedidoActual = { id: pedidoId, total: data.total || delivery.total || 0, detalles: data.detalles || [] };
+            state.pagado = false;
+            renderProductos();
+            mostrarPantalla('productos');
+            lmdToast('Delivery retomado para cobro', 'success');
+        } catch (e) {
+            lmdToast('No se pudo retomar el delivery', 'error');
+        }
+    }
+
+    function confirmarDelivery() {
+        var nombre = (document.getElementById('lmd-delivery-nombre')?.value || '').trim();
+        var telefono = (document.getElementById('lmd-delivery-telefono')?.value || '').trim();
+        var direccion = (document.getElementById('lmd-delivery-direccion')?.value || '').trim();
+        var referencia = (document.getElementById('lmd-delivery-referencia')?.value || '').trim();
+        var notas = (document.getElementById('lmd-delivery-notas')?.value || '').trim();
+        if (!nombre || !telefono || !direccion) {
+            lmdToast('Cliente, teléfono y dirección son obligatorios para delivery', 'error');
+            return;
+        }
+        state.tipoServicio = 'Delivery';
+        state.mesaId = null;
+        state.mesaNumero = null;
+        state.delivery = { clienteNombre: nombre, telefono: telefono, direccion: direccion, referencia: referencia, notas: notas };
+        _resetPedido();
+        cerrarOverlay('delivery');
         renderProductos();
         mostrarPantalla('productos');
     }
@@ -279,7 +431,9 @@
         }).join('');
 
         var productosHtml = renderProductGrid(prods);
-        var total = totalLineas(state.lineas);
+        var total = state.pedidoActual && state.pedidoActual.total
+            ? state.pedidoActual.total + totalLineas(state.lineas)
+            : totalLineas(state.lineas);
         var hayItems = state.lineas.length > 0;
 
         var cartItemsHtml = !hayItems
@@ -315,7 +469,8 @@
             '<div class="lmd-pos-cart">' +
                 '<div class="lmd-pos-cart__header">' +
                     icon('shopping-bag') +
-                    '<span>' + (state.tipoServicio === 'ComerAqui' ? 'Mesa ' + state.mesaNumero : 'Para llevar') + '</span>' +
+                    '<span>' + (state.tipoServicio === 'ComerAqui' ? 'Mesa ' + state.mesaNumero : state.tipoServicio === 'Delivery' ? 'Delivery' : 'Para llevar') + '</span>' +
+                    (state.tipoServicio === 'Delivery' && state.delivery ? '<span class="lmd-pos-delivery-badge">' + icon('map-pin') + ' ' + escapeHtml(state.delivery.clienteNombre) + '</span>' : '') +
                     (state.pedidoActual && !state.pagado ? '<span class="lmd-pos-tab-activo-badge">' + icon('clock') + ' Tab activo</span>' : '') +
                     (!state.pagado ? '<button class="lmd-pos-cart-change-servicio" onclick="pos.cambiarServicio()" title="Cambiar tipo de servicio">' + icon('refresh-cw') + '</button>' : '') +
                     (state.pagado ? '<span class="lmd-pos-pagado-badge">' + icon('check-circle') + ' Pagado</span>' : '') +
@@ -485,6 +640,7 @@
         form.append('__RequestVerificationToken', csrf ? csrf.value : '');
         form.append('Vm.CrearPedido.TipoServicio', state.tipoServicio || 'ComerAqui');
         if (state.mesaId) form.append('Vm.CrearPedido.MesaId', state.mesaId);
+        appendDeliveryFormData(form);
         state.lineas.forEach(function (l, i) {
             form.append('Vm.CrearPedido.Lineas[' + i + '].ProductoId', l.productoId);
             form.append('Vm.CrearPedido.Lineas[' + i + '].Cantidad', l.cantidad || 1);
@@ -493,10 +649,17 @@
         });
         try {
             var res = await fetch('?handler=CrearJson', { method: 'POST', body: form, headers: { 'X-Requested-With': 'XMLHttpRequest' } });
-            var data = await res.json();
+            var data = await res.json().catch(function () { return {}; });
+            if (!res.ok) {
+                lmdToast(obtenerMensajeError(data, 'No se pudo crear el pedido'), 'error');
+                _creandoPedido = false;
+                return;
+            }
             if (data.pedidoId) {
                 lmdToast('Pedido enviado a cocina', 'success');
-                if (state.tipoServicio === 'ParaLlevar') {
+                if (state.tipoServicio === 'ParaLlevar' || state.tipoServicio === 'Delivery') {
+                    registrarParaLlevarActivo(data);
+                    registrarDeliveryActivo(data);
                     _creandoPedido = false;
                     nuevaOrden();
                 } else {
@@ -507,6 +670,7 @@
                 }
                 return;
             }
+            lmdToast(obtenerMensajeError(data, 'No se pudo crear el pedido'), 'error');
         } catch (e) { lmdToast('Error al enviar pedido', 'error'); }
         _creandoPedido = false;
 
@@ -537,6 +701,7 @@
             form.append('__RequestVerificationToken', csrf ? csrf.value : '');
             form.append('Vm.CrearPedido.TipoServicio', state.tipoServicio || 'ComerAqui');
             if (state.mesaId) form.append('Vm.CrearPedido.MesaId', state.mesaId);
+            appendDeliveryFormData(form);
             state.lineas.forEach(function (l, i) {
                 form.append('Vm.CrearPedido.Lineas[' + i + '].ProductoId', l.productoId);
                 form.append('Vm.CrearPedido.Lineas[' + i + '].Cantidad', l.cantidad || 1);
@@ -545,8 +710,19 @@
             });
             try {
                 var res = await fetch('?handler=CrearJson', { method: 'POST', body: form, headers: { 'X-Requested-With': 'XMLHttpRequest' } });
-                var data = await res.json();
-                if (data.pedidoId) state.pedidoActual = { id: data.pedidoId };
+                var data = await res.json().catch(function () { return {}; });
+                if (!res.ok) {
+                    lmdToast(obtenerMensajeError(data, 'No se pudo crear el pedido'), 'error');
+                    _creandoPedido = false;
+                    return;
+                }
+                if (data.pedidoId) {
+                    state.pedidoActual = { id: data.pedidoId, total: data.total || totalLineas(state.lineas), detalles: data.detalles || [] };
+                    registrarParaLlevarActivo(data);
+                    registrarDeliveryActivo(data);
+                    state.lineas = [];
+                    lmdToast('Pedido creado. Selecciona el método de pago.', 'success');
+                }
                 else { lmdToast('No se pudo crear el pedido', 'error'); _creandoPedido = false; return; }
             } catch (e) { lmdToast('Error al crear pedido', 'error'); _creandoPedido = false; return; }
             _creandoPedido = false;
@@ -1250,6 +1426,13 @@
 
         if (state.pedidoActual && state.pedidoActual.id) {
             var csrf = document.querySelector('input[name="__RequestVerificationToken"]');
+            try {
+                await enviarPedidoActualACaja();
+            } catch (e) {
+                lmdToast(e.message || 'No se pudo enviar el pedido a caja.', 'error');
+                abrirOverlayPago();
+                return;
+            }
             var form = new FormData();
             form.append('__RequestVerificationToken', csrf ? csrf.value : '');
             form.append('pedidoId', state.pedidoActual.id);
@@ -1265,6 +1448,7 @@
                     abrirOverlayPago();
                     return;
                 }
+                quitarPedidoActivo(state.pedidoActual.id);
                 if (data && data.mensaje) lmdToast(data.mensaje, 'success');
                 if (data && data.ticketHtml) {
                     await refrescarMesas();
@@ -1284,6 +1468,71 @@
         renderProductos();
         mostrarPantalla('productos');
         lmdToast('Pago registrado. Presiona Finalizar para el comprobante.', 'success');
+    }
+
+    function appendDeliveryFormData(form) {
+        if (state.tipoServicio !== 'Delivery' || !state.delivery) return;
+        form.append('Vm.CrearPedido.ClienteDeliveryNombre', state.delivery.clienteNombre || '');
+        form.append('Vm.CrearPedido.ClienteDeliveryTelefono', state.delivery.telefono || '');
+        form.append('Vm.CrearPedido.ClienteDeliveryDireccion', state.delivery.direccion || '');
+        form.append('Vm.CrearPedido.ClienteDeliveryReferencia', state.delivery.referencia || '');
+        form.append('Vm.CrearPedido.ClienteDeliveryNotas', state.delivery.notas || '');
+    }
+
+    function obtenerMensajeError(data, fallback) {
+        if (!data) return fallback;
+        if (typeof data === 'string') return data;
+        if (data.error) return data.error;
+        if (data.message) return data.message;
+        return fallback;
+    }
+
+    function registrarDeliveryActivo(data) {
+        if (state.tipoServicio !== 'Delivery' || !state.delivery || !data || !data.pedidoId) return;
+        window.__lmdPedidosDeliveryActivos = window.__lmdPedidosDeliveryActivos || [];
+        if (window.__lmdPedidosDeliveryActivos.some(function (p) { return p.id === data.pedidoId; })) return;
+        window.__lmdPedidosDeliveryActivos.push({
+            id: data.pedidoId,
+            total: data.total || 0,
+            estado: 'EnPreparacion',
+            clienteDeliveryNombre: state.delivery.clienteNombre,
+            clienteDeliveryTelefono: state.delivery.telefono,
+            clienteDeliveryDireccion: state.delivery.direccion,
+            clienteDeliveryReferencia: state.delivery.referencia,
+            clienteDeliveryNotas: state.delivery.notas
+        });
+    }
+
+    function registrarParaLlevarActivo(data) {
+        if (state.tipoServicio !== 'ParaLlevar' || !data || !data.pedidoId) return;
+        window.__lmdPedidosParaLlevarActivos = window.__lmdPedidosParaLlevarActivos || [];
+        if (window.__lmdPedidosParaLlevarActivos.some(function (p) { return p.id === data.pedidoId; })) return;
+        window.__lmdPedidosParaLlevarActivos.push({
+            id: data.pedidoId,
+            total: data.total || 0,
+            estado: 'EnPreparacion',
+            fechaCreacion: new Date().toISOString()
+        });
+    }
+
+    function quitarPedidoActivo(pedidoId) {
+        window.__lmdPedidosParaLlevarActivos = (window.__lmdPedidosParaLlevarActivos || [])
+            .filter(function (p) { return p.id !== pedidoId; });
+        window.__lmdPedidosDeliveryActivos = (window.__lmdPedidosDeliveryActivos || [])
+            .filter(function (p) { return p.id !== pedidoId; });
+    }
+
+    async function enviarPedidoActualACaja() {
+        if (!state.pedidoActual || !state.pedidoActual.id) return;
+        var csrf = document.querySelector('input[name="__RequestVerificationToken"]');
+        var form = new FormData();
+        form.append('__RequestVerificationToken', csrf ? csrf.value : '');
+        form.append('pedidoId', state.pedidoActual.id);
+        var res = await fetch('?handler=MarcarEnCobroJson', { method: 'POST', body: form, headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+        if (!res.ok) {
+            var data = await res.json().catch(function () { return {}; });
+            throw new Error(data.error || 'No se pudo enviar el pedido a caja.');
+        }
     }
 
     function mostrarTicketModal(html) {
@@ -1381,6 +1630,7 @@
         state.tipoServicio = null;
         state.mesaId = null;
         state.mesaNumero = null;
+        state.delivery = null;
         _resetPedido();
         await refrescarMesas();
         renderSeleccion();
@@ -1717,7 +1967,7 @@
 
     // ── Public API ──────────────────────────────────────
     window.pos = {
-        seleccionarMesa, seleccionarParaLlevar,
+        seleccionarMesa, seleccionarParaLlevar, retomarParaLlevar, abrirDelivery, cerrarDelivery, confirmarDelivery, retomarDelivery,
         filtrarCategoria, agregarAlCarrito, incrementarItem, decrementarItem, eliminarDelCarrito,
         cancelarOrden, confirmarListo, irAPago,
         cerrarPago, procesarPago,
@@ -1741,7 +1991,8 @@
         document.querySelectorAll('[data-pedido-fecha]').forEach(function (badge) {
             var span = badge.querySelector('.lmd-tab-tiempo');
             if (!span) return;
-            var min = Math.floor((Date.now() - new Date(badge.dataset.pedidoFecha).getTime()) / 60000);
+            var fechaPedido = fechaServidor(badge.dataset.pedidoFecha);
+            var min = fechaPedido ? Math.floor((Date.now() - fechaPedido.getTime()) / 60000) : 0;
             span.textContent = min > 0 ? min + ' min' : 'Tab';
         });
     }
@@ -1753,7 +2004,8 @@
         badges.forEach(function (badge) {
             var span = badge.querySelector('.lmd-gracia-tiempo');
             if (!span) return;
-            var secsLeft = Math.max(0, Math.floor((new Date(badge.dataset.graciaHasta).getTime() - Date.now()) / 1000));
+            var graciaHasta = fechaServidor(badge.dataset.graciaHasta);
+            var secsLeft = graciaHasta ? Math.max(0, Math.floor((graciaHasta.getTime() - Date.now()) / 1000)) : 0;
             if (secsLeft <= 0) { hayVencidos = true; return; }
             var mins = Math.floor(secsLeft / 60), secs = secsLeft % 60;
             span.textContent = mins + ':' + (secs < 10 ? '0' : '') + secs;

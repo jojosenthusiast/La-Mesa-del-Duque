@@ -29,6 +29,40 @@ public class PedidosPageTests
         Assert.NotEmpty(page.Vm.MesasDisponibles);
         Assert.NotEmpty(page.Vm.PedidosActivos);
     }
+
+    [Fact]
+    public void PosJs_DebeExponerFlujoDeliveryConDatosObligatorios()
+    {
+        var source = File.ReadAllText(Path.Combine(LaMesaDelDuque.Pruebas.Calidad.ProjectPaths.RepoRoot, "src", "LaMesaDelDuque.Web", "wwwroot", "js", "pos.js"));
+
+        Assert.Contains("Nuevo delivery", source);
+        Assert.Contains("Vm.CrearPedido.ClienteDeliveryNombre", source);
+        Assert.Contains("Cliente, teléfono y dirección son obligatorios", source);
+        Assert.Contains("enviarPedidoActualACaja", source);
+    }
+
+    [Fact]
+    public void Despacho_DebeMostrarDatosDeDelivery()
+    {
+        var source = File.ReadAllText(Path.Combine(LaMesaDelDuque.Pruebas.Calidad.ProjectPaths.RepoRoot, "src", "LaMesaDelDuque.Web", "Pages", "Operaciones", "Despacho", "Index.cshtml"));
+
+        Assert.Contains("pedido.TipoServicio == \"Delivery\"", source);
+        Assert.Contains("ClienteDeliveryDireccion", source);
+        Assert.Contains("ClienteDeliveryTelefono", source);
+    }
+
+    [Fact]
+    public void Pos_DebeDistinguirPedidoPagadoPendienteDespacho()
+    {
+        var pageSource = File.ReadAllText(Path.Combine(LaMesaDelDuque.Pruebas.Calidad.ProjectPaths.RepoRoot, "src", "LaMesaDelDuque.Web", "Pages", "Operaciones", "Pedidos", "Index.cshtml"));
+        var jsSource = File.ReadAllText(Path.Combine(LaMesaDelDuque.Pruebas.Calidad.ProjectPaths.RepoRoot, "src", "LaMesaDelDuque.Web", "wwwroot", "js", "pos.js"));
+
+        Assert.Contains("PedidosPendientesDespacho", pageSource);
+        Assert.Contains("Concat(Model.Vm.PedidosPendientesDespacho)", pageSource);
+        Assert.Contains("pedidoEstado === 'Pagado'", jsSource);
+        Assert.Contains("Despachar", jsSource);
+        Assert.Contains("/Operaciones/Despacho", jsSource);
+    }
 }
 
 internal sealed class FakeHubContext<THub> : IHubContext<THub> where THub : Hub
@@ -73,7 +107,7 @@ internal sealed class FakePedidosServicio : IPedidosServicio
         Detalles = [new DetallePedidoDto { Id = Guid.NewGuid(), ProductoId = Guid.NewGuid(), ProductoNombre = "Sopa", Cantidad = 1, PrecioUnitario = 20, Subtotal = 20 }]
     };
 
-    public Task<PedidoDto> CrearPedidoAsync(LaMesaDelDuque.Dominio.Enumeraciones.TipoServicio tipoServicio, Guid? mesaId, List<DetalleCreacionDto> detalles, CancellationToken cancelacion = default) => Task.FromResult(_pedido);
+    public Task<PedidoDto> CrearPedidoAsync(LaMesaDelDuque.Dominio.Enumeraciones.TipoServicio tipoServicio, Guid? mesaId, List<DetalleCreacionDto> detalles, CancellationToken cancelacion = default, DatosEntregaDto? datosEntrega = null) => Task.FromResult(_pedido);
     public Task<PedidoDto> AgregarDetalleAsync(Guid pedidoId, Guid productoId, int cantidad, decimal precioUnitario, string? modificacionesJson = null, string? notas = null, CancellationToken cancelacion = default) => Task.FromResult(_pedido);
     public Task<PedidoDto> EliminarDetalleAsync(Guid pedidoId, Guid detalleId, CancellationToken cancelacion = default) => Task.FromResult(_pedido);
     public Task<PedidoDto> ActualizarCantidadDetalleAsync(Guid pedidoId, Guid detalleId, int nuevaCantidad, CancellationToken cancelacion = default) => Task.FromResult(_pedido);

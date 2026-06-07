@@ -32,6 +32,26 @@ internal class PedidoConfiguracion : IEntityTypeConfiguration<Pedido>
         constructor.Property(p => p.MeseroAsignadoId)
             .IsRequired(false);
 
+        constructor.Property(p => p.ClienteDeliveryNombre)
+            .HasMaxLength(120)
+            .IsRequired(false);
+
+        constructor.Property(p => p.ClienteDeliveryTelefono)
+            .HasMaxLength(40)
+            .IsRequired(false);
+
+        constructor.Property(p => p.ClienteDeliveryDireccion)
+            .HasMaxLength(300)
+            .IsRequired(false);
+
+        constructor.Property(p => p.ClienteDeliveryReferencia)
+            .HasMaxLength(200)
+            .IsRequired(false);
+
+        constructor.Property(p => p.ClienteDeliveryNotas)
+            .HasMaxLength(300)
+            .IsRequired(false);
+
         // Total es calculado, no se persiste
         constructor.Ignore(p => p.Total);
 

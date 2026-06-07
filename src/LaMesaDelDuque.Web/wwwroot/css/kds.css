@@ -90,6 +90,8 @@
 .lmd-kds-undo-btn:hover { background: #333; color: #fff; }
 
 .lmd-kds-header__right {
+    grid-column: 3;
+    grid-row: 1;
     display: flex;
     align-items: center;
     gap: 0.5rem;
@@ -250,4 +252,238 @@
 @media (max-width: 768px) {
     .lmd-kds-orders { grid-template-columns: 1fr; }
     .lmd-kds-card__producto { font-size: 1rem; }
+}
+
+/* ── Production board upgrade ───────────────────────────── */
+.lmd-kds-shell {
+    height: 100dvh;
+}
+
+.lmd-kds-header {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 0.75rem;
+    align-items: center;
+    padding: 0.65rem 0.85rem;
+    background: linear-gradient(90deg, #090912 0%, #111827 52%, #0f172a 100%);
+    border-bottom: 1px solid rgba(201, 162, 78, 0.22);
+}
+
+.lmd-kds-header__left {
+    display: flex;
+    align-items: baseline;
+    gap: 0.75rem;
+}
+
+.lmd-kds-titulo {
+    margin: 0;
+    color: var(--lmd-dorado-real);
+    font-family: var(--lmd-fuente-titulos, serif);
+    font-size: 1.35rem;
+    letter-spacing: 0.04em;
+}
+
+.lmd-kds-reloj {
+    color: rgba(255, 255, 255, 0.72);
+    font-weight: 900;
+    font-variant-numeric: tabular-nums;
+}
+
+.lmd-kds-stations {
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.18);
+}
+
+.lmd-kds-station-btn {
+    min-height: 38px;
+    padding: 0.5rem 0.9rem;
+    border-bottom: none;
+    border-radius: 999px;
+}
+
+.lmd-kds-station-btn--active {
+    background: rgba(201, 162, 78, 0.18);
+    color: #f8d477;
+}
+
+.lmd-kds-quick-filters {
+    grid-column: 1 / -1;
+    display: flex;
+    gap: 0.45rem;
+    overflow-x: auto;
+    padding-top: 0.2rem;
+}
+
+.lmd-kds-filter-btn {
+    appearance: none;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.05);
+    color: rgba(255, 255, 255, 0.76);
+    border-radius: 999px;
+    padding: 0.4rem 0.75rem;
+    font-size: 0.76rem;
+    font-weight: 900;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.lmd-kds-filter-btn:hover,
+.lmd-kds-filter-btn--active {
+    border-color: rgba(201, 162, 78, 0.62);
+    background: rgba(201, 162, 78, 0.16);
+    color: #f8d477;
+}
+
+.lmd-kds-main {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+    padding: 0.75rem;
+}
+
+.lmd-kds-columns {
+    height: 100%;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(260px, 1fr));
+    gap: 0.75rem;
+}
+
+.lmd-kds-col {
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 1rem;
+    overflow: hidden;
+    background: rgba(255, 255, 255, 0.035);
+}
+
+.lmd-kds-col-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.7rem 0.85rem;
+    background: rgba(0, 0, 0, 0.28);
+}
+
+.lmd-kds-col-name {
+    font-size: 1rem;
+    font-weight: 950;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.lmd-kds-col-count {
+    color: rgba(255, 255, 255, 0.62);
+    font-size: 0.75rem;
+    font-weight: 900;
+}
+
+.lmd-kds-orders {
+    grid-template-columns: 1fr;
+    gap: 0.7rem;
+    padding: 0.75rem;
+}
+
+.lmd-kds-card {
+    border-left-width: 7px;
+    border-radius: 0.9rem;
+    background: #151827;
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.22);
+}
+
+.lmd-kds-card[hidden] {
+    display: none !important;
+}
+
+.lmd-kds-card__meta-row,
+.lmd-kds-card__sla-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.45rem 0.75rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.055);
+}
+
+.lmd-kds-card__meta-row span {
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.07);
+    color: rgba(255, 255, 255, 0.74);
+    padding: 0.16rem 0.46rem;
+    font-size: 0.66rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.lmd-kds-card__sla-text {
+    font-size: 0.82rem;
+    font-weight: 950;
+    text-transform: uppercase;
+}
+
+.lmd-kds-card--fresh .lmd-kds-card__sla-text { color: #2ecc71; }
+.lmd-kds-card--warn .lmd-kds-card__sla-text { color: #f1c40f; }
+.lmd-kds-card--alert .lmd-kds-card__sla-text { color: #ff8a80; }
+
+.lmd-kds-card__eta {
+    color: rgba(255, 255, 255, 0.72);
+    font-size: 0.76rem;
+    font-weight: 900;
+    font-variant-numeric: tabular-nums;
+}
+
+.lmd-kds-card__progress {
+    height: 6px;
+    background: rgba(255, 255, 255, 0.07);
+    overflow: hidden;
+}
+
+.lmd-kds-card__progress span {
+    display: block;
+    height: 100%;
+    background: #2ecc71;
+    transition: width 0.25s ease;
+}
+
+.lmd-kds-card--warn .lmd-kds-card__progress span { background: #f1c40f; }
+.lmd-kds-card--alert .lmd-kds-card__progress span { background: #e74c3c; }
+
+.lmd-kds-card__footer {
+    align-items: center;
+}
+
+.lmd-kds-card__pedido {
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 0.66rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.lmd-kds-btn-listo {
+    min-width: 8rem;
+}
+
+@media (max-width: 1100px) {
+    .lmd-kds-header {
+        grid-template-columns: 1fr;
+    }
+
+    .lmd-kds-header__right {
+        grid-column: auto;
+        grid-row: auto;
+        flex-wrap: wrap;
+    }
+
+    .lmd-kds-columns {
+        grid-template-columns: 1fr;
+        overflow-y: auto;
+    }
+
+    .lmd-kds-col {
+        min-height: 45vh;
+    }
 }

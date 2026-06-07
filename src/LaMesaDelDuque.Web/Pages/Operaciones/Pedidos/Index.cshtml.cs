@@ -104,7 +104,7 @@ public class IndexModel : PageModel
         try
         {
             var mesaId = tipoServicio == TipoServicio.ComerAqui ? Vm.CrearPedido.MesaId : null;
-            var pedido = await _pedidosServicio.CrearPedidoAsync(tipoServicio, mesaId, detalles);
+            var pedido = await _pedidosServicio.CrearPedidoAsync(tipoServicio, mesaId, detalles, datosEntrega: CrearDatosEntregaSiAplica(tipoServicio));
             ToastSuccess = "Pedido creado correctamente.";
             return RedirectToPage(new { PedidoActualId = pedido.Id });
         }
@@ -256,9 +256,10 @@ public class IndexModel : PageModel
     public async Task<IActionResult> OnPostCrearJsonAsync()
     {
         if (Vm.CrearPedido.Lineas.Count == 0 || Vm.CrearPedido.Lineas[0].ProductoId == Guid.Empty)
-            return BadRequest("Debe seleccionar un producto.");
+            return BadRequest(new { ok = false, error = "Debe seleccionar un producto." });
 
-        Enum.TryParse<TipoServicio>(Vm.CrearPedido.TipoServicio, true, out var tipoServicio);
+        if (!Enum.TryParse<TipoServicio>(Vm.CrearPedido.TipoServicio, true, out var tipoServicio))
+            tipoServicio = TipoServicio.ComerAqui;
         var mesaId = tipoServicio == TipoServicio.ComerAqui ? Vm.CrearPedido.MesaId : null;
 
         var prods = (await _catalogoProductosServicio.ListarProductosAsync()).Where(p => p.Activo).ToDictionary(p => p.Id);
@@ -266,13 +267,15 @@ public class IndexModel : PageModel
 
         foreach (var l in Vm.CrearPedido.Lineas)
         {
-            if (!prods.TryGetValue(l.ProductoId, out var prod)) return BadRequest("Producto inválido.");
+            if (!prods.TryGetValue(l.ProductoId, out var prod))
+                return BadRequest(new { ok = false, error = "Producto inválido." });
+
             detalles.Add(new DetalleCreacionDto { ProductoId = l.ProductoId, Cantidad = l.Cantidad, PrecioUnitario = prod.Precio, Notas = l.Notas, ModificacionesJson = l.ModificacionesJson });
         }
 
         try
         {
-            var pedido = await _pedidosServicio.CrearPedidoAsync(tipoServicio, mesaId, detalles);
+            var pedido = await _pedidosServicio.CrearPedidoAsync(tipoServicio, mesaId, detalles, datosEntrega: CrearDatosEntregaSiAplica(tipoServicio));
             var detallesResponse = pedido.Detalles.Select(d => new
             {
                 id = d.Id, productoId = d.ProductoId,
@@ -408,10 +411,18 @@ public class IndexModel : PageModel
                 _ => MetodoPago.Efectivo
             };
 
+            var referenciaNormalizada = referencia?.Trim();
+
+            if ((metodoEnum == MetodoPago.Tarjeta || metodoEnum == MetodoPago.Transferencia)
+                && string.IsNullOrWhiteSpace(referenciaNormalizada))
+            {
+                return BadRequest(ErrorSeguro(new ArgumentException("La referencia del pago es obligatoria para tarjeta o transferencia.")));
+            }
+
             if (metodoEnum == MetodoPago.Efectivo && monto.HasValue && monto.Value < pedido.Total)
                 return BadRequest(ErrorSeguro(new ArgumentException($"Faltan ${pedido.Total - monto.Value:F2}")));
 
-            await _pedidosServicio.PagarPedidoAsync(pedidoId, metodoEnum, referencia);
+            await _pedidosServicio.PagarPedidoAsync(pedidoId, metodoEnum, referenciaNormalizada);
 
             var cambio = monto.HasValue && metodoEnum == MetodoPago.Efectivo ? monto.Value - pedido.Total : 0;
             var mensaje = cambio > 0 ? $"Pedido pagado. Cambio: ${cambio:F2}" : "Pedido pagado correctamente.";
@@ -488,10 +499,10 @@ public class IndexModel : PageModel
         try
         {
             if (request?.Asignaciones == null || request.Asignaciones.Count < 2)
-                return BadRequest("Se requieren al menos 2 cuentas.");
+                return BadRequest(new { ok = false, error = "Se requieren al menos 2 cuentas." });
 
             if (request.PedidoId == Guid.Empty)
-                return BadRequest("El ID del pedido es requerido.");
+                return BadRequest(new { ok = false, error = "El ID del pedido es requerido." });
 
             // Validar que el pedido existe y está en estado pagable
             var pedidos = await _pedidosServicio.ListarPedidosActivosAsync();
@@ -531,7 +542,7 @@ public class IndexModel : PageModel
         try
         {
             if (!Enum.TryParse<MetodoPago>(metodoPago, true, out var metodo))
-                return BadRequest("Método de pago inválido.");
+                return BadRequest(new { ok = false, error = "Método de pago inválido." });
             var cuenta = await _pedidosServicio.PagarCuentaAsync(cuentaId, metodo, propinaMonto);
             return new JsonResult(cuenta);
         }
@@ -559,23 +570,25 @@ public class IndexModel : PageModel
         try
         {
             var mesas = await _mesasServicio.ListarMesasAsync();
-            var pedidos = await _pedidosServicio.ListarPedidosActivosAsync();
-            var tabPorMesa = pedidos
+            var pedidosActivos = await _pedidosServicio.ListarPedidosActivosAsync();
+            var pedidosPendientesDespacho = await _pedidosServicio.ListarListosParaDespachoAsync();
+            var pedidoPorMesa = pedidosActivos
+                .Concat(pedidosPendientesDespacho)
                 .Where(p => p.MesaId.HasValue)
                 .GroupBy(p => p.MesaId!.Value)
                 .ToDictionary(g => g.Key, g => g.OrderByDescending(p => p.FechaCreacion).First());
 
             var data = mesas.Where(m => m.Activa).Select(m =>
             {
-                tabPorMesa.TryGetValue(m.Id, out var tab);
+                pedidoPorMesa.TryGetValue(m.Id, out var pedidoMesa);
                 return new
                 {
                     m.Id, m.Numero, m.Capacidad, m.Estado,
                     Zona = m.Capacidad <= 2 ? "Pequeña" : m.Capacidad <= 4 ? "Mediana" : "Grande",
-                    PedidoActualId = tab?.Id,
-                    PedidoTotal = tab?.Total,
-                    PedidoEstado = tab?.Estado,
-                    PedidoFechaCreacion = tab?.FechaCreacion,
+                    PedidoActualId = pedidoMesa?.Id,
+                    PedidoTotal = pedidoMesa?.Total,
+                    PedidoEstado = pedidoMesa?.Estado,
+                    PedidoFechaCreacion = pedidoMesa?.FechaCreacion,
                     GraciaHasta = m.GraciaHasta
                 };
             });
@@ -676,12 +689,7 @@ public class IndexModel : PageModel
             var mesas = await _mesasServicio.ListarMesasAsync();
             Vm.MesasDisponibles = mesas.Where(m => m.Activa).OrderBy(m => m.Numero).ToList();
 
-            Vm.PedidosActivos = await _pedidosServicio.ListarPedidosActivosAsync();
-            Vm.PedidoActual = PedidoActualId.HasValue
-                ? Vm.PedidosActivos.FirstOrDefault(p => p.Id == PedidoActualId.Value)
-                : Vm.PedidosActivos.OrderByDescending(p => p.Total).FirstOrDefault();
-
-            Vm.CrearPedido.TipoServicio = Vm.CrearPedido.TipoServicio is "ParaLlevar" or "ComerAqui" ? Vm.CrearPedido.TipoServicio : "ComerAqui";
+            Vm.CrearPedido.TipoServicio = Vm.CrearPedido.TipoServicio is "ParaLlevar" or "ComerAqui" or "Delivery" ? Vm.CrearPedido.TipoServicio : "ComerAqui";
 
             if (Vm.CrearPedido.Lineas.Count == 0)
                 Vm.CrearPedido.Lineas.Add(new LineaPedidoFormVm());
@@ -690,14 +698,43 @@ public class IndexModel : PageModel
         {
             Vm.ProductosDisponibles = [];
             Vm.MesasDisponibles = [];
-            Vm.PedidosActivos = [];
             ToastError = $"Error al cargar datos: {ex.Message}";
+        }
+
+        try
+        {
+            Vm.PedidosActivos = await _pedidosServicio.ListarPedidosActivosAsync();
+            Vm.PedidosPendientesDespacho = await _pedidosServicio.ListarListosParaDespachoAsync();
+            Vm.PedidoActual = PedidoActualId.HasValue
+                ? Vm.PedidosActivos.FirstOrDefault(p => p.Id == PedidoActualId.Value)
+                : Vm.PedidosActivos.OrderByDescending(p => p.Total).FirstOrDefault();
+        }
+        catch (Exception ex)
+        {
+            Vm.PedidosActivos = [];
+            Vm.PedidosPendientesDespacho = [];
+            ToastError = $"Error al cargar pedidos activos: {ex.Message}";
         }
     }
 
     private void SetUiContext()
     {
         if (ViewData is not null) ViewData["ActiveTab"] = "Pedidos";
+    }
+
+    private DatosEntregaDto? CrearDatosEntregaSiAplica(TipoServicio tipoServicio)
+    {
+        if (tipoServicio != TipoServicio.Delivery)
+            return null;
+
+        return new DatosEntregaDto
+        {
+            ClienteNombre = Vm.CrearPedido.ClienteDeliveryNombre,
+            Telefono = Vm.CrearPedido.ClienteDeliveryTelefono,
+            Direccion = Vm.CrearPedido.ClienteDeliveryDireccion,
+            Referencia = Vm.CrearPedido.ClienteDeliveryReferencia,
+            Notas = Vm.CrearPedido.ClienteDeliveryNotas
+        };
     }
 
     private static object ErrorSeguro(Exception ex)

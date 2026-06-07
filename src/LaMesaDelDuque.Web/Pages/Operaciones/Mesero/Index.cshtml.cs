@@ -169,7 +169,7 @@ public class IndexModel : PageModel
         catch (Exception ex) { _logger.LogError(ex, "Error en handler JSON"); return StatusCode(500, new { ok = false, error = "Ocurrió un error interno." }); }
     }
 
-    // ── Solicitar cuenta ──────────────────────────────────────────────────────
+    // ── Enviar cuenta a caja ─────────────────────────────────────────────────
     public async Task<IActionResult> OnPostMarcarEnCobroJsonAsync(Guid pedidoId)
     {
         try
@@ -183,13 +183,20 @@ public class IndexModel : PageModel
         catch (Exception ex) { _logger.LogError(ex, "Error en handler JSON"); return StatusCode(500, new { ok = false, error = "Ocurrió un error interno." }); }
     }
 
-    // ── Sentar mesa — crear pedido con primer ítem ───────────────────────────
-    public async Task<IActionResult> OnPostCrearConItemsJsonAsync(Guid mesaId, string? itemsJson)
+    // ── Crear pedido con primer ítem ─────────────────────────────────────────
+    public async Task<IActionResult> OnPostCrearConItemsJsonAsync(Guid? mesaId, string? itemsJson, string? tipoServicio = null)
     {
         try
         {
-            if (mesaId == Guid.Empty)
+            var tipoServicioValido = Enum.TryParse<TipoServicio>(tipoServicio, true, out var tipoServicioEnum);
+            if (!tipoServicioValido)
+                tipoServicioEnum = TipoServicio.ComerAqui;
+
+            if (tipoServicioEnum == TipoServicio.ComerAqui && (!mesaId.HasValue || mesaId.Value == Guid.Empty))
                 return BadRequest(ErrorSeguro(new ArgumentException("Mesa inválida.")));
+
+            if (tipoServicioEnum != TipoServicio.ComerAqui && mesaId.HasValue)
+                return BadRequest(ErrorSeguro(new ArgumentException("Solo los pedidos para comer aquí pueden tener mesa.")));
 
             List<ItemCarritoDto> items;
             try
@@ -220,54 +227,8 @@ public class IndexModel : PageModel
                 });
             }
 
-            var pedido = await _pedidosServicio.CrearPedidoAsync(TipoServicio.ComerAqui, mesaId, detalles);
+            var pedido = await _pedidosServicio.CrearPedidoAsync(tipoServicioEnum, mesaId, detalles);
             return new JsonResult(new { ok = true, pedidoId = pedido.Id, total = pedido.Total });
-        }
-        catch (ReglaDominioException ex) { return StatusCode(422, new { ok = false, error = ex.Message }); }
-        catch (ArgumentException ex) { return BadRequest(new { ok = false, error = ex.Message }); }
-        catch (Exception ex) { _logger.LogError(ex, "Error en handler JSON"); return StatusCode(500, new { ok = false, error = "Ocurrió un error interno." }); }
-    }
-
-    // ── Cobrar en mesa ────────────────────────────────────────────────────────
-    public async Task<IActionResult> OnPostPagarJsonAsync(
-        Guid pedidoId, string? metodoPago = null, decimal? monto = null, string? referencia = null)
-    {
-        try
-        {
-            if (pedidoId == Guid.Empty)
-                return BadRequest(ErrorSeguro(new ArgumentException("ID de pedido inválido.")));
-
-            var pedido = await _pedidosServicio.ObtenerPedidoAsync(pedidoId)
-                ?? throw new ArgumentException("Pedido no encontrado.");
-
-            if (pedido.Estado is "Cancelado" or "Pagado" or "Despachado")
-                return BadRequest(ErrorSeguro(new InvalidOperationException($"El pedido ya fue {pedido.Estado.ToLower()}.")));
-
-            var metodo = (metodoPago ?? "efectivo").Trim().ToLowerInvariant() switch
-            {
-                "tarjeta" => MetodoPago.Tarjeta,
-                "qr" or "transferencia" => MetodoPago.Transferencia,
-                _ => MetodoPago.Efectivo
-            };
-            var referenciaNormalizada = referencia?.Trim();
-
-            if ((metodo == MetodoPago.Tarjeta || metodo == MetodoPago.Transferencia)
-                && string.IsNullOrWhiteSpace(referenciaNormalizada))
-            {
-                return BadRequest(ErrorSeguro(new ArgumentException("La referencia del pago es obligatoria para tarjeta o transferencia.")));
-            }
-
-            if (metodo == MetodoPago.Efectivo && monto.HasValue && monto.Value < pedido.Total)
-                return BadRequest(ErrorSeguro(new ArgumentException($"Faltan ${pedido.Total - monto.Value:F2}")));
-
-            await _pedidosServicio.PagarPedidoAsync(pedidoId, metodo, referenciaNormalizada);
-
-            var cambio = monto.HasValue && metodo == MetodoPago.Efectivo ? monto.Value - pedido.Total : 0;
-            return new JsonResult(new
-            {
-                ok = true,
-                mensaje = cambio > 0 ? $"Pedido pagado. Cambio: ${cambio:F2}" : "Pedido pagado correctamente."
-            });
         }
         catch (ReglaDominioException ex) { return StatusCode(422, new { ok = false, error = ex.Message }); }
         catch (ArgumentException ex) { return BadRequest(new { ok = false, error = ex.Message }); }

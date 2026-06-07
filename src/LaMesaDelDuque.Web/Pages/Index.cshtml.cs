@@ -51,7 +51,7 @@ public class IndexModel : PageModel
 
         // Despacho: Encargado, Despacho
         if (esEncargado || esDespacho)
-            modulos.Add(new("Despacho", "/Operaciones/Despacho/Index", "Pedidos listos para entregar y liberar mesas."));
+            modulos.Add(new("Despacho", "/Operaciones/Despacho/Index", "Pedidos pagados listos para entregar y liberar mesas."));
 
         // Productos: Admin, Encargado
         if (esAdmin || esEncargado)
