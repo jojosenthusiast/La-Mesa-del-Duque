@@ -35,6 +35,13 @@
             .replace(/"/g, '&quot;');
     }
 
+    async function confirmarAccion(message) {
+        if (typeof window.lmdConfirm === 'function') {
+            return await window.lmdConfirm(message);
+        }
+        return window.confirm(message);
+    }
+
 
     // ── State ──────────────────────────────────────────
     var state = {
@@ -217,18 +224,9 @@
         var itemsHtml = state.pedidoDetalles.length === 0
             ? '<div class="lmd-pos-empty" style="padding:1.5rem 1rem;">' + icon('package-open') + ' Sin ítems</div>'
             : state.pedidoDetalles.map(function (d) {
-                var qtyHtml = enCobro
-                    ? '<span class="lmd-mesero-item__cant">× ' + d.cantidad + '</span>'
-                    : '<div class="lmd-mesero-item__qty-ctrl">' +
-                        '<button onclick="mesero.ajustarCantidad(\'' + escapeJsString(m.pedidoActualId) + '\',\'' + escapeJsString(d.id) + '\',-1)">' + icon('minus') + '</button>' +
-                        '<span>' + d.cantidad + '</span>' +
-                        '<button onclick="mesero.ajustarCantidad(\'' + escapeJsString(m.pedidoActualId) + '\',\'' + escapeJsString(d.id) + '\',1)">' + icon('plus') + '</button>' +
-                      '</div>';
-                var voidBtn = !enCobro
-                    ? '<button class="lmd-mesero-item__void" title="Anular" ' +
-                      'onclick="mesero.voidItem(\'' + escapeJsString(m.pedidoActualId) + '\',\'' + escapeJsString(d.id) + '\',\'' + escapeJsString(d.productoNombre) + '\')">' +
-                      icon('trash-2') + '</button>'
-                    : '';
+                var qtyHtml = '<span class="lmd-mesero-item__cant">× ' + d.cantidad + '</span>' +
+                    '<span class="lmd-mesero-item__enviado">En cocina</span>';
+                var voidBtn = '';
                 return '<div class="lmd-mesero-item">' +
                     '<div class="lmd-mesero-item__info">' +
                         '<span class="lmd-mesero-item__nombre">' + escapeHtml(d.productoNombre) + '</span>' +
@@ -269,7 +267,7 @@
     function cerrarDetalle() { cerrarOverlay('detalle'); }
 
     async function voidItem(pedidoId, detalleId, nombre) {
-        var ok = await window.lmdConfirm('¿Anular "' + nombre + '"?');
+        var ok = await confirmarAccion('¿Anular "' + nombre + '"?');
         if (!ok) return;
         try {
             var res  = await postJson('EliminarLineaJson', { pedidoId: pedidoId, detalleId: detalleId });
@@ -300,7 +298,8 @@
     async function pedirCuenta() {
         var m = state.mesaActual;
         if (!m) return;
-        var ok = await window.lmdConfirm('¿Solicitar cuenta para Mesa ' + m.numero + '?');
+        if (!m.pedidoActualId) { window.lmdToast('No hay pedido activo para esta mesa.', 'error'); return; }
+        var ok = await confirmarAccion('¿Solicitar cuenta para Mesa ' + m.numero + '?');
         if (!ok) return;
         try {
             var res  = await postJson('MarcarEnCobroJson', { pedidoId: m.pedidoActualId });

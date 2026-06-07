@@ -89,6 +89,46 @@
 }
 .lmd-kds-undo-btn:hover { background: #333; color: #fff; }
 
+.lmd-kds-header__right {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.lmd-kds-logout-form {
+    margin: 0;
+}
+
+.lmd-kds-nav-btn {
+    appearance: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 32px;
+    border: 1px solid #555;
+    background: transparent;
+    color: #d8d8e8;
+    font-size: 0.72rem;
+    font-weight: 800;
+    text-decoration: none;
+    padding: 0.35rem 0.75rem;
+    cursor: pointer;
+    border-radius: 4px;
+}
+
+.lmd-kds-nav-btn:hover,
+.lmd-kds-nav-btn:focus-visible {
+    background: #333;
+    color: #fff;
+    outline: none;
+}
+
+.lmd-kds-nav-btn--danger:hover,
+.lmd-kds-nav-btn--danger:focus-visible {
+    border-color: #e74c3c;
+    color: #ffb3ad;
+}
+
 /* Visual separators between sections */
 .lmd-kds-card__header + .lmd-kds-card__dish-row,
 .lmd-kds-card__dish-row + .lmd-kds-card__modificaciones,

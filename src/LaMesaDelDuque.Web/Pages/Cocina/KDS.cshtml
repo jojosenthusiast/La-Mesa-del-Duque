@@ -28,6 +28,12 @@
             <button class="lmd-kds-station-btn" data-estacion="Expo">Expo</button>
         </nav>
         <div class="lmd-kds-header__right">
+            <button type="button" class="lmd-kds-nav-btn" onclick="history.length > 1 ? history.back() : window.location.href='@Url.Page("/Index")'">Volver</button>
+            <a class="lmd-kds-nav-btn" asp-page="/Index">Inicio</a>
+            <form method="post" asp-page="/Auth/Logout" class="lmd-kds-logout-form">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="lmd-kds-nav-btn lmd-kds-nav-btn--danger">Cerrar sesión</button>
+            </form>
             <button class="lmd-kds-undo-btn" onclick="window.__lmdKdsUndo && window.__lmdKdsUndo()" title="Deshacer último listo">↩ Deshacer</button>
             <span id="lmd-kds-offline-badge" class="lmd-kds-offline-badge">OFFLINE</span>
             <span id="lmd-kds-contador" class="lmd-kds-contador">0 ordenes</span>

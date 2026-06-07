@@ -89,6 +89,15 @@ public class AdminShellNavigationTests
     }
 
     [Fact]
+    public void Layout_OperativoDebeMostrarBotonVolver()
+    {
+        var layout = ReadWebFile("Pages", "Shared", "_Layout.cshtml");
+
+        Assert.Contains("lmd-ops-strip__back", layout);
+        Assert.Contains("Volver", layout);
+    }
+
+    [Fact]
     public void Sidebar_DebeExponerRutasAdministrativasYNoOperativasParaAdmin()
     {
         var adminItems = Flatten(GestionSidebarNavigation.Construir(esAdmin: true, esEncargado: false, esGerente: false));
