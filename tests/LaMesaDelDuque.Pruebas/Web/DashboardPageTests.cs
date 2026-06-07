@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace LaMesaDelDuque.Pruebas.Web;
 
@@ -36,7 +37,7 @@ public class DashboardPageTests : IDisposable
 
         _metricaRepo = new MetricaRepositorio(_contexto);
         _metricaServicio = new MetricaServicio(_metricaRepo);
-        _pageModel = new DashboardModel(_metricaServicio);
+        _pageModel = new DashboardModel(_metricaServicio, NullLogger<DashboardModel>.Instance);
     }
 
     public void Dispose()
@@ -115,7 +116,7 @@ public class DashboardPageTests : IDisposable
             .FirstOrDefault();
 
         Assert.NotNull(attribute);
-        Assert.Equal("Administrador,Encargado", attribute.Roles);
+        Assert.Equal("Administrador,Encargado,Gerente", attribute.Roles);
     }
 
 }

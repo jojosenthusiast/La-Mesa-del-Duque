@@ -62,6 +62,10 @@ internal class MesasServicio : IMesasServicio
         }
         else if (mesa.Estado == EstadoMesa.Ocupada && estado == EstadoMesa.Disponible)
         {
+            var pedidos = await _uot.Pedidos.ObtenerPorMesaAsync(mesaId, cancelacion);
+            if (pedidos.Any(p => p.Estado == EstadoPedido.Pendiente || p.Estado == EstadoPedido.EnPreparacion || p.Estado == EstadoPedido.EnCobro))
+                throw new ReglaDominioException("No se puede liberar la mesa porque tiene pedidos activos.");
+
             mesa.Liberar();
         }
         else

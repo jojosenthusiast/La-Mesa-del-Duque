@@ -20,6 +20,7 @@ public static class InyeccionInfraestructura
 
         Console.WriteLine($"[DBG] esDesarrollo={esDesarrollo} cs='{connectionString}' isEmpty={string.IsNullOrWhiteSpace(connectionString)}");
 
+        servicios.AddHttpContextAccessor();
         servicios.AddScoped<AuditoriaInterceptor>();
 
         servicios.AddDbContext<LaMesaDelDuqueDbContext>((sp, opciones) =>

@@ -1,10 +1,12 @@
 using LaMesaDelDuque.Aplicacion.Dtos;
+using LaMesaDelDuque.Aplicacion.Notificaciones;
 using LaMesaDelDuque.Aplicacion.Servicios;
 using LaMesaDelDuque.Dominio.Enumeraciones;
 using LaMesaDelDuque.Web.Pages.Cocina;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.Extensions.Logging.Abstractions;
 using System.Security.Claims;
 using System.Text.Json;
 
@@ -16,7 +18,7 @@ public class KDSPageTests
     public async Task OnGetAsync_carga_ordenes_pendientes()
     {
         var servicio = new FakeCocinaServicio();
-        var page = new KDSModel(servicio);
+        var page = CrearPage(servicio);
 
         await page.OnGetAsync();
 
@@ -28,7 +30,7 @@ public class KDSPageTests
     public async Task OnGetOrdenesJsonAsync_sin_estacion_retorna_todas()
     {
         var servicio = new FakeCocinaServicio();
-        var page = new KDSModel(servicio);
+        var page = CrearPage(servicio);
 
         var result = await page.OnGetOrdenesJsonAsync("");
 
@@ -44,7 +46,7 @@ public class KDSPageTests
     public async Task OnGetOrdenesJsonAsync_con_estacion_filtra()
     {
         var servicio = new FakeCocinaServicio();
-        var page = new KDSModel(servicio);
+        var page = CrearPage(servicio);
 
         var result = await page.OnGetOrdenesJsonAsync("Parrilla");
 
@@ -61,7 +63,7 @@ public class KDSPageTests
     {
         var servicio = new FakeCocinaServicio();
         var ordenId = servicio.Ordenes[0].Id;
-        var page = new KDSModel(servicio);
+        var page = CrearPage(servicio);
 
         var result = await page.OnPostMarcarListoJsonAsync(ordenId);
 
@@ -76,12 +78,19 @@ public class KDSPageTests
     public async Task OnPostMarcarListoJsonAsync_orden_inexistente_devuelve_bad_request()
     {
         var servicio = new FakeCocinaServicio();
-        var page = new KDSModel(servicio);
+        var page = CrearPage(servicio);
 
         var result = await page.OnPostMarcarListoJsonAsync(Guid.NewGuid());
 
         Assert.IsType<BadRequestObjectResult>(result);
     }
+
+    private static KDSModel CrearPage(FakeCocinaServicio servicio)
+        => new(
+            servicio,
+            new FakeCatalogoPedidosProductosServicio(),
+            new FakeNotificadorProductos(),
+            NullLogger<KDSModel>.Instance);
 
     internal sealed class FakeCocinaServicio : ICocinaServicio
     {
@@ -129,5 +138,11 @@ public class KDSPageTests
             Recuperado.Add(ordenId);
             return Task.FromResult(orden);
         }
+    }
+
+    private sealed class FakeNotificadorProductos : INotificadorProductos
+    {
+        public Task NotificarProductoAgotadoAsync(Guid productoId, string nombreProducto, CancellationToken cancelacion = default) => Task.CompletedTask;
+        public Task NotificarProductoReactivadoAsync(Guid productoId, string nombreProducto, CancellationToken cancelacion = default) => Task.CompletedTask;
     }
 }

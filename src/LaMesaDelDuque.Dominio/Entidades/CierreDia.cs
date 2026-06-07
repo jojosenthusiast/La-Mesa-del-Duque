@@ -73,17 +73,6 @@ public class CierreDia
         CreatedAt = DateTime.UtcNow;
     }
 
-
-    public void Reabrir()
-    {
-        if (!EsCerrado)
-            return;
-
-        EsCerrado = false;
-        CerradoEn = null;
-        Observacion = null;
-    }
-
     public void Cerrar(
         decimal totalVentas,
         decimal totalVentasEfectivo,
@@ -121,5 +110,25 @@ public class CierreDia
         Observacion = string.IsNullOrWhiteSpace(observacion) ? null : observacion.Trim();
         EsCerrado = true;
         CerradoEn = DateTime.UtcNow;
+    }
+
+    public void Reabrir()
+    {
+        if (!EsCerrado)
+            throw new ReglaDominioException("El cierre de día ya está abierto.");
+
+        EsCerrado = false;
+        CerradoEn = null;
+        EfectivoReal = 0m;
+        TarjetaReal = 0m;
+        DiferenciaEfectivo = 0m;
+        DiferenciaTarjeta = 0m;
+        Observacion = null;
+        TotalVentas = 0m;
+        TotalVentasEfectivo = 0m;
+        TotalVentasTarjeta = 0m;
+        TotalPedidos = 0;
+        TotalPedidosCancelados = 0;
+        TotalMermaValorizada = 0m;
     }
 }

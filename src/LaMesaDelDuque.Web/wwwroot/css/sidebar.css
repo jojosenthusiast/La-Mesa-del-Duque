@@ -537,3 +537,74 @@
     width: 40px;
     padding-inline: 0;
 }
+
+/* Superfix responsive sidebar: desktop expanded by default, mobile overlay real */
+.lmd-app-shell { min-width: 0; width: 100%; }
+.lmd-shell-with-sidebar { min-width: 0; width: 100%; overflow-x: hidden; }
+.lmd-main-surface--sidebar { min-width: 0; overflow-x: hidden; }
+.lmd-mobile-topbar { display: none; }
+body.lmd-sidebar-mobile-lock { overflow: hidden; }
+
+@media (min-width: 768px) {
+    .lmd-sidebar { transform: none !important; }
+    .lmd-sidebar-backdrop { display: none !important; }
+    .lmd-shell-with-sidebar { margin-left: var(--lmd-sidebar-ancho); }
+    .lmd-shell-with-sidebar--collapsed { margin-left: var(--lmd-sidebar-ancho-col); }
+}
+
+@media (max-width: 767.98px) {
+    .lmd-mobile-topbar {
+        position: sticky;
+        top: 0;
+        z-index: 450;
+        display: flex !important;
+        align-items: center;
+        gap: .75rem;
+        min-height: 52px;
+        padding: .55rem .75rem;
+        background: var(--lmd-azul-duque);
+        border-bottom: 1px solid rgba(201, 162, 78, .18);
+        color: var(--lmd-marfil);
+    }
+
+    .lmd-mobile-topbar__hamburger {
+        display: inline-flex !important;
+        align-items: center;
+        justify-content: center;
+        width: 40px;
+        height: 40px;
+        border: 1px solid rgba(201, 162, 78, .28);
+        border-radius: 10px;
+        background: rgba(255, 255, 255, .04);
+        color: var(--lmd-marfil);
+        font-size: 1.45rem;
+    }
+
+    .lmd-sidebar {
+        width: var(--lmd-sidebar-ancho) !important;
+        max-width: min(88vw, var(--lmd-sidebar-ancho));
+        transform: translateX(-105%) !important;
+        transition: transform .25s ease !important;
+        z-index: 520 !important;
+    }
+
+    .lmd-sidebar.lmd-sidebar--mobile-open {
+        transform: translateX(0) !important;
+    }
+
+    .lmd-sidebar--collapsed { width: var(--lmd-sidebar-ancho) !important; }
+    .lmd-sidebar--collapsed .lmd-sidebar__brand,
+    .lmd-sidebar--collapsed .lmd-sidebar__section-label,
+    .lmd-sidebar--collapsed .lmd-sidebar__item span,
+    .lmd-sidebar--collapsed .lmd-sidebar__user-info,
+    .lmd-sidebar--collapsed .lmd-sidebar__logout span {
+        opacity: 1 !important;
+        pointer-events: auto !important;
+    }
+
+    .lmd-sidebar__toggle-btn { display: none !important; }
+    .lmd-sidebar-backdrop--visible { display: block !important; z-index: 510 !important; }
+    .lmd-shell-with-sidebar,
+    .lmd-shell-with-sidebar--collapsed { margin-left: 0 !important; width: 100% !important; }
+    .lmd-main-surface--sidebar { padding: .75rem .75rem 2rem !important; }
+}

@@ -3,6 +3,7 @@ using LaMesaDelDuque.Aplicacion.Servicios;
 using LaMesaDelDuque.Web.Hubs;
 using LaMesaDelDuque.Web.Pages.Operaciones.Pedidos;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace LaMesaDelDuque.Pruebas.Web;
 
@@ -145,4 +146,17 @@ public class FakeAlergenoServicio : IAlergenoServicio
 {
     public Task<List<AlergenoDto>> ObtenerActivosAsync(CancellationToken cancelacion = default) => Task.FromResult(new List<AlergenoDto>());
     public Task<List<AlergenoDto>> ObtenerPorProductoAsync(Guid productoId, CancellationToken cancelacion = default) => Task.FromResult(new List<AlergenoDto>());
+}
+
+public class FakeDeliveryServicio : IDeliveryServicio
+{
+    public Task<List<DeliveryPedidoDto>> ListarPedidosDomicilioAsync(CancellationToken ct = default) => Task.FromResult(new List<DeliveryPedidoDto>());
+    public Task<List<DeliveryPedidoDto>> ListarPedidosAsignadosAsync(Guid repartidorId, CancellationToken ct = default) => Task.FromResult(new List<DeliveryPedidoDto>());
+    public Task<DeliveryResumenDto> ObtenerResumenAsync(CancellationToken ct = default) => Task.FromResult(new DeliveryResumenDto());
+    public Task<List<RepartidorDto>> ListarRepartidoresAsync(CancellationToken ct = default) => Task.FromResult(new List<RepartidorDto>());
+    public Task<List<ProductoDto>> ListarProductosAsync(CancellationToken ct = default) => Task.FromResult(new List<ProductoDto>());
+    public Task<Guid> CrearPedidoDomicilioAsync(string? direccion, string? telefono, Dictionary<Guid, int> items, CancellationToken ct = default) => Task.FromResult(Guid.Empty);
+    public Task AsignarRepartidorAsync(Guid pedidoId, Guid repartidorId, CancellationToken ct = default) => Task.CompletedTask;
+    public Task MarcarEntregadoAsync(Guid pedidoId, CancellationToken ct = default) => Task.CompletedTask;
+    public Task ActualizarDatosEntregaAsync(Guid pedidoId, string? direccion, string? telefono, CancellationToken ct = default) => Task.CompletedTask;
 }

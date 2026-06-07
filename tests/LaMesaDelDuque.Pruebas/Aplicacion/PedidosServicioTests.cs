@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using LaMesaDelDuque.Aplicacion.Dtos;
 using LaMesaDelDuque.Aplicacion.Servicios;
 using LaMesaDelDuque.Dominio.Entidades;
@@ -6,6 +7,7 @@ using LaMesaDelDuque.Dominio.Excepciones;
 using LaMesaDelDuque.Dominio.Repositorios;
 using LaMesaDelDuque.Infraestructura.Persistencia;
 using LaMesaDelDuque.Infraestructura.Repositorios;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 
@@ -46,8 +48,18 @@ public class PedidosServicioTests : IDisposable
             new PagoRepositorio(_contexto),
             new ZonaSalonRepositorio(_contexto));
 
+        var usuarioId = Guid.NewGuid().ToString();
+        var claims = new ClaimsPrincipal(new ClaimsIdentity(new[]
+        {
+            new Claim(ClaimTypes.NameIdentifier, usuarioId)
+        }, "TestAuth"));
+        var httpContextAccessor = new HttpContextAccessor
+        {
+            HttpContext = new DefaultHttpContext { User = claims }
+        };
+
         _notificadorSpy = new NotificadorPedidosSpy();
-        _servicio = new PedidosServicio(_uot, _notificadorSpy);
+        _servicio = new PedidosServicio(_uot, _notificadorSpy, httpContextAccessor: httpContextAccessor);
     }
 
     public void Dispose()

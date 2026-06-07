@@ -125,6 +125,10 @@ public class KDSModel : PageModel
         {
             return StatusCode(422, new { ok = false, error = ex.Message });
         }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { ok = false, error = ex.Message });
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error en OnPostMarcarListoJsonAsync");

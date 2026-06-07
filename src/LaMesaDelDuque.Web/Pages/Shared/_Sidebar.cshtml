@@ -13,8 +13,10 @@
         : User.IsInRole("Mesero") ? "Mesero"
         : User.IsInRole("Cajero") ? "Cajero"
         : User.IsInRole("Cocinero") ? "Cocinero"
+        : User.IsInRole("Gerente") ? "Gerente"
         : "Usuario";
 }
+
 
 <aside class="lmd-sidebar" id="lmdSidebar" role="navigation" aria-label="Menú principal">
 

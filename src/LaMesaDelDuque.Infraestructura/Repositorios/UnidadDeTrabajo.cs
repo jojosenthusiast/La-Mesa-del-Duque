@@ -72,22 +72,70 @@ internal class UnidadDeTrabajo : IUnidadDeTrabajo
         OrdenCocinaRepositorio ordenCocinaRepositorio,
         CuentaRepositorio cuentaRepositorio,
         PagoRepositorio pagoRepositorio,
-        ZonaSalonRepositorio zonaSalonRepositorio)
+        ProveedorRepositorio? proveedorRepositorio = null,
+        MermaRepositorio? mermaRepositorio = null,
+        CierreDiaRepositorio? cierreDiaRepositorio = null,
+        ZonaSalonRepositorio? zonaSalonRepositorio = null)
+        : this(
+            contexto,
+            categoriaRepositorio,
+            productoRepositorio,
+            ingredienteRepositorio,
+            mesaRepositorio,
+            pedidoRepositorio,
+            rolRepositorio,
+            usuarioRepositorio,
+            auditoriaRepositorio,
+            recetaProductoRepositorio,
+            ordenCocinaRepositorio,
+            cuentaRepositorio,
+            pagoRepositorio,
+            new PromocionRepositorio(contexto),
+            new TurnoCajaRepositorio(contexto),
+            new DescuentoRepositorio(contexto),
+            new MotivoDescuentoRepositorio(contexto),
+            new DevolucionRepositorio(contexto),
+            proveedorRepositorio,
+            mermaRepositorio,
+            cierreDiaRepositorio,
+            zonaSalonRepositorio)
     {
-        _contexto = contexto;
-        Categorias = categoriaRepositorio;
-        Productos = productoRepositorio;
-        Ingredientes = ingredienteRepositorio;
-        Mesas = mesaRepositorio;
-        Pedidos = pedidoRepositorio;
-        Roles = rolRepositorio;
-        Usuarios = usuarioRepositorio;
-        Auditorias = auditoriaRepositorio;
-        RecetasProductos = recetaProductoRepositorio;
-        OrdenesCocina = ordenCocinaRepositorio;
-        Cuentas = cuentaRepositorio;
-        Pagos = pagoRepositorio;
-        ZonasSalon = zonaSalonRepositorio;
+    }
+
+    public UnidadDeTrabajo(
+        LaMesaDelDuqueDbContext contexto,
+        CategoriaProductoRepositorio categoriaRepositorio,
+        ProductoRepositorio productoRepositorio,
+        IngredienteRepositorio ingredienteRepositorio,
+        MesaRepositorio mesaRepositorio,
+        PedidoRepositorio pedidoRepositorio,
+        RolRepositorio rolRepositorio,
+        UsuarioRepositorio usuarioRepositorio,
+        AuditoriaRepositorio auditoriaRepositorio,
+        RecetaProductoRepositorio recetaProductoRepositorio,
+        OrdenCocinaRepositorio ordenCocinaRepositorio,
+        CuentaRepositorio cuentaRepositorio,
+        PagoRepositorio pagoRepositorio,
+        ZonaSalonRepositorio zonaSalonRepositorio)
+        : this(
+            contexto,
+            categoriaRepositorio,
+            productoRepositorio,
+            ingredienteRepositorio,
+            mesaRepositorio,
+            pedidoRepositorio,
+            rolRepositorio,
+            usuarioRepositorio,
+            auditoriaRepositorio,
+            recetaProductoRepositorio,
+            ordenCocinaRepositorio,
+            cuentaRepositorio,
+            pagoRepositorio,
+            proveedorRepositorio: null,
+            mermaRepositorio: null,
+            cierreDiaRepositorio: null,
+            zonaSalonRepositorio: zonaSalonRepositorio)
+    {
     }
 
     public ICategoriaProductoRepositorio Categorias { get; }

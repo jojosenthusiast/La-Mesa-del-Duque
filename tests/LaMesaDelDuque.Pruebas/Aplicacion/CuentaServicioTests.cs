@@ -134,20 +134,20 @@ public class CuentaServicioTests : IDisposable
     }
 
     [Fact]
-    public async Task PagarCuentaAsync_UltimaCuentaPendiente_DebeMarcarPedidoPagadoSinLiberarMesa()
+    public async Task PagarCuentaAsync_UltimaCuentaPendiente_DebeMarcarPedidoPagadoYLiberarMesa()
     {
         var pedido = await CrearPedidoEnPreparacionAsync();
         var cuentas = await _servicio.CrearCuentasAsync(pedido.Id, 2);
         await _servicio.PagarCuentaAsync(cuentas[0].Id, MetodoPago.Efectivo);
 
-        var pagada = await _servicio.PagarCuentaAsync(cuentas[1].Id, MetodoPago.Tarjeta);
+        var pagada = await _servicio.PagarCuentaAsync(cuentas[1].Id, MetodoPago.Tarjeta, referenciaPos: "POS-TEST-001");
         var pedidoActualizado = await _servicio.ObtenerPedidoAsync(pedido.Id);
         var mesa = await _uot.Mesas.ObtenerPorIdAsync(pedidoActualizado!.MesaId!.Value);
 
         Assert.Equal("Pagada", pagada.Estado);
         Assert.Equal("Pagado", pedidoActualizado.Estado);
         Assert.NotNull(mesa);
-        Assert.Equal(EstadoMesa.Ocupada, mesa!.Estado);
+        Assert.Equal(EstadoMesa.Disponible, mesa!.Estado);
     }
 
     [Fact]
