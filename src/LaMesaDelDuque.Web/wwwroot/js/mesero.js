@@ -106,6 +106,18 @@
         });
     }
 
+    function productoPorId(productoId) {
+        return (window.__lmdProductosMesero || []).find(function (p) { return p.id === productoId; });
+    }
+
+    function productoRequiereConfirmacion(producto) {
+        return !!(producto && producto.tieneReceta);
+    }
+
+    function crearConfirmacionOriginal() {
+        return JSON.stringify([{ ingredienteId: '00000000-0000-0000-0000-000000000000', ingredienteNombre: 'Ingredientes confirmados', accion: 'confirmado', motivo: 'confirmado', ingredienteReemplazoId: null, ingredienteReemplazoNombre: null }]);
+    }
+
     // ═══════════════════════════════════════════════════
     // GRID DE MESAS
     // ═══════════════════════════════════════════════════
@@ -370,7 +382,7 @@
 
     async function _crearPedidoConItems(m) {
         var itemsJson = JSON.stringify(state.carrito.map(function (i) {
-            return { productoId: i.id, cantidad: i.cantidad };
+            return { productoId: i.id, cantidad: i.cantidad, notas: i.notas || null, modificacionesJson: i.modificacionesJson || null };
         }));
         try {
             var tipoServicio = state.tipoServicio || 'ComerAqui';
@@ -435,9 +447,11 @@
         });
 
         var prodHtml = filtrados.map(function (p) {
-            return '<div class="lmd-pos-product-card" onclick="mesero.addToCart(\'' + escapeJsString(p.id) + '\')">' +
+            var requiereConfirmacion = productoRequiereConfirmacion(p);
+            return '<div class="lmd-pos-product-card' + (requiereConfirmacion ? ' lmd-pos-product-card--requiere-confirmacion' : '') + '" onclick="mesero.addToCart(\'' + escapeJsString(p.id) + '\')">' +
                 '<span class="lmd-pos-product-card__nombre">' + escapeHtml(p.nombre) + '</span>' +
                 '<span class="lmd-pos-product-card__precio">' + fmt(p.precio) + '</span>' +
+                (requiereConfirmacion ? '<small class="lmd-pos-product-card__sub">Ingredientes confirmados al agregar</small>' : '') +
             '</div>';
         }).join('');
 
@@ -446,7 +460,8 @@
             ? '<div class="lmd-pos-cart__empty">' + icon('shopping-cart') + '<span>Sin ítems</span></div>'
             : state.carrito.map(function (item) {
                 return '<div class="lmd-mesero-cart-item">' +
-                    '<span class="lmd-mesero-cart-item__nombre">' + escapeHtml(item.nombre) + '</span>' +
+                    '<span class="lmd-mesero-cart-item__nombre">' + escapeHtml(item.nombre) +
+                        (item.ingredientesConfirmados ? ' <small class="lmd-pos-product-card__sub">✓ ingredientes</small>' : '') + '</span>' +
                     '<div class="lmd-mesero-cart-item__qty">' +
                         '<button onclick="mesero.decCart(\'' + item.id + '\')">' + icon('minus') + '</button>' +
                         '<span>' + item.cantidad + '</span>' +
@@ -496,12 +511,18 @@
     function cerrarAgregar() { cerrarOverlay('agregar'); }
 
     function addToCart(productoId) {
-        var prods = window.__lmdProductosMesero || [];
-        var prod  = prods.find(function (p) { return p.id === productoId; });
+        var prod = productoPorId(productoId);
         if (!prod) return;
         var ex = state.carrito.find(function (i) { return i.id === productoId; });
         if (ex) ex.cantidad++;
-        else state.carrito.push({ id: prod.id, nombre: prod.nombre, precio: prod.precio, cantidad: 1 });
+        else {
+            var item = { id: prod.id, nombre: prod.nombre, precio: prod.precio, cantidad: 1 };
+            if (productoRequiereConfirmacion(prod)) {
+                item.modificacionesJson = crearConfirmacionOriginal();
+                item.ingredientesConfirmados = true;
+            }
+            state.carrito.push(item);
+        }
         _renderAgregar();
     }
 
@@ -528,7 +549,11 @@
             for (var i = 0; i < state.carrito.length; i++) {
                 var item = state.carrito[i];
                 var res  = await postJson('AgregarLineaJson', {
-                    pedidoId: m.pedidoActualId, productoId: item.id, cantidad: item.cantidad
+                    pedidoId: m.pedidoActualId,
+                    productoId: item.id,
+                    cantidad: item.cantidad,
+                    notas: item.notas || '',
+                    modificacionesJson: item.modificacionesJson || ''
                 });
                 if (!res.ok) {
                     var d = await res.json().catch(function () { return {}; });

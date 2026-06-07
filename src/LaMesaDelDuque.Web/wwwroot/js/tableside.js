@@ -21,6 +21,8 @@
                 form.append(`Vm.CrearPedido.Lineas[${i}].ProductoId`, l.productoId);
                 form.append(`Vm.CrearPedido.Lineas[${i}].Cantidad`, l.cantidad);
                 form.append(`Vm.CrearPedido.Lineas[${i}].PrecioUnitario`, (l.precioUnitario || 0).toString());
+                if (l.notas) form.append(`Vm.CrearPedido.Lineas[${i}].Notas`, l.notas);
+                if (l.modificacionesJson) form.append(`Vm.CrearPedido.Lineas[${i}].ModificacionesJson`, l.modificacionesJson);
             });
 
             const res = await fetch('?handler=CrearJson', { method: 'POST', body: form, headers: { 'X-Requested-With': 'XMLHttpRequest' } });
@@ -28,12 +30,14 @@
             return res.json();
         },
 
-        async agregar(pedidoId, productoId, cantidad) {
+        async agregar(pedidoId, productoId, cantidad, notas, modificacionesJson) {
             const form = new FormData();
             form.append('__RequestVerificationToken', csrfToken());
             form.append('pedidoId', pedidoId);
             form.append('productoId', productoId);
             form.append('cantidad', cantidad);
+            if (notas) form.append('notas', notas);
+            if (modificacionesJson) form.append('modificacionesJson', modificacionesJson);
 
             const res = await fetch('?handler=AgregarLineaJson', { method: 'POST', body: form, headers: { 'X-Requested-With': 'XMLHttpRequest' } });
             if (!res.ok) throw new Error((await res.text()) || 'Error al agregar');
@@ -76,6 +80,22 @@
             tipoServicio: 'ComerAqui',
             mesaId: state.mesaId
         }));
+    }
+
+    function confirmacionIngredientes(prod) {
+        if (!prod || !prod.tieneReceta) return { notas: null, modificacionesJson: null };
+
+        return {
+            notas: null,
+            modificacionesJson: JSON.stringify([{
+                ingredienteId: '00000000-0000-0000-0000-000000000000',
+                ingredienteNombre: 'Ingredientes confirmados',
+                accion: 'confirmado',
+                motivo: 'confirmado',
+                ingredienteReemplazoId: null,
+                ingredienteReemplazoNombre: null
+            }])
+        };
     }
 
     // ── SignalR ─────────────────────────────────────────────
@@ -233,13 +253,16 @@
         async agregarProducto(productoId) {
             const prod = window.__lmdProductosDisponibles.find(p => p.id === productoId);
             if (!prod) return;
+            const confirmacion = confirmacionIngredientes(prod);
 
             if (!state.pedidoActual) {
                 try {
                     const result = await api.crear('ComerAqui', state.mesaId, [{
                         productoId,
                         cantidad: 1,
-                        precioUnitario: prod.precio
+                        precioUnitario: prod.precio,
+                        notas: confirmacion.notas,
+                        modificacionesJson: confirmacion.modificacionesJson
                     }]);
                     state.pedidoActual = { id: result.pedidoId, estado: result.estado, enviado: false };
                     state.lineas = result.lineas || [{
@@ -257,7 +280,7 @@
                 }
             } else {
                 try {
-                    await api.agregar(state.pedidoActual.id, productoId, 1);
+                    await api.agregar(state.pedidoActual.id, productoId, 1, confirmacion.notas, confirmacion.modificacionesJson);
                     const existente = state.lineas.find(l => l.productoId === productoId);
                     if (existente) {
                         existente.cantidad++;

@@ -496,6 +496,7 @@
         if (filtered.length === 0) return '<div class="lmd-pos-empty">Sin productos en esta categoría</div>';
         return filtered.map(function (p) {
             var agotado = p.agotado === true;
+            var requiereConfirmacion = productoRequiereConfirmacion(p);
             var ico = p.categoriaNombre === 'Bebidas' ? 'wine' : p.categoriaNombre === 'Postres' ? 'cake-slice' : 'utensils';
             var tienePromo = !!p.promoNombre;
             var precioConDescuento = tienePromo
@@ -509,18 +510,47 @@
                       fmt(Math.max(0, precioConDescuento)) +
                   '</span>'
                 : '<span class="lmd-pos-producto-card__precio">' + fmt(p.precio || 0) + '</span>';
-            return '<div class="lmd-pos-producto-card' + (agotado ? ' lmd-pos-producto-card--agotado' : '') + (tienePromo ? ' lmd-pos-producto-card--promo' : '') + '">' +
-                '<div class="lmd-pos-producto-card__body" onclick="' + (agotado || state.pagado ? '' : 'pos.agregarAlCarrito(\'' + escapeJsString(p.id) + '\',\'' + escapeJsString(p.nombre || '') + '\',' + (p.precio || 0) + ')') + '">' +
+            var accionClick = agotado || state.pagado ? '' : 'pos.agregarProductoDesdeGrid(\'' + escapeJsString(p.id) + '\',\'' + escapeJsString(p.nombre || '') + '\',' + (p.precio || 0) + ')';
+            return '<div class="lmd-pos-producto-card' + (agotado ? ' lmd-pos-producto-card--agotado' : '') + (tienePromo ? ' lmd-pos-producto-card--promo' : '') + (requiereConfirmacion ? ' lmd-pos-producto-card--requiere-confirmacion' : '') + '">' +
+                '<div class="lmd-pos-producto-card__body" onclick="' + accionClick + '">' +
                     '<div class="lmd-pos-producto-card__ico">' + icon(ico) + '</div>' +
                     '<span class="lmd-pos-producto-card__nombre">' + escapeHtml(p.nombre || '') + '</span>' +
                     precioHtml +
+                    (requiereConfirmacion ? '<span class="lmd-pos-producto-card__confirm-badge">Confirmar ingredientes</span>' : '') +
                     (tienePromo ? '<span class="lmd-pos-producto-card__promo-badge">' + icon('tag') + ' ' + escapeHtml(p.promoNombre || 'PROMO') + '</span>' : '') +
                     (p.tiempoPreparacionMin ? '<span class="lmd-pos-producto-card__tiempo">' + p.tiempoPreparacionMin + ' min</span>' : '') +
                     (agotado ? '<span class="lmd-pos-producto-card__agotado-badge">Agotado</span>' : '') +
                 '</div>' +
-                '<button class="lmd-pos-producto-card__editar" onclick="pos.abrirModificadores(\'' + p.id + '\')" title="Editar ingredientes">' + icon('edit-3') + '</button>' +
+                (requiereConfirmacion ? '<button class="lmd-pos-producto-card__editar" onclick="pos.abrirModificadores(\'' + escapeJsString(p.id) + '\')" title="Editar ingredientes">' + icon('edit-3') + '</button>' : '') +
             '</div>';
         }).join('');
+    }
+
+    function productoPorId(productoId) {
+        return (window.__lmdProductosDisponibles || []).find(function (p) { return p.id === productoId; });
+    }
+
+    function productoRequiereConfirmacion(producto) {
+        return !!(producto && producto.tieneReceta);
+    }
+
+    function crearConfirmacionOriginal() {
+        return JSON.stringify([{ ingredienteId: '00000000-0000-0000-0000-000000000000', ingredienteNombre: 'Ingredientes confirmados', accion: 'confirmado', motivo: 'confirmado', ingredienteReemplazoId: null, ingredienteReemplazoNombre: null }]);
+    }
+
+    function lineaConfirmada(linea) {
+        if (!linea) return false;
+        var producto = productoPorId(linea.productoId);
+        if (!productoRequiereConfirmacion(producto)) return true;
+        return !!linea.modificacionesJson;
+    }
+
+    function validarLineasConfirmadas() {
+        var pendientes = state.lineas.filter(function (l) { return !lineaConfirmada(l); });
+        if (pendientes.length === 0) return true;
+        lmdToast('Confirma los ingredientes de: ' + pendientes.map(function (l) { return l.productoNombre; }).join(', '), 'error');
+        abrirModificadores(pendientes[0].productoId);
+        return false;
     }
 
     function filtrarCategoria(cat) {
@@ -538,6 +568,20 @@
         else { state.lineas.push({ productoId: prodId, productoNombre: nombre, cantidad: 1, precioUnitario: precio }); }
         renderProductos();
         mostrarPantalla('productos');
+    }
+
+    function agregarProductoDesdeGrid(prodId, nombre, precio) {
+        if (state.pagado) return;
+        var producto = productoPorId(prodId);
+        if (productoRequiereConfirmacion(producto)) {
+            var existente = state.lineas.find(function (l) { return l.productoId === prodId; });
+            if (!lineaConfirmada(existente)) {
+                abrirModificadores(prodId);
+                return;
+            }
+        }
+
+        agregarAlCarrito(prodId, nombre, precio);
     }
 
     function incrementarItem(idx) {
@@ -600,6 +644,7 @@
         if (state.lineas.length === 0) { lmdToast('Agrega productos primero', 'error'); return; }
 
         if (state.pagado) { abrirOverlayDocumentos(); return; }
+        if (!validarLineasConfirmadas()) return;
 
         if (_creandoPedido) return;
         _creandoPedido = true;
@@ -682,6 +727,7 @@
     async function irAPago() {
         if (state.pagado) return;
         if (_creandoPedido) return;
+        if (state.lineas.length > 0 && !validarLineasConfirmadas()) return;
 
         // Tab abierto con items pendientes: enviarlos a cocina primero, luego cobrar
         if (state.pedidoActual && state.lineas.length > 0) {
@@ -1680,22 +1726,12 @@
         var ingsHtml = _mod.ingredientes.length > 0
             ? _mod.ingredientes.map(function (ing) {
                 var est = ing.estado || 'normal';
-                var otros = _mod.ingredientes.filter(function (o) { return o.id !== ing.id; });
-                var reemplazoSel = est === 'quitado' && otros.length > 0
-                    ? '<select class="lmd-mod-ing-reemplazo" onchange="pos.cambiarReemplazo(\'' + escapeJsString(ing.id) + '\', this.value)">' +
-                          '<option value="">— Sin reemplazo</option>' +
-                          otros.map(function (o) {
-                              return '<option value="' + escapeHtml(o.id) + '"' + (ing.reemplazoId === o.id ? ' selected' : '') + '>' + escapeHtml(o.nombre) + '</option>';
-                          }).join('') +
-                      '</select>'
-                    : '';
                 return '<div class="lmd-mod-ing-row lmd-mod-ing-row--' + est + '">' +
                     '<span class="lmd-mod-ing-nombre">' + escapeHtml(ing.nombre) + ' <small>(' + escapeHtml(ing.cantidad) + ')</small></span>' +
                     '<div class="lmd-mod-ing-acciones">' +
                         '<button class="lmd-mod-ing-btn lmd-mod-ing-btn--extra' + (est === 'extra' ? ' activo' : '') + '" onclick="pos.toggleEstadoIngrediente(\'' + escapeJsString(ing.id) + '\', \'extra\')" title="Extra">' + icon('plus-circle') + '</button>' +
                         '<button class="lmd-mod-ing-btn lmd-mod-ing-btn--quitar' + (est === 'quitado' ? ' activo' : '') + '" onclick="pos.toggleEstadoIngrediente(\'' + escapeJsString(ing.id) + '\', \'quitado\')" title="Quitar">' + icon('minus-circle') + '</button>' +
                     '</div>' +
-                    reemplazoSel +
                 '</div>';
               }).join('')
             : '<span class="lmd-mod-empty">Sin ingredientes registrados</span>';
@@ -1732,17 +1768,6 @@
         renderModificadorModal();
     }
 
-    function cambiarReemplazo(ingId, reemplazoId) {
-        var ing = _mod.ingredientes.find(function (i) { return i.id === ingId; });
-        if (!ing) return;
-        if (!reemplazoId) { ing.reemplazoId = null; ing.reemplazoNombre = ''; }
-        else {
-            var r = _mod.ingredientes.find(function (i) { return i.id === reemplazoId; });
-            ing.reemplazoId = reemplazoId;
-            ing.reemplazoNombre = r ? r.nombre : '';
-        }
-    }
-
     function toggleAlergia(alergia) {
         var idx = _mod.alergias.indexOf(alergia);
         if (idx >= 0) _mod.alergias.splice(idx, 1);
@@ -1761,11 +1786,7 @@
         _mod.ingredientes.forEach(function (ing) {
             var est = ing.estado || 'normal';
             if (est === 'quitado') {
-                if (ing.reemplazoId) {
-                    mods.push({ ingredienteId: ing.id, ingredienteNombre: ing.nombre, accion: 'intercambiar', motivo: 'preferencia', ingredienteReemplazoId: ing.reemplazoId, ingredienteReemplazoNombre: ing.reemplazoNombre });
-                } else {
-                    mods.push({ ingredienteId: ing.id, ingredienteNombre: ing.nombre, accion: 'quitar', motivo: 'preferencia', ingredienteReemplazoId: null, ingredienteReemplazoNombre: null });
-                }
+                mods.push({ ingredienteId: ing.id, ingredienteNombre: ing.nombre, accion: 'quitar', motivo: 'preferencia', ingredienteReemplazoId: null, ingredienteReemplazoNombre: null });
             } else if (est === 'extra') {
                 mods.push({ ingredienteId: ing.id, ingredienteNombre: ing.nombre, accion: 'extra', motivo: 'preferencia', ingredienteReemplazoId: null, ingredienteReemplazoNombre: null });
             }
@@ -1780,11 +1801,22 @@
         if (_mod.notaCustom && _mod.notaCustom.trim()) notasArr.push(_mod.notaCustom.trim());
         var notas = notasArr.length > 0 ? notasArr.join(' | ') : null;
 
+        var productoActual = productoPorId(_mod.productoId);
+        var soloInformativos = mods.length === 0 || mods.every(function (mod) { return mod.accion === 'alergia' || mod.accion === 'curso'; });
+        if (productoRequiereConfirmacion(productoActual) && soloInformativos) {
+            mods.push({ ingredienteId: '00000000-0000-0000-0000-000000000000', ingredienteNombre: 'Ingredientes confirmados', accion: 'confirmado', motivo: 'confirmado', ingredienteReemplazoId: null, ingredienteReemplazoNombre: null });
+        }
+
         var linea = state.lineas.find(function (l) { return l.productoId === _mod.productoId; });
+        if (!linea && productoRequiereConfirmacion(productoActual) && productoActual) {
+            linea = { productoId: productoActual.id, productoNombre: productoActual.nombre, cantidad: 1, precioUnitario: productoActual.precio };
+            state.lineas.push(linea);
+        }
         if (linea) {
             linea.modificacionesJson = mods.length > 0 ? JSON.stringify(mods) : null;
             linea.notas = notas;
             linea.tieneModificaciones = mods.length > 0 || !!notas;
+            linea.ingredientesConfirmados = productoRequiereConfirmacion(productoActual);
             renderProductos();
         }
 
@@ -1968,13 +2000,13 @@
     // ── Public API ──────────────────────────────────────
     window.pos = {
         seleccionarMesa, seleccionarParaLlevar, retomarParaLlevar, abrirDelivery, cerrarDelivery, confirmarDelivery, retomarDelivery,
-        filtrarCategoria, agregarAlCarrito, incrementarItem, decrementarItem, eliminarDelCarrito,
+        filtrarCategoria, agregarAlCarrito, agregarProductoDesdeGrid, incrementarItem, decrementarItem, eliminarDelCarrito,
         cancelarOrden, confirmarListo, irAPago,
         cerrarPago, procesarPago,
         seleccionarBillete, keypadInput, keypadConfirmar,
         volverAMetodos, simularTarjeta, confirmarTarjeta, simularQR, confirmarOtro,
         abrirSplit, volverAPago, splitIgualitario, splitPorPersona, splitMixto,
-        toggleEstadoIngrediente, cambiarReemplazo,
+        toggleEstadoIngrediente,
         iniciarAsignacionSplit, asignarItemSplit, confirmarAsignacionSplit, _renderSplitNPicker, _renderSplitAsignacion,
         confirmarAnulacion,
         ajustarSplitN, iniciarSplitIgualitario, cobrarSiguientePersona,

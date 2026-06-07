@@ -15,22 +15,27 @@ public class TablesideModel : PageModel
     private readonly IPedidosServicio _pedidosServicio;
     private readonly ICatalogoProductosServicio _catalogoProductosServicio;
     private readonly IMesasServicio _mesasServicio;
+    private readonly IRecetasProductosServicio _recetasServicio;
     private readonly ILogger<TablesideModel> _logger;
 
     public TablesideModel(
         IPedidosServicio pedidosServicio,
         ICatalogoProductosServicio catalogoProductosServicio,
         IMesasServicio mesasServicio,
+        IRecetasProductosServicio recetasServicio,
         ILogger<TablesideModel> logger)
     {
         _pedidosServicio = pedidosServicio;
         _catalogoProductosServicio = catalogoProductosServicio;
         _mesasServicio = mesasServicio;
+        _recetasServicio = recetasServicio;
         _logger = logger;
     }
 
     [BindProperty]
     public PedidosPageVm Vm { get; set; } = new();
+
+    public HashSet<Guid> ProductosConReceta { get; private set; } = [];
 
     public async Task OnGetAsync()
     {
@@ -54,7 +59,14 @@ public class TablesideModel : PageModel
             if (!prods.TryGetValue(l.ProductoId, out var prod))
                 return BadRequest(new { ok = false, error = "Producto inválido." });
 
-            detalles.Add(new DetalleCreacionDto { ProductoId = l.ProductoId, Cantidad = l.Cantidad, PrecioUnitario = prod.Precio });
+            detalles.Add(new DetalleCreacionDto
+            {
+                ProductoId = l.ProductoId,
+                Cantidad = l.Cantidad,
+                PrecioUnitario = prod.Precio,
+                Notas = l.Notas,
+                ModificacionesJson = l.ModificacionesJson
+            });
         }
 
         try
@@ -114,6 +126,14 @@ public class TablesideModel : PageModel
     {
         var productos = await _catalogoProductosServicio.ListarProductosAsync();
         Vm.ProductosDisponibles = productos.Where(p => p.Activo).OrderBy(p => p.CategoriaNombre).ThenBy(p => p.Nombre).ToList();
+
+        ProductosConReceta = [];
+        foreach (var producto in Vm.ProductosDisponibles)
+        {
+            var receta = await _recetasServicio.ObtenerPorProductoIdAsync(producto.Id);
+            if (receta is not null)
+                ProductosConReceta.Add(producto.Id);
+        }
 
         var mesas = await _mesasServicio.ListarMesasAsync();
         Vm.MesasDisponibles = mesas.Where(m => m.Activa).OrderBy(m => m.Numero).ToList();

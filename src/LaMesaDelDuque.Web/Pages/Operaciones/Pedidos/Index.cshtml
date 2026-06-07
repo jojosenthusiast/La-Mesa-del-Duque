@@ -50,7 +50,9 @@
 <script>
     window.__lmdMesasDisponibles = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(mesasPos, jsonOptions));
 
-    window.__lmdProductosDisponibles = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(productosPos, jsonOptions));
+    window.__lmdProductosDisponibles = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+        Model.Vm.ProductosDisponibles.Select(p => new { p.Id, p.Nombre, p.Precio, p.CategoriaNombre, p.TiempoPreparacionMin, p.ImagenUrl, TieneReceta = Model.ProductosConReceta.Contains(p.Id) }),
+        jsonOptions));
 
     window.__lmdPedidosDeliveryActivos = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(deliveriesActivos, jsonOptions));
 

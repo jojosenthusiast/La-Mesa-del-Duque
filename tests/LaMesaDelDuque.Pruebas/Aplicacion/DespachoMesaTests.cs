@@ -89,7 +89,6 @@ public sealed class DespachoMesaTests : IDisposable
         pedido.AgregarDetalle(new DetallePedido(producto, 1, 3.50m, null, null));
         pedido.MarcarEnPreparacion();
         pedido.MarcarComoPagado();
-        pedido.MarcarListo();
 
         await _uot.Pedidos.AgregarAsync(pedido);
         await _uot.GuardarCambiosAsync();

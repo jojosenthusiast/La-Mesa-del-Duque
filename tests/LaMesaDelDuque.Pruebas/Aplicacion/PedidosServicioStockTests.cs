@@ -73,13 +73,79 @@ public class PedidosServicioStockTests : IDisposable
         var ex = await Assert.ThrowsAsync<ReglaDominioException>(() =>
             _servicio.CrearPedidoAsync(TipoServicio.ParaLlevar, null, new List<DetalleCreacionDto>
             {
-                new() { ProductoId = producto.Id, Cantidad = 1, PrecioUnitario = producto.Precio }
+                CrearDetalleConfirmado(producto)
             }));
 
         Assert.Contains("Pizza agotada", ex.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Queso Pizza agotada", ex.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(0, await _contexto.Set<Pedido>().CountAsync());
         Assert.Equal(0m, await StockActualAsync(ingrediente.Id));
+    }
+
+    [Fact]
+    public async Task CrearPedido_CuandoProductoTieneRecetaYNoConfirmaIngredientes_DebeRechazarAntesDeEnviarACocina()
+    {
+        var (producto, ingrediente) = await CrearProductoConRecetaAsync("Pizza sin confirmar", stockIngrediente: 2m, consumoPorUnidad: 1m);
+
+        var ex = await Assert.ThrowsAsync<ReglaDominioException>(() =>
+            _servicio.CrearPedidoAsync(TipoServicio.ParaLlevar, null, new List<DetalleCreacionDto>
+            {
+                new() { ProductoId = producto.Id, Cantidad = 1, PrecioUnitario = producto.Precio }
+            }));
+
+        Assert.Contains("confirmar los ingredientes", ex.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(0, await _contexto.Set<Pedido>().CountAsync());
+        Assert.Equal(2m, await StockActualAsync(ingrediente.Id));
+    }
+
+    [Theory]
+    [InlineData("alergia", "alergia")]
+    [InlineData("curso", "Entrada")]
+    public async Task CrearPedido_CuandoProductoTieneRecetaYSoloTienePayloadInformativo_DebeRechazarConfirmacion(string accion, string ingredienteNombre)
+    {
+        var (producto, ingrediente) = await CrearProductoConRecetaAsync($"Pizza solo {accion}", stockIngrediente: 2m, consumoPorUnidad: 1m);
+        var payloadInformativo = $"[{{\"ingredienteId\":\"00000000-0000-0000-0000-000000000000\",\"ingredienteNombre\":\"{ingredienteNombre}\",\"accion\":\"{accion}\",\"motivo\":\"{accion}\"}}]";
+
+        var ex = await Assert.ThrowsAsync<ReglaDominioException>(() =>
+            _servicio.CrearPedidoAsync(TipoServicio.ParaLlevar, null, new List<DetalleCreacionDto>
+            {
+                new() { ProductoId = producto.Id, Cantidad = 1, PrecioUnitario = producto.Precio, ModificacionesJson = payloadInformativo }
+            }));
+
+        Assert.Contains("confirmar los ingredientes", ex.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(0, await _contexto.Set<Pedido>().CountAsync());
+        Assert.Equal(2m, await StockActualAsync(ingrediente.Id));
+    }
+
+    [Fact]
+    public async Task CrearPedido_CuandoProductoTieneRecetaEIntercambioNoSoportado_DebeRechazarSinOmitirStock()
+    {
+        var (producto, ingrediente) = await CrearProductoConRecetaAsync("Pizza intercambio", stockIngrediente: 2m, consumoPorUnidad: 1m);
+        var payloadIntercambio = $"[{{\"ingredienteId\":\"{ingrediente.Id}\",\"ingredienteNombre\":\"{ingrediente.Nombre}\",\"accion\":\"intercambiar\",\"motivo\":\"preferencia\",\"ingredienteReemplazoId\":\"{Guid.NewGuid()}\",\"ingredienteReemplazoNombre\":\"Reemplazo no catalogado\"}}]";
+
+        var ex = await Assert.ThrowsAsync<ReglaDominioException>(() =>
+            _servicio.CrearPedidoAsync(TipoServicio.ParaLlevar, null, new List<DetalleCreacionDto>
+            {
+                new() { ProductoId = producto.Id, Cantidad = 1, PrecioUnitario = producto.Precio, ModificacionesJson = payloadIntercambio }
+            }));
+
+        Assert.Contains("intercambiar", ex.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(0, await _contexto.Set<Pedido>().CountAsync());
+        Assert.Equal(2m, await StockActualAsync(ingrediente.Id));
+    }
+
+    [Fact]
+    public async Task CrearPedido_CuandoProductoTieneRecetaYConfirmaIngredientes_DebePermitirSinModificarConsumo()
+    {
+        var (producto, ingrediente) = await CrearProductoConRecetaAsync("Pizza confirmada", stockIngrediente: 2m, consumoPorUnidad: 1m);
+
+        var pedido = await _servicio.CrearPedidoAsync(TipoServicio.ParaLlevar, null, new List<DetalleCreacionDto>
+        {
+            CrearDetalleConfirmado(producto)
+        });
+
+        Assert.Equal("EnPreparacion", pedido.Estado);
+        Assert.Equal(1m, await StockActualAsync(ingrediente.Id));
     }
 
     [Fact]
@@ -90,8 +156,8 @@ public class PedidosServicioStockTests : IDisposable
         var ex = await Assert.ThrowsAsync<ReglaDominioException>(() =>
             _servicio.CrearPedidoAsync(TipoServicio.ParaLlevar, null, new List<DetalleCreacionDto>
             {
-                new() { ProductoId = producto.Id, Cantidad = 1, PrecioUnitario = producto.Precio },
-                new() { ProductoId = producto.Id, Cantidad = 1, PrecioUnitario = producto.Precio }
+                CrearDetalleConfirmado(producto),
+                CrearDetalleConfirmado(producto)
             }));
 
         Assert.Contains("Pizza doble", ex.Message, StringComparison.OrdinalIgnoreCase);
@@ -106,7 +172,7 @@ public class PedidosServicioStockTests : IDisposable
 
         var pedido = await _servicio.CrearPedidoAsync(TipoServicio.ParaLlevar, null, new List<DetalleCreacionDto>
         {
-            new() { ProductoId = producto.Id, Cantidad = 2, PrecioUnitario = producto.Precio }
+            CrearDetalleConfirmado(producto, cantidad: 2)
         });
 
         Assert.Equal("EnPreparacion", pedido.Estado);
@@ -120,7 +186,7 @@ public class PedidosServicioStockTests : IDisposable
 
         await _servicio.CrearPedidoAsync(TipoServicio.ParaLlevar, null, new List<DetalleCreacionDto>
         {
-            new() { ProductoId = producto.Id, Cantidad = 1, PrecioUnitario = producto.Precio }
+            CrearDetalleConfirmado(producto)
         });
 
         var productoActualizado = await _contexto.Set<Producto>()
@@ -135,7 +201,7 @@ public class PedidosServicioStockTests : IDisposable
         var (producto, ingrediente) = await CrearProductoConRecetaAsync("Pizza incremento", stockIngrediente: 2m, consumoPorUnidad: 1m);
         var pedido = await _servicio.CrearPedidoAsync(TipoServicio.ParaLlevar, null, new List<DetalleCreacionDto>
         {
-            new() { ProductoId = producto.Id, Cantidad = 1, PrecioUnitario = producto.Precio }
+            CrearDetalleConfirmado(producto)
         });
 
         var ex = await Assert.ThrowsAsync<ReglaDominioException>(() =>
@@ -154,7 +220,7 @@ public class PedidosServicioStockTests : IDisposable
         var (producto, ingrediente) = await CrearProductoConRecetaAsync("Pizza pagada", stockIngrediente: 2m, consumoPorUnidad: 1m);
         var pedido = await _servicio.CrearPedidoAsync(TipoServicio.ParaLlevar, null, new List<DetalleCreacionDto>
         {
-            new() { ProductoId = producto.Id, Cantidad = 1, PrecioUnitario = producto.Precio }
+            CrearDetalleConfirmado(producto)
         });
         await _servicio.MarcarEnCobroAsync(pedido.Id);
         await _servicio.PagarPedidoAsync(pedido.Id);
@@ -177,7 +243,7 @@ public class PedidosServicioStockTests : IDisposable
         var (producto, ingrediente) = await CrearProductoConRecetaAsync("Pizza eliminada", stockIngrediente: 2m, consumoPorUnidad: 1m);
         var pedido = await _servicio.CrearPedidoAsync(TipoServicio.ParaLlevar, null, new List<DetalleCreacionDto>
         {
-            new() { ProductoId = producto.Id, Cantidad = 1, PrecioUnitario = producto.Precio }
+            CrearDetalleConfirmado(producto)
         });
 
         var usuarioId = await _contexto.Set<Usuario>()
@@ -195,7 +261,7 @@ public class PedidosServicioStockTests : IDisposable
         var (producto, ingrediente) = await CrearProductoConRecetaAsync("Pizza cancelada", stockIngrediente: 1m, consumoPorUnidad: 1m);
         var pedido = await _servicio.CrearPedidoAsync(TipoServicio.ParaLlevar, null, new List<DetalleCreacionDto>
         {
-            new() { ProductoId = producto.Id, Cantidad = 1, PrecioUnitario = producto.Precio }
+            CrearDetalleConfirmado(producto)
         });
 
         await _servicio.CancelarPedidoAsync(pedido.Id);
@@ -213,7 +279,7 @@ public class PedidosServicioStockTests : IDisposable
         var (producto, ingrediente) = await CrearProductoConRecetaAsync("Pizza cantidad invalida", stockIngrediente: 2m, consumoPorUnidad: 1m);
         var pedido = await _servicio.CrearPedidoAsync(TipoServicio.ParaLlevar, null, new List<DetalleCreacionDto>
         {
-            new() { ProductoId = producto.Id, Cantidad = 1, PrecioUnitario = producto.Precio }
+            CrearDetalleConfirmado(producto)
         });
 
         var ex = await Assert.ThrowsAsync<ReglaDominioException>(() =>
@@ -274,6 +340,18 @@ public class PedidosServicioStockTests : IDisposable
 
         return (producto, ingrediente);
     }
+
+    private static DetalleCreacionDto CrearDetalleConfirmado(Producto producto, int cantidad = 1)
+        => new()
+        {
+            ProductoId = producto.Id,
+            Cantidad = cantidad,
+            PrecioUnitario = producto.Precio,
+            ModificacionesJson = ConfirmacionIngredientesJson()
+        };
+
+    private static string ConfirmacionIngredientesJson()
+        => "[{\"ingredienteId\":\"00000000-0000-0000-0000-000000000000\",\"ingredienteNombre\":\"Ingredientes confirmados\",\"accion\":\"confirmado\",\"motivo\":\"confirmado\"}]";
 
     private static IUnidadDeTrabajo CrearUnidadDeTrabajo(LaMesaDelDuqueDbContext contexto)
     {

@@ -17,6 +17,7 @@ public class IndexModel : PageModel
     private readonly IPedidosServicio _pedidosServicio;
     private readonly ICatalogoProductosServicio _catalogoProductosServicio;
     private readonly IMesasServicio _mesasServicio;
+    private readonly IRecetasProductosServicio _recetasServicio;
     private readonly IHubContext<PedidosHub> _hubContext;
     private readonly ILogger<IndexModel> _logger;
 
@@ -24,28 +25,38 @@ public class IndexModel : PageModel
         IPedidosServicio pedidosServicio,
         ICatalogoProductosServicio catalogoProductosServicio,
         IMesasServicio mesasServicio,
+        IRecetasProductosServicio recetasServicio,
         IHubContext<PedidosHub> hubContext,
         ILogger<IndexModel> logger)
     {
         _pedidosServicio = pedidosServicio;
         _catalogoProductosServicio = catalogoProductosServicio;
         _mesasServicio = mesasServicio;
+        _recetasServicio = recetasServicio;
         _hubContext = hubContext;
         _logger = logger;
     }
 
     public List<ProductoDto> ProductosDisponibles { get; set; } = [];
+    public HashSet<Guid> ProductosConReceta { get; private set; } = [];
 
     public async Task OnGetAsync()
     {
-        ViewData["Title"] = "Mesero";
+        if (ViewData is not null) ViewData["Title"] = "Mesero";
         try
         {
             var productos = await _catalogoProductosServicio.ListarProductosAsync();
             ProductosDisponibles = productos.Where(p => p.Activo)
                 .OrderBy(p => p.CategoriaNombre).ThenBy(p => p.Nombre).ToList();
+            ProductosConReceta = [];
+            foreach (var producto in ProductosDisponibles)
+            {
+                var receta = await _recetasServicio.ObtenerPorProductoIdAsync(producto.Id);
+                if (receta is not null && receta.Ingredientes.Count > 0)
+                    ProductosConReceta.Add(producto.Id);
+            }
         }
-        catch { ProductosDisponibles = []; }
+        catch { ProductosDisponibles = []; ProductosConReceta = []; }
     }
 
     // ── Mesas ─────────────────────────────────────────────────────────────────
@@ -223,7 +234,9 @@ public class IndexModel : PageModel
                 {
                     ProductoId     = item.ProductoId,
                     Cantidad       = item.Cantidad,
-                    PrecioUnitario = prod.Precio
+                    PrecioUnitario = prod.Precio,
+                    Notas = item.Notas,
+                    ModificacionesJson = item.ModificacionesJson
                 });
             }
 
@@ -235,7 +248,7 @@ public class IndexModel : PageModel
         catch (Exception ex) { _logger.LogError(ex, "Error en handler JSON"); return StatusCode(500, new { ok = false, error = "Ocurrió un error interno." }); }
     }
 
-    private sealed record ItemCarritoDto(Guid ProductoId, int Cantidad);
+    private sealed record ItemCarritoDto(Guid ProductoId, int Cantidad, string? Notas, string? ModificacionesJson);
 
     // ── Helper ────────────────────────────────────────────────────────────────
     private static object ErrorSeguro(Exception ex)

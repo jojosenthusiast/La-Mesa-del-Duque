@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.Text.Json;
 using LaMesaDelDuque.Aplicacion.Dtos;
 using LaMesaDelDuque.Aplicacion.Notificaciones;
 using LaMesaDelDuque.Dominio.Entidades;
@@ -71,6 +72,8 @@ internal class PedidosServicio : IPedidosServicio
             var producto = await _uot.Productos.ObtenerConTrackingAsync(d.ProductoId, cancelacion)
                 ?? throw new ArgumentException($"No se encontró el producto con ID {d.ProductoId}.", nameof(detalles));
 
+            await ValidarModificacionesAsync(d.ProductoId, d.ModificacionesJson, cancelacion);
+
             var detalle = new DetallePedido(producto, d.Cantidad, d.PrecioUnitario, d.Notas, d.ModificacionesJson);
             await AplicarMejorPromocionAsync(detalle, d.ProductoId, d.PrecioUnitario, cancelacion);
             pedido.AgregarDetalle(detalle);
@@ -109,6 +112,8 @@ internal class PedidosServicio : IPedidosServicio
         var producto = await _uot.Productos.ObtenerConTrackingAsync(productoId, cancelacion)
             ?? throw new ArgumentException($"No se encontró el producto con ID {productoId}.", nameof(productoId));
 
+        await ValidarModificacionesAsync(productoId, modificacionesJson, cancelacion);
+
         var detalle = new DetallePedido(producto, cantidad, precioUnitario, notas, modificacionesJson);
         await AplicarMejorPromocionAsync(detalle, productoId, precioUnitario, cancelacion);
         await ReservarStockAsync([detalle], cancelacion);
@@ -141,6 +146,9 @@ internal class PedidosServicio : IPedidosServicio
         {
             var producto = await _uot.Productos.ObtenerConTrackingAsync(item.ProductoId, cancelacion)
                 ?? throw new ArgumentException($"No se encontró el producto con ID {item.ProductoId}.", nameof(items));
+
+            await ValidarModificacionesAsync(item.ProductoId, item.ModificacionesJson, cancelacion);
+
             var detalle = new DetallePedido(producto, item.Cantidad, item.PrecioUnitario, item.Notas, item.ModificacionesJson);
             await AplicarMejorPromocionAsync(detalle, item.ProductoId, item.PrecioUnitario, cancelacion);
             nuevosDetalles.Add(detalle);
@@ -221,6 +229,66 @@ internal class PedidosServicio : IPedidosServicio
         await ValidarStockSuficienteAsync(consumos, ct);
         await DescontarStockAsync(consumos, ct);
         await SincronizarProductosPorIngredientesAsync(consumos.Keys, ct);
+    }
+
+    private async Task ValidarModificacionesAsync(Guid productoId, string? modificacionesJson, CancellationToken ct)
+    {
+        var receta = await _uot.RecetasProductos.ObtenerPorProductoIdAsync(productoId, ct);
+        if (receta is null || receta.Ingredientes.Count == 0) return;
+
+        if (string.IsNullOrWhiteSpace(modificacionesJson))
+            throw new ReglaDominioException("Debe confirmar los ingredientes del producto antes de enviarlo a cocina.");
+
+        List<ModificacionIngrediente> modificaciones;
+        try
+        {
+            modificaciones = JsonSerializer.Deserialize<List<ModificacionIngrediente>>(
+                modificacionesJson,
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? [];
+        }
+        catch (JsonException)
+        {
+            throw new ReglaDominioException("Las modificaciones de ingredientes tienen un formato inválido.");
+        }
+
+        if (modificaciones.Count == 0)
+            throw new ReglaDominioException("Debe confirmar los ingredientes del producto antes de enviarlo a cocina.");
+
+        var ingredientesReceta = receta.Ingredientes.Select(i => i.IngredienteId).ToHashSet();
+        var modificacionesVistas = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var contieneConfirmacionIngredientes = false;
+
+        foreach (var modificacion in modificaciones)
+        {
+            var accion = (modificacion.Accion ?? string.Empty).Trim().ToLowerInvariant();
+
+            if (accion is "alergia" or "curso")
+                continue;
+
+            if (accion == "intercambiar")
+                throw new ReglaDominioException("La acción intercambiar no está soportada hasta contar con un catálogo válido de reemplazos.");
+
+            if (accion == "confirmado")
+            {
+                contieneConfirmacionIngredientes = true;
+                continue;
+            }
+
+            if (accion is not ("quitar" or "extra"))
+                throw new ReglaDominioException("Acción de modificación inválida.");
+
+            if (modificacion.IngredienteId == Guid.Empty || !ingredientesReceta.Contains(modificacion.IngredienteId))
+                throw new ReglaDominioException("La modificación contiene un ingrediente que no pertenece a la receta.");
+
+            contieneConfirmacionIngredientes = true;
+
+            var clave = $"{accion}:{modificacion.IngredienteId}";
+            if (!modificacionesVistas.Add(clave))
+                throw new ReglaDominioException("Hay modificaciones duplicadas para el mismo ingrediente.");
+        }
+
+        if (!contieneConfirmacionIngredientes)
+            throw new ReglaDominioException("Debe confirmar los ingredientes del producto antes de enviarlo a cocina.");
     }
 
     private async Task<Dictionary<Guid, ConsumoIngrediente>> CalcularConsumosTotalesAsync(IEnumerable<DetallePedido> detalles, CancellationToken ct)
@@ -360,10 +428,6 @@ internal class PedidosServicio : IPedidosServicio
             .Select(m => m.IngredienteId)
             .ToHashSet();
 
-        var intercambios = mods
-            .Where(m => m.Accion == "intercambiar" && m.IngredienteReemplazoId.HasValue)
-            .ToDictionary(m => m.IngredienteId, m => m.IngredienteReemplazoId!.Value);
-
         var extras = mods
             .Where(m => m.Accion == "extra")
             .Select(m => m.IngredienteId)
@@ -375,16 +439,12 @@ internal class PedidosServicio : IPedidosServicio
         {
             if (quitados.Contains(ri.IngredienteId)) continue;
 
-            var targetId = intercambios.TryGetValue(ri.IngredienteId, out var reemplazo)
-                ? reemplazo
-                : ri.IngredienteId;
-
             var cantidadDetalle = cantidadOverride ?? detalle.Cantidad;
             var cantidad = ri.CantidadRequerida * cantidadDetalle;
             if (extras.Contains(ri.IngredienteId))
                 cantidad += ri.CantidadRequerida * cantidadDetalle;
 
-            consumos[targetId] = consumos.TryGetValue(targetId, out var prev) ? prev + cantidad : cantidad;
+            consumos[ri.IngredienteId] = consumos.TryGetValue(ri.IngredienteId, out var prev) ? prev + cantidad : cantidad;
         }
 
         foreach (var m in mods.Where(m => m.Accion == "extra"))

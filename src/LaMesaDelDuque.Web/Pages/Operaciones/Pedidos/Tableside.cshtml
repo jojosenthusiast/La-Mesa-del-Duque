@@ -39,7 +39,7 @@
             Model.Vm.MesasDisponibles.Select(m => new { m.Id, m.Numero, m.Capacidad, m.Estado }), jsonOptsTableside));
 
         window.__lmdProductosDisponibles = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
-            Model.Vm.ProductosDisponibles.Select(p => new { p.Id, p.Nombre, p.Precio, p.CategoriaNombre, p.TiempoPreparacionMin, p.ImagenUrl }), jsonOptsTableside));
+            Model.Vm.ProductosDisponibles.Select(p => new { p.Id, p.Nombre, p.Precio, p.CategoriaNombre, p.TiempoPreparacionMin, p.ImagenUrl, TieneReceta = Model.ProductosConReceta.Contains(p.Id) }), jsonOptsTableside));
     </script>
     <script src="~/lib/microsoft/signalr/dist/browser/signalr.min.js"></script>
     <script src="~/js/tableside.js" asp-append-version="true"></script>
